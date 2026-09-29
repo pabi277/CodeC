@@ -27,6 +27,9 @@ class SettingsManager(private val context: Context) {
         val TERMINAL_FONT_SIZE = floatPreferencesKey("terminal_font_size")
         val TERMINAL_FONT_FAMILY = stringPreferencesKey("terminal_font_family")
         val TERMINAL_EXTRA_KEYS_MACROS = stringPreferencesKey("terminal_extra_keys_macros")
+        // Phase 71.1 — the 📌 on a Packages card: catalog ids, comma-separated,
+        // most recently pinned first (PackagePins owns the format).
+        val PINNED_PACKAGES = stringPreferencesKey("pinned_packages")
 
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         // Phase 50.2 — "Match my wallpaper" (dynamic colour opt-in).
@@ -206,6 +209,14 @@ class SettingsManager(private val context: Context) {
     }
     val terminalExtraKeysMacrosFlow: Flow<String> = context.dataStore.data.map {
         it[TERMINAL_EXTRA_KEYS_MACROS] ?: ""
+    }
+
+    // Phase 71.1 — pinned Packages cards (raw string; PackagePins parses it).
+    val pinnedPackagesFlow: Flow<String> = context.dataStore.data.map {
+        it[PINNED_PACKAGES] ?: ""
+    }
+    suspend fun setPinnedPackages(csv: String) {
+        context.dataStore.edit { it[PINNED_PACKAGES] = csv }
     }
 
         // Phase 40.5 — the default is CodeC's own green (AccentPalette.DEFAULT_STORAGE_HEX),

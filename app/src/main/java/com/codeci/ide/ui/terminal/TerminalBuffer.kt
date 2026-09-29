@@ -253,8 +253,9 @@ class TerminalBuffer(
      * * Alt screen: rectangular copy only. Full-screen apps repaint on
      *   SIGWINCH; reflowing their screen fights them.
      * * Rows-only change (same width): cheap path — grow by pulling rows
-     *   back out of scrollback, shrink by pushing top screen rows into
-     *   scrollback. No re-wrapping needed.
+     *   back out of scrollback, shrink by dropping the empty rows below
+     *   the cursor first (Phase 71.1) and pushing only the remainder of the
+     *   top screen rows into scrollback. No re-wrapping needed.
      * * Width change (primary screen): the scrollback + screen rows are
      *   re-joined into logical lines (following [Row.wrapped]) and re-split
      *   at the new width by [Reflow], then repartitioned back into
@@ -321,9 +322,20 @@ class TerminalBuffer(
             repeat(take) { current.add(0, scrollback.removeLast()) }
             cursorY += take
         } else if (r < rows) {
-            // Shrink: overflow top screen rows into scrollback; the cursor
-            // follows its content up (clamped onto the screen).
-            val push = rows - r
+            // Shrink. Phase 71.1 — the keyboard bug ("open the keyboard, close
+            // it, and many extra lines appear"): the shrink used to push the
+            // TOP rows into scrollback no matter what, so a short screen (a
+            // prompt on row 2 of 30) lost its cursor row to history, the
+            // cursor clamped to row 0, and the matching grow then moved the
+            // cursor down by the full row count — leaving it far below its
+            // own content. Every terminal that survives a soft keyboard does
+            // it the other way round: the empty rows BELOW the cursor go
+            // first (they hold nothing), and only what is still owed overflows
+            // off the top, so the cursor never leaves its content.
+            val owed = rows - r
+            val drop = minOf(owed, blankRowsBelowCursor(current))
+            repeat(drop) { current.removeAt(current.lastIndex) }
+            val push = owed - drop
             for (i in 0 until push) {
                 scrollback.addLast(current[i])
                 while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
@@ -340,6 +352,17 @@ class TerminalBuffer(
         cursorY = cursorY.coerceIn(0, rows - 1)
         cursorX = cursorX.coerceIn(0, cols - 1)
         generation++
+    }
+
+    /** Rows under the cursor that hold nothing (default blanks) — safe to drop. */
+    private fun blankRowsBelowCursor(current: List<Row>): Int {
+        var n = 0
+        var y = current.lastIndex
+        while (y > cursorY && current[y].cells.all { it.isBlank() }) {
+            n++
+            y--
+        }
+        return n
     }
 
     private fun ensureWidth(row: Row, c: Int): Row {

@@ -1,6 +1,6 @@
 # Proposed Phase 71.1 — Packages, installation and Terminal
 
-**Status: discussion in progress (2026-09-29) — the owner said "71.1 start"; scope answers recorded below; nothing is implemented yet.** One part = one
+**Status: 🚧 IMPLEMENTED on the session branch `arena/01a0ead9-codec` (2026-09-29) — CI and device evidence below; not merged, no PR (the owner's command).** One part = one
 future chat. No deadline, dependency, new control or replacement engine promised.
 
 ## Copy into a new chat
@@ -92,3 +92,39 @@ Questions asked, **owner answers verbatim (option ids as chosen in the dialog):*
 the chat recommends the exit report be written by `pkg` itself instead of
 wrapping the command the user sees; the owner's call) and whether the further
 review items below join the part.
+
+## Owner follow-up and design latitude — 2026-09-29 (chat, verbatim gist)
+
+> "Whatever you want to do it better you can do but i have some specific device
+> problem — 1. Add package pin 📌 option 2. The terminal behavior sometimes glitch like
+> i open keyboard and close the keyboard it add extra many lines 3. After userland
+> install user have to must run pkg update but all user don't know that"
+
+Three owner reports (not measured by the chat; none is device-verified by it).
+Wherever the words below say **agent's choice**, the owner gave latitude
+("whatever you want") and the design is the chat's, not an owner answer.
+
+## Implementation record
+
+| # | What | Design (choice) | Where |
+|---|---|---|---|
+| 1 | Stuck INSTALLING → true RETRY | Owner: `detect_exit`. Built as the chat recommended — **agent's choice of mechanism**: `pkg` itself writes `$PREFIX/var/lib/codec-pkg/last-result` (`<epoch> <command> <exit> <targets…>`) on exit, instead of wrapping the command the user sees. Row rule `InstallOutcomes.decide`: on disk → INSTALLED; else a result counts only if it is an install, newer than this tap, and names the package; exit ≠ 0 → RETRY + one sentence pointing at the Terminal; exit 0 with nothing on disk → back to INSTALL. Chains/pipes name no targets → the old disk-only poll. Poll moved off the main thread and stops when the row stops. INSTALLING is a door to the Terminal (progress stays there; no new indicator, no lock). | `ui/modules/PkgResult.kt`, `ShellEnvironment.pkgScript()`, `ModulesScreen.kt` |
+| 2 | ⬇ Install userland | Owner: `confirm`. Wording follows the truth (**agent's choice**): tools work → "Reinstall the Linux tools?" (closes all sessions, re-downloads, projects untouched); otherwise "Set up the Linux tools?". | `TerminalScreen.kt`, `terminal_userland_*` |
+| 3 | Session identity | Owner: `name_in_toast`. `SessionLabel`: "Session 2" for a default title, "2 · build" for a named one; toasts read "Installing git in Session 2…"; top-bar title uses it. No layout change. | `TerminalUx.kt`, `ModulesScreen.kt`, `TerminalScreen.kt` |
+| 4 | 📌 pin (owner report 1) | **Agent's choice:** pin-to-top favourites in a "Pinned" group (not `apt-mark hold`, which would change what `pkg upgrade` does). Persisted as a CSV of catalog ids under DataStore key `pinned_packages` (most recent first; unknown ids dropped; cap 24). This is the explicit persistence exception the owner's request needs. Pin is a real `IconButton`; TalkBack names it. | `PackagePins.kt`, `SettingsManager.kt`, `ModulesScreen.kt` |
+| 5 | "pkg update" nobody knows (owner report 3) | **Agent's choice:** the app does it: `pkg install` / `upgrade` / `search` refresh the index once when no lists exist (`ensure_index`); a failed refresh stops the install with no pending marker or lock. Nothing to teach, no guide (Phase 64 stands). The editor run planner's own `pkg update && pkg install` is untouched. | `ShellEnvironment.pkgScript()` |
+| 6 | Extra lines after keyboard open/close (owner report 2) | Reproduced at **source level** only: a shrink pushed top rows to scrollback regardless of content and clamped the cursor, a grow restored the cursor in full → phantom blank rows. Now a shrink drops empty rows below the cursor first (`blankRowsBelowCursor`). **Not proven to be the device cause.** Open: the PTY also gets SIGWINCH on every ime resize (`imePadding` → new rows/cols → `resize`), and bash's own redraw is not covered by this fix. | `TerminalBuffer.kt` |
+
+Not done (offered, undecided): Restart ↻ confirm, "Copied whole session" toast,
+48 dp targets in the session menu. Deliberately unchanged: signatures, atomic
+recovery, transaction serialization, HUP/INT/TERM handling in `pkg`.
+
+**Bootstrap note.** `pkg` is rewritten on every shell prepare; whether an
+already-installed device receives the new script without a `BOOTSTRAP_VERSION`
+bump is not verified on a device (the stamp stays `27`).
+
+### Evidence, kept apart
+
+- **Source tests** (new/changed, host JVM; CI executes them): `PkgResultTest`, `PackagePinsTest`, `SessionLabelTest`, `PkgIndexAndResultTest` (real `/bin/sh` + mock apt-get/gpgv/curl), `Phase71PackagesTerminalWiringTest`, `TerminalBufferTest` +6, `ReflowTest`, `TouchTargetTest` (20 → 21 IconButtons). The chat ran them in a kotlinc + host-`sh` harness with a JUnit shim (not Gradle): 25 + 12 + 11 + buffer 24 + the touch/icon/token/type/skeleton/chrome/settings guards pass. That is a local reading, **not CI**.
+- **Android tests:** none added. Compose code (`ModulesScreen`, `TerminalScreen`) was **not compiled locally** (no Gradle here); CI's `assembleDebug` is the first compile.
+- **Device evidence:** none. The owner has not tested this build. Device pass required for: a failed install (airplane mode) → RETRY; the ⬇ dialog; toast/top-bar session name; 📌 across an app restart; first `pkg install` on a fresh userland without `pkg update`; keyboard open/close in a terminal with a prompt.

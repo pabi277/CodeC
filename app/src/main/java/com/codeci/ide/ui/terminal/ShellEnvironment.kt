@@ -229,6 +229,35 @@ object ShellEnvironment {
           exit 1
         }
 
+        # Phase 71.1 — how did the last package operation END? The app used to
+        # guess from the disk alone, so a failed install left the Packages row
+        # on a disabled INSTALLING button forever. Every install / upgrade /
+        # uninstall / update now leaves ONE line for the app to read:
+        #   <epoch-seconds> <command> <exit-status> <package names…>
+        # Written on the way out (also for early error() exits), replaced
+        # atomically, never printed — the command the user sees is unchanged.
+        LOCK_HELD=0
+        COMMAND=""
+        TARGETS=""
+        record_result() {
+          case "${'$'}COMMAND" in
+            install|i|upgrade|uninstall|remove|rm|update) ;;
+            *) return 0 ;;
+          esac
+          mkdir -p "${'$'}STATE" 2>/dev/null || return 0
+          printf '%s %s %s %s\n' "${'$'}(date +%s 2>/dev/null || echo 0)" "${'$'}COMMAND" "${'$'}1" "${'$'}TARGETS" \
+            > "${'$'}STATE/last-result.tmp" 2>/dev/null &&
+            mv -f "${'$'}STATE/last-result.tmp" "${'$'}STATE/last-result" 2>/dev/null
+          return 0
+        }
+        finish() {
+          _finish_rc="${'$'}?"
+          if [ "${'$'}LOCK_HELD" -eq 1 ]; then rm -rf "${'$'}LOCK"; fi
+          record_result "${'$'}_finish_rc"
+          return "${'$'}_finish_rc"
+        }
+        trap finish EXIT
+
         require_backend() {
           [ -x "${'$'}PREFIX/bin/apt-get" ] || error "package manager is not present in this userland. Install a Phase 3 CodeC bootstrap; never add an official Termux repository."
           [ -x "${'$'}PREFIX/bin/dpkg" ] || error "dpkg is not present in this CodeC userland; refusing to use an external package manager."
@@ -308,7 +337,8 @@ object ShellEnvironment {
             sleep 1
           done
           printf '%s\n' "${'$'}${'$'}" > "${'$'}LOCK/pid"
-          trap 'rm -rf "${'$'}LOCK"' EXIT HUP INT TERM
+          LOCK_HELD=1
+          trap 'rm -rf "${'$'}LOCK"' HUP INT TERM
         }
 
         free_kb() {
@@ -601,12 +631,33 @@ object ShellEnvironment {
           printf '  Space change:     ~%s\n\n' "${'$'}_fmt_total_inst"
         }
 
+        # Phase 71.1 — the first `pkg install` after a userland install used to
+        # fail with "Unable to locate package" until the user typed `pkg update`,
+        # a step nobody had told them about. A fresh userland has no package
+        # index at all, so the index is refreshed HERE, once, by the command
+        # that needs it. `pkg update` stays as the explicit way to refresh later.
+        index_cached() {
+          for _idx in "${'$'}PREFIX"/var/lib/apt/lists/*Packages*; do
+            [ -s "${'$'}_idx" ] && return 0
+          done
+          return 1
+        }
+
+        ensure_index() {
+          index_cached && return 0
+          echo "pkg: no package list yet (first use after setup) — refreshing it now, one time only."
+          verify_release_signature
+          friendly_apt apt_get update || return "${'$'}?"
+          echo "pkg: package list ready."
+        }
+
         install_specs() {
           [ "${'$'}#" -gt 0 ] || error "usage: pkg install [-y] <name> [name ...]"
           before="${'$'}(free_kb)"
           if [ -n "${'$'}before" ] && [ "${'$'}before" -lt "${'$'}MIN_FREE_KB" ]; then
             error "insufficient disk space under ${'$'}PREFIX (${'$'}before KB free; need at least ${'$'}MIN_FREE_KB KB)"
           fi
+          ensure_index || return "${'$'}?"
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' "${'$'}*" > "${'$'}marker"
           verify_release_signature
@@ -645,6 +696,7 @@ object ShellEnvironment {
           if [ -n "${'$'}before" ] && [ "${'$'}before" -lt "${'$'}MIN_FREE_KB" ]; then
             error "insufficient disk space under ${'$'}PREFIX (${'$'}before KB free; need at least ${'$'}MIN_FREE_KB KB)"
           fi
+          ensure_index || return "${'$'}?"
           marker="${'$'}STATE/transaction.pending"
           printf '%s\n' upgrade > "${'$'}marker"
           verify_release_signature
@@ -733,8 +785,6 @@ object ShellEnvironment {
 
         YES_FLAG=0
         VERBOSE_FLAG=0
-        COMMAND=""
-        TARGETS=""
 
         while [ "${'$'}#" -gt 0 ]; do
           case "${'$'}1" in
@@ -799,6 +849,8 @@ HELP
             ;;
           search)
             [ "${'$'}#" -gt 0 ] || error "usage: pkg search <name>"
+            acquire_lock
+            ensure_index || exit "${'$'}?"
             apt_cache search "${'$'}@"
             ;;
           install|i)

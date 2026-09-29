@@ -74,7 +74,7 @@ class TouchTargetTest {
     @Test
     fun `the scan really visits buttons`() {
         // A pin that never matches is a pin that never fails: the core files
-        // hold twenty IconButtons today (6 editor + 5 hub + 2 packages +
+        // held twenty IconButtons before Phase 71.1 (6 editor + 5 hub + 2 packages +
         // 6 terminal + 1 settings — the first-run welcome held none, and Phase
         // 58.1 retired that screen). Settings' first one is Phase 62's ✕: the
         // search field offers it only when there is something to clear, and it
@@ -83,7 +83,7 @@ class TouchTargetTest {
         // 3 → 4 in Phase 57.1, and 4 → 5 in Phase 68.1 and 5 → 6 with sort door for compact Spck parity:
         // the Test ▷ Row became an IconButton to save horizontal space, the top
         // bar became a 48dp Row (hamburger + search + run + optional test), and
-        // the tab row's trailing cell kept the editor-menu IconButton. A phase
+        // the tab row's trailing cell kept the editor-menu IconButton. Phase 71.1 took the total 20 → 21 (packages 2 → 3): the 📌 on a package card is an IconButton like every other, so the 48 dp rule holds. A phase
         // that changes this number again must say why here, not just edit the digit.
         var total = 0
         for (name in coreFiles) {
@@ -95,8 +95,8 @@ class TouchTargetTest {
             total += Regex("""\bIconButton\s*\(""").findAll(code).count()
         }
         assertTrue(
-            "expected 20 IconButtons across the core files, found $total",
-            total == 20,
+            "expected 21 IconButtons across the core files, found $total",
+            total == 21,
         )
     }
 }

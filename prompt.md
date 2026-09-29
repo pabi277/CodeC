@@ -5,7 +5,7 @@
 > fix — TROUBLESHOOTING §47) is **owner-tested and merged via
 > [PR #93](https://github.com/pabi277/CodeC/pull/93)**; last code commit `308441e`, CI ✅
 > `36467347590`. The PR records the merge commit. The polish series' remaining discussion
-> drafts are **65.1, 68.1, 71.1, 73.1, 74.1** — the owner names the next one; nothing starts
+> drafts are **65.1, 68.1, 71.1, 73.1, 74.1** (2026-09-29 addendum: 68.1 was merged in PR #90, and **71.1 is implemented on `arena/01a0ead9-codec`, awaiting CI/owner** — see `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`) — the owner names the next one; nothing starts
 > on the agent's own. The operative handoff is the **CURRENT HANDOFF — 2026-09-29** block
 > below; every block after it is history.
 

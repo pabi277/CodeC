@@ -72,6 +72,7 @@ import com.codeci.ide.ui.components.TerminalEmulatorView
 import com.codeci.ide.ui.components.TerminalExtraKeys
 import com.codeci.ide.ui.components.openTerminalUrl
 import com.codeci.ide.ui.components.parseExtraKeysMacros
+import com.codeci.ide.ui.terminal.SessionLabel
 import com.codeci.ide.ui.terminal.SetupFacts
 import com.codeci.ide.ui.terminal.SetupGatePolicy
 import com.codeci.ide.ui.terminal.TerminalIntro
@@ -130,6 +131,8 @@ fun TerminalScreen(
     var renameTarget by remember { mutableStateOf<String?>(null) }
     var renameText by remember { mutableStateOf("") }
     var closeTarget by remember { mutableStateOf<String?>(null) }
+    // Phase 71.1 — ⬇ closes EVERY session and re-downloads the tools: ask first.
+    var confirmUserland by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.ensureStarted() }
     LaunchedEffect(Unit) {
@@ -183,6 +186,49 @@ fun TerminalScreen(
             },
             dismissButton = {
                 TextButton(onClick = { renameTarget = null }) {
+                    Text(stringResource(R.string.session_cancel))
+                }
+            }
+        )
+    }
+
+    if (confirmUserland) {
+        // The words follow what is true right now: with working tools the tap
+        // is destructive (sessions + a re-download); with none it is the setup.
+        val toolsWork = setupFacts.usable
+        AlertDialog(
+            onDismissRequest = { confirmUserland = false },
+            title = {
+                Text(
+                    stringResource(
+                        if (toolsWork) R.string.terminal_userland_confirm_title
+                        else R.string.terminal_userland_setup_title
+                    )
+                )
+            },
+            text = {
+                Text(
+                    stringResource(
+                        if (toolsWork) R.string.terminal_userland_confirm_body
+                        else R.string.terminal_userland_setup_body
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmUserland = false
+                    viewModel.installUserland()
+                }) {
+                    Text(
+                        stringResource(
+                            if (toolsWork) R.string.terminal_userland_confirm_action
+                            else R.string.terminal_userland_setup_action
+                        )
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmUserland = false }) {
                     Text(stringResource(R.string.session_cancel))
                 }
             }
@@ -253,8 +299,9 @@ fun TerminalScreen(
                 }
             },
             title = {
-                val base = activeItem?.displayTitle
-                    ?.takeIf { it.isNotBlank() }
+                // Phase 71.1 — the session is named in the bar, not only counted
+                // by the badge: "Session 2", or "2 · build" for a renamed one.
+                val base = activeItem?.let { SessionLabel.titled(it.sessionNumber, it.displayTitle) }
                     ?: snapshot.title.takeIf { it.isNotBlank() && it != "Terminal" }
                     ?: stringResource(R.string.nav_terminal)
                 val suffix = when (lifecycle) {
@@ -298,7 +345,7 @@ fun TerminalScreen(
                         contentDescription = stringResource(R.string.terminal_paste)
                     )
                 }
-                IconButton(onClick = { viewModel.installUserland() }) {
+                IconButton(onClick = { confirmUserland = true }) {
                     Icon(
                         Icons.Default.GetApp,
                         contentDescription = stringResource(R.string.terminal_install_userland)

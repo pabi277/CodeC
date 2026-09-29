@@ -144,9 +144,11 @@ class ReflowTest {
 
         buf.resize(4, 2)
 
-        // Two rows overflowed to scrollback; "cc" is the new top row.
-        assertEquals(0, buf.cursorY)
-        assertEquals('c'.code, buf.cell(0, 0).cp)
+        // Phase 71.1: the empty row under the cursor is dropped first, so only
+        // "aa" overflows and the cursor row ("cc") stays on screen, last.
+        assertEquals(1, buf.cursorY)
+        assertEquals('c'.code, buf.cell(0, 1).cp)
+        assertEquals("bb\ncc", buf.visibleText())
     }
 
     @Test

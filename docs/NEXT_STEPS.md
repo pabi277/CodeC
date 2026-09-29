@@ -1,3 +1,16 @@
+**2026-09-29 — Phase 71.1 (Packages, installation and Terminal) 🚧 IMPLEMENTED on
+`arena/01a0ead9-codec`; not merged, no PR.** Owner said "71.1 start"; asked four questions
+(`detect_exit`, ⬇ `confirm`, `name_in_toast`, `review_more`), then reported three device problems
+and gave latitude (*"Whatever you want to do it better you can do"*): a package pin 📌, extra
+terminal lines after opening/closing the keyboard, and "after userland install users must run
+`pkg update` but don't know". Shipped: `pkg` writes a result file the Packages row reads (a failed
+install becomes RETRY, no stuck INSTALLING); ⬇ asks first; the session is named in toasts and the
+top bar; pin-to-top favourites (DataStore `pinned_packages`, agent's design); `pkg` refreshes the
+index itself when there are no lists; the terminal buffer no longer keeps phantom blank rows on a
+shrink/grow (source-level cause only — not proven to be the device cause). Record and evidence
+split: `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`. **CI:** see that record (filled
+in after the run). **No device pass.** Remaining drafts: 65.1, 73.1, 74.1 (68.1 merged in PR #90).
+
 **2026-09-29 — HEAD: the 70.1 + 72.1 branch is ✅ OWNER-TESTED and MERGED to `main` on the
 owner's command → [PR #93](https://github.com/pabi277/CodeC/pull/93).** Owner, verbatim: *"Yes all
 test passed complete docs and merge to main"* — covering round 5's four rows (the Projects card
