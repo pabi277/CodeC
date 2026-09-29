@@ -1,5 +1,5 @@
 **2026-09-29 — Phase 73.2 (Git connection: auto-install, clear errors, new-user guidance) 🚧
-IMPLEMENTED, CI pending.** Owner-reported directly (not a discussion draft), verbatim: "The git
+IMPLEMENTED, CI ✅ GREEN `36523739665` on `2f6bf55`.** Owner-reported directly (not a discussion draft), verbatim: "The git
 connection in the editor part make it properly working: 1. If git is not installed auto install
 1st. 2. Clear error massage that can be read by normal users. 3. What to do add for new users."
 Reading the code first: the not-installed state was one static sentence with no action; error
@@ -22,8 +22,9 @@ there. New tests: `GitInstallWiringTest.kt` (source-scan style, matching `GitDis
 precedent — no Robolectric Compose render exists for this sheet). Pre-validated with a local
 kotlinc 2.4.20 + JRE 25 syntax check (no parse errors; unresolved-reference cascades only,
 expected without the Android/Compose classpath). Record: `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
-CI: pending. No device pass; none claimed. **Not merged** — awaiting CI, then the owner's device
-pass and merge command (rule.md §3).
+**CI: ✅ GREEN `36523739665`** on tip `2f6bf55` (the first real Gradle compile/run of the changed
+files). No device pass; none claimed. **Not merged** — awaiting the owner's device pass and merge
+command (rule.md §3).
 
 **2026-09-29 — Phase 73.1 (Source control and GitHub) 🚧 IMPLEMENTED, CI pending.** Verified state
 first: `main` @ `69c4b5316b3f2072bed05f96e22698b4d26da9d0` (PR #94, Phase 71.1 + the pinch-zoom

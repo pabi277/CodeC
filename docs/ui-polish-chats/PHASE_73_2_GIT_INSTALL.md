@@ -1,10 +1,10 @@
 # Phase 73.2 — Git connection: auto-install, clear errors, new-user guidance
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI pending; session branch
-`arena/01a0eb2d-codec`. Owner device pass owed. Not one of the numbered
-UI-polish discussion drafts (65.1/74.1 remain untouched) — this is a
-rule.md §4 bug/improvement lifecycle item the owner asked for directly, in
-the same Git area 73.1 just touched.**
+**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36523739665` on tip `2f6bf55`; session
+branch `arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). Not one of the
+numbered UI-polish discussion drafts (65.1/74.1 remain untouched) — this is a rule.md §4
+bug/improvement lifecycle item the owner asked for directly, in the same Git area 73.1 just
+touched.**
 
 ## The owner's report (verbatim, 2026-09-29)
 
@@ -123,7 +123,8 @@ classes missing from that ad-hoc classpath (expected — this is not a real
 compile), with zero syntax-level errors (`expecting`/`unexpected tokens`).
 This is a syntax reading, not CI.
 
-## Evidence to be added once available
+## Evidence
 
-- CI run id + tip sha once `Build APK` finishes on this branch.
-- Owner device pass (not claimed here).
+- **CI: ✅ GREEN.** `Build APK` run `36523739665` on tip `2f6bf55` — the first real Gradle
+  compile/run of the changed files (unit tests, lint, debug/release APK assembly).
+- **Device:** not run this session; none claimed.

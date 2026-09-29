@@ -46,7 +46,7 @@
 ---
 
 **CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 CI ✅ GREEN, not
-merged; 73.2 implemented this session, CI pending).** Read `rule.md`, `docs/NEXT_STEPS.md`
+merged; 73.2 implemented this session, CI ✅ GREEN `36523739665`).** Read `rule.md`, `docs/NEXT_STEPS.md`
 (head entry), `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`,
 `docs/ui-polish-chats/PHASE_73_1_GIT.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the
 historical entries below.
@@ -99,7 +99,8 @@ install mechanism (`TerminalViewModel.sendCommand` + polling the pure `PkgResult
 refreshes in place instead of navigating to Terminal (a deliberate deviation from the Packages
 convention, per the owner's "stay in place" answer). `git_not_a_repo_message` rewritten in plain
 words; `GitErrors.classify()` reviewed and found already good (no change). New test:
-`GitInstallWiringTest.kt`. CI: pending. Not merged. Full record:
+`GitInstallWiringTest.kt`. **CI ✅ GREEN `36523739665`** (tip `2f6bf55`). Not merged — owner
+device pass and merge command still owed (rule.md §3). Full record:
 `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
 
 *What is next — the owner decides, you ask:* once 73.1 and 73.2 are settled, the remaining discussion drafts
