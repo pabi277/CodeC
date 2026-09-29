@@ -165,3 +165,5 @@ expectations moved (they had pinned the old "empty row overflows the top into sc
 both halves now stay on screen). Old code fails 5, new code passes 28 in the harness. **Not
 explained:** the six consecutive prompts at the top of the screenshot (each could be Enter presses or a
 prompt per SIGWINCH — not measured). **No device pass.**
+
+**CI for this follow-up:** `Build APK` `36513501892` on `12c4076` ✅ GREEN (10 m 10 s). Device pass still owed.
