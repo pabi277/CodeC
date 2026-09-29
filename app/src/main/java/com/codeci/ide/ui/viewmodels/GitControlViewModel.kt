@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Phase 13 — state for the Source Control pane ([GitControlSheet]): branch
+ * Phase 13 — state for the Source Control panel ([GitControlPanel]): branch
  * + change list, pull, and the one-tap commit-and-push flow, plus the inline
  * diff viewer contents.
  *
@@ -120,7 +120,7 @@ class GitControlViewModel : ViewModel() {
         val publishNeedsPermission: String? = null,
         /**
          * Phase 73.3 — Spck parity: Log History / Checkout Commit. Loaded on
-         * demand when the sheet opens, not on every [refresh] (a repo can
+         * demand when the panel opens, not on every [refresh] (a repo can
          * have thousands of commits; nothing else in this pane needs them).
          */
         val commits: List<GitCommitEntry> = emptyList(),
@@ -349,7 +349,7 @@ class GitControlViewModel : ViewModel() {
             // git) must NOT be reported as "git is installed, something else
             // broke". The old single try/catch below did exactly that (a
             // hardcoded `gitInstalled = true` in the catch), which could
-            // leave a brand-new sheet showing "Initialize repository" for a
+            // leave a brand-new panel showing "Initialize repository" for a
             // project where git was never actually usable — a beginner never
             // saw the Install Git button at all. Treat any failure to obtain
             // a working manager the same as "not installed".
@@ -431,7 +431,7 @@ class GitControlViewModel : ViewModel() {
                     // never block an operation that would have worked.
                     online = null
                 )
-                // "What will be committed" — every pending path the sheet
+                // "What will be committed" — every pending path the panel
                 // shows, projected the same way stage+commit would take them.
                 val preview = status?.let { s ->
                     // Treat every listed change as "would be staged by add -A".
@@ -548,7 +548,7 @@ class GitControlViewModel : ViewModel() {
 
     /**
      * Phase 73.3 — Log History / Checkout Commit share one list load. Loaded
-     * on demand (opening the sheet), not on every [refresh].
+     * on demand (opening the panel), not on every [refresh].
      */
     fun loadCommits(context: Context, projectRoot: File, limit: Int = 50) {
         viewModelScope.launch {
@@ -657,92 +657,23 @@ class GitControlViewModel : ViewModel() {
     }
 
     /**
-     * One-tap COMMIT & PUSH: stage everything, commit with the stored
-     * identity, then push. A push failure (offline, no token, rejected) is
-     * reported without losing the fact that the commit succeeded.
-     */
-    fun commitAndPush(context: Context, projectRoot: File, message: String) {
-        val trimmed = message.trim()
-        if (trimmed.isEmpty()) {
-            _state.value = _state.value.copy(message = "Enter a commit message")
-            return
-        }
-        // Phase 17 §2.5 — Spck's rule: no commit while a merge conflict is
-        // open. The UI disables the button too; this guard keeps the path
-        // honest if it is ever reached from elsewhere.
-        val conflicts = conflictsOf()
-        if (conflicts.isNotEmpty()) {
-            _state.value = _state.value.copy(
-                message = if (conflicts.size == 1) {
-                    "Resolve the conflict in ${conflicts.first().path.substringAfterLast('/')} before committing"
-                } else {
-                    "Resolve the ${conflicts.size} conflicted files before committing"
-                }
-            )
-            return
-        }
-        runGitOperation(context, projectRoot, "Committing…") { git ->
-            // Phase 39.2 — stageAll is the choke point: ensure exclude +
-            // untrack previously-committed artifacts + git add -A. The
-            // hygiene note is surfaced on the sheet so an unexplained
-            // `git rm --cached` never appears in the user's history.
-            val hygiene = git.stageAll(projectRoot)
-            val note = hygiene.userMessage()
-            if (note != null) {
-                _state.value = _state.value.copy(hygieneNote = note)
-            }
-            git.commit(projectRoot, trimmed)
-            // Phase 40.2 — ONE push, and its real bytes decide what we say.
-            // A push that stays local used to be indistinguishable from one
-            // that reached GitHub; now the outcome is parsed and kept as
-            // state ([UiState.lastResult]).
-            val branchLabel = runCatching { git.currentBranch(projectRoot) }
-                .getOrNull()
-                ?.takeIf { it.isNotBlank() }
-            val attempt = git.pushCapturing(projectRoot, branchName = branchLabel)
-            val outcome = GitPushParser.parse(
-                stdout = attempt.stdout,
-                stderr = attempt.stderr,
-                exitCode = attempt.exitCode,
-                branch = branchLabel,
-                remoteUrl = runCatching { git.remoteUrl(projectRoot) }.getOrNull()
-            )
-            val failure = failureFor(outcome, attempt, git.hasCredentials)
-            _state.value = _state.value.copy(
-                lastResult = outcome,
-                pushError = failure?.message,
-                pushHelpUrl = failure?.helpUrl
-            )
-            if (failure == null) {
-                // Phase 39 device follow-up — name the branch so success never
-                // reads like a silent push to main.
-                val pushed = when {
-                    outcome is PushOutcome.UpToDate && branchLabel != null ->
-                        "Already up to date on $branchLabel ✓"
-                    outcome is PushOutcome.UpToDate -> "Already up to date ✓"
-                    branchLabel != null -> "Committed & pushed to $branchLabel ✓"
-                    else -> "Committed & pushed ✓"
-                }
-                if (note != null) "$note · $pushed" else pushed
-            } else {
-                // Phase 17 follow-up: a friendly, actionable reason + token
-                // link instead of raw git output.
-                val prefix = if (note != null) "$note · " else ""
-                val where = if (branchLabel != null) " on $branchLabel" else ""
-                "${prefix}Committed locally$where ✓ — NOT pushed: ${failure.message}"
-            }
-        }
-    }
-
-    /**
      * Phase 73.5 — Spck's "Commit All": stage everything and commit locally,
-     * WITHOUT pushing. Same guards as [commitAndPush] (a message is required,
-     * conflicts block the commit), same [GitManager.stageAll] choke point, but
-     * the push step is skipped — the sheet's existing "N commit(s) not pushed
-     * yet" section then offers the retry/push, so Commit All → PUSH reads as
-     * one honest two-step flow.
+     * WITHOUT pushing. Same guards the old combined commit-and-push had (a
+     * message is required, conflicts block the commit), same
+     * [GitManager.stageAll] choke point, but the push step is skipped — the
+     * panel's existing "N commit(s) not pushed yet" section then offers the
+     * retry/push, so Commit All → PUSH reads as one honest two-step flow.
+     *
+     * Phase 73.7 — the Commit dialog's Stage All toggle reaches [stageAll]:
+     * on (the default, Spck's own default) stages everything first, off
+     * commits only what is already staged. Off with an empty index fails
+     * in git's own plain words ("nothing to commit"), shown like any
+     * other commit error — no new error case invented. The dialog's
+     * author fields never reach this function: the dialog saves them to
+     * the credentials store itself (when changed), and the manager this
+     * op builds reads the stored identity — one writer, one reader.
      */
-    fun commitOnly(context: Context, projectRoot: File, message: String) {
+    fun commitOnly(context: Context, projectRoot: File, message: String, stageAll: Boolean = true) {
         val trimmed = message.trim()
         if (trimmed.isEmpty()) {
             _state.value = _state.value.copy(message = "Enter a commit message")
@@ -760,10 +691,13 @@ class GitControlViewModel : ViewModel() {
             return
         }
         runGitOperation(context, projectRoot, "Committing…") { git ->
-            val hygiene = git.stageAll(projectRoot)
-            val note = hygiene.userMessage()
-            if (note != null) {
-                _state.value = _state.value.copy(hygieneNote = note)
+            val note = if (stageAll) {
+                val hygiene = git.stageAll(projectRoot)
+                hygiene.userMessage()?.also { userMessage ->
+                    _state.value = _state.value.copy(hygieneNote = userMessage)
+                }
+            } else {
+                null
             }
             git.commit(projectRoot, trimmed)
             val branchLabel = runCatching { git.currentBranch(projectRoot) }
@@ -776,21 +710,25 @@ class GitControlViewModel : ViewModel() {
     }
 
     /**
-     * Phase 17 device fix — retry a push on its own (the Source Control sheet
+     * Phase 17 device fix — retry a push on its own (the Source Control panel
      * offers this whenever the branch is ahead of its remote).
      */
-    fun push(context: Context, projectRoot: File) {
+    // Phase 73.7 — the Push dialog names the remote and the branch
+    // (Spck's two dropdowns). Both default to today's behaviour: the
+    // current branch, the first configured remote.
+    fun push(context: Context, projectRoot: File, remote: String? = null, branch: String? = null) {
         runGitOperation(context, projectRoot, "Pushing…") { git ->
-            val branch = runCatching { git.currentBranch(projectRoot) }
-                .getOrNull()
-                ?.takeIf { it.isNotBlank() }
-            val attempt = git.pushCapturing(projectRoot, branchName = branch)
+            val branchLabel = branch?.takeIf { it.isNotBlank() }
+                ?: runCatching { git.currentBranch(projectRoot) }
+                    .getOrNull()
+                    ?.takeIf { it.isNotBlank() }
+            val attempt = git.pushCapturing(projectRoot, branchName = branchLabel, remoteName = remote)
             val outcome = GitPushParser.parse(
                 stdout = attempt.stdout,
                 stderr = attempt.stderr,
                 exitCode = attempt.exitCode,
-                branch = branch,
-                remoteUrl = runCatching { git.remoteUrl(projectRoot) }.getOrNull()
+                branch = branchLabel,
+                remoteUrl = runCatching { git.remoteUrl(projectRoot, remote) }.getOrNull()
             )
             val failure = failureFor(outcome, attempt, git.hasCredentials)
             _state.value = _state.value.copy(
@@ -800,7 +738,7 @@ class GitControlViewModel : ViewModel() {
             )
             when {
                 failure != null -> "NOT pushed: ${failure.message}"
-                branch != null -> "Pushed to $branch ✓"
+                branchLabel != null -> "Pushed to $branchLabel ✓"
                 else -> "Pushed ✓"
             }
         }
@@ -1011,9 +949,10 @@ class GitControlViewModel : ViewModel() {
     // Phase 15/16 added a per-file stage/unstage toggle (the mockup's +/− row
     // button: staged rows unstage via `git reset -- <path>`, unstaged rows
     // stage via `git add -- <path>`). Phase 73.1 removed it: the one commit
-    // action in this sheet, [commitAndPush], always calls `git.stageAll()`
-    // first, so the toggle changed the git index without ever changing what
-    // got committed. [GitManager.stageFile]/[GitManager.unstageFile] remain —
+    // action in this panel, [commitOnly], stages everything first (unless
+    // the Commit dialog's Stage All toggle is off), so a per-file toggle
+    // would change the git index without ever changing what got committed.
+    // [GitManager.stageFile]/[GitManager.unstageFile] remain —
     // [markResolved] below still uses `stageFile` to clear a conflict mark.
 
     /** Called only after a named-file confirmation; no optimistic row removal. */

@@ -379,10 +379,8 @@
     <string name="git_pull">PULL</string>
     <string name="git_working_tree_clean">Working tree clean ✓</string>
     <string name="git_commit_hint">Commit message</string>
-    <string name="git_commit_push">COMMIT &amp; PUSH</string>
     <!-- Phase 39 device follow-up: always name the checked-out branch so a
          push from test-1 cannot look like (or silently target) main. -->
-    <string name="git_commit_push_to">COMMIT &amp; PUSH TO %1$s</string>
     <string name="git_push_to">PUSH TO %1$s</string>
     <string name="git_renamed_from">renamed from %1$s</string>
     <string name="git_diff_title">Changes</string>
@@ -563,7 +561,6 @@
     <string name="editor_show_keys_row">Show keys row</string>
     <string name="editor_hide_keys_row">Hide keys row</string>
     <!-- Phase 15/16 mockup-exact: source-control sheet -->
-    <string name="git_commit_message_placeholder">Message (Ctrl+Enter to commit)</string>
     <string name="git_changes_header">Changes</string>
     <string name="git_stage">Stage file</string>
     <string name="git_unstage">Unstage file</string>
@@ -577,7 +574,6 @@
     <!-- Phase 17: merge conflicts -->
     <string name="git_conflicts_header">Conflicts</string>
     <string name="git_conflict_hint">Edit the file to resolve the conflict, then tap ✓ to mark it resolved.</string>
-    <string name="git_commit_blocked">Resolve the conflicts below before committing.</string>
     <string name="git_mark_resolved">Mark resolved</string>
 
     <!-- Phase 17: Switch Branch -->
@@ -610,11 +606,6 @@
     <string name="panel_search_placeholder">Find Text</string>
     <string name="panel_search_results">Results</string>
     <string name="panel_search_no_matches">No matches</string>
-    <string name="panel_repository_empty">No Git Repository initialized. Initialize one to version your work.</string>
-    <string name="panel_repository_init">Initialize Repository</string>
-    <string name="panel_repository_no_branch">No branch yet</string>
-    <string name="panel_repository_changes">Changes: %1$d</string>
-    <string name="panel_repository_open">Source Control</string>
     <!-- Phase 61: preview diagnostics and viewport controls -->
     <string name="preview_console">Console</string>
     <string name="preview_network">Network</string>
@@ -742,7 +733,21 @@
     <string name="git_install_prompt_title">Git is not installed</string>
     <string name="git_install_prompt_message">Git keeps a history of every change you make and can back your project up to GitHub. Do you want to install it now?</string>
     <string name="git_install_prompt_action">INSTALL</string>
-    <string name="panel_repository_no_git">Git isn’t installed on this device yet, so this project has no history. Install it to begin:</string>
-    <string name="panel_repository_install_git">INSTALL GIT</string>
+    <!-- Phase 73.7 — the Spck ditto: git moved from the bottom sheet into
+         the drawer's Repository panel, and Commit All / Push / Remotes /
+         Log History are centered dialogs (the owner's screenshots). -->
+    <string name="panel_repository_no_project">Open a project to use Source Control.</string>
+    <string name="git_dialog_ok">Ok</string>
+    <string name="git_commit_dialog_message_label">Message</string>
+    <string name="git_commit_stage_all">Stage All</string>
+    <string name="git_push_dialog_title">Push</string>
+    <string name="git_push_dialog_remotes">Remotes</string>
+    <string name="git_push_dialog_branches">Branches</string>
+    <string name="git_push_no_remote">Add a remote first — there is nowhere to push to yet.</string>
+    <string name="git_remotes_search_hint">Search Remote</string>
+    <string name="git_remotes_new_title">New Remote</string>
+    <string name="git_remotes_copy_url">Remote URL</string>
+    <string name="git_remotes_delete">Delete Remote</string>
+    <string name="git_remotes_no_match">No remote matches that search.</string>
 </resources>
 

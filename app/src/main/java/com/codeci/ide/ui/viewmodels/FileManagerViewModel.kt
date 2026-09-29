@@ -152,7 +152,7 @@ class FileManagerViewModel : ViewModel() {
                 // the user's .gitignore.
                 runCatching { RepoHygiene.ensure(project.root) }
                 // Hub cards stay local-only (no ls-remote per project — that
-                // would stall the grid offline). The Source Control sheet
+                // would stall the grid offline). The Source Control panel
                 // runs resolvePublishState and repairs upstream tracking, so
                 // the next hub refresh after opening SC sees the truth.
                 runCatching { git.status(project.root) }.getOrNull()

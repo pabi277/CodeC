@@ -41,17 +41,14 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -110,55 +107,55 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Phase 13 Source Control sheet, re-skinned mockup-exact (design:
- * mockups/source-control.png, Phase 17 spec §2.1): "Source Control" title
- * with an outlined `⌥ branch ▾` chip, a multiline commit-message box, the
- * full-width filled COMMIT & PUSH button, a "Changes N" list where each row
- * carries a typed file icon, its folder path, the porcelain letter and a
- * per-file +/− stage toggle, and the PULL / REFRESH outlined button pair.
- * Engine and diff viewer are the unchanged Phase 13 `GitManager`/`DiffEngine`.
+ * Phase 13 Source Control, re-skinned mockup-exact (design:
+ * mockups/source-control.png, Phase 17 spec §2.1), then Spck-exact in
+ * Phase 73.5 (screenshots 1–4): a REPOSITORY header with search /
+ * branch-menu / push-menu icons, an UNSTAGED collapsible section with a
+ * count badge, an install status bar, and an inline Git Credentials
+ * dialog. Engine and diff viewer are the unchanged Phase 13
+ * `GitManager`/`DiffEngine`.
  *
- * Phase 73.5 re-skinned the chrome Spck-exact (screenshots 1–4): a
- * REPOSITORY header with search / branch-menu / push-menu icons, an
- * UNSTAGED collapsible section with a count badge, an install status bar,
- * and an inline Git Credentials dialog. The commit box, commit preview,
- * conflicts, PULL / REFRESH and the unpushed section below the header are
- * unchanged behaviour.
+ * Phase 73.7 — this is a *panel*, not a sheet: the owner's screenshots
+ * show git living inside the editor's side panel (the REPOSITORY tab),
+ * so the bottom-sheet wrapper is gone and the drawer hosts this
+ * content directly. Commit All and Push moved into Spck's dialogs with
+ * it (the old inline commit box + COMMIT & PUSH button are deleted).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GitControlSheet(
+fun GitControlPanel(
     projectRoot: File,
-    onDismiss: () -> Unit,
     viewModel: GitControlViewModel = viewModel(),
-    /** Phase 39 device follow-up — see [BranchSwitchSheet.onBeforeSwitch]. */
+    /** Phase 39 device follow-up — see [BranchSwitchDialog.onBeforeSwitch]. */
     onBeforeBranchSwitch: (() -> Unit)? = null,
-    /** Phase 39 device follow-up — see [BranchSwitchSheet.onAfterSwitch]. */
+    /** Phase 39 device follow-up — see [BranchSwitchDialog.onAfterSwitch]. */
     onAfterBranchSwitch: (() -> Unit)? = null,
     /**
      * Phase 73.5 — the Git Credentials dialog's "Manage" link reuses the
      * drawer footer's existing Settings jump (Settings keeps its own
      * editor; both write the same store). The dialog itself lives in this
-     * sheet now — credentials no longer require leaving the panel.
+     * panel — credentials no longer require leaving it.
      */
     onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     var pendingDiscard by remember(projectRoot) { mutableStateOf<GitFileChange?>(null) }
-    var commitMessage by remember { mutableStateOf("") }
     // Phase 17 — the branch chip opens the Switch Branch dialog.
-    var showBranchSheet by remember { mutableStateOf(false) }
+    var showBranchDialog by remember { mutableStateOf(false) }
     // Phase 40.3 — the Publish-to-GitHub dialog (create the remote there isn't one).
-    var showPublishSheet by remember { mutableStateOf(false) }
+    var showPublishDialog by remember { mutableStateOf(false) }
     // Phase 73.5 — Spck-exact header: the 73.3 overflow menu is split into
     // the two screenshot menus (branch menu + push menu). Every action the
     // overflow had is still here, reached from the same ViewModel calls.
     var showBranchMenu by remember { mutableStateOf(false) }
     var showPushMenu by remember { mutableStateOf(false) }
     var showCredentialsDialog by remember { mutableStateOf(false) }
-    var logSheetMode by remember(projectRoot) { mutableStateOf<GitLogSheetMode?>(null) }
-    var showRemotesSheet by remember { mutableStateOf(false) }
+    // Phase 73.7 — Commit All and Push open Spck's dialogs (the inline
+    // commit box + COMMIT & PUSH button are deleted with the old sheet).
+    var showCommitDialog by remember { mutableStateOf(false) }
+    var showPushDialog by remember { mutableStateOf(false) }
+    var logDialogMode by remember(projectRoot) { mutableStateOf<GitLogDialogMode?>(null) }
+    var showRemotesDialog by remember { mutableStateOf(false) }
     var pendingRevertAll by remember { mutableStateOf(false) }
     // Phase 73.5 — the header search icon filters the UNSTAGED list by
     // path; the section itself collapses like Spck's.
@@ -170,10 +167,10 @@ fun GitControlSheet(
     // Packages/Terminal and back. Reuses the exact mechanism Phase 71.1 built
     // for the Packages tab: the real command goes into the shared terminal
     // session (`TerminalViewModel.sendCommand`, activity-scoped, so it runs
-    // even if this sheet is closed afterwards), and `PkgResult`/`InstallOutcomes`
+    // even if this panel is closed afterwards), and `PkgResult`/`InstallOutcomes`
     // — pure and already host-tested — decide WAITING/INSTALLED/FAILED from the
     // exit-status file `pkg` itself writes, exactly like a Packages row. The
-    // one difference from a Packages row: on success this stays in the sheet
+    // one difference from a Packages row: on success this stays in the panel
     // (`viewModel.refresh`) instead of navigating to Terminal — the owner's
     // choice, since the user came here to work on a repo, not to watch a shell.
     val terminalViewModel: TerminalViewModel = activityTerminalViewModel()
@@ -255,840 +252,801 @@ fun GitControlSheet(
         viewModel.refresh(context, projectRoot)
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-            // ---- header: REPOSITORY + search / branch / push -------------
-            // Phase 73.5 — Spck screenshot 4: the title with three icon
-            // buttons on the right (search filters the UNSTAGED list; the
-            // branch button opens screenshot 1's menu; the push button
-            // opens screenshot 3's). The branch chip keeps its own row
-            // below so the current branch (or a detached HEAD) stays
-            // visible without opening a menu.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.git_repository_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                if (state.gitInstalled && state.isRepo) {
-                    IconButton(onClick = { searchingGit = !searchingGit }) {
+    // Phase 73.7 — no bottom-sheet wrapper: the drawer hosts this Column
+    // directly (the owner's screenshots show git inside the side panel).
+    // The whole panel scrolls on short screens; the UNSTAGED list keeps
+    // its own capped height inside it.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+    ) {
+        // ---- header: REPOSITORY + search / branch / push -------------
+        // Phase 73.5 — Spck screenshot 4: the title with three icon
+        // buttons on the right (search filters the UNSTAGED list; the
+        // branch button opens screenshot 1's menu; the push button
+        // opens screenshot 3's). The branch chip keeps its own row
+        // below so the current branch (or a detached HEAD) stays
+        // visible without opening a menu.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.git_repository_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            if (state.gitInstalled && state.isRepo) {
+                IconButton(onClick = { searchingGit = !searchingGit }) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = stringResource(R.string.git_search_changes)
+                    )
+                }
+                Box {
+                    IconButton(onClick = { showBranchMenu = true }) {
                         Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.git_search_changes)
+                            SpckIcons.GitBranch,
+                            contentDescription = stringResource(R.string.git_branch_menu_description)
                         )
                     }
-                    Box {
-                        IconButton(onClick = { showBranchMenu = true }) {
+                    DropdownMenu(
+                        expanded = showBranchMenu,
+                        onDismissRequest = { showBranchMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_branches_action)) },
+                            leadingIcon = {
+                                Icon(SpckIcons.GitBranch, contentDescription = null)
+                            },
+                            onClick = {
+                                showBranchMenu = false
+                                showBranchDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_remotes_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Share, contentDescription = null)
+                            },
+                            onClick = {
+                                showBranchMenu = false
+                                viewModel.loadRemotes(context, projectRoot)
+                                showRemotesDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_log_history_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.History, contentDescription = null)
+                            },
+                            onClick = {
+                                showBranchMenu = false
+                                viewModel.loadCommits(context, projectRoot)
+                                logDialogMode = GitLogDialogMode.VIEW
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_refresh_files_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Refresh, contentDescription = null)
+                            },
+                            onClick = {
+                                showBranchMenu = false
+                                viewModel.refresh(context, projectRoot)
+                            }
+                        )
+                    }
+                }
+                Box {
+                    IconButton(onClick = { showPushMenu = true }) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = stringResource(R.string.git_push_menu_description)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showPushMenu,
+                        onDismissRequest = { showPushMenu = false }
+                    ) {
+                        val pushMenuBranch = state.status?.branch
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = if (!pushMenuBranch.isNullOrBlank()) {
+                                        stringResource(R.string.git_branch_menu_header, pushMenuBranch)
+                                    } else {
+                                        stringResource(
+                                            R.string.git_branch_menu_header,
+                                            stringResource(R.string.git_detached_head)
+                                        )
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            enabled = false,
+                            onClick = {}
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_commit_all_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.DoneAll, contentDescription = null)
+                            },
+                            // Phase 73.7 — Spck's Commit All dialog asks
+                            // for the message itself, so this only gates
+                            // on "something to commit, no conflict open".
+                            enabled = !state.busy && !state.loading &&
+                                state.isRepo && !state.status?.files.isNullOrEmpty() &&
+                                state.status?.files.orEmpty().none { it.isConflict },
+                            onClick = {
+                                showPushMenu = false
+                                showCommitDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.git_revert_all_action),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null)
+                            },
+                            enabled = state.status?.files?.isNotEmpty() == true &&
+                                state.status?.noCommits != true,
+                            onClick = {
+                                showPushMenu = false
+                                pendingRevertAll = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_checkout_commit_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Restore, contentDescription = null)
+                            },
+                            onClick = {
+                                showPushMenu = false
+                                viewModel.loadCommits(context, projectRoot)
+                                logDialogMode = GitLogDialogMode.CHECKOUT
+                            }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_fetch_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Download, contentDescription = null)
+                            },
+                            onClick = {
+                                showPushMenu = false
+                                viewModel.fetch(context, projectRoot)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_pull)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.CloudDownload, contentDescription = null)
+                            },
+                            onClick = {
+                                showPushMenu = false
+                                viewModel.pull(context, projectRoot)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_push_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null)
+                            },
+                            // Phase 73.7 — Spck's Push dialog names the
+                            // remote + branch; its lists load here so
+                            // the dropdowns arrive filled.
+                            enabled = !state.busy && !state.loading,
+                            onClick = {
+                                showPushMenu = false
+                                viewModel.loadRemotes(context, projectRoot)
+                                viewModel.loadBranches(context, projectRoot)
+                                showPushDialog = true
+                            }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_credentials_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.VpnKey, contentDescription = null)
+                            },
+                            onClick = {
+                                showPushMenu = false
+                                showCredentialsDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.git_provider_action)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Hub, contentDescription = null)
+                            },
+                            onClick = {
+                                showPushMenu = false
+                                showCredentialsDialog = true
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        // ---- branch chip (its own row since 73.5) ----------------------
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Phase 73.3 — a checked-out COMMIT (not a branch) used to
+            // make this chip vanish silently; a beginner who tapped
+            // Checkout Commit would see no branch name anywhere. Show a
+            // distinct, still-tappable chip (opens Switch Branch, the
+            // existing way back) instead of nothing.
+            when {
+                state.status?.branch != null -> {
+                    val branch = state.status?.branch!!
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable { showBranchDialog = true }
+                            .border(
+                                width = 1.dp,
+                                // Phase 40.5 — 0.55 alpha measured 2.25:1 (needs
+                                // 3:1 for a control boundary); opaque is 4.56:1.
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 SpckIcons.GitBranch,
-                                contentDescription = stringResource(R.string.git_branch_menu_description)
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.primary
                             )
-                        }
-                        DropdownMenu(
-                            expanded = showBranchMenu,
-                            onDismissRequest = { showBranchMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_branches_action)) },
-                                leadingIcon = {
-                                    Icon(SpckIcons.GitBranch, contentDescription = null)
-                                },
-                                onClick = {
-                                    showBranchMenu = false
-                                    showBranchSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_remotes_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Share, contentDescription = null)
-                                },
-                                onClick = {
-                                    showBranchMenu = false
-                                    viewModel.loadRemotes(context, projectRoot)
-                                    showRemotesSheet = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_log_history_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.History, contentDescription = null)
-                                },
-                                onClick = {
-                                    showBranchMenu = false
-                                    viewModel.loadCommits(context, projectRoot)
-                                    logSheetMode = GitLogSheetMode.VIEW
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_refresh_files_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Refresh, contentDescription = null)
-                                },
-                                onClick = {
-                                    showBranchMenu = false
-                                    viewModel.refresh(context, projectRoot)
-                                }
-                            )
-                        }
-                    }
-                    Box {
-                        IconButton(onClick = { showPushMenu = true }) {
-                            Icon(
-                                Icons.Default.Share,
-                                contentDescription = stringResource(R.string.git_push_menu_description)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showPushMenu,
-                            onDismissRequest = { showPushMenu = false }
-                        ) {
-                            val pushMenuBranch = state.status?.branch
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = if (!pushMenuBranch.isNullOrBlank()) {
-                                            stringResource(R.string.git_branch_menu_header, pushMenuBranch)
-                                        } else {
-                                            stringResource(
-                                                R.string.git_branch_menu_header,
-                                                stringResource(R.string.git_detached_head)
-                                            )
-                                        },
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                enabled = false,
-                                onClick = {}
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_commit_all_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.DoneAll, contentDescription = null)
-                                },
-                                // Mirrors the COMMIT & PUSH button's enabled
-                                // state, minus the message check — a blank
-                                // message shows the "Enter a commit message"
-                                // hint instead of silently doing nothing.
-                                enabled = !state.busy && !state.loading &&
-                                    state.isRepo && !state.status?.files.isNullOrEmpty() &&
-                                    state.status?.files.orEmpty().none { it.isConflict },
-                                onClick = {
-                                    showPushMenu = false
-                                    viewModel.commitOnly(context, projectRoot, commitMessage)
-                                    commitMessage = ""
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(R.string.git_revert_all_action),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null)
-                                },
-                                enabled = state.status?.files?.isNotEmpty() == true &&
-                                    state.status?.noCommits != true,
-                                onClick = {
-                                    showPushMenu = false
-                                    pendingRevertAll = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_checkout_commit_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Restore, contentDescription = null)
-                                },
-                                onClick = {
-                                    showPushMenu = false
-                                    viewModel.loadCommits(context, projectRoot)
-                                    logSheetMode = GitLogSheetMode.CHECKOUT
-                                }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_fetch_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Download, contentDescription = null)
-                                },
-                                onClick = {
-                                    showPushMenu = false
-                                    viewModel.fetch(context, projectRoot)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_pull)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.CloudDownload, contentDescription = null)
-                                },
-                                onClick = {
-                                    showPushMenu = false
-                                    viewModel.pull(context, projectRoot)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_push_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.CloudUpload, contentDescription = null)
-                                },
-                                onClick = {
-                                    showPushMenu = false
-                                    viewModel.push(context, projectRoot)
-                                }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_credentials_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.VpnKey, contentDescription = null)
-                                },
-                                onClick = {
-                                    showPushMenu = false
-                                    showCredentialsDialog = true
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.git_provider_action)) },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Hub, contentDescription = null)
-                                },
-                                onClick = {
-                                    showPushMenu = false
-                                    showCredentialsDialog = true
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-            // ---- branch chip (its own row since 73.5) ----------------------
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Phase 73.3 — a checked-out COMMIT (not a branch) used to
-                // make this chip vanish silently; a beginner who tapped
-                // Checkout Commit would see no branch name anywhere. Show a
-                // distinct, still-tappable chip (opens Switch Branch, the
-                // existing way back) instead of nothing.
-                when {
-                    state.status?.branch != null -> {
-                        val branch = state.status?.branch!!
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .clickable { showBranchSheet = true }
-                                .border(
-                                    width = 1.dp,
-                                    // Phase 40.5 — 0.55 alpha measured 2.25:1 (needs
-                                    // 3:1 for a control boundary); opaque is 4.56:1.
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = RoundedCornerShape(50)
-                                )
-                                .padding(horizontal = 12.dp, vertical = 5.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    SpckIcons.GitBranch,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(15.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = branch,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    maxLines = 1
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Icon(
-                                    Icons.Default.ExpandMore,
-                                    contentDescription = stringResource(R.string.editor_drawer_switch_branch),
-                                    modifier = Modifier.size(15.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                    state.status?.detached == true -> {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .clickable { showBranchSheet = true }
-                                .border(
-                                    width = 1.dp,
-                                    color = UnpushedAmber,
-                                    shape = RoundedCornerShape(50)
-                                )
-                                .padding(horizontal = 12.dp, vertical = 5.dp)
-                        ) {
+                            Spacer(Modifier.width(6.dp))
                             Text(
-                                // Phase 17 added this string, never wired to
-                                // anything (no path produced detached HEAD
-                                // until 73.3's Checkout Commit); reused as-is.
-                                text = stringResource(R.string.git_detached_head),
+                                text = branch,
                                 style = MaterialTheme.typography.labelLarge,
-                                color = UnpushedAmber,
+                                color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1
                             )
-                        }
-                    }
-                }
-            }
-
-            // Phase 73.5 — the header search field filters the UNSTAGED
-            // list by path (Spck screenshot 4's search icon). The query
-            // only narrows what is shown; commit/discard still act on the
-            // real change set, never on the filtered view.
-            if (searchingGit && state.gitInstalled && state.isRepo) {
-                OutlinedTextField(
-                    value = gitSearchQuery,
-                    onValueChange = { gitSearchQuery = it },
-                    placeholder = { Text(stringResource(R.string.git_search_changes)) },
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = null)
-                    },
-                    trailingIcon = {
-                        if (gitSearchQuery.isNotEmpty()) {
-                            IconButton(onClick = { gitSearchQuery = "" }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.clear)
-                                )
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
-                )
-            }
-
-            state.message?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
-            }
-
-            when {
-                state.loading || state.busy -> {
-                    // Phase 52.2 — the source-control sheet has a stable shape
-                    // while git reads; a spinner-only blank made a slow status
-                    // call look like a broken sheet.
-                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        repeat(4) { SkeletonGitRow() }
-                    }
-                }
-                !state.gitInstalled -> {
-                    // Phase 73.2 — only offer the one-tap install when the
-                    // Linux tools it needs are actually ready; otherwise keep
-                    // today's plain message unchanged (the owner's decision).
-                    if (installGitVerdict.allowed) {
-                        GitInstallGuidance(
-                            installing = installingGit,
-                            failed = gitInstallFailed,
-                            elapsedSec = gitInstallElapsedSec,
-                            onInstall = { showInstallPrompt = true }
-                        )
-                    } else {
-                        SheetGuidance(stringResource(R.string.git_not_installed_message))
-                    }
-                }
-                !state.isRepo -> {
-                    // Phase 73.3 — the owner's follow-up superseded 73.2's
-                    // "wording only" decision for this one screen: `git init`
-                    // was the last normal action still requiring the
-                    // terminal, so it is now a real button, not just clearer
-                    // text. Clone (a working GUI flow already, in Files) is
-                    // still named, not duplicated here.
-                    GitInitGuidance(
-                        busy = state.busy,
-                        onInit = { viewModel.initRepo(context, projectRoot) }
-                    )
-                }
-                else -> {
-                    // ---- Phase 40.1: readiness before the attempt ----------
-                    // The owner's symptom was an error rendered where he was
-                    // not looking ("it shows error in the background i can't
-                    // see it"). Readiness answers *before* the tap: what is
-                    // missing, in one sentence, with the remedy on the same row.
-                    val pushBlocker = state.readiness?.blocker(GitOp.PUSH)
-                    val pushReadiness = state.readiness?.message(GitOp.PUSH)
-                    when {
-                        pushBlocker != null && pushReadiness != null -> Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 6.dp)
-                        ) {
-                            Text(
-                                text = "!",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = UnpushedAmber
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                Icons.Default.ExpandMore,
+                                contentDescription = stringResource(R.string.editor_drawer_switch_branch),
+                                modifier = Modifier.size(15.dp),
+                                tint = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = pushReadiness,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = UnpushedAmber
-                                )
-                                if (pushBlocker == GitBlocker.NO_TOKEN) {
-                                    GitHelpLink(GitErrors.TOKEN_HELP_URL)
-                                }
-                            }
-                            if (pushBlocker == GitBlocker.NO_REMOTE) {
-                                Spacer(Modifier.width(8.dp))
-                                OutlinedButton(
-                                    onClick = { showPublishSheet = true },
-                                    enabled = !state.busy && !state.publishBusy,
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.height(42.dp)
-                                ) {
-                                    Text("PUBLISH", letterSpacing = 0.8.sp)
-                                }
-                            }
-                        }
-                        state.readiness?.isReady(GitOp.PUSH) == true -> Text(
-                            text = "✓ GitHub ready",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
-                        )
-                    }
-                    // Phase 17 §2.5 — conflicts get their own group and block
-                    // the commit; everything else stays in "Changes".
-                    val files = state.status?.files.orEmpty()
-                    val conflicts = files.filter { it.isConflict }
-                    val others = files.filterNot { it.isConflict }
-
-                    // ---- commit message + COMMIT & PUSH --------------------
-                    OutlinedTextField(
-                        value = commitMessage,
-                        onValueChange = { commitMessage = it },
-                        placeholder = {
-                            Text(stringResource(R.string.git_commit_message_placeholder))
-                        },
-                        minLines = 3,
-                        maxLines = 5,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    )
-                    // Phase 39.2 — "what will be committed" list + hygiene note.
-                    // Makes the ignore policy verifiable by a human instead of
-                    // by faith, and answers "why didn't my file push?".
-                    state.hygieneNote?.let { note ->
-                        Text(
-                            text = note,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
-                        )
-                    }
-                    state.commitPreview?.let { preview ->
-                        if (preview.total > 0) {
-                            Text(
-                                text = stringResource(R.string.git_commit_preview_header, preview.total),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                            )
-                            preview.staged.forEach { entry ->
-                                Text(
-                                    text = "  ${entry.status}  ${entry.path}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = CodecType.codeFamily,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            if (preview.truncated) {
-                                Text(
-                                    text = stringResource(
-                                        R.string.git_commit_preview_more,
-                                        (preview.total - preview.staged.size).coerceAtLeast(0)
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
-                                )
-                            }
                         }
                     }
-                    // Mockup-exact: light-lavender fill with dark text
-                    // (not the default primary/white button).
-                    Button(
-                        onClick = {
-                            viewModel.commitAndPush(context, projectRoot, commitMessage)
-                            commitMessage = ""
-                        },
-                        enabled = !state.busy && !state.loading &&
-                            state.isRepo && commitMessage.isNotBlank() &&
-                            !state.status?.files.isNullOrEmpty() &&
-                            // Phase 17 §2.5 — Spck blocks commits while a
-                            // merge conflict is open.
-                            conflicts.isEmpty(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFC3A1F5),
-                            contentColor = Color(0xFF221A3E),
-                            disabledContainerColor = Color(0xFFC3A1F5).copy(alpha = 0.4f),
-                            disabledContentColor = Color(0xFF221A3E).copy(alpha = 0.6f)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
+                }
+                state.status?.detached == true -> {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .padding(top = 10.dp)
-                    ) {
-                        // Phase 39 device follow-up — name the branch so a
-                        // push from test-1 never looks like "push to main".
-                        val pushBranch = state.status?.branch
-                        Text(
-                            text = if (!pushBranch.isNullOrBlank()) {
-                                stringResource(R.string.git_commit_push_to, pushBranch)
-                            } else {
-                                stringResource(R.string.git_commit_push)
-                            },
-                            letterSpacing = 1.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    // Phase 17 §2.5 — say WHY the button is dead (Spck rule:
-                    // no commit while a conflict is open).
-                    if (conflicts.isNotEmpty()) {
-                        Text(
-                            text = stringResource(R.string.git_commit_blocked),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ConflictPurple,
-                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(top = 14.dp))
-
-                    // ---- conflicts (Phase 17 §2.5) -------------------------
-                    if (conflicts.isNotEmpty()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.git_conflicts_header),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = ConflictPurple
+                            .clip(RoundedCornerShape(50))
+                            .clickable { showBranchDialog = true }
+                            .border(
+                                width = 1.dp,
+                                color = UnpushedAmber,
+                                shape = RoundedCornerShape(50)
                             )
-                            Spacer(Modifier.width(10.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(5.dp))
-                                    .background(ConflictPurple.copy(alpha = 0.18f))
-                                    .padding(horizontal = 7.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    conflicts.size.toString(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = ConflictPurple
-                                )
-                            }
-                        }
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
                         Text(
-                            text = stringResource(R.string.git_conflict_hint),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                            // Phase 17 added this string, never wired to
+                            // anything (no path produced detached HEAD
+                            // until 73.3's Checkout Commit); reused as-is.
+                            text = stringResource(R.string.git_detached_head),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = UnpushedAmber,
+                            maxLines = 1
                         )
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            conflicts.forEachIndexed { index, change ->
-                                GitChangeRow(
-                                    change = change,
-                                    projectFolderName = projectRoot.name,
-                                    onOpenDiff = {
-                                        viewModel.openDiff(context, projectRoot, change.path)
-                                    },
-                                    onToggleStage = {
-                                        viewModel.markResolved(context, projectRoot, change)
-                                    },
-                                    markResolvedMode = true
-                                )
-                                if (index < conflicts.lastIndex) {
-                                    HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                    )
-                                }
-                            }
-                        }
-                        HorizontalDivider()
                     }
+                }
+            }
+        }
 
-                    // ---- UNSTAGED (Spck screenshot 4) ------------------------
-                    // Phase 73.5 — the changes list is the UNSTAGED section:
-                    // collapsible, with the count badge Spck shows. The one
-                    // deliberate omission is Spck's "+" stage-all button:
-                    // Phase 73.1 removed staging controls because COMMIT &
-                    // PUSH always runs `add -A` first, so a stage button here
-                    // would change the index without ever changing what gets
-                    // committed — a no-op dressed as an action. The header
-                    // search only narrows this list by path; commit/discard
-                    // still act on the real change set, never the filtered view.
-                    val visibleOthers = if (gitSearchQuery.isBlank()) {
-                        others
-                    } else {
-                        others.filter {
-                            it.path.contains(gitSearchQuery.trim(), ignoreCase = true)
+        // Phase 73.5 — the header search field filters the UNSTAGED
+        // list by path (Spck screenshot 4's search icon). The query
+        // only narrows what is shown; commit/discard still act on the
+        // real change set, never on the filtered view.
+        if (searchingGit && state.gitInstalled && state.isRepo) {
+            OutlinedTextField(
+                value = gitSearchQuery,
+                onValueChange = { gitSearchQuery = it },
+                placeholder = { Text(stringResource(R.string.git_search_changes)) },
+                singleLine = true,
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (gitSearchQuery.isNotEmpty()) {
+                        IconButton(onClick = { gitSearchQuery = "" }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.clear)
+                            )
                         }
                     }
-                    Row(
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            )
+        }
+
+        state.message?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
+        }
+
+        when {
+            state.loading || state.busy -> {
+                // Phase 52.2 — the source-control panel keeps a stable shape
+                // while git reads; a spinner-only blank made a slow status
+                // call look broken.
+                Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    repeat(4) { SkeletonGitRow() }
+                }
+            }
+            !state.gitInstalled -> {
+                // Phase 73.2 — only offer the one-tap install when the
+                // Linux tools it needs are actually ready; otherwise keep
+                // today's plain message unchanged (the owner's decision).
+                if (installGitVerdict.allowed) {
+                    GitInstallGuidance(
+                        installing = installingGit,
+                        failed = gitInstallFailed,
+                        elapsedSec = gitInstallElapsedSec,
+                        onInstall = { showInstallPrompt = true }
+                    )
+                } else {
+                    SheetGuidance(stringResource(R.string.git_not_installed_message))
+                }
+            }
+            !state.isRepo -> {
+                // Phase 73.3 — the owner's follow-up superseded 73.2's
+                // "wording only" decision for this one screen: `git init`
+                // was the last normal action still requiring the
+                // terminal, so it is now a real button, not just clearer
+                // text. Clone (a working GUI flow already, in Files) is
+                // still named, not duplicated here.
+                GitInitGuidance(
+                    busy = state.busy,
+                    onInit = { viewModel.initRepo(context, projectRoot) }
+                )
+            }
+            else -> {
+                // ---- Phase 40.1: readiness before the attempt ----------
+                // The owner's symptom was an error rendered where he was
+                // not looking ("it shows error in the background i can't
+                // see it"). Readiness answers *before* the tap: what is
+                // missing, in one sentence, with the remedy on the same row.
+                val pushBlocker = state.readiness?.blocker(GitOp.PUSH)
+                val pushReadiness = state.readiness?.message(GitOp.PUSH)
+                when {
+                    pushBlocker != null && pushReadiness != null -> Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable { unstagedExpanded = !unstagedExpanded }
-                            .padding(vertical = 10.dp)
+                            .padding(top = 6.dp)
                     ) {
-                        Icon(
-                            if (unstagedExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
-                            contentDescription = stringResource(
-                                if (unstagedExpanded) {
-                                    R.string.git_collapse_section
-                                } else {
-                                    R.string.git_expand_section
-                                }
-                            ),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
                         Text(
-                            text = stringResource(R.string.git_unstaged_header),
+                            text = "!",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = UnpushedAmber
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = pushReadiness,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = UnpushedAmber
+                            )
+                            if (pushBlocker == GitBlocker.NO_TOKEN) {
+                                GitHelpLink(GitErrors.TOKEN_HELP_URL)
+                            }
+                        }
+                        if (pushBlocker == GitBlocker.NO_REMOTE) {
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = { showPublishDialog = true },
+                                enabled = !state.busy && !state.publishBusy,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.height(42.dp)
+                            ) {
+                                Text("PUBLISH", letterSpacing = 0.8.sp)
+                            }
+                        }
+                    }
+                    state.readiness?.isReady(GitOp.PUSH) == true -> Text(
+                        text = "✓ GitHub ready",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                    )
+                }
+                // Phase 17 §2.5 — conflicts get their own group and block
+                // the commit; everything else stays in "Changes".
+                val files = state.status?.files.orEmpty()
+                val conflicts = files.filter { it.isConflict }
+                val others = files.filterNot { it.isConflict }
+
+                // Phase 39.2 — "what will be committed" list + hygiene note.
+                // Makes the ignore policy verifiable by a human instead of
+                // by faith, and answers "why didn't my file push?".
+                // (Phase 73.7 — the inline commit box + COMMIT & PUSH
+                // button that used to sit here moved into Spck's Commit
+                // All dialog; this projection stays, since Commit All
+                // with Stage All on commits exactly what it lists.)
+                state.hygieneNote?.let { note ->
+                    Text(
+                        text = note,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                    )
+                }
+                state.commitPreview?.let { preview ->
+                    if (preview.total > 0) {
+                        Text(
+                            text = stringResource(R.string.git_commit_preview_header, preview.total),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        )
+                        preview.staged.forEach { entry ->
+                            Text(
+                                text = "  ${entry.status}  ${entry.path}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = CodecType.codeFamily,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        if (preview.truncated) {
+                            Text(
+                                text = stringResource(
+                                    R.string.git_commit_preview_more,
+                                    (preview.total - preview.staged.size).coerceAtLeast(0)
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(top = 14.dp))
+
+                // ---- conflicts (Phase 17 §2.5) -------------------------
+                if (conflicts.isNotEmpty()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.git_conflicts_header),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = ConflictPurple
                         )
                         Spacer(Modifier.width(10.dp))
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(5.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(ConflictPurple.copy(alpha = 0.18f))
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
-                            Text(others.size.toString(), style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                conflicts.size.toString(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = ConflictPurple
+                            )
                         }
                     }
-
-                    if (unstagedExpanded && files.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.git_working_tree_clean),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
-                        )
-                    } else if (unstagedExpanded && others.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.git_no_other_changes),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
-                        )
-                    } else if (unstagedExpanded) {
-                        if (visibleOthers.isEmpty()) {
-                            Text(
-                                text = stringResource(R.string.git_no_matching_changes),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+                    Text(
+                        text = stringResource(R.string.git_conflict_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                    )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        conflicts.forEachIndexed { index, change ->
+                            GitChangeRow(
+                                change = change,
+                                projectFolderName = projectRoot.name,
+                                onOpenDiff = {
+                                    viewModel.openDiff(context, projectRoot, change.path)
+                                },
+                                onToggleStage = {
+                                    viewModel.markResolved(context, projectRoot, change)
+                                },
+                                markResolvedMode = true
                             )
-                        } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 320.dp)
-                                .padding(vertical = 2.dp)
-                        ) {
-                            itemsIndexed(visibleOthers, key = { _, change -> change.path }) { index, change ->
-                                GitChangeRow(
-                                    change = change,
-                                    projectFolderName = projectRoot.name,
-                                    onOpenDiff = {
-                                        viewModel.openDiff(context, projectRoot, change.path)
-                                    },
-                                    onDiscard = if (GitDiscardPolicy.canDiscard(change)) {
-                                        { pendingDiscard = change }
-                                    } else null
+                            if (index < conflicts.lastIndex) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                 )
-                                // Mockup: a hairline between every change row.
-                                if (index < visibleOthers.lastIndex) {
-                                    HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                    )
-                                }
                             }
                         }
-                        }
                     }
-
                     HorizontalDivider()
+                }
 
-                    // ---- PULL / REFRESH -------------------------------------
-                    Row(
+                // ---- UNSTAGED (Spck screenshot 4) ------------------------
+                // Phase 73.5 — the changes list is the UNSTAGED section:
+                // collapsible, with the count badge Spck shows. The one
+                // deliberate omission is Spck's "+" stage-all button:
+                // Phase 73.1 removed staging controls because COMMIT &
+                // PUSH always runs `add -A` first, so a stage button here
+                // would change the index without ever changing what gets
+                // committed — a no-op dressed as an action. The header
+                // search only narrows this list by path; commit/discard
+                // still act on the real change set, never the filtered view.
+                val visibleOthers = if (gitSearchQuery.isBlank()) {
+                    others
+                } else {
+                    others.filter {
+                        it.path.contains(gitSearchQuery.trim(), ignoreCase = true)
+                    }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { unstagedExpanded = !unstagedExpanded }
+                        .padding(vertical = 10.dp)
+                ) {
+                    Icon(
+                        if (unstagedExpanded) Icons.Default.ExpandMore else Icons.Default.ExpandLess,
+                        contentDescription = stringResource(
+                            if (unstagedExpanded) {
+                                R.string.git_collapse_section
+                            } else {
+                                R.string.git_expand_section
+                            }
+                        ),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.git_unstaged_header),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(others.size.toString(), style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                if (unstagedExpanded && files.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.git_working_tree_clean),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+                    )
+                } else if (unstagedExpanded && others.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.git_no_other_changes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+                    )
+                } else if (unstagedExpanded) {
+                    if (visibleOthers.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.git_no_matching_changes),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+                        )
+                    } else {
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp)
+                            .heightIn(max = 320.dp)
+                            .padding(vertical = 2.dp)
                     ) {
-                        OutlinedButton(
-                            onClick = { viewModel.pull(context, projectRoot) },
-                            enabled = !state.busy && !state.loading,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp)
-                        ) {
-                            // Mockup: the pull mark is the download arrow (↓ over a line).
-                            Icon(
-                                Icons.Default.Download,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                        itemsIndexed(visibleOthers, key = { _, change -> change.path }) { index, change ->
+                            GitChangeRow(
+                                change = change,
+                                projectFolderName = projectRoot.name,
+                                onOpenDiff = {
+                                    viewModel.openDiff(context, projectRoot, change.path)
+                                },
+                                onDiscard = if (GitDiscardPolicy.canDiscard(change)) {
+                                    { pendingDiscard = change }
+                                } else null
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.git_pull), letterSpacing = 0.8.sp)
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        OutlinedButton(
-                            onClick = { viewModel.refresh(context, projectRoot) },
-                            enabled = !state.busy && !state.loading,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.refresh), letterSpacing = 0.8.sp)
-                        }
-                    }
-
-                    // ---- honest push state (Phase 17 device fix) -----------
-                    // A commit clears the change list, so a FAILED push used
-                    // to look exactly like a successful one. Whenever the
-                    // branch is ahead of its remote (or a push failed), say so
-                    // and offer a retry.
-                    val ahead = state.status?.ahead ?: 0
-                    // A branch that tracks nothing has no "ahead" figure at
-                    // all — it simply is not published yet, which is exactly
-                    // the case the owner hit with a freshly created branch.
-                    val unpublished = state.status?.unpublished == true
-                    // Phase 40.2 — a push result is *state*, not a toast: it
-                    // stays until it is dismissed or the user refreshes.
-                    val pushOk = state.lastResult?.ok == true
-                    if (ahead > 0 || state.pushError != null || unpublished ||
-                        state.lastResult != null
-                    ) {
-                        HorizontalDivider()
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 10.dp)
-                        ) {
-                            Text(
-                                text = if (pushOk) "✓" else "↑",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (pushOk) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    UnpushedAmber
-                                }
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                if (!pushOk) {
-                                    Text(
-                                        text = when {
-                                            ahead > 0 -> {
-                                                val b = state.status?.branch
-                                                if (!b.isNullOrBlank()) {
-                                                    stringResource(
-                                                        R.string.git_unpushed_count_branch,
-                                                        ahead,
-                                                        b
-                                                    )
-                                                } else {
-                                                    stringResource(R.string.git_unpushed_count, ahead)
-                                                }
-                                            }
-                                            state.pushError != null ->
-                                                stringResource(R.string.git_unpushed_unknown)
-                                            else -> stringResource(
-                                                R.string.git_unpushed_new_branch,
-                                                state.status?.branch ?: ""
-                                            )
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = UnpushedAmber
-                                    )
-                                }
-                                // Phase 40.2 — what actually happened to the last
-                                // push, named branch and all.
-                                state.lastResult?.let { result ->
-                                    PushResultCard(
-                                        result = result,
-                                        onDismiss = { viewModel.dismissPushResult() },
-                                        onPublish = { showPublishSheet = true }
-                                    )
-                                }
-                                state.pushError?.let { error ->
-                                    Text(
-                                        text = error,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-                                }
-                                // Phase 17 follow-up — a tappable help link
-                                // (the GitHub token page) when the failure has
-                                // one, so "no token" is one tap from the fix.
-                                state.pushHelpUrl?.let { url ->
-                                    GitHelpLink(url)
-                                }
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            OutlinedButton(
-                                onClick = { viewModel.push(context, projectRoot) },
-                                enabled = !state.busy && !state.loading,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.height(42.dp)
-                            ) {
-                                val pushBranch = state.status?.branch
-                                Text(
-                                    text = if (!pushBranch.isNullOrBlank()) {
-                                        stringResource(R.string.git_push_to, pushBranch)
-                                    } else {
-                                        stringResource(R.string.git_push_action)
-                                    },
-                                    letterSpacing = 0.8.sp
+                            // Mockup: a hairline between every change row.
+                            if (index < visibleOthers.lastIndex) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                 )
                             }
+                        }
+                    }
+                    }
+                }
+
+                HorizontalDivider()
+
+                // ---- PULL / REFRESH -------------------------------------
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.pull(context, projectRoot) },
+                        enabled = !state.busy && !state.loading,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                    ) {
+                        // Mockup: the pull mark is the download arrow (↓ over a line).
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.git_pull), letterSpacing = 0.8.sp)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    OutlinedButton(
+                        onClick = { viewModel.refresh(context, projectRoot) },
+                        enabled = !state.busy && !state.loading,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.refresh), letterSpacing = 0.8.sp)
+                    }
+                }
+
+                // ---- honest push state (Phase 17 device fix) -----------
+                // A commit clears the change list, so a FAILED push used
+                // to look exactly like a successful one. Whenever the
+                // branch is ahead of its remote (or a push failed), say so
+                // and offer a retry.
+                val ahead = state.status?.ahead ?: 0
+                // A branch that tracks nothing has no "ahead" figure at
+                // all — it simply is not published yet, which is exactly
+                // the case the owner hit with a freshly created branch.
+                val unpublished = state.status?.unpublished == true
+                // Phase 40.2 — a push result is *state*, not a toast: it
+                // stays until it is dismissed or the user refreshes.
+                val pushOk = state.lastResult?.ok == true
+                if (ahead > 0 || state.pushError != null || unpublished ||
+                    state.lastResult != null
+                ) {
+                    HorizontalDivider()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = if (pushOk) "✓" else "↑",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (pushOk) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                UnpushedAmber
+                            }
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (!pushOk) {
+                                Text(
+                                    text = when {
+                                        ahead > 0 -> {
+                                            val b = state.status?.branch
+                                            if (!b.isNullOrBlank()) {
+                                                stringResource(
+                                                    R.string.git_unpushed_count_branch,
+                                                    ahead,
+                                                    b
+                                                )
+                                            } else {
+                                                stringResource(R.string.git_unpushed_count, ahead)
+                                            }
+                                        }
+                                        state.pushError != null ->
+                                            stringResource(R.string.git_unpushed_unknown)
+                                        else -> stringResource(
+                                            R.string.git_unpushed_new_branch,
+                                            state.status?.branch ?: ""
+                                        )
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = UnpushedAmber
+                                )
+                            }
+                            // Phase 40.2 — what actually happened to the last
+                            // push, named branch and all.
+                            state.lastResult?.let { result ->
+                                PushResultCard(
+                                    result = result,
+                                    onDismiss = { viewModel.dismissPushResult() },
+                                    onPublish = { showPublishDialog = true }
+                                )
+                            }
+                            state.pushError?.let { error ->
+                                Text(
+                                    text = error,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                            // Phase 17 follow-up — a tappable help link
+                            // (the GitHub token page) when the failure has
+                            // one, so "no token" is one tap from the fix.
+                            state.pushHelpUrl?.let { url ->
+                                GitHelpLink(url)
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        OutlinedButton(
+                            // Phase 73.7 — the retry also names its
+                            // target first (same dialog as the menu).
+                            onClick = {
+                                viewModel.loadRemotes(context, projectRoot)
+                                viewModel.loadBranches(context, projectRoot)
+                                showPushDialog = true
+                            },
+                            enabled = !state.busy && !state.loading,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.height(42.dp)
+                        ) {
+                            val pushBranch = state.status?.branch
+                            Text(
+                                text = if (!pushBranch.isNullOrBlank()) {
+                                    stringResource(R.string.git_push_to, pushBranch)
+                                } else {
+                                    stringResource(R.string.git_push_action)
+                                },
+                                letterSpacing = 0.8.sp
+                            )
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
         }
+        Spacer(modifier = Modifier.height(12.dp))
     }
 
     if (state.diffPath != null) {
@@ -1101,17 +1059,17 @@ fun GitControlSheet(
     }
 
     // Phase 17 — Switch Branch, opened from the branch chip.
-    if (showBranchSheet) {
-        BranchSwitchSheet(
+    if (showBranchDialog) {
+        BranchSwitchDialog(
             projectRoot = projectRoot,
-            onDismiss = { showBranchSheet = false },
+            onDismiss = { showBranchDialog = false },
             onBeforeSwitch = onBeforeBranchSwitch,
             onAfterSwitch = onAfterBranchSwitch
         )
     }
 
     // Phase 40.3 — Publish to GitHub (create the remote when there isn't one).
-    if (showPublishSheet) {
+    if (showPublishDialog) {
         PublishToGitHubDialog(
             defaultName = projectRoot.name,
             busy = state.publishBusy,
@@ -1119,7 +1077,7 @@ fun GitControlSheet(
             note = state.publishNote,
             needsPermission = state.publishNeedsPermission,
             onDismiss = {
-                showPublishSheet = false
+                showPublishDialog = false
                 viewModel.dismissPublish()
             },
             onPublish = { name, description, isPrivate ->
@@ -1136,37 +1094,84 @@ fun GitControlSheet(
     }
 
     // Phase 73.3 — Log History / Checkout Commit share one commit list.
-    logSheetMode?.let { mode ->
-        GitLogSheet(
+    logDialogMode?.let { mode ->
+        GitLogDialog(
             mode = mode,
             commits = state.commits,
             loading = state.commitsLoading,
             error = state.commitsError,
             onDismiss = {
-                logSheetMode = null
+                logDialogMode = null
                 viewModel.clearCommits()
             },
             onCheckout = { entry ->
                 viewModel.checkoutCommit(context, projectRoot, entry)
-                logSheetMode = null
+                logDialogMode = null
                 viewModel.clearCommits()
             }
         )
     }
 
     // Phase 73.3 — the general Remotes screen (view/add/remove).
-    if (showRemotesSheet) {
-        GitRemotesSheet(
+    if (showRemotesDialog) {
+        GitRemotesDialog(
             remotes = state.remotes,
             loading = state.remotesLoading,
             busy = state.remotesBusy,
             error = state.remotesError,
             onDismiss = {
-                showRemotesSheet = false
+                showRemotesDialog = false
                 viewModel.clearRemotes()
             },
             onAdd = { name, url -> viewModel.addRemote(context, projectRoot, name, url) },
             onRemove = { name -> viewModel.removeRemote(context, projectRoot, name) }
+        )
+    }
+
+    // Phase 73.7 — Spck's Commit All dialog (message + identity + Stage
+    // All); Ok saves the identity when changed, then stages (when on)
+    // and commits. The credentials row stacks the Git Credentials
+    // dialog ABOVE this one (the draft underneath is kept).
+    if (showCommitDialog) {
+        GitCommitDialog(
+            busy = state.busy,
+            canCommit = !state.status?.files.isNullOrEmpty() &&
+                state.status?.files.orEmpty().none { it.isConflict },
+            onDismiss = { showCommitDialog = false },
+            onOpenCredentials = { showCredentialsDialog = true },
+            onConfirm = { message, stageAll ->
+                viewModel.commitOnly(context, projectRoot, message, stageAll)
+                showCommitDialog = false
+            }
+        )
+    }
+
+    // Phase 73.7 — Spck's Push dialog (remote + branch + credentials);
+    // Ok pushes to the chosen pair, then closes. The no-remote path
+    // trades this dialog for the Remotes screen (sequential, not
+    // stacked); the credentials row stacks like the Commit dialog's.
+    if (showPushDialog) {
+        GitPushDialog(
+            remotes = state.remotes.map { it.name },
+            // Push targets a local branch (Spck pushes the checked-out
+            // one); remote-tracking names would confuse the pair.
+            branches = state.branches?.local?.map { it.name }.orEmpty(),
+            currentBranch = state.status?.branch,
+            busy = state.busy,
+            onDismiss = {
+                showPushDialog = false
+                viewModel.clearRemotes()
+            },
+            onAddRemote = {
+                showPushDialog = false
+                viewModel.loadRemotes(context, projectRoot)
+                showRemotesDialog = true
+            },
+            onOpenCredentials = { showCredentialsDialog = true },
+            onConfirm = { remote, branch ->
+                viewModel.push(context, projectRoot, remote, branch)
+                showPushDialog = false
+            }
         )
     }
 
@@ -1183,15 +1188,15 @@ fun GitControlSheet(
     }
 
     // Phase 73.5 — the inline Git Credentials dialog (Spck screenshot
-    // 2). "Manage" leaves the panel for Settings' own editor (the sheet
-    // would otherwise cover it); saving re-reads readiness so a fresh
-    // token can clear the NO_TOKEN blocker without a manual refresh.
+    // 2). "Manage" leaves the panel for Settings' own editor (a
+    // full-screen route, not a dialog); saving re-reads readiness so a
+    // fresh token can clear the NO_TOKEN blocker without a manual
+    // refresh.
     if (showCredentialsDialog) {
         GitCredentialsDialog(
             onDismiss = { showCredentialsDialog = false },
             onManage = {
                 showCredentialsDialog = false
-                onDismiss()
                 onOpenSettings()
             },
             onSaved = { viewModel.refresh(context, projectRoot) }
@@ -1371,7 +1376,7 @@ private fun PublishToGitHubDialog(
     var isPrivate by remember { mutableStateOf(true) }
     var existingUrl by remember { mutableStateOf("") }
 
-    // Success closes the dialog — the sheet keeps the result card and note.
+    // Success closes the dialog — the panel keeps the result card and note.
     LaunchedEffect(note) {
         if (!note.isNullOrBlank()) onDismiss()
     }
@@ -1670,11 +1675,11 @@ private fun GitFileIcon(name: String) {
 /**
  * One change row. For a conflicted file ([markResolvedMode]) the trailing
  * control is Spck's ✓ "Mark Resolved". An ordinary change row has no stage
- * toggle: Phase 73.1 removed it — COMMIT & PUSH always stages everything
+ * toggle: Phase 73.1 removed it — Commit All always stages everything
  * (`stageAll` before `commit`, matching the "what will be committed" preview,
  * which already projects every listed change as if `add -A` had run), so the
  * old +/− button changed the git index without ever changing what the one
- * commit action in this sheet would commit. Kept for its actual use — marking
+ * commit action in this panel would commit. Kept for its actual use — marking
  * a conflict resolved — with the same [onToggleStage] callback, now only
  * wired when [markResolvedMode] is true.
  */

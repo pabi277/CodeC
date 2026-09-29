@@ -5,16 +5,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 73.5 — the Source Control sheet re-skinned Spck-exact (the owner's
+ * Phase 73.5 — the Source Control panel re-skinned Spck-exact (the owner's
  * four screenshots): a REPOSITORY header with search / branch-menu /
  * push-menu icons, a collapsible UNSTAGED section with a count badge, an
  * install status bar (no redirect to Terminal), an inline Git Credentials
  * dialog (Settings keeps its own editor on the same store), and a
  * Commit All action that commits without pushing. Source-scan checks in
  * the same spirit as [GitGuiParityWiringTest]: no Robolectric Compose
- * render exists for this sheet, so the wiring is pinned by source text
+ * render exists for this panel, so the wiring is pinned by source text
  * (single-line anchors only — no multi-line literal matching, which would
  * be a whitespace trap on every future reformat).
+ *
+ * Phase 73.7 — the sheet that hosted this panel is deleted (the drawer
+ * hosts [GitControlPanel] directly); Commit All gained the dialog's Stage
+ * All toggle and author fields, and Manage lost its sheet dismiss.
  */
 class GitSpckPanelWiringTest {
     private fun source(path: String) = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/$path").readText()
@@ -63,6 +67,9 @@ class GitSpckPanelWiringTest {
         // conflicts block the commit.
         assertTrue(fn.contains("Enter a commit message"))
         assertTrue(fn.contains("before committing"))
+        // Phase 73.7 — the Commit dialog's Stage All toggle makes the
+        // staging conditional (off commits only what is staged).
+        assertTrue(fn.contains("val note = if (stageAll) {"))
     }
 
     @Test fun `the credentials dialog edits all four stored values through the shared store`() {
@@ -90,13 +97,15 @@ class GitSpckPanelWiringTest {
         assertTrue(dialog.contains("stringResource(R.string.git_credentials_ok)"))
     }
 
-    @Test fun `saving credentials refreshes the sheet, Manage leaves for Settings`() {
+    @Test fun `saving credentials refreshes the panel, Manage leaves for Settings`() {
         assertTrue(sheet.contains("if (showCredentialsDialog) {"))
         assertTrue(sheet.contains("GitCredentialsDialog("))
         assertTrue(sheet.contains("onSaved = { viewModel.refresh(context, projectRoot) }"))
         val manage = sheet.substringAfter("onManage = {").substringBefore("onSaved = {")
         assertTrue(manage.contains("showCredentialsDialog = false"))
-        assertTrue(manage.contains("onDismiss()"))
+        // Phase 73.7 — the sheet is gone, so Manage no longer dismisses
+        // one: it closes the dialog and jumps straight to Settings.
+        assertFalse(manage.contains("onDismiss()"))
         assertTrue(manage.contains("onOpenSettings()"))
     }
 

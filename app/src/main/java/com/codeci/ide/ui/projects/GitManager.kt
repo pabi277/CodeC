@@ -376,12 +376,19 @@ class GitManager(
     fun pushCapturing(
         root: File,
         branchName: String? = null,
-        setUpstream: Boolean? = null
+        setUpstream: Boolean? = null,
+        // Phase 73.7 — the Push dialog names the remote (Spck's Remotes
+        // dropdown). Null/blank keeps the old behaviour: the first
+        // configured remote, `origin` when there is none (git then fails
+        // with its own words, which the caller parses).
+        remoteName: String? = null
     ): GitPushAttempt {
         val status = runCatching { status(root) }.getOrNull()
         val branch = branchName?.trim()?.takeIf { it.isNotEmpty() } ?: status?.branch
         val needsUpstream = setUpstream ?: (status?.upstream == null)
-        val remote = firstRemote(root) ?: "origin"
+        // The name comes from the dialog's dropdown of real remotes, so
+        // git has already accepted it; still, only a non-blank value wins.
+        val remote = remoteName?.trim()?.takeIf { it.isNotEmpty() } ?: firstRemote(root) ?: "origin"
         val ref = branch?.takeIf { GitBranchOps.isSafeExistingBranch(it) } ?: "HEAD"
         val args = if (needsUpstream) {
             listOf("push", "--set-upstream", remote, ref)
@@ -481,7 +488,7 @@ class GitManager(
      * `git status --porcelain=v1 -b` prints `## main...origin/main` only once
      * a branch tracks something, so a missing upstream is detectable without
      * another process — and the extra `status` call is the one CodeC already
-     * makes for the Source Control sheet.
+     * makes for the Source Control panel.
      *
      * Always passes the branch **name** (not a bare `git push`) so a push
      * from `test-1` cannot be mistaken for (or silently land on) `main`.
@@ -524,7 +531,7 @@ class GitManager(
         if (name.isEmpty() || !GitBranchOps.isSafeExistingBranch(name)) return false
         val remote = firstRemote(root) ?: "origin"
         // Cap the probe well below the full push timeout — a hung ls-remote
-        // must not freeze the Source Control sheet for five minutes.
+        // must not freeze the Source Control panel for five minutes.
         val probeTimeout = networkTimeoutSeconds.coerceAtMost(30L)
         val result = runCatching {
             runGit(
@@ -1074,7 +1081,7 @@ class GitManager(
         // it is created. `checkout -b` always leaves HEAD at a real commit, so
         // the push simply creates the same-named remote branch. Best-effort:
         // offline / no token keeps the branch local, the dialog says so
-        // honestly, and the Source Control sheet offers the PUSH retry.
+        // honestly, and the Source Control panel offers the PUSH retry.
         var published = false
         var publishError: String? = null
         if (target.kind == BranchTargetKind.NEW) {

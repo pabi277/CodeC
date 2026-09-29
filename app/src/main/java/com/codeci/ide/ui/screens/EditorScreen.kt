@@ -144,7 +144,6 @@ import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.components.EditorSidePanel
-import com.codeci.ide.ui.components.RepositoryPanelState
 import com.codeci.ide.ui.components.SearchPanelState
 import com.codeci.ide.ui.editor.NavCell
 import com.codeci.ide.ui.editor.ProjectSearch
@@ -206,22 +205,12 @@ import com.codeci.ide.ui.navigation.BackRouter
 import com.codeci.ide.ui.navigation.BackState
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
-import com.codeci.ide.ui.modules.InstallOutcome
-import com.codeci.ide.ui.modules.InstallOutcomes
-import com.codeci.ide.ui.modules.PackageCatalog
-import com.codeci.ide.ui.modules.PkgResult
 import com.codeci.ide.ui.projects.EditorLaunchState
-import com.codeci.ide.ui.projects.GitContext
-import com.codeci.ide.ui.projects.GitErrors
-import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectRunTarget
 import com.codeci.ide.ui.services.LanguageRegistry
-import com.codeci.ide.ui.terminal.SetupAction
-import com.codeci.ide.ui.terminal.SetupGatePolicy
-import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
 import com.codeci.ide.ui.theme.ThemeManager
@@ -253,6 +242,13 @@ fun EditorScreen(
      * bar, no project chrome, no launch-state write). Absent → PROJECT.
      */
     singleFile: Boolean = false,
+    /**
+     * Phase 73.7 — the route's `panel` hand-off: `"repository"` (the hub
+     * ⋮'s "Source Control") selects the side panel's Repository slot and
+     * opens the drawer on entry. Absent → the default slot. Any other
+     * value is ignored — the route never promises more than one slot.
+     */
+    panel: String? = null,
     onNavigateBack: () -> Unit = {},
     onFileRenamed: (String) -> Unit = {},
     onProjectSelected: (ProjectInfo) -> Unit = {},
@@ -328,12 +324,28 @@ fun EditorScreen(
     // reset the caret, and re-point "open where I left off" at it). The
     // decision is pure (EditorRouteOpen) and the session marker lives in the
     // ViewModel, so it survives a rotation and dies with the tabs.
+    // Phase 55 — the side panel's selected slot. Owner follow-up: Files is
+    // the editor menu's default; the user's own tap always wins afterwards.
+    // Declared ahead of the route-open effect (Phase 73.7): the
+    // `panel=repository` hand-off selects the Repository slot there, and a
+    // local is only visible after its declaration.
+    var sidePanel by remember { mutableStateOf(SidePanelPlan.DEFAULT_PANEL) }
+    // Declared here with it (Phase 73.7): the same hand-off opens the
+    // drawer on the Repository slot.
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val editorRouteKey = EditorRouteOpen.key(projectName, fileName, singleFile)
     LaunchedEffect(editorRouteKey) {
         if (!EditorRouteOpen.shouldOpen(editorRouteKey, viewModel.openedRoute())) {
             return@LaunchedEffect
         }
         viewModel.markRouteOpened(editorRouteKey)
+        // Phase 73.7 — the hub "Source Control" hand-off: entering with
+        // `panel=repository` selects the Repository slot and opens the
+        // drawer on it. PROJECT opens only — a peek has no panel chrome.
+        if (panel == RailPanel.REPOSITORY.id && !singleFile && projectName != null) {
+            sidePanel = RailPanel.REPOSITORY
+            drawerState.open()
+        }
         if (projectName != null && fileName != null) {
             if (singleFile) {
                 // Phase 46.2 — the peek: no onProjectSelected (the hub tap
@@ -474,8 +486,6 @@ fun EditorScreen(
     // exactly the window during which the keys row must ride the keyboard.
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
-
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val uiScope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
 
@@ -516,7 +526,9 @@ fun EditorScreen(
         }
     }
     // Phase 16 — drawer dialogs: create entry (parent, isFolder), per-row rename,
-    // delete confirm, go-to-line and the git sheet for the footer row.
+    // delete confirm and go-to-line. (The footer row's Source Control used
+    // to open a git sheet here; Phase 73.7 moved git into the panel, so the
+    // row just selects the Repository slot — see openSourceControl.)
     var pendingCreate by remember { mutableStateOf<Pair<String?, Boolean>?>(null) }
     var entryName by remember { mutableStateOf("") }
     var pendingRenameEntry by remember { mutableStateOf<EditorFileEntry?>(null) }
@@ -525,9 +537,8 @@ fun EditorScreen(
     var goToLineText by remember { mutableStateOf("") }
     // Phase 24.9 — per-project .codec.json run-config editor.
     var showCodecConfig by remember { mutableStateOf(false) }
-    var gitSheetRoot by remember { mutableStateOf<File?>(null) }
     // Phase 17 — Switch Branch, opened from the drawer footer.
-    var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
+    var gitBranchDialogRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
     // Phase 69.1 — the coding row's horizontal position is owned HERE, not
     // inside the row. The caps a phone thumb reaches for most (`;`, `/`, `=`,
@@ -550,11 +561,7 @@ fun EditorScreen(
     // the sorted order AND the checkmark, so the ✓ never lies about the row.
     val lastTabSort by viewModel.lastTabSort.collectAsState()
     var showSortMenu by remember { mutableStateOf(false) }
-    // ---- Phase 55 — the side panel's own state --------------------------
-    // Owner follow-up: Files is the editor menu's default;
-    // the user's
-    // own tap always wins afterwards.
-    var sidePanel by remember { mutableStateOf(SidePanelPlan.DEFAULT_PANEL) }
+    // ---- Phase 55 — the side panel's search state ------------------------
     var searchQuery by remember { mutableStateOf("") }
     var searchOptions by remember { mutableStateOf(ProjectSearch.Options()) }
     var searchHits by remember { mutableStateOf<List<ProjectSearch.Hit>>(emptyList()) }
@@ -1313,148 +1320,16 @@ fun EditorScreen(
             }
         }
 
-        // One action, two doors: the drawer footer's Source Control row and the
-        // panel's Repository slot open the same sheet, from the same root.
+        // Phase 73.7 — one action, two doors: the drawer footer's Source
+        // Control row and the hub ⋮ both land on the panel's Repository
+        // slot (the full git panel lives there now — the sheet is gone).
+        // Scratch mode still toasts: there is no project to show.
         val openSourceControl: () -> Unit = {
-            val root = currentProject?.let {
-                runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
-            }
-            if (root != null) {
-                gitSheetRoot = root
+            if (currentProject != null) {
+                sidePanel = RailPanel.REPOSITORY
+                uiScope.launch { drawerState.open() }
             } else {
                 Toast.makeText(context, context.getString(R.string.editor_scratch_mode), Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        // ---- Phase 73.6: drawer git without Terminal --------------------
-        // The Repository panel's Initialize used to close the drawer and
-        // type `git init` into the visible shell — which runs in the
-        // projects folder, not the project, and never checked git was
-        // installed (the owner's verbatim report: tapped Initialize, the
-        // app switched to Terminal by itself, first "no git command", then
-        // after a manual install a repo in the wrong folder with `master`).
-        // Initialize now runs the engine's `init` in place; when git is
-        // missing, the shared install prompt asks first, then the same
-        // background install + status bar the sheet uses takes over and
-        // auto-continues into the pending initialize.
-        val drawerTerminalViewModel = activityTerminalViewModel()
-        val drawerSetupFacts by drawerTerminalViewModel.setupFacts.collectAsState()
-        val drawerInstallVerdict = remember(drawerSetupFacts) {
-            SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, drawerSetupFacts)
-        }
-        val drawerGitPackage = remember { PackageCatalog.ALL_PACKAGES.first { it.id == "git" } }
-        val drawerGitInstallTargets = remember(drawerGitPackage) { PkgResult.installTargets(drawerGitPackage.installCommand) }
-        val drawerUserlandPrefix = remember(context) { ShellEnvironment.prefixDir(context.applicationContext.filesDir) }
-        var drawerGitInstalled by remember { mutableStateOf(true) }
-        var drawerGitCheckTick by remember { mutableStateOf(0) }
-        var drawerInstallingGit by remember { mutableStateOf(false) }
-        var drawerGitInstallStartedAtSec by remember { mutableStateOf(0L) }
-        var drawerInstallFailed by remember { mutableStateOf(false) }
-        var drawerInstallElapsedSec by remember { mutableStateOf(0) }
-        var drawerInitializing by remember { mutableStateOf(false) }
-        var drawerPendingInitRoot by remember { mutableStateOf<File?>(null) }
-        var showGitInstallPrompt by remember { mutableStateOf(false) }
-
-        // Best-effort truth about the git binary (a plain file check, no
-        // process). Defaults true: the worst case before the first check
-        // lands is an Initialize tap that finds no manager and asks to
-        // install — the correct door anyway.
-        LaunchedEffect(currentProject, drawerGitCheckTick) {
-            drawerGitInstalled = withContext(Dispatchers.IO) {
-                GitContext(context.applicationContext).gitBinary() != null
-            }
-        }
-
-        fun startDrawerInstall() {
-            drawerInstallFailed = false
-            drawerGitInstallStartedAtSec = System.currentTimeMillis() / 1000
-            drawerInstallElapsedSec = 0
-            drawerInstallingGit = true
-            Toast.makeText(context, context.getString(R.string.git_installing), Toast.LENGTH_SHORT).show()
-            drawerTerminalViewModel.sendCommand(drawerGitPackage.installCommand)
-        }
-
-        // Declared before the polling loop below: a local fun is only
-        // visible after its declaration, and the INSTALLED branch calls it.
-        fun runDrawerInit(root: File) {
-            uiScope.launch {
-                drawerInitializing = true
-                val git = withContext(Dispatchers.IO) {
-                    runCatching { GitContext(context.applicationContext).manager() }.getOrNull()
-                }
-                if (git == null) {
-                    drawerInitializing = false
-                    drawerGitInstalled = false
-                    drawerPendingInitRoot = root
-                    showGitInstallPrompt = true
-                    return@launch
-                }
-                val already = withContext(Dispatchers.IO) {
-                    runCatching { git.isRepository(root) }.getOrDefault(false)
-                }
-                if (already) {
-                    drawerInitializing = false
-                    viewModel.refreshGitMeta(context)
-                    drawerState.close()
-                    openSourceControl()
-                    return@launch
-                }
-                val error = withContext(Dispatchers.IO) {
-                    runCatching { git.init(root) }.exceptionOrNull()
-                }
-                drawerInitializing = false
-                if (error == null) {
-                    viewModel.refreshGitMeta(context)
-                    drawerGitCheckTick++
-                    drawerState.close()
-                    openSourceControl()
-                } else {
-                    val message = if (error is GitManager.GitCommandException) {
-                        GitErrors.classify(error.message, error.exitCode, hasToken = false).display()
-                    } else {
-                        error.message ?: context.getString(R.string.git_init_busy)
-                    }
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-
-        LaunchedEffect(drawerInstallingGit) {
-            if (!drawerInstallingGit) return@LaunchedEffect
-            while (drawerInstallingGit) {
-                delay(1_500)
-                val (result, onDisk) = withContext(Dispatchers.IO) {
-                    val read = PkgResult.read(drawerUserlandPrefix)
-                    val installed = GitContext(context.applicationContext).gitBinary() != null
-                    read to installed
-                }
-                when (InstallOutcomes.decide(drawerGitInstallTargets, drawerGitInstallStartedAtSec, onDisk, result)) {
-                    InstallOutcome.INSTALLED -> {
-                        drawerInstallingGit = false
-                        drawerGitInstalled = true
-                        drawerGitCheckTick++
-                        viewModel.refreshGitMeta(context)
-                        // The install was asked for by an Initialize tap:
-                        // continue into it instead of stranding the user.
-                        drawerPendingInitRoot?.let { root ->
-                            drawerPendingInitRoot = null
-                            runDrawerInit(root)
-                        }
-                    }
-                    InstallOutcome.FAILED, InstallOutcome.ENDED_WITHOUT_INSTALL -> {
-                        drawerInstallingGit = false
-                        drawerInstallFailed = true
-                    }
-                    InstallOutcome.WAITING -> Unit
-                }
-            }
-        }
-        LaunchedEffect(drawerInstallingGit) {
-            while (drawerInstallingGit) {
-                delay(1_000)
-                drawerInstallElapsedSec =
-                    ((System.currentTimeMillis() / 1000) - drawerGitInstallStartedAtSec)
-                        .coerceAtLeast(0).coerceAtMost(5999).toInt()
             }
         }
 
@@ -1577,35 +1452,38 @@ fun EditorScreen(
                         searchQuery = ""
                         searchHits = emptyList()
                     },
-                    repository = RepositoryPanelState(
-                        hasRepository = gitBranch != null,
-                        branch = gitBranch,
-                        changeCount = gitChangeCount,
-                        gitInstalled = drawerGitInstalled,
-                        canInstallGit = drawerInstallVerdict.allowed,
-                        installingGit = drawerInstallingGit,
-                        installFailed = drawerInstallFailed,
-                        installElapsedSec = drawerInstallElapsedSec,
-                        initializing = drawerInitializing
-                    ),
-                    onInitializeRepository = {
-                        // Phase 73.6 — full GUI: the engine's `init` in
-                        // place (see runDrawerInit above). The old path
-                        // closed the drawer and typed `git init` into the
-                        // visible shell — which runs in the projects
-                        // folder, not the project, and never checked git
-                        // was installed (the owner's device report).
-                        val root = currentProject?.let {
+                    // Phase 73.7 — the Repository slot hosts the full Source
+                    // Control panel (install / init / changes / dialogs):
+                    // the owner's screenshots show git living inside the
+                    // side panel, not in a bottom sheet. Scratch mode has
+                    // no project, so it keeps a one-line empty state.
+                    repositoryContent = {
+                        val gitRoot = currentProject?.let {
                             runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
                         }
-                        if (root != null) {
-                            runDrawerInit(root)
+                        if (gitRoot != null) {
+                            GitControlPanel(
+                                projectRoot = gitRoot,
+                                // Phase 39 device follow-up — keep editor
+                                // buffers in lockstep with the checked-out
+                                // branch (flush before, reload after).
+                                onBeforeBranchSwitch = { viewModel.prepareForBranchSwitch(context) },
+                                onAfterBranchSwitch = { viewModel.reloadAfterBranchSwitch(context) },
+                                // Phase 73.3 — the panel's "Git Credentials"
+                                // item reuses the same jump the drawer footer
+                                // already has.
+                                onOpenSettings = onOpenSettings
+                            )
                         } else {
-                            Toast.makeText(context, context.getString(R.string.editor_scratch_mode), Toast.LENGTH_SHORT).show()
+                            Text(
+                                text = stringResource(R.string.panel_repository_no_project),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp)
+                            )
                         }
                     },
-                    onInstallGit = { showGitInstallPrompt = true },
-                    onOpenSourceControl = openSourceControl,
+                    repositoryBadgeCount = gitChangeCount,
                     files = {
                 EditorProjectDrawer(
                     projectName = currentProject,
@@ -1657,7 +1535,7 @@ fun EditorScreen(
                         val root = currentProject?.let {
                             runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
                         }
-                        if (root != null) gitBranchSheetRoot = root else Toast.makeText(
+                        if (root != null) gitBranchDialogRoot = root else Toast.makeText(
                             context,
                             context.getString(R.string.editor_scratch_mode),
                             Toast.LENGTH_SHORT
@@ -2935,47 +2813,18 @@ fun EditorScreen(
             )
         }
 
-        // Phase 73.6 — the shared install question (drawer install option
-        // + retry). Confirming starts the background install; declining
-        // drops the pending initialize too.
-        if (showGitInstallPrompt) {
-            GitInstallPromptDialog(
-                onConfirm = {
-                    showGitInstallPrompt = false
-                    startDrawerInstall()
-                },
-                onDismiss = {
-                    showGitInstallPrompt = false
-                    drawerPendingInitRoot = null
-                }
-            )
-        }
-
-        gitSheetRoot?.let { root ->
-            GitControlSheet(
-                projectRoot = root,
-                onDismiss = {
-                    gitSheetRoot = null
-                    // Branch may have changed from the SC chip sheet.
-                    viewModel.refreshGitMeta(context)
-                },
-                // Phase 39 device follow-up — keep editor buffers in lockstep
-                // with the checked-out branch (flush before, reload after).
-                onBeforeBranchSwitch = { viewModel.prepareForBranchSwitch(context) },
-                onAfterBranchSwitch = { viewModel.reloadAfterBranchSwitch(context) },
-                // Phase 73.3 — the overflow menu's "Git Credentials" item
-                // reuses the same jump the drawer footer already has.
-                onOpenSettings = onOpenSettings
-            )
-        }
+        // Phase 73.7 — no git sheet door, no drawer install prompt: the
+        // Repository slot hosts the panel (install / init / changes /
+        // dialogs all live there now), and the drawer's Source Control
+        // row just selects that slot (openSourceControl above).
 
         // Phase 17 — Switch Branch from the drawer footer: closing refreshes
         // the drawer's branch chip and status letters.
-        gitBranchSheetRoot?.let { root ->
-            BranchSwitchSheet(
+        gitBranchDialogRoot?.let { root ->
+            BranchSwitchDialog(
                 projectRoot = root,
                 onDismiss = {
-                    gitBranchSheetRoot = null
+                    gitBranchDialogRoot = null
                     viewModel.refreshGitMeta(context)
                 },
                 onBeforeSwitch = { viewModel.prepareForBranchSwitch(context) },

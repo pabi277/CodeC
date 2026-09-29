@@ -9,10 +9,10 @@ import com.codeci.ide.R
 
 /**
  * Phase 73.6 — the shared "Git is not installed, do you want to install
- * it?" question (the owner's words). Asked from two doors that both end in
- * the same background install: the editor drawer's Repository panel (its
- * Initialize flow, when no git is found) and the Source Control sheet's
+ * it?" question (the owner's words). Asked by the Source Control panel's
  * INSTALL GIT button (which asked nothing before starting in 73.2–73.5).
+ * Phase 73.7 deleted the second 73.6 door (the drawer slot's own Initialize
+ * flow) with the drawer slot itself — git has one home now, this panel.
  *
  * Confirming starts the real `pkg install` in the shared terminal session
  * underneath while a status bar tracks it in the panel — the install

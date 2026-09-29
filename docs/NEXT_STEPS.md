@@ -1,3 +1,23 @@
+**2026-09-29 — Phase 73.7 (git moves into the editor panel: Spck-ditto dialogs, no sheets) 🚧
+IMPLEMENTED, CI PENDING.** Owner follow-up on the 73.5/73.6 builds with 8 Spck screenshots attached
+(branch menu, Git Credentials, Remotes, New Remote, detach-HEAD confirm, Commit All, empty Remotes,
+Push): git must live inside the editor's side panel (the REPOSITORY tab) Spck-ditto — no bottom
+sheet anywhere — with Spck's Commit All and Push dialogs, centered Remotes/Log dialogs, a count
+badge on the rail's branch icon, and the push menu's Provider row opening Git Credentials. Asked
+four scope questions before coding; owner locked all four: full-panel, ditto-dialogs, all-dialogs,
+provider-row (Publish stays the permission-asked direct-create path; manual paste-a-URL stays
+primary). Shipped: `GitControlSheet` → `GitControlPanel` hosted in the drawer slot (73.6 slot UI
++ engine + sheet doors deleted); new `GitCommitDialog` (credentials row, message, store-owned
+author name/email, Stage All default ON) and `GitPushDialog` (remote/branch dropdowns; engine
+`pushCapturing` gained `remoteName?`); Remotes/Log/BranchSwitch converted to centered dialogs;
+rail badge; hub ⋮ → editor via a new optional `panel=repository` route arg; 11 dead strings
+deleted, 13 added. Tests: new `GitPanelWiringTest.kt` (8 cases) replaces
+`GitDrawerInstallWiringTest.kt`; Parity/Spck/discard/hygiene/route pins migrated; Install and
+Refresh suites untouched. No JVM/kotlinc in the sandbox — verified with the brace/paren scan +
+a Python mirror of every new/changed assertion (all pass) + a stale-pin sweep. Record:
+`docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md`. No device pass; none claimed. **Not
+merged** — owner device pass and merge command owed for 73.1–73.7 together (rule.md §3).
+
 **2026-09-29 — Phase 73.6 (editor-drawer git: full-GUI Initialize + ask-first install prompt) 🚧
 IMPLEMENTED, CI ✅ GREEN `36566495685` on `65d34a2`.** Owner device report on the 73.5 build, verbatim: "if git is not
 installed it will install automatically in the background with status bar but it's not happened

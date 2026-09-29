@@ -25,7 +25,7 @@ class BackRouterRootTest {
      * answering the same question.
      */
     private val tabPatterns = listOf(
-        "editor?projectName={projectName}&fileName={fileName}&single={single}",
+        "editor?projectName={projectName}&fileName={fileName}&single={single}&panel={panel}",
         "terminal?cmd={cmd}&nonce={nonce}",
         "modules",
         "settings",

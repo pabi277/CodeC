@@ -40,7 +40,7 @@ class GitDiscardWiringTest {
         assertFalse(reload.contains("saveAllTabs("))
     }
     @Test fun `existing git affordances still delegate to the one engine`() {
-        for (call in listOf("viewModel.openDiff(", "viewModel.commitAndPush(",
+        for (call in listOf("viewModel.openDiff(", "viewModel.commitOnly(",
             "viewModel.pull(", "viewModel.push(", "viewModel.markResolved(")) assertTrue(call, sheet.contains(call))
         for (call in listOf("git.stageAll(", "git.commit(", "git.pull(", "git.pushCapturing(")) assertTrue(call, vm.contains(call))
     }

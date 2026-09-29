@@ -11,13 +11,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,27 +34,30 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.codeci.ide.R
 import com.codeci.ide.ui.projects.GitCommitEntry
 
 /** Log History (browse only) vs. Checkout Commit (each row offers a checkout). */
-enum class GitLogSheetMode { VIEW, CHECKOUT }
+enum class GitLogDialogMode { VIEW, CHECKOUT }
 
 /**
  * Phase 73.3 — Spck's "Log History" and "Checkout Commit" share one commit
  * list (both are `git log`); [mode] only changes whether a row's checkout
  * action is offered. Reached from the Source Control header's overflow menu.
  *
+ * Phase 73.7 — centered dialog, not a bottom sheet: the owner's
+ * instruction leaves no bottom popup anywhere in git.
+ *
  * Checking out an older commit detaches HEAD — a state most beginners have
  * never heard of — so a row's checkout always confirms first, in plain
- * words, before [onCheckout] runs; [GitControlView]'s branch chip and result
+ * words, before [onCheckout] runs; [GitControlPanel]'s branch chip and result
  * message then make the "not on a branch now" state visible afterward.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GitLogSheet(
-    mode: GitLogSheetMode,
+fun GitLogDialog(
+    mode: GitLogDialogMode,
     commits: List<GitCommitEntry>,
     loading: Boolean,
     error: String?,
@@ -60,26 +66,38 @@ fun GitLogSheet(
 ) {
     var pendingCheckout by remember { mutableStateOf<GitCommitEntry?>(null) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
         ) {
-            Text(
-                text = stringResource(
-                    if (mode == GitLogSheetMode.CHECKOUT) {
-                        R.string.git_checkout_commit_action
-                    } else {
-                        R.string.git_log_history_action
-                    }
-                ),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)
-            )
-            if (mode == GitLogSheetMode.CHECKOUT) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(
+                        if (mode == GitLogDialogMode.CHECKOUT) {
+                            R.string.git_checkout_commit_action
+                        } else {
+                            R.string.git_log_history_action
+                        }
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.cancel)
+                    )
+                }
+            }
+            if (mode == GitLogDialogMode.CHECKOUT) {
                 Text(
                     text = stringResource(R.string.git_checkout_commit_explainer),
                     style = MaterialTheme.typography.bodySmall,
@@ -112,7 +130,7 @@ fun GitLogSheet(
                     itemsIndexed(commits, key = { _, entry -> entry.sha }) { index, entry ->
                         GitCommitRow(
                             entry = entry,
-                            checkoutMode = mode == GitLogSheetMode.CHECKOUT,
+                            checkoutMode = mode == GitLogDialogMode.CHECKOUT,
                             onCheckout = { pendingCheckout = entry }
                         )
                         if (index < commits.lastIndex) {
@@ -123,6 +141,7 @@ fun GitLogSheet(
                     }
                 }
             }
+        }
         }
     }
 

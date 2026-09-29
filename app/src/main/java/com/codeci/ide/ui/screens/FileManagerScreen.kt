@@ -182,6 +182,13 @@ fun FileManagerScreen(
      * and keeps riding [onProjectFileSelected].
      */
     onProjectFilePeek: (projectName: String, relativePath: String) -> Unit = { _, path -> onFileSelected(path) },
+    /**
+     * Phase 73.7 — the hub ⋮'s "Source Control" opens the editor with the
+     * Repository panel selected (same entry-file pair as
+     * [onProjectFileSelected], routed to the panel instead). The hub's own
+     * git sheet is deleted with it — git lives in the editor panel now.
+     */
+    onProjectGitPanel: (projectName: String, relativePath: String) -> Unit = { _, _ -> },
     onProjectSelected: (ProjectInfo) -> Unit = {},
     onPreviewFile: (String) -> Unit = {},
     onProjectPreviewFile: (projectName: String, relativePath: String) -> Unit = { _, path -> onPreviewFile(path) },
@@ -225,9 +232,8 @@ fun FileManagerScreen(
     var exportProjectName by remember { mutableStateOf<String?>(null) }
     var showActionsMenu by remember { mutableStateOf(false) }
     var showCloneDialog by remember { mutableStateOf(false) }
-    var gitSheetProject by remember { mutableStateOf<ProjectInfo?>(null) }
     // Phase 17 — Switch Branch, opened from the Projects card ⋮.
-    var branchSheetProject by remember { mutableStateOf<ProjectInfo?>(null) }
+    var branchDialogProject by remember { mutableStateOf<ProjectInfo?>(null) }
     // Phase 15 — Projects Hub presentation state.
     var hubFilter by remember { mutableStateOf(ProjectHubFilter.ALL) }
     var searchOpen by remember { mutableStateOf(false) }
@@ -267,7 +273,7 @@ fun FileManagerScreen(
         showCreateItem || showCloneDialog || showZipNameDialog ||
         renameTarget != null || deleteTarget != null ||
         deleteProjectTarget != null || renameProjectTarget != null ||
-        gitSheetProject != null || branchSheetProject != null
+        branchDialogProject != null
     val hubBackAction = BackRouter.decide(
         BackState(
             hubProjectOpen = activeProject != null,
@@ -360,6 +366,21 @@ fun FileManagerScreen(
             if (entry != null) {
                 onProjectSelected(project)
                 onProjectFileSelected(project.name, entry)
+            } else {
+                selectProject(project)
+            }
+        }
+    }
+
+    // Phase 73.7 — the hub ⋮'s "Source Control": the same entry-file
+    // resolution as openInEditor, then the panel route instead of a
+    // plain open (null-tolerant: the tree ⋮ can fire with no project).
+    fun openGitPanel(project: ProjectInfo?) {
+        if (project == null) return
+        viewModel.entryFileForEditor(context, project.name) { entry ->
+            if (entry != null) {
+                onProjectSelected(project)
+                onProjectGitPanel(project.name, entry)
             } else {
                 selectProject(project)
             }
@@ -515,7 +536,7 @@ fun FileManagerScreen(
                                 leadingIcon = { Icon(Icons.Default.AccountTree, contentDescription = null) },
                                 onClick = {
                                     showActionsMenu = false
-                                    gitSheetProject = activeProject
+                                    openGitPanel(activeProject)
                                 }
                             )
                             DropdownMenuItem(
@@ -650,7 +671,7 @@ fun FileManagerScreen(
                                 }
                             }
                             HubCardAction.DELETE -> deleteProjectTarget = project
-                            HubCardAction.SOURCE_CONTROL -> gitSheetProject = project
+                            HubCardAction.SOURCE_CONTROL -> openGitPanel(project)
                             HubCardAction.PULL -> viewModel.pullProject(context, project.name)
                             HubCardAction.COPY_REMOTE_URL -> viewModel.remoteUrlFor(context, project.name) { url ->
                                 scope.launch {
@@ -662,7 +683,7 @@ fun FileManagerScreen(
                                     }
                                 }
                             }
-                            HubCardAction.SWITCH_BRANCH -> branchSheetProject = project
+                            HubCardAction.SWITCH_BRANCH -> branchDialogProject = project
                             HubCardAction.PUSH -> viewModel.pushProject(context, project.name)
                         }
                     },
@@ -1318,22 +1339,12 @@ fun FileManagerScreen(
         )
     }
 
-    gitSheetProject?.let { project ->
-        GitControlSheet(
-            projectRoot = project.root,
-            onDismiss = { gitSheetProject = null },
-            // Phase 73.3 — the overflow menu's "Git Credentials" item reuses
-            // this screen's existing Settings jump.
-            onOpenSettings = onOpenSettings
-        )
-    }
-
     // Phase 17 — Switch Branch from the Projects card ⋮.
-    branchSheetProject?.let { project ->
-        BranchSwitchSheet(
+    branchDialogProject?.let { project ->
+        BranchSwitchDialog(
             projectRoot = project.root,
             onDismiss = {
-                branchSheetProject = null
+                branchDialogProject = null
                 viewModel.loadProjects(context)
             }
         )

@@ -72,7 +72,7 @@ import java.io.File
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BranchSwitchSheet(
+fun BranchSwitchDialog(
     projectRoot: File,
     onDismiss: () -> Unit,
     viewModel: GitControlViewModel = viewModel(),

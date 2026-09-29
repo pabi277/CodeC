@@ -19,8 +19,8 @@ class GitGuiParityWiringTest {
     private val sheet = source("screens/GitControlView.kt")
     private val viewModel = source("viewmodels/GitControlViewModel.kt")
     private val manager = source("projects/GitManager.kt")
-    private val logSheet = source("screens/GitLogSheet.kt")
-    private val remotesSheet = source("screens/GitRemotesSheet.kt")
+    private val logDialog = source("screens/GitLogDialog.kt")
+    private val remotesDialog = source("screens/GitRemotesDialog.kt")
     private val strings = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
 
     @Test fun `the two header menus only appear once git and a repository are both ready`() {
@@ -38,10 +38,10 @@ class GitGuiParityWiringTest {
 
     @Test fun `the branch menu offers Branches, Remotes, Log History and Refresh Files`() {
         val menu = sheet.substringAfter("expanded = showBranchMenu,").substringBefore("expanded = showPushMenu,")
-        assertTrue(menu.contains("showBranchSheet = true"))
+        assertTrue(menu.contains("showBranchDialog = true"))
         assertTrue(menu.contains("viewModel.loadRemotes(context, projectRoot)"))
-        assertTrue(menu.contains("showRemotesSheet = true"))
-        assertTrue(menu.contains("logSheetMode = GitLogSheetMode.VIEW"))
+        assertTrue(menu.contains("showRemotesDialog = true"))
+        assertTrue(menu.contains("logDialogMode = GitLogDialogMode.VIEW"))
         assertTrue(menu.contains("viewModel.refresh(context, projectRoot)"))
         assertTrue(menu.contains("stringResource(R.string.git_branches_action)"))
         assertTrue(menu.contains("stringResource(R.string.git_refresh_files_action)"))
@@ -50,14 +50,18 @@ class GitGuiParityWiringTest {
     @Test fun `the push menu offers Commit All, Revert All, Checkout Commit, Fetch, Pull, Push, Credentials and Provider`() {
         // Bounded by the branch-chip row that follows the header, so the
         // bottom PULL button below cannot satisfy these assertions.
+        // Phase 73.7 — Commit All and Push open Spck's dialogs (the menu
+        // names the action; the dialog asks the questions), so the pins
+        // below assert the dialog opens, not a direct ViewModel call.
         val menu = sheet.substringAfter("expanded = showPushMenu,").substringBefore("// ---- branch chip")
         assertTrue(menu.contains("stringResource(R.string.git_branch_menu_header, pushMenuBranch)"))
-        assertTrue(menu.contains("viewModel.commitOnly(context, projectRoot, commitMessage)"))
+        assertTrue(menu.contains("showCommitDialog = true"))
         assertTrue(menu.contains("pendingRevertAll = true"))
-        assertTrue(menu.contains("logSheetMode = GitLogSheetMode.CHECKOUT"))
+        assertTrue(menu.contains("logDialogMode = GitLogDialogMode.CHECKOUT"))
         assertTrue(menu.contains("viewModel.fetch(context, projectRoot)"))
         assertTrue(menu.contains("viewModel.pull(context, projectRoot)"))
-        assertTrue(menu.contains("viewModel.push(context, projectRoot)"))
+        assertTrue(menu.contains("viewModel.loadBranches(context, projectRoot)"))
+        assertTrue(menu.contains("showPushDialog = true"))
         // Phase 73.5 — Git Credentials AND Provider both open the new
         // inline dialog (screenshot 2); only the dialog's own Manage link
         // still jumps to Settings.
@@ -83,9 +87,9 @@ class GitGuiParityWiringTest {
     }
 
     @Test fun `checking out an old commit confirms first and clears state on dismiss`() {
-        assertTrue(logSheet.contains("AlertDialog("))
-        assertTrue(logSheet.contains("onCheckout(entry)"))
-        assertTrue(logSheet.contains("stringResource(R.string.git_checkout_commit_confirm, entry.shortSha)"))
+        assertTrue(logDialog.contains("AlertDialog("))
+        assertTrue(logDialog.contains("onCheckout(entry)"))
+        assertTrue(logDialog.contains("stringResource(R.string.git_checkout_commit_confirm, entry.shortSha)"))
         assertTrue(sheet.contains("viewModel.clearCommits()"))
         assertTrue(sheet.contains("viewModel.checkoutCommit(context, projectRoot, entry)"))
     }
@@ -110,9 +114,9 @@ class GitGuiParityWiringTest {
     @Test fun `remotes can be added and removed, with a confirm before removing`() {
         assertTrue(sheet.contains("onAdd = { name, url -> viewModel.addRemote(context, projectRoot, name, url) }"))
         assertTrue(sheet.contains("onRemove = { name -> viewModel.removeRemote(context, projectRoot, name) }"))
-        assertTrue(remotesSheet.contains("AlertDialog("))
-        assertTrue(remotesSheet.contains("pendingRemove = entry.name"))
-        assertTrue(remotesSheet.contains("stringResource(R.string.git_remotes_remove_confirm, remoteName)"))
+        assertTrue(remotesDialog.contains("AlertDialog("))
+        assertTrue(remotesDialog.contains("pendingRemove = entry.name"))
+        assertTrue(remotesDialog.contains("stringResource(R.string.git_remotes_remove_confirm, remoteName)"))
     }
 
     @Test fun `every new ViewModel action goes through runGitOperation`() {
