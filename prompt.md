@@ -3,11 +3,12 @@
 > [PR #94](https://github.com/pabi277/CodeC/pull/94); `main` tip `69c4b5316b3f2072bed05f96e22698b4d26da9d0`,
 > CI ✅ `36515609337`. Record: `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`. A later
 > session on `main` @ that tip then discussed **73.1 Source control and GitHub** (owner's pick
-> from the offered drafts) and implemented it — see the **CURRENT HANDOFF — 2026-09-29 (after
-> PR #94)** block below for its state. The polish series' remaining discussion drafts after 73.1
-> are **65.1** and **74.1** — the owner names the next one; nothing starts on the agent's own.
-> The operative handoff is the **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below;
-> every block after it is history.
+> from the offered drafts), implemented it and got CI ✅ GREEN (`36519004263` on `9acfa34`,
+> branch `arena/01a0eb2d-codec`) — **not yet merged**, owner device pass owed; see the
+> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for its state. The polish series'
+> remaining discussion drafts after 73.1 are **65.1** and **74.1** — the owner names the next
+> one; nothing starts on the agent's own. The operative handoff is the **CURRENT HANDOFF —
+> 2026-09-29 (after PR #94)** block below; every block after it is history.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -76,10 +77,11 @@ got committed (`commitAndPush` always `git.stageAll()`s first). Fix: removed tha
 ordinary change rows (Mark Resolved on conflict rows, which does a real `git.stageFile`, is
 untouched); `GitControlViewModel.toggleStage()` deleted as orphaned. Discard safety, push
 readiness/help-links and the push result card were reviewed and left untouched — they already
-match the brief. Full record, evidence split (source tests / Android tests / device) and CI state:
-`docs/ui-polish-chats/PHASE_73_1_GIT.md`. **If CI is not yet green or the owner has not merged,
-finish that first** (push, watch `Build APK`, fix for-cause failures, update the doc, report, stop
-at the merge gate) before starting anything new.
+match the brief. **CI ✅ GREEN** (`36519004263` on `9acfa34`) — the first real Gradle
+compile/run of the changed files. **Not merged** — the owner has not yet run a device pass or
+given the merge command (rule.md §3); do that before starting anything new. Full record,
+evidence split (source tests / Android tests / device) and CI state:
+`docs/ui-polish-chats/PHASE_73_1_GIT.md`.
 
 *What is next — the owner decides, you ask:* once 73.1 is settled, the remaining discussion drafts
 are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in

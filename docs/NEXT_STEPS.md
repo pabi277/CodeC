@@ -22,8 +22,10 @@ result card were reviewed and are untouched — they already do what the brief a
 the removed pin) + new case `the ordinary change row has no stage toggle, only Mark Resolved does`.
 Pre-validated with a local kotlinc 2.4.20 + JRE 25 syntax check (no parse errors; unresolved-
 reference cascades only, expected without the Android/Compose classpath) — a syntax reading, not
-CI. Record: `docs/ui-polish-chats/PHASE_73_1_GIT.md`. **CI: pending push.** No device pass; none
-claimed. Remaining discussion drafts: 65.1, 74.1.
+CI. Record: `docs/ui-polish-chats/PHASE_73_1_GIT.md`. **CI: ✅ GREEN `36519004263` on `9acfa34`**
+(12 m 17 s) — the first real Gradle compile/run of the changed files. No device pass; none
+claimed. Remaining discussion drafts: 65.1, 74.1. **Not merged** — awaiting the owner's command
+(rule.md §3).
 
 **2026-09-29 — Phase 71.1 (Packages, installation and Terminal) ✅ COMPLETE — owner device-tested and MERGED on
 his command** (*"Device test passed record everything and merge with main"*; no device/OS/build named). Owner said "71.1 start"; asked four questions

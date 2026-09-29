@@ -1,8 +1,8 @@
 # Proposed Phase 73.1 — Source control and GitHub
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI pending; session branch `arena/01a0eb2d-codec`.
-Record, CI and evidence below.** One part = one future chat. No deadline,
-dependency, new control or replacement engine promised.
+**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN, owner device pass owed; session branch
+`arena/01a0eb2d-codec`. Record, CI and evidence below.** One part = one future chat.
+No deadline, dependency, new control or replacement engine promised.
 
 ## Copy into a new chat
 
@@ -134,4 +134,9 @@ affordances were reviewed and already do this — see Discussion record and
 
 ### CI
 
-Pending — will be recorded here once the session branch is pushed and `Build APK` runs.
+✅ **GREEN** — `Build APK` [`36519004263`](https://github.com/pabi277/CodeC/actions/runs/36519004263)
+on commit `9acfa34` (12 m 17 s, `arena/01a0eb2d-codec`). This is the first real Gradle
+compile/run of `GitControlView.kt`/`GitControlViewModel.kt` after this change —
+`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` all passed, so
+`GitDiscardWiringTest`'s new/changed cases ran on real JUnit, not only the local kotlinc
+syntax check. **Still no device pass** — none claimed.
