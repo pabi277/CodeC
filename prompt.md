@@ -13,8 +13,11 @@
 > is now a button)** — and implemented it too (CI ✅ GREEN `36544645579`); a device report on
 > that same build then surfaced a real bug — **73.4: `refresh()`'s catch-all mis-reported
 > "installed" after any error, letting "Initialize repository" show on a project git was never
-> installed on** — fixed this session too, CI ✅ GREEN `36551505966`; see the
-> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all four states.
+> installed on** — fixed this session too, CI ✅ GREEN `36551505966`. A further session then
+> copied that whole branch onto `arena/01a0eca9-codec` and implemented the owner's follow-up —
+> **73.5, the Spck-exact Git panel (REPOSITORY header + two menus, install status bar, inline
+> credentials dialog, Commit All without push)** — CI pending on push; see the
+> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all five states.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
 > **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below; every block after it is history.
@@ -172,7 +175,35 @@ device — if git still will not install after this fix, the next diagnostic ste
 73.1/73.2/73.3/73.4 together (rule.md §3). Full record:
 `docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`.
 
-*What is next — the owner decides, you ask:* once 73.1, 73.2, 73.3 and 73.4 are settled, the remaining discussion drafts
+*73.5 (this session, on `arena/01a0eca9-codec`, not a discussion draft — a direct owner
+improvement report, same 4 Spck screenshots):* owner verbatim: "Ok i want to convert the git
+part of the editor fully terminal independent gui … the 1st git install will be in terminal
+but not be redirected to terminal instead a status ber for the installation completion …
+Settings have a git config place merge that also here so here also i can set like the
+provide screenshot". The session branch was fast-forwarded to `arena/01a0eb2d-codec` tip
+`5e242f9` first (identical content), then this phase on top. Asked four scope questions
+first; owner answers: (1) **full Spck-style restyle** (REPOSITORY header + 3 icons, two
+menus exactly like the screenshots, UNSTAGED section with count badge; commit box + changes
++ pull/refresh stay below); (2) **Commit All = commit only, no push**; (3) **Provider
+opens the same credentials dialog** as Git Credentials; (4) **all 4 credential fields**.
+Shipped: Spck-exact header (branch menu + push menu item-for-item, same ViewModel calls
+73.3 used; branch chip on its own row below); UNSTAGED collapsible + count badge +
+display-only search filter (screenshot 4's `+` stage-all deliberately NOT ported — 73.1
+proved a stage control here is a no-op dressed as an action; no shortcut hint shown —
+no `Ctrl+Enter` handler exists); install status bar (elapsed seconds + indeterminate
+track, finishes in-panel; `ENDED_WITHOUT_INSTALL` now failed + RETRY); new inline
+`GitCredentialsDialog.kt` (screenshot 2's shape on the shared `GitCredentialsStore`;
+only its Manage link still jumps to Settings); new `commitOnly` (same guards +
+`stageAll` choke point, no push). Supersedes two 73.3 decisions: the single overflow
+menu (split in two, every action kept) and credentials-as-Settings-jump. Tests: new
+`GitSpckPanelWiringTest.kt` (8 cases); parity/install/discard wiring tests updated. No
+JVM/kotlinc in sandbox — verified with a Kotlin state-machine brace/paren scan + a
+Python mirror of every test assertion pre-push (caught two edit-tool glitches before
+commit). **CI pending** on push; not merged — owner device pass and merge command owed
+for 73.1/73.2/73.3/73.4/73.5 together (rule.md §3). Full record:
+`docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`.
+
+*What is next — the owner decides, you ask:* once 73.1, 73.2, 73.3, 73.4 and 73.5 are settled, the remaining discussion drafts
 are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in
 `docs/ui-polish-chats/`). Ask which part (or which bug) comes next — offer both, with one line
 each on what the brief proposes; do not recommend a redesign (owner, 2026-09-27: keep the current

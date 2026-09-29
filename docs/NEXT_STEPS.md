@@ -1,3 +1,35 @@
+**2026-09-29 — Phase 73.5 (Git panel: Spck-exact layout, install status bar, inline credentials) 🚧
+IMPLEMENTED, CI pending.** Owner-reported directly (not a discussion draft), same 4 Spck
+screenshots 73.3 ported the menu *items* from — this phase ports the *layout*: fully
+terminal-independent Git GUI. Asked four scope questions before coding; owner answered: (1)
+**full Spck-style restyle** (REPOSITORY header + 3 icons, two menus exactly like the
+screenshots, UNSTAGED section with count badge; commit box + changes + pull/refresh stay
+below); (2) **Commit All = commit only, no push** (new path; big button unchanged); (3)
+**Provider opens the same credentials dialog** as Git Credentials; (4) **all 4 credential
+fields** (nothing lost). Shipped: Spck-exact header (branch menu = Branches/Remotes/Log
+History/Refresh Files; push menu = BRANCH header + Commit All/Revert All/Checkout
+Commit/Fetch/Pull/Push/Git Credentials/Provider), branch chip on its own row below;
+UNSTAGED collapsible + count badge + header search filter (display-only); install status
+bar (elapsed seconds + indeterminate track — `pkg` reports no percentage — success
+refreshes in place, `ENDED_WITHOUT_INSTALL` now shows failed + RETRY instead of silently
+reverting); new `GitCredentialsDialog.kt` (screenshot 2's shape: provider row with GitHub
+as the honest single entry, Manage link to Settings, 4 fields, "Create a GitHub Token."
+link, Cancel/Ok — same `GitCredentialsStore` Settings uses, save refreshes readiness);
+new `commitOnly` (same guards + `stageAll` choke point as commit-and-push, no push —
+existing unpushed section offers the follow-up PUSH). Deliberately NOT ported: screenshot
+4's `+` stage-all (73.1 proved a stage control here is a no-op dressed as an action) and
+screenshot 3's shortcut hint (no `Ctrl+Enter` handler exists in this sheet). Supersedes
+two 73.3 decisions: the single overflow menu (split into the two screenshot menus, every
+action kept) and credentials-as-Settings-jump (inline dialog now; only Manage still
+jumps). Session branch `arena/01a0eca9-codec` was fast-forwarded to `arena/01a0eb2d-codec`
+tip `5e242f9` first (identical content), then this phase on top. Tests: new
+`GitSpckPanelWiringTest.kt` (8 cases), parity/install/discard wiring tests updated (see
+record). No JVM/kotlinc in sandbox — verified with a Kotlin state-machine brace/paren
+scan + a Python mirror of every test assertion before pushing (caught two edit-tool
+glitches pre-commit). Record: `docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`. No
+device pass; none claimed. **Not merged** — owner device pass and merge command owed for
+73.1/73.2/73.3/73.4/73.5 together (rule.md §3).
+
 **2026-09-29 — Phase 73.4 (device fix: git-refresh mis-reported "installed" after any error) 🚧
 IMPLEMENTED, CI ✅ GREEN `36551505966` on `b49e726`.** Owner device report, verbatim: "Auto install not
 working"; follow-up, after asking where: tapped Install Git in the Git panel, then "I click the
