@@ -131,6 +131,7 @@ class GitGuiParityWiringTest {
             assertTrue(name, strings.contains("name=\"$name\""))
         }
         // The destructive actions both spell out "cannot be undone" in plain words.
-        assertTrue(strings.substringAfter("name=\"git_revert_all_confirm\"").contains("cannot be undone"))
+        val revertConfirm = strings.substringAfter("name=\"git_revert_all_confirm\"").substringBefore("</string>")
+        assertTrue(revertConfirm.contains("cannot be undone"))
     }
 }

@@ -73,7 +73,7 @@ class GitInstallWiringTest {
         // path; the old "type git init in the Terminal" instruction was
         // dropped once a real button did that instead (see
         // `GitGuiParityWiringTest`).
-        val notARepo = strings.substringAfter("name=\"git_not_a_repo_message\"")
+        val notARepo = strings.substringAfter("name=\"git_not_a_repo_message\"").substringBefore("</string>")
         assertTrue(notARepo.contains("Clone from GitHub"))
         assertFalse(notARepo.contains("Terminal"))
     }
