@@ -10,8 +10,11 @@
 > GREEN (`36523739665`) — **not yet merged**. The same session then took a third direct owner
 > report, 4 Spck screenshots attached — **73.3, the git menu ported to full GUI parity
 > (Fetch/Log History/Checkout Commit/Revert All/Remotes/Git Credentials, everything but install
-> is now a button)** — and implemented it too (CI ✅ GREEN `36544645579`); see the
-> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all three states.
+> is now a button)** — and implemented it too (CI ✅ GREEN `36544645579`); a device report on
+> that same build then surfaced a real bug — **73.4: `refresh()`'s catch-all mis-reported
+> "installed" after any error, letting "Initialize repository" show on a project git was never
+> installed on** — fixed this session too; see the
+> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all four states.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
 > **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below; every block after it is history.
@@ -141,10 +144,35 @@ DialogProperties(...)`, unlike the file's own pre-existing dialogs — fixed in 
 an unscoped `substringAfter` that read to end-of-file and got polluted by unrelated later
 strings containing "Terminal" — fixed, plus the same latent shape in
 `GitGuiParityWiringTest`, in `84b8d79`). **CI ✅ GREEN `36544645579`** on tip `84b8d79`. Not
-merged — owner device pass and merge command still owed for 73.1/73.2/73.3 together (rule.md
-§3). Full record: `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`.
+merged — owner device pass and merge command still owed for 73.1/73.2/73.3/73.4 together
+(rule.md §3). Full record: `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`.
 
-*What is next — the owner decides, you ask:* once 73.1, 73.2 and 73.3 are settled, the remaining discussion drafts
+*73.4 (this session, device fix, not a discussion draft):* owner device report, verbatim: "Auto
+install not working"; follow-up, after asking exactly where: tapped Install Git in the Git panel,
+then "I click the initialize in the repo no installed git" — meaning the sheet showed 73.3's
+"Initialize repository" button on a project where git was never installed, instead of the Install
+Git button. Root cause, found by reading `GitControlViewModel.refresh()`: it wrapped acquiring
+the `GitManager` AND running `git status` in one try/catch, and the catch unconditionally set
+`gitInstalled = true` while never touching `isRepo` (left stale at the `UiState` default,
+`false`). `GitContext.manager()` only reaches shell/credential setup — `ShellBootstrap.prepare()`
+writing profile scripts, extracting TCC, reading stored credentials, none of it git-specific —
+AFTER already confirming a `git` binary exists on disk; any exception there (or anywhere else in
+the block) got misreported as "git is installed, something else broke", landing on exactly
+`gitInstalled = true, isRepo = false` — the "Initialize repository" state — on a device where git
+was never confirmed working. Fixed: manager acquisition is now its own try/catch reporting
+`gitInstalled = false, isRepo = false` on failure (routes to Install Git, not a dead-end
+Initialize button); the git-status catch re-derives `isRepo` with a fresh plain filesystem check
+instead of leaving it stale. New test: `GitRefreshStateWiringTest.kt` (5 cases, source-scan
+style; every assertion hand-verified against the real file with a Python mirror of Kotlin's
+substring semantics — this session's own 73.3 CI-round lesson applied before trusting it, not
+after). This does **not** claim to know why the underlying exception fired on the owner's
+device — if git still will not install after this fix, the next diagnostic step is a
+`pkg install -y git` run captured directly from Terminal (exit code + output). **CI: not yet run
+this session.** Not merged — owner device pass and merge command still owed for
+73.1/73.2/73.3/73.4 together (rule.md §3). Full record:
+`docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`.
+
+*What is next — the owner decides, you ask:* once 73.1, 73.2, 73.3 and 73.4 are settled, the remaining discussion drafts
 are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in
 `docs/ui-polish-chats/`). Ask which part (or which bug) comes next — offer both, with one line
 each on what the brief proposes; do not recommend a redesign (owner, 2026-09-27: keep the current

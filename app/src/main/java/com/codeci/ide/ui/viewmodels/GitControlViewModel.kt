@@ -341,25 +341,53 @@ class GitControlViewModel : ViewModel() {
     fun refresh(context: Context, projectRoot: File, finalMessage: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true)
-            try {
-                val git = gitContext(context).manager()
-                if (git == null) {
-                    _state.value = _state.value.copy(
-                        loading = false,
+            // Phase 73.4 device fix — acquiring the manager is its own try:
+            // [GitContext.manager] only reaches shell/credential setup AFTER
+            // it has already confirmed a `git` binary is on disk, so a
+            // failure here (e.g. ShellBootstrap.prepare() failing to write a
+            // profile script or extract the TCC bundle — nothing to do with
+            // git) must NOT be reported as "git is installed, something else
+            // broke". The old single try/catch below did exactly that (a
+            // hardcoded `gitInstalled = true` in the catch), which could
+            // leave a brand-new sheet showing "Initialize repository" for a
+            // project where git was never actually usable — a beginner never
+            // saw the Install Git button at all. Treat any failure to obtain
+            // a working manager the same as "not installed".
+            val git = try {
+                gitContext(context).manager()
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    loading = false,
+                    gitInstalled = false,
+                    isRepo = false,
+                    status = null,
+                    message = friendly(e, hasToken = false).display(),
+                    readiness = GitReadiness.forProject(
                         gitInstalled = false,
-                        isRepo = false,
-                        status = null,
-                        message = finalMessage,
-                        // Phase 40.1 — git itself is the blocker; every
-                        // operation is answered before it is attempted.
-                        readiness = GitReadiness.forProject(
-                            gitInstalled = false,
-                            hasToken = false,
-                            isRepository = false
-                        )
+                        hasToken = false,
+                        isRepository = false
                     )
-                    return@launch
-                }
+                )
+                return@launch
+            }
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    loading = false,
+                    gitInstalled = false,
+                    isRepo = false,
+                    status = null,
+                    message = finalMessage,
+                    // Phase 40.1 — git itself is the blocker; every
+                    // operation is answered before it is attempted.
+                    readiness = GitReadiness.forProject(
+                        gitInstalled = false,
+                        hasToken = false,
+                        isRepository = false
+                    )
+                )
+                return@launch
+            }
+            try {
                 val isRepo = withContext(Dispatchers.IO) { git.isRepository(projectRoot) }
                 val status = if (isRepo) {
                     withContext(Dispatchers.IO) {
@@ -441,9 +469,19 @@ class GitControlViewModel : ViewModel() {
             } catch (e: Exception) {
                 // `git status` never authenticates, so a token check is moot;
                 // classify to turn "not a git repository" etc. into guidance.
+                // `git` (above) is confirmed present, so `gitInstalled = true`
+                // is right here — but `isRepo` must NOT be left at its stale
+                // previous value (the `isRepo` this same call already
+                // computed a few lines up never reached `_state.value`
+                // because the exception happened first). Re-derive it with
+                // the same plain filesystem check `isRepository` itself uses
+                // (no git invocation, so it cannot fail the same way twice).
+                val stillRepo = runCatching { git.isRepository(projectRoot) }
+                    .getOrDefault(_state.value.isRepo)
                 _state.value = _state.value.copy(
                     loading = false,
                     gitInstalled = true,
+                    isRepo = stillRepo,
                     message = friendly(e, hasToken = false).display()
                 )
             }

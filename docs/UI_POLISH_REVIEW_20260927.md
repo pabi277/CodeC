@@ -165,6 +165,7 @@ and record your answer before implementing the part.
 | [73.1](ui-polish-chats/PHASE_73_1_GIT.md) | Source control and GitHub | Simplify hierarchy; keep discard safeguards. **Implemented 2026-09-29** (the per-file stage toggle removed — it never changed what COMMIT & PUSH committed; discard/Mark Resolved/push-readiness untouched) — CI ✅ GREEN `36519004263`, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_1_GIT.md). |
 | [73.2](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md) | Git connection: auto-install, clear errors, new-user guidance | Owner-reported (not a discussion draft): auto-install git, readable errors, beginner guidance. **Implemented 2026-09-29** (one-tap Install Git reusing the Packages-tab mechanism; not-a-repo message rewritten in plain words; error classification reviewed, already good) — CI ✅ GREEN `36523739665`, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md). |
 | [73.3](ui-polish-chats/PHASE_73_3_GIT_GUI.md) | Git menu: full GUI parity with Spck | Owner-reported (not a discussion draft), 4 Spck screenshots attached: everything but git install should be a button, not the terminal. **Implemented 2026-09-29** (Fetch, Log History, Checkout Commit, Revert All with confirm, a general Remotes screen, a real `git init` button, Git Credentials shortcut) — CI ✅ GREEN `36544645579`, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_3_GIT_GUI.md). |
+| [73.4](ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md) | Device fix: git-refresh mis-reported "installed" after any error | Owner device report: "Auto install not working" / tapped Install Git, then saw and tapped "Initialize repository" on a project git was never installed on. Root cause: `refresh()`'s one catch-all hardcoded `gitInstalled = true` and left `isRepo` stale. **Implemented 2026-09-29** (manager acquisition is its own try/catch; git-status catch re-derives `isRepo`) — CI pending this session's push, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md). |
 | [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. |
 **Owner-selected starting area (2026-09-27): Projects and files.** Start the
 next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
@@ -177,7 +178,11 @@ implemented this session (CI ✅ GREEN `36523739665`, owner device pass owed,
 not merged); 73.3 (owner-reported, not a discussion draft: the whole git
 menu ported to buttons, Spck-parity, per 4 attached screenshots) is also
 implemented this session (CI ✅ GREEN `36544645579`, owner device pass
-owed, not merged); 65.1 and 74.1
+owed, not merged); 73.4 (device fix: a git-refresh catch-all mis-reported
+"installed" after any error, letting "Initialize repository" show on a
+project git was never installed on — found from the owner's own "Auto
+install not working" report) is also implemented this session (CI pending
+this session's push, owner device pass owed, not merged); 65.1 and 74.1
 remain discussion drafts** (68.1 merged in PR #90) — the owner picks the
 next discussion draft. The part numbers are stable IDs, not a requirement
 to execute 65 first. My original suggestion was editor/typing; the owner's

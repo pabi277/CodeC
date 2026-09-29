@@ -1,3 +1,26 @@
+**2026-09-29 — Phase 73.4 (device fix: git-refresh mis-reported "installed" after any error) 🚧
+IMPLEMENTED, CI pending this session's push.** Owner device report, verbatim: "Auto install not
+working"; follow-up, after asking where: tapped Install Git in the Git panel, then "I click the
+initialize in the repo no installed git" — the Source Control sheet was offering 73.3's
+"Initialize repository" button on a project where git was never actually installed, so the
+owner never even saw the Install Git button. Root cause: `GitControlViewModel.refresh()` wrapped
+manager-acquisition and git-status in ONE try/catch whose catch unconditionally set
+`gitInstalled = true` and never touched `isRepo` (left stale at the `UiState` default, `false`,
+for a fresh sheet) — so ANY exception (including one from `ShellBootstrap.prepare()` writing
+profile scripts, nothing to do with git) was reported as "git is installed, something else
+broke", landing exactly on `gitInstalled = true, isRepo = false` — the "Initialize repository"
+state. Fixed: manager acquisition is now its own try/catch reporting `gitInstalled = false,
+isRepo = false` on failure (routes to Install Git instead of a dead-end Initialize button); the
+git-status catch now re-derives `isRepo` with a fresh, plain filesystem check instead of leaving
+it stale. New test: `GitRefreshStateWiringTest.kt` (5 cases, source-scan style, every assertion
+hand-verified against the real file with a Python mirror of Kotlin's substring semantics before
+being trusted). Record: `docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`. **This does not
+claim to know why the underlying exception fired on the owner's device** — if git still will not
+install after this fix, the next step is a `pkg install -y git` run captured directly from
+Terminal (exit code + output) to read the real failure. **CI: not yet run this session.** No
+device pass; none claimed. **Not merged** — owner device pass and merge command owed for
+73.1/73.2/73.3/73.4 together (rule.md §3).
+
 **2026-09-29 — Phase 73.3 (Git menu: full GUI parity with Spck) 🚧 IMPLEMENTED, CI ✅ GREEN
 `36544645579` on `84b8d79`.** Owner-reported directly, attached 4 Spck Editor screenshots, verbatim:
 "Now git is fully depend on terminal but want it to be gui not a cli. Mean everything will be
