@@ -1,8 +1,7 @@
 # Phase 73.6 — Editor drawer git goes full GUI (Initialize + install prompt)
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36566495685` on
-`65d34a2`; session branch `arena/01a0eca9-codec`. Owner device pass owed,
-not merged (rule.md §3).
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN `36566495685` on
+`65d34a2`; session branch `arena/01a0eca9-codec`. Owner device pass ✅ 2026-09-29, merged via PR #95.
 Not one of the numbered UI-polish discussion drafts (65.1/74.1 remain
 untouched) — this is a rule.md §4 bug/improvement lifecycle item from the
 owner's own device report on the 73.5 build, superseding one 73.2 decision

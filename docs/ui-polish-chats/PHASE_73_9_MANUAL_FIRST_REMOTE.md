@@ -1,8 +1,7 @@
 # Phase 73.9 — Manual-first no-remote flow (origin by default)
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36597542971` on
-`e4f8d6a`; session branch `arena/01a0eca9-codec`. Owner device pass owed,
-not merged (rule.md §3).
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN `36597542971` on
+`e4f8d6a`; session branch `arena/01a0eca9-codec`. Owner device pass ✅ 2026-09-29, merged via PR #95.
 Not one of the numbered UI-polish discussion drafts (65.1/74.1 remain
 untouched) — this is a rule.md §4 lifecycle item from the owner's own
 follow-up on the 73.8 build (see below).**
@@ -64,7 +63,4 @@ exactly, and "other things are ok" fenced the rest.
 
 ## Owed
 
-- Owner device pass + merge command for 73.1–73.9 together (rule.md
-  §3).
-- Device cleanup (carried since 73.6): the stray `projects/.git` from
-  the old drawer-init bug still needs `rm -rf` on the owner's device.
+- None — device pass ✅ 2026-09-29 (*"Everything looks good"*), merged with 73.1–73.9 together via PR #95 (the stray `projects/.git` cleanup retired with the pass).

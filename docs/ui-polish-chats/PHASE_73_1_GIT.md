@@ -1,6 +1,6 @@
 # Proposed Phase 73.1 — Source control and GitHub
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN, owner device pass owed; session branch
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN, owner device pass ✅ 2026-09-29, merged via PR #95; session branch
 `arena/01a0eb2d-codec`. Record, CI and evidence below.** One part = one future chat.
 No deadline, dependency, new control or replacement engine promised.
 

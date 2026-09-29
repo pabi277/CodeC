@@ -1,4 +1,4 @@
-**2026-09-29 — Phase 73.9 (manual-first no-remote flow, origin by default) 🚧
+**2026-09-29 — Phase 73.9 (manual-first no-remote flow, origin by default) ✅
 IMPLEMENTED, CI ✅ GREEN `36597542971` on `e4f8d6a`.** Owner premise fix on the 73.8 build: most users
 will not give their token the repo-create permission, so Publish fails for them — "focus no remote
 user have to 1st create a repository and paste its link in remote and set the name at origin default.
@@ -9,11 +9,9 @@ the row); New Remote name starts at `origin` unless taken; `GitHelpLink` gains a
 `actionId` → new `ACTION_ADD_REMOTE`, dead `ACTION_PUBLISH_REPO` const deleted. Publish dialog/engine
 untouched for permissioned tokens (after-push card door). Tests: Phase40 remedy pin + new Panel
 manual-first case. Python mirror of every assertion + CI as the compiler (green first round). Record:
-`docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`. No device pass; none claimed. **Not
-merged** — owner device pass and merge command owed for 73.1–73.9 together (rule.md §3). Device
-`rm -rf` of the stray `projects/.git` still owed.
+`docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95) (the stray `projects/.git` cleanup retired with the pass).
 
-**2026-09-29 — Phase 73.8 (git page owns credentials, the install card, and beginner hints) 🚧
+**2026-09-29 — Phase 73.8 (git page owns credentials, the install card, and beginner hints) ✅
 IMPLEMENTED, CI ✅ GREEN `36593360018` on `aa8912d`.** Owner punch-list on the 73.7 build, verbatim gist:
 push-menu trigger should be ⋮ (the share glyph reads as "share this file"); the install "is just a
 status bar" — want "a card saying installing git like in package part, will show live % … and will
@@ -30,11 +28,9 @@ in Commit, in Push. Tests: install-wiring rewrite + guidance/clone/hint/trigger 
 pins follow the rewords. No JDK/SDK in the sandbox — verified with a Python mirror of every
 new/changed assertion (all pass) + CI as the compiler (3 rounds: TerminalStatusLabel import +
 duplicate @Composable, then one missed pin, then green). Record:
-`docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`. No device pass; none claimed. **Not
-merged** — owner device pass and merge command owed for 73.1–73.8 together (rule.md §3). Device
-`rm -rf` of the stray `projects/.git` still owed.
+`docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95) (the stray `projects/.git` cleanup retired with the pass).
 
-**2026-09-29 — Phase 73.7 (git moves into the editor panel: Spck-ditto dialogs, no sheets) 🚧
+**2026-09-29 — Phase 73.7 (git moves into the editor panel: Spck-ditto dialogs, no sheets) ✅
 IMPLEMENTED, CI ✅ GREEN `36583980074` on `0b57c0a`.** Owner follow-up on the 73.5/73.6 builds with 8 Spck screenshots attached
 (branch menu, Git Credentials, Remotes, New Remote, detach-HEAD confirm, Commit All, empty Remotes,
 Push): git must live inside the editor's side panel (the REPOSITORY tab) Spck-ditto — no bottom
@@ -51,10 +47,9 @@ deleted, 13 added. Tests: new `GitPanelWiringTest.kt` (8 cases) replaces
 `GitDrawerInstallWiringTest.kt`; Parity/Spck/discard/hygiene/route pins migrated; Install and
 Refresh suites untouched. No JVM/kotlinc in the sandbox — verified with the brace/paren scan +
 a Python mirror of every new/changed assertion (all pass) + a stale-pin sweep. Record:
-`docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md`. No device pass; none claimed. **Not
-merged** — owner device pass and merge command owed for 73.1–73.7 together (rule.md §3).
+`docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md`. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
 
-**2026-09-29 — Phase 73.6 (editor-drawer git: full-GUI Initialize + ask-first install prompt) 🚧
+**2026-09-29 — Phase 73.6 (editor-drawer git: full-GUI Initialize + ask-first install prompt) ✅
 IMPLEMENTED, CI ✅ GREEN `36566495685` on `65d34a2`.** Owner device report on the 73.5 build, verbatim: "if git is not
 installed it will install automatically in the background with status bar but it's not happened
 … when i click on initialize it opens terminal … So where is gui?" — followed by: install must
@@ -83,10 +78,9 @@ state-machine brace/paren scan (all six touched files balanced) + a Python mirro
 assertion (caught two edit-tool tail-garbage glitches and four silently un-applied edits
 pre-commit). One CI fixup round (four missing `EditorScreen.kt` imports — `65d34a2`).
 Record: `docs/ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md`. No device pass; none
-claimed. **Not merged** — owner device pass and merge command owed for 73.1–73.6 together
-(rule.md §3).
+claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
 
-**2026-09-29 — Phase 73.5 (Git panel: Spck-exact layout, install status bar, inline credentials) 🚧
+**2026-09-29 — Phase 73.5 (Git panel: Spck-exact layout, install status bar, inline credentials) ✅
 IMPLEMENTED, CI ✅ GREEN `36560766234` on `d469d52`.** Owner-reported directly (not a discussion draft), same 4 Spck
 screenshots 73.3 ported the menu *items* from — this phase ports the *layout*: fully
 terminal-independent Git GUI. Asked four scope questions before coding; owner answered: (1)
@@ -116,10 +110,9 @@ record). No JVM/kotlinc in sandbox — verified with a Kotlin state-machine brac
 scan + a Python mirror of every test assertion before pushing (caught two edit-tool
 glitches pre-commit). One CI fixup round (backtick test name with an illegal `:` —
 `d469d52`). Record: `docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`. No
-device pass; none claimed. **Not merged** — owner device pass and merge command owed for
-73.1/73.2/73.3/73.4/73.5 together (rule.md §3).
+device pass; none claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
 
-**2026-09-29 — Phase 73.4 (device fix: git-refresh mis-reported "installed" after any error) 🚧
+**2026-09-29 — Phase 73.4 (device fix: git-refresh mis-reported "installed" after any error) ✅
 IMPLEMENTED, CI ✅ GREEN `36551505966` on `b49e726`.** Owner device report, verbatim: "Auto install not
 working"; follow-up, after asking where: tapped Install Git in the Git panel, then "I click the
 initialize in the repo no installed git" — the Source Control sheet was offering 73.3's
@@ -139,10 +132,9 @@ being trusted). Record: `docs/ui-polish-chats/PHASE_73_4_GIT_STATE_FIX.md`. **Th
 claim to know why the underlying exception fired on the owner's device** — if git still will not
 install after this fix, the next step is a `pkg install -y git` run captured directly from
 Terminal (exit code + output) to read the real failure. **CI ✅ GREEN `36551505966`.** No
-device pass; none claimed. **Not merged** — owner device pass and merge command owed for
-73.1/73.2/73.3/73.4 together (rule.md §3).
+device pass; none claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
 
-**2026-09-29 — Phase 73.3 (Git menu: full GUI parity with Spck) 🚧 IMPLEMENTED, CI ✅ GREEN
+**2026-09-29 — Phase 73.3 (Git menu: full GUI parity with Spck) ✅ IMPLEMENTED, CI ✅ GREEN
 `36544645579` on `84b8d79`.** Owner-reported directly, attached 4 Spck Editor screenshots, verbatim:
 "Now git is fully depend on terminal but want it to be gui not a cli. Mean everything will be
 from buttons no need terminal for that (expect git install). Like spck i also attache some
@@ -191,10 +183,9 @@ needed `properties = DialogProperties(...)`, not direct named args (compile fail
 `substringBefore` to stop it capturing unrelated later strings that also said "Terminal" (test
 failure, run `36538858396`, fixed `84b8d79`). **CI: ✅ GREEN `36544645579`** on tip `84b8d79`.
 Record: `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`. No device pass; none claimed.
-**Not merged** — awaiting the owner's device pass and merge command for 73.1/73.2/73.3
-together (rule.md §3).
+Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
 
-**2026-09-29 — Phase 73.2 (Git connection: auto-install, clear errors, new-user guidance) 🚧
+**2026-09-29 — Phase 73.2 (Git connection: auto-install, clear errors, new-user guidance) ✅
 IMPLEMENTED, CI ✅ GREEN `36523739665` on `2f6bf55`.** Owner-reported directly (not a discussion draft), verbatim: "The git
 connection in the editor part make it properly working: 1. If git is not installed auto install
 1st. 2. Clear error massage that can be read by normal users. 3. What to do add for new users."
@@ -219,10 +210,9 @@ precedent — no Robolectric Compose render exists for this sheet). Pre-validate
 kotlinc 2.4.20 + JRE 25 syntax check (no parse errors; unresolved-reference cascades only,
 expected without the Android/Compose classpath). Record: `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
 **CI: ✅ GREEN `36523739665`** on tip `2f6bf55` (the first real Gradle compile/run of the changed
-files). No device pass; none claimed. **Not merged** — awaiting the owner's device pass and merge
-command (rule.md §3).
+files). No device pass; none claimed. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
 
-**2026-09-29 — Phase 73.1 (Source control and GitHub) 🚧 IMPLEMENTED, CI pending.** Verified state
+**2026-09-29 — Phase 73.1 (Source control and GitHub) ✅ IMPLEMENTED, CI pending.** Verified state
 first: `main` @ `69c4b5316b3f2072bed05f96e22698b4d26da9d0` (PR #94, Phase 71.1 + the pinch-zoom
 follow-up), CI green, PRs #83/#42 untouched. Owner picked **73.1** from the offered drafts (65.1,
 73.1, 74.1). Reading `GitControlView.kt`/`GitControlViewModel.kt` end to end found: no
@@ -248,8 +238,7 @@ Pre-validated with a local kotlinc 2.4.20 + JRE 25 syntax check (no parse errors
 reference cascades only, expected without the Android/Compose classpath) — a syntax reading, not
 CI. Record: `docs/ui-polish-chats/PHASE_73_1_GIT.md`. **CI: ✅ GREEN `36519004263` on `9acfa34`**
 (12 m 17 s) — the first real Gradle compile/run of the changed files. No device pass; none
-claimed. Remaining discussion drafts: 65.1, 74.1. **Not merged** — awaiting the owner's command
-(rule.md §3).
+claimed. Remaining discussion drafts: 65.1, 74.1. Owner device pass ✅ 2026-09-29 (*"Everything looks good"*). **Merged** with 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95).
 
 **2026-09-29 — Phase 71.1 (Packages, installation and Terminal) ✅ COMPLETE — owner device-tested and MERGED on
 his command** (*"Device test passed record everything and merge with main"*; no device/OS/build named). Owner said "71.1 start"; asked four questions

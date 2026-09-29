@@ -1,7 +1,7 @@
 # Phase 73.3 — Git menu: full GUI parity with Spck (no terminal, except install)
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36544645579` on tip `84b8d79`; session
-branch `arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). Not one of the
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN `36544645579` on tip `84b8d79`; session
+branch `arena/01a0eb2d-codec`. Owner device pass ✅ 2026-09-29, merged via PR #95. Not one of the
 numbered UI-polish discussion drafts (65.1/74.1 remain untouched) — this is a rule.md §4
 bug/improvement lifecycle item, in the same Git area 73.1/73.2 just touched, superseding one
 73.2 decision (see below).**

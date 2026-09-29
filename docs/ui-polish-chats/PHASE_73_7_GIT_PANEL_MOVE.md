@@ -1,8 +1,7 @@
 # Phase 73.7 — Git moves into the editor panel (Spck-ditto dialogs, no sheets)
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36583980074` on
-`0b57c0a`; session branch `arena/01a0eca9-codec`. Owner device pass owed,
-not merged (rule.md §3).
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN `36583980074` on
+`0b57c0a`; session branch `arena/01a0eca9-codec`. Owner device pass ✅ 2026-09-29, merged via PR #95.
 Not one of the numbered UI-polish discussion drafts (65.1/74.1 remain
 untouched) — this is a rule.md §4 lifecycle item from the owner's own
 follow-up on the 73.5/73.6 builds, superseding the 73.6 drawer slot it

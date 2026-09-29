@@ -1,7 +1,7 @@
 # Phase 73.2 — Git connection: auto-install, clear errors, new-user guidance
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36523739665` on tip `2f6bf55`; session
-branch `arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). Not one of the
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN `36523739665` on tip `2f6bf55`; session
+branch `arena/01a0eb2d-codec`. Owner device pass ✅ 2026-09-29, merged via PR #95. Not one of the
 numbered UI-polish discussion drafts (65.1/74.1 remain untouched) — this is a rule.md §4
 bug/improvement lifecycle item the owner asked for directly, in the same Git area 73.1 just
 touched.**

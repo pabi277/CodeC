@@ -1,7 +1,7 @@
 # Phase 73.4 — device fix: git-refresh mis-reported "installed" after any error
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36551505966` on tip `b49e726`; session
-branch `arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). A real bug fix on
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN `36551505966` on tip `b49e726`; session
+branch `arena/01a0eb2d-codec`. Owner device pass ✅ 2026-09-29, merged via PR #95. A real bug fix on
 top of 73.1/73.2/73.3, found from the owner's own device report — not a new discussion draft.**
 
 ## The owner's report (verbatim, 2026-09-29)

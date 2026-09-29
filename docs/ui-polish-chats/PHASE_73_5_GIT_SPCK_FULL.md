@@ -1,9 +1,8 @@
 # Phase 73.5 — Git panel: Spck-exact layout, install status bar, inline credentials
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36560766234` on tip
+**Status: ✅ IMPLEMENTED (2026-09-29), CI ✅ GREEN `36560766234` on tip
 `d469d52`; session branch `arena/01a0eca9-codec` (copied whole from
-`arena/01a0eb2d-codec`, tip `5e242f9`, then this phase on top). Owner device
-pass owed, not merged (rule.md §3). Not one of the numbered UI-polish
+`arena/01a0eb2d-codec`, tip `5e242f9`, then this phase on top). Owner device pass ✅ 2026-09-29, merged via PR #95. Not one of the numbered UI-polish
 discussion drafts (65.1/74.1 remain untouched) — this is a rule.md §4
 bug/improvement lifecycle item the owner asked for directly, in the same Git
 area 73.1–73.4 just touched, superseding two 73.3 decisions (see below).**

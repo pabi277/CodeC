@@ -1,31 +1,20 @@
-> **Latest owner instruction — 2026-09-29 (after Phase 71.1 + the pinch-zoom follow-up):**
-> *"Device test passed record everything and merge with main"* → merged via
-> [PR #94](https://github.com/pabi277/CodeC/pull/94); `main` tip `69c4b5316b3f2072bed05f96e22698b4d26da9d0`,
-> CI ✅ `36515609337`. Record: `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`. A later
-> session on `main` @ that tip then discussed **73.1 Source control and GitHub** (owner's pick
-> from the offered drafts), implemented it and got CI ✅ GREEN (`36519004263` on `9acfa34`,
-> branch `arena/01a0eb2d-codec`) — **not yet merged**, owner device pass owed. The same session
-> then took a direct owner bug/improvement report (not a discussion draft) — **73.2, the Git
-> connection: auto-install, clear errors, new-user guidance** — implemented it and got CI ✅
-> GREEN (`36523739665`) — **not yet merged**. The same session then took a third direct owner
-> report, 4 Spck screenshots attached — **73.3, the git menu ported to full GUI parity
-> (Fetch/Log History/Checkout Commit/Revert All/Remotes/Git Credentials, everything but install
-> is now a button)** — and implemented it too (CI ✅ GREEN `36544645579`); a device report on
-> that same build then surfaced a real bug — **73.4: `refresh()`'s catch-all mis-reported
-> "installed" after any error, letting "Initialize repository" show on a project git was never
-> installed on** — fixed this session too, CI ✅ GREEN `36551505966`. A further session then
-> copied that whole branch onto `arena/01a0eca9-codec` and implemented the owner's follow-up —
-> **73.5, the Spck-exact Git panel (REPOSITORY header + two menus, install status bar, inline
-> credentials dialog, Commit All without push)** — CI ✅ GREEN `36560766234`. A device report
-> on that build (drawer Initialize opened Terminal and init'd the projects folder) then became
-> **73.6, the drawer's full-GUI Initialize + the shared ask-first install prompt** — implemented
-> this session on `arena/01a0eca9-codec`, CI ✅ GREEN `36566495685`. A further owner follow-up
-> with 8 Spck screenshots then became **73.7, git moves into the editor panel (Spck-ditto
-> dialogs, no sheets)** — implemented this session on `arena/01a0eca9-codec`, CI ✅ GREEN `36583980074`; see the
-> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all seven states.
+> **Latest owner instruction — 2026-09-29 (the 73.x git series):** after PR #94
+> (Phase 71.1 + pinch-zoom, `main` @ `69c4b53`, CI `36515609337`), the owner picked **73.1
+> Source control and GitHub** from the offered drafts (CI ✅ `36519004263`, branch
+> `arena/01a0eb2d-codec`), then reported a run of direct follow-ups on the same builds —
+> **73.2 Git connection** (CI ✅ `36523739665`), **73.3 full GUI parity** (CI ✅ `36544645579`),
+> **73.4 refresh mis-reported "installed"** (CI ✅ `36551505966`) — then the branch moved to
+> `arena/01a0eca9-codec` for **73.5 Spck-exact panel** (CI ✅ `36560766234`), **73.6 drawer
+> full-GUI Initialize + ask-first prompt** (CI ✅ `36566495685`), **73.7 git moves into the
+> editor panel** (CI ✅ `36583980074`), **73.8 git page owns credentials + install card +
+> hints** (CI ✅ `36593360018`), **73.9 manual-first no-remote + origin default**
+> (CI ✅ `36597542971`) — then *"Everything looks good update docs and merge it to main"* →
+> **merged 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95)**
+> (device pass ✅ 2026-09-29). Records: `docs/ui-polish-chats/PHASE_73_*.md`,
+> `docs/NEXT_STEPS.md` head entries.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
-> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below; every block after it is history.
+> **CURRENT HANDOFF — 2026-09-29 (after PR #95)** block below; every block after it is history.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -60,31 +49,28 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 CI ✅ GREEN, not
-merged; 73.2 CI ✅ GREEN `36523739665`, not merged; 73.3 CI ✅ GREEN `36544645579`, not merged;
-73.4 CI ✅ GREEN `36551505966`, not merged; 73.5 CI ✅ GREEN `36560766234`, not merged; 73.6
-CI ✅ GREEN `36566495685`, not merged; 73.7 CI ✅ GREEN `36583980074`, not merged, on `arena/01a0eca9-codec`).**
+**CURRENT HANDOFF — 2026-09-29 (after PR #95, 73.1–73.9 merged; device pass ✅).**
 Read `rule.md`,
-`docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md`,
-`docs/ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md`,
-`docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`,
-`docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`,
-`docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`,
-`docs/ui-polish-chats/PHASE_73_1_GIT.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the
-historical entries below.
+`docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,
+`docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`,
+`docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5
+before the historical entries below (73.1–73.6 records stand as history behind them).
 
-*State to verify first, never assume:* `main` should be at `69c4b5316b3f2072bed05f96e22698b4d26da9d0`
-(the merge commit of [PR #94](https://github.com/pabi277/CodeC/pull/94), Phase 71.1 + the
-pinch-zoom follow-up); your session is a fresh `arena/*` branch off that `main` — confirm with
-`git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`, `gh run list --limit 3`.
+*State to verify first, never assume:* `main` should be at the merge commit of
+[PR #95](https://github.com/pabi277/CodeC/pull/95) (73.1–73.9, the terminal-independent git
+series — the PR records the merge commit); your session is a fresh `arena/*` branch off that
+`main` — confirm with `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`,
+`gh run list --limit 3`.
 The Arena sandbox can silently reset local HEAD to the base commit between turns while the files
 stay newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
 reset --mixed FETCH_HEAD` and check `git status --short` shows only your own edits. Never
-`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were open at #94's
-merge (#83, #42) — leave them to the owner.
+`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were still open at
+#95's merge (#83, #42) — leave them to the owner.
 
 *What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`
-§5) has 64, 66.1, 67.1, 69.1–69.4, 70.1, 71.1 and 72.1 delivered, owner-tested and merged. The
+§5) has 64, 66.1, 67.1, 69.1–69.4, 70.1, 71.1, 72.1 and 73.1–73.9 delivered, owner-tested and
+merged (73 = terminal-independent git: Spck-parity Repository panel, ditto dialogs, install
+card, credentials on the git page, manual-first remote). The
 editor's replay path (`SoraEditorHost`: one `Content.replace` delta, `restartInput()` before and
 after it only while `hasComposingText()`), the preview WebView's `MATCH_PARENT` birth and its
 page-box instrument line, the tools panel's phone geometry (half the page area; the keyboard
