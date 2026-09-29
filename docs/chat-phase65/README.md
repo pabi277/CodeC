@@ -8,4 +8,4 @@ In that chat the owner also reported two code-writing defects: Python `def` auto
 
 ## Current status
 
-Navigation selection remains as implemented. The independent Phase 74.1 Settings work remains. The former green Build APK runs validate the prior source revision, not the follow-up that reverts typing changes; CI for the current branch is pending. No PR opened and no merge performed.
+Navigation selection remains as implemented. The independent Phase 74.1 Settings work remains. The earlier green Build APK runs predate the revert. Post-revert Build APK `36625653233` is green on `902c9f6`; it validates the restored source, not the typing behavior, which remains unresolved. No PR opened and no merge performed.
