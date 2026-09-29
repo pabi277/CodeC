@@ -2,6 +2,7 @@ package com.codeci.ide.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -68,9 +69,14 @@ import com.codeci.ide.R
 import com.codeci.ide.ui.components.SpckIcons
 import com.codeci.ide.ui.components.FileIconView
 import com.codeci.ide.ui.components.SkeletonGitRow
+import com.codeci.ide.ui.modules.InstallOutcome
+import com.codeci.ide.ui.modules.InstallOutcomes
+import com.codeci.ide.ui.modules.PackageCatalog
+import com.codeci.ide.ui.modules.PkgResult
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.DiffOp
 import com.codeci.ide.ui.projects.GitBlocker
+import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.GitDiscardPolicy
 import com.codeci.ide.ui.projects.GitFileChange
@@ -78,8 +84,15 @@ import com.codeci.ide.ui.projects.GitFileState
 import com.codeci.ide.ui.projects.GitOp
 import com.codeci.ide.ui.projects.GitHubPublish
 import com.codeci.ide.ui.projects.PushOutcome
+import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.GitControlViewModel
+import com.codeci.ide.ui.viewmodels.TerminalViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -110,6 +123,64 @@ fun GitControlSheet(
     var showBranchSheet by remember { mutableStateOf(false) }
     // Phase 40.3 — the Publish-to-GitHub dialog (create the remote there isn't one).
     var showPublishSheet by remember { mutableStateOf(false) }
+
+    // Phase 73.2 — install git in place instead of sending the user to
+    // Packages/Terminal and back. Reuses the exact mechanism Phase 71.1 built
+    // for the Packages tab: the real command goes into the shared terminal
+    // session (`TerminalViewModel.sendCommand`, activity-scoped, so it runs
+    // even if this sheet is closed afterwards), and `PkgResult`/`InstallOutcomes`
+    // — pure and already host-tested — decide WAITING/INSTALLED/FAILED from the
+    // exit-status file `pkg` itself writes, exactly like a Packages row. The
+    // one difference from a Packages row: on success this stays in the sheet
+    // (`viewModel.refresh`) instead of navigating to Terminal — the owner's
+    // choice, since the user came here to work on a repo, not to watch a shell.
+    val terminalViewModel: TerminalViewModel = activityTerminalViewModel()
+    val setupFacts by terminalViewModel.setupFacts.collectAsState()
+    // The Linux tools themselves (the ~40 MB userland) are a separate,
+    // bigger install than the `git` package — SetupGatePolicy already knows
+    // whether they're ready. When they are not, the owner's decision is to
+    // keep today's plain message pointing at Terminal, not to chain into
+    // that bigger download from here.
+    val installGitVerdict = remember(setupFacts) {
+        SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, setupFacts)
+    }
+    val gitPackage = remember { PackageCatalog.ALL_PACKAGES.first { it.id == "git" } }
+    val gitInstallTargets = remember(gitPackage) { PkgResult.installTargets(gitPackage.installCommand) }
+    val userlandPrefix = remember(context) { ShellEnvironment.prefixDir(context.applicationContext.filesDir) }
+    var installingGit by remember(projectRoot) { mutableStateOf(false) }
+    var gitInstallStartedAtSec by remember(projectRoot) { mutableStateOf(0L) }
+    var gitInstallFailed by remember(projectRoot) { mutableStateOf(false) }
+
+    LaunchedEffect(installingGit) {
+        if (!installingGit) return@LaunchedEffect
+        while (installingGit) {
+            delay(1_500)
+            val (result, onDisk) = withContext(Dispatchers.IO) {
+                val read = PkgResult.read(userlandPrefix)
+                val installed = GitContext(context.applicationContext).gitBinary() != null
+                read to installed
+            }
+            when (InstallOutcomes.decide(gitInstallTargets, gitInstallStartedAtSec, onDisk, result)) {
+                InstallOutcome.INSTALLED -> {
+                    installingGit = false
+                    viewModel.refresh(context, projectRoot)
+                }
+                InstallOutcome.FAILED -> {
+                    installingGit = false
+                    gitInstallFailed = true
+                }
+                InstallOutcome.ENDED_WITHOUT_INSTALL -> installingGit = false
+                InstallOutcome.WAITING -> Unit
+            }
+        }
+    }
+    val onInstallGit: () -> Unit = {
+        gitInstallFailed = false
+        gitInstallStartedAtSec = System.currentTimeMillis() / 1000
+        installingGit = true
+        Toast.makeText(context, context.getString(R.string.git_installing), Toast.LENGTH_SHORT).show()
+        terminalViewModel.sendCommand(gitPackage.installCommand)
+    }
 
     LaunchedEffect(projectRoot) {
         viewModel.refresh(context, projectRoot)
@@ -189,7 +260,18 @@ fun GitControlSheet(
                     }
                 }
                 !state.gitInstalled -> {
-                    SheetGuidance(stringResource(R.string.git_not_installed_message))
+                    // Phase 73.2 — only offer the one-tap install when the
+                    // Linux tools it needs are actually ready; otherwise keep
+                    // today's plain message unchanged (the owner's decision).
+                    if (installGitVerdict.allowed) {
+                        GitInstallGuidance(
+                            installing = installingGit,
+                            failed = gitInstallFailed,
+                            onInstall = onInstallGit
+                        )
+                    } else {
+                        SheetGuidance(stringResource(R.string.git_not_installed_message))
+                    }
                 }
                 !state.isRepo -> {
                     SheetGuidance(stringResource(R.string.git_not_a_repo_message))
@@ -962,6 +1044,60 @@ private fun SheetGuidance(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
     )
+}
+
+/**
+ * Phase 73.2 — shown instead of [SheetGuidance] when git is missing but the
+ * Linux tools it needs are already ready, so a real one-tap install is
+ * actually possible from here.
+ */
+@Composable
+private fun GitInstallGuidance(
+    installing: Boolean,
+    failed: Boolean,
+    onInstall: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+        Text(
+            text = stringResource(R.string.git_install_explainer),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        when {
+            installing -> Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 14.dp)
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.git_installing),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            failed -> Column(modifier = Modifier.padding(top = 10.dp)) {
+                Text(
+                    text = stringResource(R.string.git_install_failed_message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                OutlinedButton(
+                    onClick = onInstall,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.padding(top = 8.dp).height(42.dp)
+                ) {
+                    Text(stringResource(R.string.install_label_retry), letterSpacing = 0.8.sp)
+                }
+            }
+            else -> OutlinedButton(
+                onClick = onInstall,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.padding(top = 12.dp).height(46.dp)
+            ) {
+                Text(stringResource(R.string.git_install_action), letterSpacing = 0.8.sp)
+            }
+        }
+    }
 }
 
 /**

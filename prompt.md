@@ -4,11 +4,13 @@
 > CI ✅ `36515609337`. Record: `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`. A later
 > session on `main` @ that tip then discussed **73.1 Source control and GitHub** (owner's pick
 > from the offered drafts), implemented it and got CI ✅ GREEN (`36519004263` on `9acfa34`,
-> branch `arena/01a0eb2d-codec`) — **not yet merged**, owner device pass owed; see the
-> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for its state. The polish series'
-> remaining discussion drafts after 73.1 are **65.1** and **74.1** — the owner names the next
-> one; nothing starts on the agent's own. The operative handoff is the **CURRENT HANDOFF —
-> 2026-09-29 (after PR #94)** block below; every block after it is history.
+> branch `arena/01a0eb2d-codec`) — **not yet merged**, owner device pass owed. The same session
+> then took a direct owner bug/improvement report (not a discussion draft) — **73.2, the Git
+> connection: auto-install, clear errors, new-user guidance** — and implemented it too (CI
+> pending); see the **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for both states.
+> The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
+> names the next one; nothing starts on the agent's own. The operative handoff is the
+> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below; every block after it is history.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -43,8 +45,9 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 implemented this
-session, CI pending).** Read `rule.md`, `docs/NEXT_STEPS.md` (head entry),
+**CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 CI ✅ GREEN, not
+merged; 73.2 implemented this session, CI pending).** Read `rule.md`, `docs/NEXT_STEPS.md`
+(head entry), `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`,
 `docs/ui-polish-chats/PHASE_73_1_GIT.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the
 historical entries below.
 
@@ -83,7 +86,23 @@ given the merge command (rule.md §3); do that before starting anything new. Ful
 evidence split (source tests / Android tests / device) and CI state:
 `docs/ui-polish-chats/PHASE_73_1_GIT.md`.
 
-*What is next — the owner decides, you ask:* once 73.1 is settled, the remaining discussion drafts
+*73.2 (this session, not yet on `main`, not a discussion draft — a direct owner bug/improvement
+report):* owner verbatim: "The git connection in the editor part make it properly working: 1. If
+git is not installed auto install 1st. 2. Clear error massage that can be read by normal users.
+3. What to do add for new users." Asked three scope questions first; owner answers: (1) a one-tap
+**Install Git** button, not silent (background progress, auto-continues on success); (2) if the
+Linux userland itself isn't ready yet (rare), keep today's "go to Terminal" message unchanged —
+do not chain into the big userland bootstrap from the Git sheet; (3) better wording only for
+new-user guidance, no new buttons. Shipped: the Source Control sheet reuses the exact Packages-tab
+install mechanism (`TerminalViewModel.sendCommand` + polling the pure `PkgResult`/
+`InstallOutcomes`), gated by the same `SetupGatePolicy` the Packages tab uses; on success it
+refreshes in place instead of navigating to Terminal (a deliberate deviation from the Packages
+convention, per the owner's "stay in place" answer). `git_not_a_repo_message` rewritten in plain
+words; `GitErrors.classify()` reviewed and found already good (no change). New test:
+`GitInstallWiringTest.kt`. CI: pending. Not merged. Full record:
+`docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
+
+*What is next — the owner decides, you ask:* once 73.1 and 73.2 are settled, the remaining discussion drafts
 are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in
 `docs/ui-polish-chats/`). Ask which part (or which bug) comes next — offer both, with one line
 each on what the brief proposes; do not recommend a redesign (owner, 2026-09-27: keep the current

@@ -163,16 +163,20 @@ and record your answer before implementing the part.
 | [71.1](ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md) | Packages, installation and Terminal | Visible progress, safe transactions. |
 | [72.1](ui-polish-chats/PHASE_72_1_PREVIEW.md) | Web preview, console and viewport tools | Polish existing tools. **Delivered 2026-09-28** (five-tab console, four render rounds incl. the `WRAP_CONTENT` → zero-layout-height cause, the phone pass; the project card opens the editor) — owner-tested 2026-09-29, [PR #93](https://github.com/pabi277/CodeC/pull/93); [record](chat-phase70/README.md). |
 | [73.1](ui-polish-chats/PHASE_73_1_GIT.md) | Source control and GitHub | Simplify hierarchy; keep discard safeguards. **Implemented 2026-09-29** (the per-file stage toggle removed — it never changed what COMMIT & PUSH committed; discard/Mark Resolved/push-readiness untouched) — CI ✅ GREEN `36519004263`, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_1_GIT.md). |
+| [73.2](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md) | Git connection: auto-install, clear errors, new-user guidance | Owner-reported (not a discussion draft): auto-install git, readable errors, beginner guidance. **Implemented 2026-09-29** (one-tap Install Git reusing the Packages-tab mechanism; not-a-repo message rewritten in plain words; error classification reviewed, already good) — CI pending, not merged; [record](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md). |
 | [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. |
 **Owner-selected starting area (2026-09-27): Projects and files.** Start the
 next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
 owner names a particular file detail first. *State on 2026-09-29:* 64, 66.1,
 67.1, 69.1–69.4, 70.1, 71.1 and 72.1 are delivered and merged; **73.1 is
-implemented this chat (CI pending, owner device pass owed); 65.1 and 74.1
-remain discussion drafts** (68.1 merged in PR #90) — the owner picks the next
-one. The part numbers are stable IDs, not a requirement to execute 65 first.
-My original suggestion was editor/typing; the owner's priority overrides that.
-Polish one agreed part per chat.
+implemented this session (CI ✅ GREEN `36519004263`, owner device pass owed,
+not merged); 73.2 (owner-reported Git connection fixes — auto-install,
+clear errors, new-user guidance — not a discussion draft) is also
+implemented this session (CI pending); 65.1 and 74.1 remain discussion
+drafts** (68.1 merged in PR #90) — the owner picks the next discussion
+draft. The part numbers are stable IDs, not a requirement to execute 65
+first. My original suggestion was editor/typing; the owner's priority
+overrides that. Polish one agreed part per chat.
 
 ## 6. Gate for every chat
 

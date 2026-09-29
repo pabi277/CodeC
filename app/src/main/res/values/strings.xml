@@ -361,7 +361,16 @@
     <string name="source_control_title">Source Control</string>
     <string name="git_refresh">Refresh status</string>
     <string name="git_not_installed_message">git is not installed. Install it from the Modules tab (Git) or run “pkg install -y git” in the terminal, then come back.</string>
-    <string name="git_not_a_repo_message">This project is not a Git repository. Clone one from Files → ⋮ → Clone from GitHub, or run “git init” in the terminal.</string>
+    <!-- Phase 73.2 — shown only when the Linux tools ARE ready, so an
+         Install Git button can actually work; explains git in plain words
+         instead of assuming the reader knows what it is. -->
+    <string name="git_install_explainer">Git isn’t installed on this device yet. Git keeps a history of every change you make and can back your project up to GitHub.</string>
+    <string name="git_install_action">INSTALL GIT</string>
+    <string name="git_installing">Installing git…</string>
+    <string name="git_install_failed_message">The install didn’t finish. Open Terminal to see what happened, then try again.</string>
+    <!-- Phase 73.2 — plain-words rewrite: says what Git IS for before it says
+         what to do, for a reader who has never used Git. -->
+    <string name="git_not_a_repo_message">Git keeps a history of your code and can back it up to GitHub. This folder isn’t tracked by Git yet — clone an existing repository from Files → ⋮ → Clone from GitHub, or type “git init” in the Terminal to start tracking it here.</string>
     <string name="git_detached_head">detached HEAD</string>
     <string name="git_pull">PULL</string>
     <string name="git_working_tree_clean">Working tree clean ✓</string>

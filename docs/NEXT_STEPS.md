@@ -1,3 +1,30 @@
+**2026-09-29 — Phase 73.2 (Git connection: auto-install, clear errors, new-user guidance) 🚧
+IMPLEMENTED, CI pending.** Owner-reported directly (not a discussion draft), verbatim: "The git
+connection in the editor part make it properly working: 1. If git is not installed auto install
+1st. 2. Clear error massage that can be read by normal users. 3. What to do add for new users."
+Reading the code first: the not-installed state was one static sentence with no action; error
+classification (`GitErrors.classify`) already maps ~12 raw git failures to plain-English messages
+with a next step each (found already good, left unchanged); the not-a-repo message named a fix
+without ever saying what Git/Source Control is for. Asked three scope questions before writing
+code; owner answered each: (1) auto-install = a one-tap **Install Git** button, not silent — no
+install happens without a tap, background progress, auto-continues on success; (2) if the Linux
+userland itself isn't ready yet (rare), keep today's "go to Terminal" message unchanged — do not
+chain into the big userland bootstrap from the Git sheet; (3) new-user guidance = better wording
+only, no new buttons. Shipped: the Source Control sheet gets a `TerminalViewModel` handle via the
+existing `activityTerminalViewModel()` helper and reuses the exact Packages-tab install mechanism
+(`sendCommand("pkg install -y git")` + polling the pure, already host-tested
+`PkgResult`/`InstallOutcomes`) gated by the same `SetupGatePolicy.can(INSTALL_PACKAGE, ...)` the
+Packages tab uses — allowed → new `GitInstallGuidance` (explainer + INSTALL GIT button +
+installing/failed states, stays in the sheet and refreshes in place on success, unlike a Packages
+row); refused → today's message unchanged. `git_not_a_repo_message` rewritten in plain words
+(states what Git does before naming the same two existing recovery paths); no new action added
+there. New tests: `GitInstallWiringTest.kt` (source-scan style, matching `GitDiscardWiringTest`'s
+precedent — no Robolectric Compose render exists for this sheet). Pre-validated with a local
+kotlinc 2.4.20 + JRE 25 syntax check (no parse errors; unresolved-reference cascades only,
+expected without the Android/Compose classpath). Record: `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
+CI: pending. No device pass; none claimed. **Not merged** — awaiting CI, then the owner's device
+pass and merge command (rule.md §3).
+
 **2026-09-29 — Phase 73.1 (Source control and GitHub) 🚧 IMPLEMENTED, CI pending.** Verified state
 first: `main` @ `69c4b5316b3f2072bed05f96e22698b4d26da9d0` (PR #94, Phase 71.1 + the pinch-zoom
 follow-up), CI green, PRs #83/#42 untouched. Owner picked **73.1** from the offered drafts (65.1,
