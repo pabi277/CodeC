@@ -164,7 +164,7 @@ and record your answer before implementing the part.
 | [72.1](ui-polish-chats/PHASE_72_1_PREVIEW.md) | Web preview, console and viewport tools | Polish existing tools. **Delivered 2026-09-28** (five-tab console, four render rounds incl. the `WRAP_CONTENT` → zero-layout-height cause, the phone pass; the project card opens the editor) — owner-tested 2026-09-29, [PR #93](https://github.com/pabi277/CodeC/pull/93); [record](chat-phase70/README.md). |
 | [73.1](ui-polish-chats/PHASE_73_1_GIT.md) | Source control and GitHub | Simplify hierarchy; keep discard safeguards. **Implemented 2026-09-29** (the per-file stage toggle removed — it never changed what COMMIT & PUSH committed; discard/Mark Resolved/push-readiness untouched) — CI ✅ GREEN `36519004263`, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_1_GIT.md). |
 | [73.2](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md) | Git connection: auto-install, clear errors, new-user guidance | Owner-reported (not a discussion draft): auto-install git, readable errors, beginner guidance. **Implemented 2026-09-29** (one-tap Install Git reusing the Packages-tab mechanism; not-a-repo message rewritten in plain words; error classification reviewed, already good) — CI ✅ GREEN `36523739665`, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_2_GIT_INSTALL.md). |
-| [73.3](ui-polish-chats/PHASE_73_3_GIT_GUI.md) | Git menu: full GUI parity with Spck | Owner-reported (not a discussion draft), 4 Spck screenshots attached: everything but git install should be a button, not the terminal. **Implemented 2026-09-29** (Fetch, Log History, Checkout Commit, Revert All with confirm, a general Remotes screen, a real `git init` button, Git Credentials shortcut) — CI pending this session's push, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_3_GIT_GUI.md). |
+| [73.3](ui-polish-chats/PHASE_73_3_GIT_GUI.md) | Git menu: full GUI parity with Spck | Owner-reported (not a discussion draft), 4 Spck screenshots attached: everything but git install should be a button, not the terminal. **Implemented 2026-09-29** (Fetch, Log History, Checkout Commit, Revert All with confirm, a general Remotes screen, a real `git init` button, Git Credentials shortcut) — CI ✅ GREEN `36544645579`, owner device pass owed, not merged; [record](ui-polish-chats/PHASE_73_3_GIT_GUI.md). |
 | [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. |
 **Owner-selected starting area (2026-09-27): Projects and files.** Start the
 next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
@@ -176,7 +176,8 @@ clear errors, new-user guidance — not a discussion draft) is also
 implemented this session (CI ✅ GREEN `36523739665`, owner device pass owed,
 not merged); 73.3 (owner-reported, not a discussion draft: the whole git
 menu ported to buttons, Spck-parity, per 4 attached screenshots) is also
-implemented this session (CI pending this session's push); 65.1 and 74.1
+implemented this session (CI ✅ GREEN `36544645579`, owner device pass
+owed, not merged); 65.1 and 74.1
 remain discussion drafts** (68.1 merged in PR #90) — the owner picks the
 next discussion draft. The part numbers are stable IDs, not a requirement
 to execute 65 first. My original suggestion was editor/typing; the owner's

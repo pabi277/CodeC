@@ -1,7 +1,7 @@
 # Phase 73.3 — Git menu: full GUI parity with Spck (no terminal, except install)
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), pending CI on this session's push; session branch
-`arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). Not one of the
+**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36544645579` on tip `84b8d79`; session
+branch `arena/01a0eb2d-codec`. Owner device pass owed, not merged (rule.md §3). Not one of the
 numbered UI-polish discussion drafts (65.1/74.1 remain untouched) — this is a rule.md §4
 bug/improvement lifecycle item, in the same Git area 73.1/73.2 just touched, superseding one
 73.2 decision (see below).**
@@ -252,8 +252,37 @@ anchor string — a direct `grep -cF` confirmation against the real file
 content before trusting the assertion. CI (`Build APK`) remains the actual
 test executor of record for this change, as for every prior phase.
 
+## CI round trip (no local JVM this session — see Tests)
+
+Without a local `kotlinc`/JVM to pre-validate against (see Tests), the first
+push surfaced two real mistakes CI caught that a syntax-only read missed:
+
+1. **Run `36538343931` — compile failure.** `AlertDialog`'s
+   `dismissOnBackPress`/`dismissOnClickOutside` were passed as direct named
+   arguments in the three new confirm dialogs (Revert All, Checkout Commit,
+   Remove Remote) — this Compose Material3 version only accepts them via a
+   `properties = DialogProperties(...)` argument (the exact shape the
+   pre-existing Publish-to-GitHub and discard-progress dialogs in the same
+   file already use, which a closer read before writing would have caught).
+   Fixed in `5b38694`.
+2. **Run `36538858396` — compiled, one test failure.**
+   `GitInstallWiringTest`'s rewritten "new user-facing strings" test used
+   `strings.substringAfter("name=\"git_not_a_repo_message\"")` with no
+   matching `substringBefore`, so it captured everything to the end of
+   `strings.xml` — including two unrelated, untouched strings
+   (`notice_userland_not_ready`, `install_failed_retry`) that legitimately
+   say "Terminal", tripping the new `assertFalse(...contains("Terminal"))`
+   check. Scoped with `.substringBefore("</string>")`; the identical latent
+   bug shape in `GitGuiParityWiringTest`'s `git_revert_all_confirm` check
+   (not yet failing, but wrong for the same reason) was fixed the same way
+   pre-emptively. Fixed in `84b8d79`.
+3. **Run `36544645579` — CI ✅ GREEN.** Both APKs assembled
+   (`CodeC-IDE-1.3.17-universal.apk` / `-debug.apk`), all host unit tests
+   passed.
+
 ## Evidence
 
-- **CI:** not yet run this session — push and CI poll are the next step
-  after this document.
+- **CI: ✅ GREEN.** `Build APK` run `36544645579` on tip `84b8d79` — the
+  first real Gradle compile/run of the changed files, after two fixup
+  commits (`5b38694`, `84b8d79`) resolving the failures above.
 - **Device:** not run this session; none claimed.

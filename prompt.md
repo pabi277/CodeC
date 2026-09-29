@@ -10,7 +10,7 @@
 > GREEN (`36523739665`) — **not yet merged**. The same session then took a third direct owner
 > report, 4 Spck screenshots attached — **73.3, the git menu ported to full GUI parity
 > (Fetch/Log History/Checkout Commit/Revert All/Remotes/Git Credentials, everything but install
-> is now a button)** — and implemented it too (CI pending); see the
+> is now a button)** — and implemented it too (CI ✅ GREEN `36544645579`); see the
 > **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all three states.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
@@ -50,7 +50,7 @@
 ---
 
 **CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 CI ✅ GREEN, not
-merged; 73.2 CI ✅ GREEN `36523739665`, not merged; 73.3 implemented this session, CI pending
+merged; 73.2 CI ✅ GREEN `36523739665`, not merged; 73.3 implemented this session, CI ✅ GREEN `36544645579`
 this session's push).** Read `rule.md`, `docs/NEXT_STEPS.md`
 (head entry), `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`,
 `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`,
@@ -133,9 +133,16 @@ dialog; "Git Credentials" as a Settings shortcut (no second editor built). New t
 superseded not-a-repo test. No JVM/coroutines/JUnit jars were available in this fresh sandbox
 this session (confirmed, network-checked) — verified instead by manual review, brace/paren
 sanity checks, and a `grep -cF` confirmation of every wiring-test anchor against the real file.
-**CI: not yet run this session** — push + poll is the immediate next step. Not merged — owner
-device pass and merge command still owed for 73.1/73.2/73.3 together (rule.md §3). Full record:
-`docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`.
+That manual review missed two real bugs the first two CI rounds caught: run `36538343931`
+failed `compileDebugKotlin` (the three new confirm dialogs passed `dismissOnBackPress`/
+`dismissOnClickOutside` as bare `AlertDialog` args instead of via `properties =
+DialogProperties(...)`, unlike the file's own pre-existing dialogs — fixed in `5b38694`); run
+`36538858396` then failed one host test (`GitInstallWiringTest`'s not-a-repo string check used
+an unscoped `substringAfter` that read to end-of-file and got polluted by unrelated later
+strings containing "Terminal" — fixed, plus the same latent shape in
+`GitGuiParityWiringTest`, in `84b8d79`). **CI ✅ GREEN `36544645579`** on tip `84b8d79`. Not
+merged — owner device pass and merge command still owed for 73.1/73.2/73.3 together (rule.md
+§3). Full record: `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`.
 
 *What is next — the owner decides, you ask:* once 73.1, 73.2 and 73.3 are settled, the remaining discussion drafts
 are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in

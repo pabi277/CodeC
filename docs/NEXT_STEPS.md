@@ -1,5 +1,5 @@
-**2026-09-29 — Phase 73.3 (Git menu: full GUI parity with Spck) 🚧 IMPLEMENTED, CI pending
-(this session's push).** Owner-reported directly, attached 4 Spck Editor screenshots, verbatim:
+**2026-09-29 — Phase 73.3 (Git menu: full GUI parity with Spck) 🚧 IMPLEMENTED, CI ✅ GREEN
+`36544645579` on `84b8d79`.** Owner-reported directly, attached 4 Spck Editor screenshots, verbatim:
 "Now git is fully depend on terminal but want it to be gui not a cli. Mean everything will be
 from buttons no need terminal for that (expect git install). Like spck i also attache some
 screenshot for help. Analysis all the screenshot carefully every small details must be note."
@@ -40,10 +40,15 @@ coroutines/JUnit jars were available in this fresh sandbox this session (confirm
 and blocked apt/curl network checks) — unlike 73.1/73.2, no local kotlinc syntax check was
 possible; verified instead by line-by-line manual review, production-file brace/paren-count
 sanity checks (balanced), and a direct `grep -cF` confirmation of every source-scan test's
-literal anchor against the real file before trusting it. Record:
-`docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`. **CI: not yet run this session** — push +
-poll is the immediate next step. No device pass; none claimed. **Not merged** — awaiting the
-owner's device pass and merge command for 73.1/73.2/73.3 together (rule.md §3).
+literal anchor against the real file before trusting it. Without that local check, the first
+push surfaced two real mistakes: `AlertDialog`'s `dismissOnBackPress`/`dismissOnClickOutside`
+needed `properties = DialogProperties(...)`, not direct named args (compile failure, run
+`36538343931`, fixed `5b38694`), and a `strings.xml` wiring-test substring check needed a
+`substringBefore` to stop it capturing unrelated later strings that also said "Terminal" (test
+failure, run `36538858396`, fixed `84b8d79`). **CI: ✅ GREEN `36544645579`** on tip `84b8d79`.
+Record: `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`. No device pass; none claimed.
+**Not merged** — awaiting the owner's device pass and merge command for 73.1/73.2/73.3
+together (rule.md §3).
 
 **2026-09-29 — Phase 73.2 (Git connection: auto-install, clear errors, new-user guidance) 🚧
 IMPLEMENTED, CI ✅ GREEN `36523739665` on `2f6bf55`.** Owner-reported directly (not a discussion draft), verbatim: "The git
