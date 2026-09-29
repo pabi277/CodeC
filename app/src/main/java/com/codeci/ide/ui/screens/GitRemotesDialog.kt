@@ -320,7 +320,12 @@ private fun NewRemoteDialog(
     onDismiss: () -> Unit,
     onAdd: (name: String, url: String) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
+    // Phase 73.9 — the owner's "name at origin default": the manual-first
+    // no-remote flow pastes the first link here, and git convention names
+    // it origin; only when origin is taken does the field start empty.
+    var name by remember {
+        mutableStateOf(if (existingNames.any { it.equals("origin", ignoreCase = true) }) "" else "origin")
+    }
     var url by remember { mutableStateOf("") }
 
     val trimmedName = name.trim()

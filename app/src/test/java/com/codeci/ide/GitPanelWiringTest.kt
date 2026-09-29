@@ -229,4 +229,24 @@ class GitPanelWiringTest {
         assertTrue(commitDialog.contains("stringResource(R.string.git_hint_commit_local)"))
         assertTrue(pushDialog.contains("stringResource(R.string.git_hint_push)"))
     }
+
+    @Test fun `the no-remote flow is manual-first with origin as the default name`() {
+        // Phase 73.9 — most users' tokens lack the repo-create
+        // permission, so Publish fails for them; the readiness row now
+        // guides create-on-GitHub (link) then paste-the-link (button).
+        assertTrue(readiness.contains("Create the repository on GitHub first, then paste its link"))
+        assertTrue(readiness.contains("the name defaults to origin"))
+        assertTrue(panel.contains("GitHelpLink("))
+        assertTrue(panel.contains("GitHubPublish.NEW_REPO_URL"))
+        assertTrue(panel.contains("label = \"Create the repository on GitHub ↗\""))
+        val row = panel.substringAfter("if (pushBlocker == GitBlocker.NO_REMOTE) {")
+            .substringBefore("// Phase 73.8 — the token remedy sits on the row")
+        assertTrue(row.contains("Text(\"ADD REMOTE\", letterSpacing = 0.8.sp)"))
+        assertTrue(row.contains("viewModel.loadRemotes(context, projectRoot)"))
+        assertTrue(row.contains("showRemotesDialog = true"))
+        assertFalse(row.contains("showPublishDialog = true"))
+        // The New Remote name field starts at origin (git convention)
+        // unless origin is already taken.
+        assertTrue(remotesDialog.contains("existingNames.any { it.equals(\"origin\", ignoreCase = true) }"))
+    }
 }

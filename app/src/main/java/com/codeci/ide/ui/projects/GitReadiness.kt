@@ -100,9 +100,14 @@ data class GitReadiness(
         GitBlocker.NO_REPOSITORY ->
             "This folder isn't a Git repository yet. Tap Initialize repository " +
                 "above, or clone a repository instead."
+        // Phase 73.9 — manual-first: most users' tokens lack the repo-create
+        // permission, so Publish fails for them; the flow that always works
+        // is create-on-GitHub-then-paste-the-link (the row offers the link
+        // and the Remotes dialog, the name defaults to origin there).
         GitBlocker.NO_REMOTE ->
-            "This project has no GitHub remote yet, so there is nowhere to push. " +
-                "Tap Publish to create the repository."
+            "This project has no remote yet, so there is nowhere to push. " +
+                "Create the repository on GitHub first, then paste its link " +
+                "in the Remotes dialog — the name defaults to origin."
         GitBlocker.OFFLINE ->
             "You're offline or GitHub is unreachable. Your work is safe on this " +
                 "device — reconnect and retry."
@@ -114,7 +119,7 @@ data class GitReadiness(
         GitBlocker.GIT_NOT_INSTALLED -> ACTION_INSTALL_GIT
         GitBlocker.NO_TOKEN -> ACTION_CONNECT_TOKEN
         GitBlocker.NO_REPOSITORY -> ACTION_INIT_REPO
-        GitBlocker.NO_REMOTE -> ACTION_PUBLISH_REPO
+        GitBlocker.NO_REMOTE -> ACTION_ADD_REMOTE
         GitBlocker.OFFLINE -> ACTION_RETRY
     }
 
@@ -132,7 +137,7 @@ data class GitReadiness(
         const val ACTION_INSTALL_GIT = "INSTALL_GIT"
         const val ACTION_CONNECT_TOKEN = "CONNECT_TOKEN"
         const val ACTION_INIT_REPO = "INIT_REPO"
-        const val ACTION_PUBLISH_REPO = "PUBLISH_REPO"
+        const val ACTION_ADD_REMOTE = "ADD_REMOTE"
         const val ACTION_RETRY = "RETRY"
 
         /** Readiness for a project the app has open (git resolved, repo known). */

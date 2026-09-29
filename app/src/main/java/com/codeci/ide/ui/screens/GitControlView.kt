@@ -700,16 +700,34 @@ fun GitControlPanel(
                             if (pushBlocker == GitBlocker.NO_TOKEN) {
                                 GitHelpLink(GitErrors.TOKEN_HELP_URL)
                             }
+                            // Phase 73.9 — step 1 of the manual-first
+                            // no-remote flow: create the repository on
+                            // GitHub (most tokens lack the create
+                            // permission, so Publish fails for them).
+                            if (pushBlocker == GitBlocker.NO_REMOTE) {
+                                GitHelpLink(
+                                    GitHubPublish.NEW_REPO_URL,
+                                    label = "Create the repository on GitHub ↗"
+                                )
+                            }
                         }
+                        // Phase 73.9 — step 2 sits on the row itself:
+                        // ADD REMOTE opens the Remotes dialog (lists
+                        // pre-loaded, like the menu door); the PUBLISH
+                        // button it replaces stays reachable through the
+                        // after-push card for permissioned tokens.
                         if (pushBlocker == GitBlocker.NO_REMOTE) {
                             Spacer(Modifier.width(8.dp))
                             OutlinedButton(
-                                onClick = { showPublishDialog = true },
-                                enabled = !state.busy && !state.publishBusy,
+                                onClick = {
+                                    viewModel.loadRemotes(context, projectRoot)
+                                    showRemotesDialog = true
+                                },
+                                enabled = !state.busy,
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(42.dp)
                             ) {
-                                Text("PUBLISH", letterSpacing = 0.8.sp)
+                                Text("ADD REMOTE", letterSpacing = 0.8.sp)
                             }
                         }
                         // Phase 73.8 — the token remedy sits on the row
@@ -1879,10 +1897,10 @@ private fun GitInitGuidance(
  * approach the Settings screen uses for its GitHub links).
  */
 @Composable
-private fun GitHelpLink(url: String) {
+private fun GitHelpLink(url: String, label: String = "Create a GitHub token ↗") {
     val context = LocalContext.current
     Text(
-        text = "Create a GitHub token ↗",
+        text = label,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier
