@@ -1,7 +1,8 @@
 # Phase 73.6 — Editor drawer git goes full GUI (Initialize + install prompt)
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI pending; session branch
-`arena/01a0eca9-codec`. Owner device pass owed, not merged (rule.md §3).
+**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36566495685` on
+`65d34a2`; session branch `arena/01a0eca9-codec`. Owner device pass owed,
+not merged (rule.md §3).
 Not one of the numbered UI-polish discussion drafts (65.1/74.1 remain
 untouched) — this is a rule.md §4 bug/improvement lifecycle item from the
 owner's own device report on the 73.5 build, superseding one 73.2 decision
@@ -104,6 +105,9 @@ command from the default prompt (cwd is already `projects/`):
 
 ## Evidence
 
-- **CI:** pending — pushed on `arena/01a0eca9-codec`, `Build APK` run
-  awaited (record the run id here when green).
+- **CI:** ✅ GREEN `36566495685` on `65d34a2`. One fixup round: run
+  `36566151760` was red for cause on four missing `EditorScreen.kt`
+  imports (`SetupGatePolicy`/`SetupAction`/`ShellEnvironment`/`delay` —
+  the other two errors were cascades), fixed in `65d34a2` with no
+  behaviour change.
 - **Device:** not run this session; none claimed.

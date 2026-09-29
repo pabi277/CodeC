@@ -1,5 +1,5 @@
 **2026-09-29 — Phase 73.6 (editor-drawer git: full-GUI Initialize + ask-first install prompt) 🚧
-IMPLEMENTED, CI pending.** Owner device report on the 73.5 build, verbatim: "if git is not
+IMPLEMENTED, CI ✅ GREEN `36566495685` on `65d34a2`.** Owner device report on the 73.5 build, verbatim: "if git is not
 installed it will install automatically in the background with status bar but it's not happened
 … when i click on initialize it opens terminal … So where is gui?" — followed by: install must
 show an option "git is not installed do you want to install it than start install". Reading the
@@ -25,7 +25,8 @@ it. Tests: new `GitDrawerInstallWiringTest.kt` (6 cases) + `GitInstallWiringTest
 pin the ask-first sheet button. No JVM/kotlinc in the sandbox — verified with the Kotlin
 state-machine brace/paren scan (all six touched files balanced) + a Python mirror of every test
 assertion (caught two edit-tool tail-garbage glitches and four silently un-applied edits
-pre-commit). Record: `docs/ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md`. No device pass; none
+pre-commit). One CI fixup round (four missing `EditorScreen.kt` imports — `65d34a2`).
+Record: `docs/ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md`. No device pass; none
 claimed. **Not merged** — owner device pass and merge command owed for 73.1–73.6 together
 (rule.md §3).
 
