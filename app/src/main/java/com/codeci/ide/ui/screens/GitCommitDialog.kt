@@ -184,6 +184,15 @@ fun GitCommitDialog(
                         enabled = !saving
                     )
                 }
+                // Phase 73.8 — one grey line for newcomers: the beginner's
+                // central confusion is "I committed, why isn't it on
+                // GitHub?" — answered where the commit happens.
+                Text(
+                    text = stringResource(R.string.git_hint_commit_local),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                )
 
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
                     Spacer(Modifier.weight(1f))

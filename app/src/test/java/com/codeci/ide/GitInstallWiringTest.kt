@@ -17,17 +17,27 @@ class GitInstallWiringTest {
     private val sheet = source("screens/GitControlView.kt")
     private val strings = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
 
-    @Test fun `install button only appears when the userland gate allows it`() {
+    @Test fun `install card shows the userland state while the gate refuses, git after`() {
         // The gate is computed once, from the same SetupGatePolicy the
         // Packages tab uses — no bespoke readiness check invented here.
         assertTrue(sheet.contains("SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, setupFacts)"))
         val branch = sheet.substringAfter("!state.gitInstalled -> {").substringBefore("!state.isRepo -> {")
-        assertTrue(branch.contains("if (installGitVerdict.allowed) {"))
-        assertTrue(branch.contains("GitInstallGuidance("))
-        // When the gate refuses (Linux tools not ready yet), today's plain
-        // message is kept byte-for-byte — the owner's explicit decision not
-        // to chain into the full userland bootstrap from this sheet.
-        assertTrue(branch.contains("SheetGuidance(stringResource(R.string.git_not_installed_message))"))
+        // Phase 73.8 supersedes 73.2's "plain message" decision: one card
+        // for both states (the owner's "like in package part").
+        assertTrue(branch.contains("GitInstallCard("))
+        assertTrue(branch.contains("installAllowed = installGitVerdict.allowed"))
+        assertTrue(branch.contains("setupFacts = setupFacts"))
+        // The userland section speaks the Terminal tab's own stage words
+        // (one wording, two screens) with the installer's real % — and
+        // the gate's own refusal sentence as the guidance.
+        assertTrue(sheet.contains("TerminalUx.label("))
+        assertTrue(sheet.contains("stringResource(R.string.git_userland_title)"))
+        assertTrue(sheet.contains("SetupGatePolicy.refusal(SetupAction.INSTALL_PACKAGE, progress, setupFacts)"))
+        assertTrue(sheet.contains("stringResource(R.string.git_userland_git_wait)"))
+        // The determinate bar exists ONLY while a real download % exists.
+        val userland = sheet.substringAfter("private fun UserlandInstallSection(").substringBefore("@Composable\nprivate fun GitInitGuidance(")
+        assertTrue(userland.contains("if (progress.stage == SetupStage.DOWNLOADING && percent != null) {"))
+        assertTrue(userland.contains("progress = { percent.coerceIn(0, 100) / 100f }"))
     }
 
     @Test fun `tapping install asks first, then sends the same command the git package catalog entry uses`() {
@@ -54,18 +64,30 @@ class GitInstallWiringTest {
         assertTrue(loop.contains("viewModel.refresh(context, projectRoot)"))
         assertTrue(loop.contains("InstallOutcome.FAILED ->"))
         assertTrue(loop.contains("gitInstallFailed = true"))
+        // Phase 73.8 — the same tick reads the shared session's
+        // transcript for the live installer line (only what appeared
+        // after this install started) and keeps the last lines for the
+        // failed state — the honest signals `pkg` never gives.
+        assertTrue(loop.contains("terminalViewModel.transcriptText()"))
+        assertTrue(loop.contains("gitInstallLogBaseline = transcript.length"))
+        assertTrue(loop.contains("gitInstallLogLine = fresh.lineSequence()"))
+        assertTrue(loop.contains("gitInstallFailTail = failTail()"))
     }
 
-    @Test fun `the installing state is a status bar with elapsed time, not a spinner row`() {
+    @Test fun `the installing state is a card with elapsed time and the live installer line`() {
         // Phase 73.5 — the command still runs in the shared terminal
-        // session underneath, but the user is never redirected there; this
+        // session underneath, but the user is never redirected there; the
         // bar (elapsed seconds on an indeterminate track — `pkg` reports
         // no percentage) is the whole progress surface, finishing in-panel.
-        val guidance = sheet.substringAfter("private fun GitInstallGuidance(").substringBefore("private fun GitInitGuidance(")
-        assertTrue(guidance.contains("LinearProgressIndicator(modifier = Modifier.fillMaxWidth())"))
-        assertTrue(guidance.contains("stringResource(R.string.git_install_progress, elapsedSec)"))
-        assertTrue(guidance.contains("stringResource(R.string.git_install_background_note)"))
-        assertFalse(guidance.contains("CircularProgressIndicator"))
+        // Phase 73.8 — the bar moved into the install card (the owner's
+        // "like in package part") with the installer's live last line.
+        val card = sheet.substringAfter("private fun GitInstallCard(").substringBefore("private fun UserlandInstallSection(")
+        assertTrue(card.contains("LinearProgressIndicator(modifier = Modifier.fillMaxWidth())"))
+        assertTrue(card.contains("stringResource(R.string.git_install_progress, elapsedSec)"))
+        assertTrue(card.contains("stringResource(R.string.git_install_background_note)"))
+        assertFalse(card.contains("CircularProgressIndicator"))
+        assertTrue(card.contains("stringResource(R.string.git_install_live_label)"))
+        assertTrue(card.contains("liveLine?.let { line ->"))
         assertTrue(sheet.contains("var gitInstallElapsedSec by remember(projectRoot) { mutableStateOf(0) }"))
     }
 
@@ -78,6 +100,11 @@ class GitInstallWiringTest {
         val ended = loop.substringAfter("InstallOutcome.ENDED_WITHOUT_INSTALL -> {").substringBefore("InstallOutcome.WAITING -> Unit")
         assertTrue(ended.contains("installingGit = false"))
         assertTrue(ended.contains("gitInstallFailed = true"))
+        // Phase 73.8 — the failed state keeps the last installer lines in
+        // the box (no "open Terminal" redirect for the diagnosis).
+        val card = sheet.substringAfter("private fun GitInstallCard(").substringBefore("private fun UserlandInstallSection(")
+        assertTrue(card.contains("stringResource(R.string.git_install_failed_tail_label)"))
+        assertTrue(card.contains("failTail.forEach { line ->"))
     }
 
     @Test fun `not-a-repo guidance grew a real init button in Phase 73_3`() {
@@ -93,10 +120,17 @@ class GitInstallWiringTest {
 
     @Test fun `new user-facing strings exist and explain git in plain words`() {
         for (name in listOf(
-            "git_install_explainer", "git_install_action", "git_installing", "git_install_failed_message"
+            "git_install_explainer", "git_install_action", "git_installing", "git_install_failed_message",
+            "git_userland_title", "git_userland_checking", "git_userland_git_wait",
+            "git_install_live_label", "git_install_failed_tail_label"
         )) {
             assertTrue(name, strings.contains("name=\"$name\""))
         }
+        // Phase 73.8 — the failed message points at the box's own tail
+        // lines, never at Terminal.
+        val failed = strings.substringAfter("name=\"git_install_failed_message\"").substringBefore("</string>")
+        assertTrue(failed.contains("last lines are below"))
+        assertFalse(failed.contains("Terminal"))
         // Phase 73.3 — the message still names Clone as the other recovery
         // path; the old "type git init in the Terminal" instruction was
         // dropped once a real button did that instead (see

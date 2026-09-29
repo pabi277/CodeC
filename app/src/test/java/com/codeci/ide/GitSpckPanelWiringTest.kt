@@ -32,6 +32,10 @@ class GitSpckPanelWiringTest {
         assertTrue(sheet.contains("stringResource(R.string.git_search_changes)"))
         assertTrue(sheet.contains("stringResource(R.string.git_branch_menu_description)"))
         assertTrue(sheet.contains("stringResource(R.string.git_push_menu_description)"))
+        // Phase 73.8 — the owner's call: the push menu opens from a ⋮
+        // (the share glyph read as "share this file").
+        val trigger = sheet.substringAfter("IconButton(onClick = { showPushMenu = true })").substringBefore("DropdownMenu(")
+        assertTrue(trigger.contains("Icons.Default.MoreVert"))
         // The branch chip keeps its own row below the header, so 73.3's
         // detached-HEAD chip stays visible without opening a menu.
         val chipRow = sheet.substringAfter("// ---- branch chip").substringBefore("if (searchingGit && state.gitInstalled && state.isRepo) {")

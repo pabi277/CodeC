@@ -27,6 +27,10 @@ class GitPanelWiringTest {
     private val screen = source("navigation/Screen.kt")
     private val viewModel = source("viewmodels/GitControlViewModel.kt")
     private val manager = source("projects/GitManager.kt")
+    private val readiness = source("projects/GitReadiness.kt")
+    private val errors = source("projects/GitErrors.kt")
+    private val publishApi = source("projects/GitHubPublishApi.kt")
+    private val pushOutcome = source("projects/GitPushOutcome.kt")
     private val strings = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
 
     @Test fun `the side panel hosts the real panel in the Repository slot, with a count badge on the rail`() {
@@ -184,5 +188,45 @@ class GitPanelWiringTest {
         )) {
             assertFalse(name, strings.contains("name=\"$name\""))
         }
+        // Phase 73.8 — the beginner hints.
+        for (name in listOf("git_hint_unstaged", "git_hint_commit_local", "git_hint_push")) {
+            assertTrue(name, strings.contains("name=\"$name\""))
+        }
+    }
+
+    @Test fun `the token and install guidance point at the git page, never Settings`() {
+        // Phase 73.8 — the owner's "now present in the git page":
+        // credentials live in the ⋮ menu's Git Credentials dialog and
+        // git installs from the panel's own card.
+        assertTrue(readiness.contains("Tap INSTALL GIT at the top of this panel"))
+        assertTrue(readiness.contains("Add one in Git Credentials"))
+        assertTrue(readiness.contains("Tap Initialize repository"))
+        assertTrue(errors.contains("Git Credentials (⋮ menu"))
+        assertTrue(publishApi.contains("Git Credentials"))
+        assertTrue(pushOutcome.contains("Git Credentials"))
+        for (src in listOf(readiness, errors, publishApi, pushOutcome)) {
+            assertFalse(src.contains("Settings → GitHub Account"))
+        }
+        assertFalse(readiness.contains("Modules → Git"))
+        // The readiness row's token remedy sits on the row itself (one
+        // tap opens the dialog — the same shape as the PUBLISH remedy).
+        assertTrue(panel.contains("if (pushBlocker == GitBlocker.NO_TOKEN) {"))
+        assertTrue(panel.contains("stringResource(R.string.git_credentials_action),"))
+    }
+
+    @Test fun `the clone dialog opens credentials inline instead of leaving for Settings`() {
+        // Phase 73.8 — no project exists yet at clone time, so the git
+        // page cannot host this; the dialog stacks above the clone draft.
+        assertTrue(hub.contains("showCloneCredentials = true"))
+        assertTrue(hub.contains("if (showCloneCredentials) {"))
+        assertTrue(hub.contains("GitCredentialsDialog("))
+        assertTrue(hub.contains("onSaved = { showCloneCredentials = false }"))
+    }
+
+    @Test fun `each beginner hint sits where its confusion happens`() {
+        // Phase 73.8 — one grey line each, no popups, no coach marks.
+        assertTrue(panel.contains("stringResource(R.string.git_hint_unstaged)"))
+        assertTrue(commitDialog.contains("stringResource(R.string.git_hint_commit_local)"))
+        assertTrue(pushDialog.contains("stringResource(R.string.git_hint_push)"))
     }
 }

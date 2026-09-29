@@ -117,7 +117,7 @@ object GitHubPublish {
             401 -> PublishResult.ApiError(
                 PublishErrorKind.TOKEN_MISSING,
                 "GitHub did not accept the stored token. Save a new one in " +
-                    "Settings → GitHub Account, then publish again.",
+                    "Git Credentials (⋮ menu), then publish again.",
                 helpUrl = GitErrors.TOKEN_HELP_URL
             )
             403 -> if (json.contains("rate limit", ignoreCase = true)) {

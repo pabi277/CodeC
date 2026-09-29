@@ -360,14 +360,14 @@
     <string name="clone_success">Cloned %1$s</string>
     <string name="source_control_title">Source Control</string>
     <string name="git_refresh">Refresh status</string>
-    <string name="git_not_installed_message">git is not installed. Install it from the Modules tab (Git) or run “pkg install -y git” in the terminal, then come back.</string>
+    <string name="git_not_installed_message">git is not installed. Open the editor’s Repository panel and tap INSTALL GIT, then come back.</string>
     <!-- Phase 73.2 — shown only when the Linux tools ARE ready, so an
          Install Git button can actually work; explains git in plain words
          instead of assuming the reader knows what it is. -->
     <string name="git_install_explainer">Git isn’t installed on this device yet. Git keeps a history of every change you make and can back your project up to GitHub.</string>
     <string name="git_install_action">INSTALL GIT</string>
     <string name="git_installing">Installing git…</string>
-    <string name="git_install_failed_message">The install didn’t finish. Open Terminal to see what happened, then try again.</string>
+    <string name="git_install_failed_message">The install didn’t finish — the last lines are below. Read them, then try again.</string>
     <!-- Phase 73.2 — plain-words rewrite: says what Git IS for before it says
          what to do, for a reader who has never used Git. -->
     <!-- Phase 73.3 — the terminal instruction is gone: the button right
@@ -749,5 +749,15 @@
     <string name="git_remotes_copy_url">Remote URL</string>
     <string name="git_remotes_delete">Delete Remote</string>
     <string name="git_remotes_no_match">No remote matches that search.</string>
+    <!-- Phase 73.8 — the install card (userland state + honest git progress),
+         the beginner hints, and the credential rewordings. -->
+    <string name="git_userland_title">Linux tools</string>
+    <string name="git_userland_checking">Checking the Linux tools…</string>
+    <string name="git_userland_git_wait">Git installs after the Linux tools finish.</string>
+    <string name="git_install_live_label">Last installer line:</string>
+    <string name="git_install_failed_tail_label">Last lines:</string>
+    <string name="git_hint_unstaged">Edited files appear here. Commit All stages and commits everything at once.</string>
+    <string name="git_hint_commit_local">Commits stay on this device until you Push.</string>
+    <string name="git_hint_push">Sends your commits to the chosen remote.</string>
 </resources>
 

@@ -151,8 +151,8 @@ object GitPushParser {
                     "GitHub accepted the connection but refused the write — the token " +
                         "needs Contents → Read and write on this repository."
                 } else {
-                    "GitHub rejected the token. Check it in Settings → GitHub Account " +
-                        "(a fine-grained token with Contents → Read and write)."
+                    "GitHub rejected the token. Check it in Git Credentials " +
+                        "(⋮ menu; a fine-grained token with Contents → Read and write)."
                 }
             )
         }

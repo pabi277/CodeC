@@ -45,7 +45,9 @@ class GitErrorsTest {
         )
         assertEquals(GitErrorKind.NO_TOKEN, err.kind)
         assertEquals(GitErrors.TOKEN_HELP_URL, err.helpUrl)
-        assertTrue(err.message.contains("Settings → GitHub Account"))
+        // Phase 73.8 — credentials live on the git page now, so the
+        // no-token guidance points at the ⋮ menu, not Settings.
+        assertTrue(err.message.contains("Git Credentials"))
     }
 
     @Test

@@ -86,15 +86,20 @@ data class GitReadiness(
     /** One sentence for the user, or null when [op] is ready. */
     fun message(op: GitOp): String? = when (blocker(op)) {
         null -> null
+        // Phase 73.8 — the panel installs git itself now (73.2's card),
+        // so this points at its own INSTALL GIT button, not Modules.
         GitBlocker.GIT_NOT_INSTALLED ->
-            "Git isn't installed. Install it from Modules → Git (or run " +
-                "`pkg install git` in the terminal), then retry."
+            "Git isn't installed. Tap INSTALL GIT at the top of this panel, then retry."
+        // Phase 73.8 — credentials live on this page now (73.5's Git
+        // Credentials dialog), so this points at the ⋮ menu, not Settings.
         GitBlocker.NO_TOKEN ->
-            "No GitHub token is connected. Add one in Settings → GitHub Account " +
-                "(a token with Contents → Read and write), then retry."
+            "No GitHub token is connected. Add one in Git Credentials " +
+                "(⋮ menu; a token with Contents → Read and write), then retry."
+        // Phase 73.8 — the panel inits the repo itself now (73.3's
+        // button), so this points above, not at the terminal.
         GitBlocker.NO_REPOSITORY ->
-            "This folder isn't a Git repository yet. Run `git init` in the terminal " +
-                "or clone a repository instead."
+            "This folder isn't a Git repository yet. Tap Initialize repository " +
+                "above, or clone a repository instead."
         GitBlocker.NO_REMOTE ->
             "This project has no GitHub remote yet, so there is nowhere to push. " +
                 "Tap Publish to create the repository."

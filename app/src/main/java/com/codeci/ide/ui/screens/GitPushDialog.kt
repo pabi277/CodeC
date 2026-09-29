@@ -201,6 +201,15 @@ fun GitPushDialog(
                     )
                 }
 
+                // Phase 73.8 — one grey line for newcomers: what Push does
+                // with the commits (the other half of the commit hint).
+                Text(
+                    text = stringResource(R.string.git_hint_push),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                )
+
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onDismiss) {

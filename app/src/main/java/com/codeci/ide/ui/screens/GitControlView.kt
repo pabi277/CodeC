@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Search
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -96,8 +99,15 @@ import com.codeci.ide.ui.projects.GitOp
 import com.codeci.ide.ui.projects.GitHubPublish
 import com.codeci.ide.ui.projects.PushOutcome
 import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.terminal.SetupFacts
 import com.codeci.ide.ui.terminal.SetupGatePolicy
+import com.codeci.ide.ui.terminal.SetupStage
 import com.codeci.ide.ui.terminal.ShellEnvironment
+import com.codeci.ide.ui.terminal.TerminalLifecycle
+import com.codeci.ide.ui.terminal.TerminalUx
+import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecTokens.Radius
+import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.GitControlViewModel
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -177,9 +187,10 @@ fun GitControlPanel(
     val setupFacts by terminalViewModel.setupFacts.collectAsState()
     // The Linux tools themselves (the ~40 MB userland) are a separate,
     // bigger install than the `git` package — SetupGatePolicy already knows
-    // whether they're ready. When they are not, the owner's decision is to
-    // keep today's plain message pointing at Terminal, not to chain into
-    // that bigger download from here.
+    // whether they're ready. Phase 73.8 supersedes 73.2's "plain message"
+    // decision: when they are not ready, the install card below shows the
+    // userland's live state (stage + the installer's real download %)
+    // instead of a dead message pointing at Terminal.
     val installGitVerdict = remember(setupFacts) {
         SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, setupFacts)
     }
@@ -195,15 +206,36 @@ fun GitControlPanel(
     var showInstallPrompt by remember(projectRoot) { mutableStateOf(false) }
     // Phase 73.5 — elapsed seconds for the install status bar below.
     var gitInstallElapsedSec by remember(projectRoot) { mutableStateOf(0) }
+    // Phase 73.8 — the honest progress signals `pkg` never gives: the
+    // installer's live last line (read from the shared session's
+    // transcript, only what appeared after this install started) and,
+    // on failure, the last lines kept in the box (no Terminal redirect).
+    var gitInstallLogLine by remember(projectRoot) { mutableStateOf<String?>(null) }
+    var gitInstallFailTail by remember(projectRoot) { mutableStateOf<List<String>>(emptyList()) }
+    var gitInstallLogBaseline by remember(projectRoot) { mutableStateOf(-1) }
 
     LaunchedEffect(installingGit) {
         if (!installingGit) return@LaunchedEffect
         while (installingGit) {
             delay(1_500)
-            val (result, onDisk) = withContext(Dispatchers.IO) {
+            val (result, onDisk, transcript) = withContext(Dispatchers.IO) {
                 val read = PkgResult.read(userlandPrefix)
                 val installed = GitContext(context.applicationContext).gitBinary() != null
-                read to installed
+                Triple(read, installed, terminalViewModel.transcriptText())
+            }
+            if (gitInstallLogBaseline < 0) gitInstallLogBaseline = transcript.length
+            val fresh = transcript.drop(gitInstallLogBaseline.coerceAtLeast(0))
+            gitInstallLogLine = fresh.lineSequence()
+                .map { it.trim() }
+                .lastOrNull { it.isNotEmpty() }
+                ?.take(140)
+            fun failTail(): List<String> {
+                val source = fresh.ifBlank { transcript }
+                return source.lineSequence()
+                    .map { it.trim().take(140) }
+                    .filter { it.isNotEmpty() }
+                    .toList()
+                    .takeLast(6)
             }
             when (InstallOutcomes.decide(gitInstallTargets, gitInstallStartedAtSec, onDisk, result)) {
                 InstallOutcome.INSTALLED -> {
@@ -212,6 +244,7 @@ fun GitControlPanel(
                 }
                 InstallOutcome.FAILED -> {
                     installingGit = false
+                    gitInstallFailTail = failTail()
                     gitInstallFailed = true
                 }
                 // Phase 73.5 — `pkg` ended but git still is not on disk
@@ -222,6 +255,7 @@ fun GitControlPanel(
                 // is still missing after an install ran") is identical.
                 InstallOutcome.ENDED_WITHOUT_INSTALL -> {
                     installingGit = false
+                    gitInstallFailTail = failTail()
                     gitInstallFailed = true
                 }
                 InstallOutcome.WAITING -> Unit
@@ -229,8 +263,8 @@ fun GitControlPanel(
         }
     }
     // Phase 73.5 — ticks the "Installing git… · Ns" label on the status
-    // bar. `pkg` reports no percentage, so elapsed time is the honest
-    // progress signal (see GitInstallGuidance).
+    // bar. `pkg` reports no percentage, so elapsed time + the live
+    // installer line are the honest progress signals (see GitInstallCard).
     LaunchedEffect(installingGit) {
         while (installingGit) {
             delay(1_000)
@@ -243,6 +277,9 @@ fun GitControlPanel(
         gitInstallFailed = false
         gitInstallStartedAtSec = System.currentTimeMillis() / 1000
         gitInstallElapsedSec = 0
+        gitInstallLogLine = null
+        gitInstallFailTail = emptyList()
+        gitInstallLogBaseline = -1
         installingGit = true
         Toast.makeText(context, context.getString(R.string.git_installing), Toast.LENGTH_SHORT).show()
         terminalViewModel.sendCommand(gitPackage.installCommand)
@@ -342,9 +379,12 @@ fun GitControlPanel(
                     }
                 }
                 Box {
+                    // Phase 73.8 — the owner's call: the share glyph read as
+                    // "share this file", but the menu holds Commit All,
+                    // Fetch, Pull, Push, Credentials… — a ⋮, honestly.
                     IconButton(onClick = { showPushMenu = true }) {
                         Icon(
-                            Icons.Default.Share,
+                            Icons.Default.MoreVert,
                             contentDescription = stringResource(R.string.git_push_menu_description)
                         )
                     }
@@ -601,19 +641,21 @@ fun GitControlPanel(
                 }
             }
             !state.gitInstalled -> {
-                // Phase 73.2 — only offer the one-tap install when the
-                // Linux tools it needs are actually ready; otherwise keep
-                // today's plain message unchanged (the owner's decision).
-                if (installGitVerdict.allowed) {
-                    GitInstallGuidance(
-                        installing = installingGit,
-                        failed = gitInstallFailed,
-                        elapsedSec = gitInstallElapsedSec,
-                        onInstall = { showInstallPrompt = true }
-                    )
-                } else {
-                    SheetGuidance(stringResource(R.string.git_not_installed_message))
-                }
+                // Phase 73.8 — one install card for both states: the
+                // userland's live state while the Linux tools are still
+                // arriving (73.2's plain message is retired), git's own
+                // install once the gate allows it.
+                GitInstallCard(
+                    setupFacts = setupFacts,
+                    installAllowed = installGitVerdict.allowed,
+                    installing = installingGit,
+                    failed = gitInstallFailed,
+                    elapsedSec = gitInstallElapsedSec,
+                    liveLine = gitInstallLogLine,
+                    failTail = gitInstallFailTail,
+                    installCommand = gitPackage.installCommand,
+                    onInstall = { showInstallPrompt = true }
+                )
             }
             !state.isRepo -> {
                 // Phase 73.3 — the owner's follow-up superseded 73.2's
@@ -668,6 +710,24 @@ fun GitControlPanel(
                                 modifier = Modifier.height(42.dp)
                             ) {
                                 Text("PUBLISH", letterSpacing = 0.8.sp)
+                            }
+                        }
+                        // Phase 73.8 — the token remedy sits on the row
+                        // itself now (the owner's "now present in the git
+                        // page"): one tap opens the Git Credentials
+                        // dialog, no Settings detour.
+                        if (pushBlocker == GitBlocker.NO_TOKEN) {
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedButton(
+                                onClick = { showCredentialsDialog = true },
+                                enabled = !state.busy,
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.height(42.dp)
+                            ) {
+                                Text(
+                                    stringResource(R.string.git_credentials_action),
+                                    letterSpacing = 0.8.sp
+                                )
                             }
                         }
                     }
@@ -839,6 +899,16 @@ fun GitControlPanel(
                         Text(others.size.toString(), style = MaterialTheme.typography.labelMedium)
                     }
                 }
+
+                // Phase 73.8 — one grey line for newcomers (the owner's
+                // "hard but ok"): what lands here, and what Commit All
+                // does with it. No popup, no coach mark.
+                Text(
+                    text = stringResource(R.string.git_hint_unstaged),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 if (unstagedExpanded && files.isEmpty()) {
                     Text(
@@ -1541,55 +1611,219 @@ private fun SheetGuidance(text: String) {
  * progress surface, and it finishes right here in the panel.
  */
 @Composable
-private fun GitInstallGuidance(
+/**
+ * Phase 73.8 — the install card (the owner's "like in package part"):
+ * `PackageItemCard`'s shape — a Card with a header row, the command, and
+ * a status badge — with git's two install states inside. While the
+ * Linux-tools gate refuses, the card shows the USERLAND's live state
+ * (the Terminal tab's own stage words via [TerminalUx], with the
+ * installer's real download % whenever it knows one — nothing here is
+ * fabricated); once the gate allows, it shows git's own install
+ * (elapsed + the installer's live last line while running, the last
+ * lines in the box on failure). Nothing ever redirects to Terminal.
+ */
+@Composable
+private fun GitInstallCard(
+    setupFacts: SetupFacts,
+    installAllowed: Boolean,
     installing: Boolean,
     failed: Boolean,
     elapsedSec: Int,
+    liveLine: String?,
+    failTail: List<String>,
+    installCommand: String,
     onInstall: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
-        Text(
-            text = stringResource(R.string.git_install_explainer),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        when {
-            installing -> Column(modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
-                Text(
-                    text = stringResource(R.string.git_install_progress, elapsedSec),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.git_install_background_note),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            failed -> Column(modifier = Modifier.padding(top = 10.dp)) {
-                Text(
-                    text = stringResource(R.string.git_install_failed_message),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-                OutlinedButton(
-                    onClick = onInstall,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.padding(top = 8.dp).height(42.dp)
-                ) {
-                    Text(stringResource(R.string.install_label_retry), letterSpacing = 0.8.sp)
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        shape = RoundedCornerShape(CodecTokens.radius(Radius.M)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.RAISED))
+    ) {
+        Column(modifier = Modifier.padding(CodecTokens.space(Space.L))) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.git_install_action),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = installCommand,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = CodecType.codeFamily,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (installing || failed) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(CodecTokens.radius(Radius.S)))
+                            .background(
+                                if (failed) {
+                                    MaterialTheme.colorScheme.errorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                }
+                            )
+                            .padding(
+                                horizontal = CodecTokens.space(Space.S),
+                                vertical = CodecTokens.space(Space.XS)
+                            )
+                    ) {
+                        Text(
+                            text = if (failed) "FAILED" else "INSTALLING",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (failed) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
+                        )
+                    }
                 }
             }
-            else -> OutlinedButton(
-                onClick = onInstall,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.padding(top = 12.dp).height(46.dp)
-            ) {
-                Text(stringResource(R.string.git_install_action), letterSpacing = 0.8.sp)
+            if (!installAllowed) {
+                UserlandInstallSection(setupFacts = setupFacts)
+            } else {
+                Text(
+                    text = stringResource(R.string.git_install_explainer),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                when {
+                    installing -> Column(modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
+                        Text(
+                            text = stringResource(R.string.git_install_progress, elapsedSec),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        liveLine?.let { line ->
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.git_install_live_label),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = line,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = CodecType.codeFamily,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.git_install_background_note),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    failed -> Column(modifier = Modifier.padding(top = 10.dp)) {
+                        Text(
+                            text = stringResource(R.string.git_install_failed_message),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        if (failTail.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.git_install_failed_tail_label),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            failTail.forEach { line ->
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontFamily = CodecType.codeFamily,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = onInstall,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.padding(top = 8.dp).height(42.dp)
+                        ) {
+                            Text(stringResource(R.string.install_label_retry), letterSpacing = 0.8.sp)
+                        }
+                    }
+                    else -> OutlinedButton(
+                        onClick = onInstall,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.padding(top = 12.dp).height(46.dp)
+                    ) {
+                        Text(stringResource(R.string.git_install_action), letterSpacing = 0.8.sp)
+                    }
+                }
             }
         }
+    }
+}
+
+/**
+ * Phase 73.8 — the card's Linux-tools section, shown while the userland
+ * gate refuses the git install. The stage words are the Terminal tab's
+ * own ([TerminalUx.label] — one wording, two screens); the bar is
+ * determinate only while the installer reports a real download %,
+ * indeterminate otherwise (an unknown is shown as an unknown).
+ */
+@Composable
+private fun UserlandInstallSection(setupFacts: SetupFacts) {
+    val progress = setupFacts.progress
+    val stageLabel = if (progress.stage == SetupStage.CHECKING) {
+        stringResource(R.string.git_userland_checking)
+    } else {
+        TerminalUx.label(
+            TerminalLifecycle.STARTING,
+            progress.stage,
+            progress.percent
+        ).text
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(
+            text = stringResource(R.string.git_userland_title),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stageLabel,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(Modifier.height(8.dp))
+        val percent = progress.percent
+        if (progress.stage == SetupStage.DOWNLOADING && percent != null) {
+            LinearProgressIndicator(
+                progress = { percent.coerceIn(0, 100) / 100f },
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = SetupGatePolicy.refusal(SetupAction.INSTALL_PACKAGE, progress, setupFacts),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.git_userland_git_wait),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

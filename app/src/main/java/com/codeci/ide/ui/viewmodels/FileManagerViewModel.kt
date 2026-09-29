@@ -549,7 +549,7 @@ class FileManagerViewModel : ViewModel() {
      * named folder inside the projects root, then register it as a project
      * (same flow as the Phase 8 ZIP import) and open it. Partial clones are
      * cleaned up on failure. Public repositories clone without credentials;
-     * a stored token (Settings → GitHub Account) is used automatically.
+     * a stored token (Git Credentials) is used automatically.
      *
      * Phase 15 — the Projects Hub clone dialog adds the optional [branch]
      * (`--branch`) and [shallow] (`--depth 1`) arguments; with the defaults

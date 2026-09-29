@@ -1374,8 +1374,9 @@ fun MainApp(
                             launchSingleTop = true
                         }
                     },
-                    // Phase 15 — the clone dialog's token hint jumps to
-                    // Settings → GitHub Account (the Phase 13 card).
+                    // Phase 15 — the hub's Settings jump (the clone dialog's
+                    // token hint used it until 73.8 gave the dialog its own
+                    // inline Git Credentials editor).
                     onOpenSettings = {
                         navController.navigate(Screen.Settings.route) {
                             launchSingleTop = true

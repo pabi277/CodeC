@@ -232,6 +232,10 @@ fun FileManagerScreen(
     var exportProjectName by remember { mutableStateOf<String?>(null) }
     var showActionsMenu by remember { mutableStateOf(false) }
     var showCloneDialog by remember { mutableStateOf(false) }
+    // Phase 73.8 — the clone dialog's token hint opens the Git
+    // Credentials dialog inline (no project exists yet, so the git page
+    // cannot host this; the dialog can, from anywhere).
+    var showCloneCredentials by remember { mutableStateOf(false) }
     // Phase 17 — Switch Branch, opened from the Projects card ⋮.
     var branchDialogProject by remember { mutableStateOf<ProjectInfo?>(null) }
     // Phase 15 — Projects Hub presentation state.
@@ -1303,13 +1307,12 @@ fun FileManagerScreen(
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            stringResource(R.string.settings_title),
+                            stringResource(R.string.git_credentials_action),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.clickable {
-                                showCloneDialog = false
-                                onOpenSettings()
+                                showCloneCredentials = true
                             }
                         )
                     }
@@ -1336,6 +1339,20 @@ fun FileManagerScreen(
             dismissButton = {
                 TextButton(onClick = { showCloneDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
+        )
+    }
+
+    // Phase 73.8 — stacks above the clone dialog (the URL draft
+    // underneath is kept); cloning reads the shared store, so a fresh
+    // token just works. "Manage" still jumps to Settings' own editor.
+    if (showCloneCredentials) {
+        GitCredentialsDialog(
+            onDismiss = { showCloneCredentials = false },
+            onManage = {
+                showCloneCredentials = false
+                onOpenSettings()
+            },
+            onSaved = { showCloneCredentials = false }
         )
     }
 
