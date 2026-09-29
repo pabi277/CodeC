@@ -1,3 +1,18 @@
+**2026-09-29 — Phase 73.9 (manual-first no-remote flow, origin by default) 🚧
+IMPLEMENTED, CI ✅ GREEN `36597542971` on `e4f8d6a`.** Owner premise fix on the 73.8 build: most users
+will not give their token the repo-create permission, so Publish fails for them — "focus no remote
+user have to 1st create a repository and paste its link in remote and set the name at origin default.
+Other things are ok." No scope questions (the flow was prescribed exactly). Shipped: NO_REMOTE message
+rewritten (create first, paste the link, origin default); readiness row guides step 1 via a
+github.com/new link and step 2 via an ADD REMOTE button opening the Remotes dialog (PUBLISH gone from
+the row); New Remote name starts at `origin` unless taken; `GitHelpLink` gains a label param;
+`actionId` → new `ACTION_ADD_REMOTE`, dead `ACTION_PUBLISH_REPO` const deleted. Publish dialog/engine
+untouched for permissioned tokens (after-push card door). Tests: Phase40 remedy pin + new Panel
+manual-first case. Python mirror of every assertion + CI as the compiler (green first round). Record:
+`docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`. No device pass; none claimed. **Not
+merged** — owner device pass and merge command owed for 73.1–73.9 together (rule.md §3). Device
+`rm -rf` of the stray `projects/.git` still owed.
+
 **2026-09-29 — Phase 73.8 (git page owns credentials, the install card, and beginner hints) 🚧
 IMPLEMENTED, CI ✅ GREEN `36593360018` on `aa8912d`.** Owner punch-list on the 73.7 build, verbatim gist:
 push-menu trigger should be ⋮ (the share glyph reads as "share this file"); the install "is just a
