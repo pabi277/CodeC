@@ -2003,3 +2003,26 @@ must show the gate and two restarts around `ed.text.replace(plan.start, …)`
 there, check whether a new path edits `editor.text` directly without going
 through the host's replay — every programmatic edit while the IME composes
 needs the same bracket.
+
+## 48. "Installing…" never ends / "I must run pkg update first" / "the terminal adds many blank lines after the keyboard" (owner device reports, 2026-09-29, Phase 71.1)
+
+**Installing… never ends.** The Packages row used to look only for the binary on disk, so a failed
+install (offline, no space) left a disabled INSTALLING button. Now `pkg` writes
+`$PREFIX/var/lib/codec-pkg/last-result` and the row shows RETRY with a sentence pointing at the
+Terminal; tapping INSTALLING opens the Terminal, where the progress and the reason are.
+
+**"Run `pkg update` first".** `pkg install|upgrade|search` refreshes the index once by itself when
+there are no lists; if the refresh fails the install stops and says so.
+
+**Blank lines after the keyboard opens/closes.** Source-level cause: the terminal buffer's shrink
+pushed rows to scrollback regardless of content and clamped the cursor, the grow restored it in
+full. Fixed in `TerminalBuffer` (`blankRowsBelowCursor`, `ReflowTest` + `TerminalBufferTest`). Not
+device-verified; if lines still appear, capture whether they come from bash redrawing its prompt
+after SIGWINCH (each ime resize resizes the PTY) and reopen.
+
+**Pinch zoom leaves a gap between two `codec $` prompts (owner screenshot, 2026-09-29).** Cause:
+`Reflow` lost the cursor when it trimmed the blank after the prompt's `$` (mapped to the last row), and
+kept the screen's empty tail so a shrinking zoom pushed the prompt into history. Fixed in `Reflow`
+(`keepAtLeast`) and `TerminalBuffer.resize` (blank tail dropped); record in the 71.1 brief. Not
+device-verified.
+

@@ -39,10 +39,12 @@ class ReflowTest {
 
         buf.resize(4, 2)
 
-        // The empty second screen row is real screen state, so the rewrapped
-        // top ("abcd") overflows into scrollback — assert over the transcript.
+        // Phase 71.1: the empty second screen row holds nothing, so it is the
+        // one that goes — both halves of the rewrapped line stay on screen and
+        // nothing is pushed into history (it used to overflow "abcd").
         assertEquals("abcd\nefgh", buf.snapshot().transcriptText())
-        assertEquals("efgh", buf.visibleText())
+        assertEquals("abcd\nefgh", buf.visibleText())
+        assertEquals(0, buf.scrollbackSize)
     }
 
     @Test
@@ -144,9 +146,11 @@ class ReflowTest {
 
         buf.resize(4, 2)
 
-        // Two rows overflowed to scrollback; "cc" is the new top row.
-        assertEquals(0, buf.cursorY)
-        assertEquals('c'.code, buf.cell(0, 0).cp)
+        // Phase 71.1: the empty row under the cursor is dropped first, so only
+        // "aa" overflows and the cursor row ("cc") stays on screen, last.
+        assertEquals(1, buf.cursorY)
+        assertEquals('c'.code, buf.cell(0, 1).cp)
+        assertEquals("bb\ncc", buf.visibleText())
     }
 
     @Test
@@ -187,13 +191,14 @@ class ReflowTest {
         buf.resize(2, 2)
 
         // Fragment 1 shrinks to "x" (blank padding at the boundary), the pair
-        // moves to the next fragment intact; the trailing empty screen row
-        // overflows "x" into scrollback first.
+        // moves to the next fragment intact. Phase 71.1: the trailing empty
+        // screen row is dropped, so both fragments stay on screen.
         val snap = buf.snapshot()
         assertEquals("x\n漢", snap.transcriptText())
-        assertEquals(0x6F22, buf.cell(0, 0).cp)     // wide glyph heads the screen
-        assertTrue(buf.cell(0, 0).flags and CellFlags.WIDE_LEAD != 0)
-        assertEquals(' '.code, buf.cell(1, 0).cp)   // continuation half
+        assertEquals('x'.code, buf.cell(0, 0).cp)
+        assertEquals(0x6F22, buf.cell(0, 1).cp)     // the wide glyph, whole, on row 1
+        assertTrue(buf.cell(0, 1).flags and CellFlags.WIDE_LEAD != 0)
+        assertEquals(' '.code, buf.cell(1, 1).cp)   // continuation half
     }
 
     @Test

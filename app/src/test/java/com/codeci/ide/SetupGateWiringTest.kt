@@ -193,7 +193,8 @@ class SetupGateWiringTest {
         var count = 0
         while (index >= 0) {
             count++
-            val context = src.substring(maxOf(0, index - 600), index)
+            // 900: Phase 71.1 made each site's toast a 5-line SessionLabel call between the gate and the send.
+            val context = src.substring(maxOf(0, index - 900), index)
             assertTrue(
                 "sendCommand at $index is not gated (context ends: …${context.takeLast(90)})",
                 context.contains("if (gated)") ||

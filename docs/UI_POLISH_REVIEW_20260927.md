@@ -167,8 +167,7 @@ and record your answer before implementing the part.
 **Owner-selected starting area (2026-09-27): Projects and files.** Start the
 next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
 owner names a particular file detail first. *State on 2026-09-29:* 64, 66.1,
-67.1, 69.1–69.4, 70.1 and 72.1 are delivered and merged; **65.1, 68.1, 71.1,
-73.1 and 74.1 remain discussion drafts** — the owner picks the next one. The part numbers are stable IDs,
+67.1, 69.1–69.4, 70.1, 71.1 and 72.1 are delivered and merged; **65.1, 73.1 and 74.1 remain discussion drafts** (68.1 merged in PR #90) — the owner picks the next one. The part numbers are stable IDs,
 not a requirement to execute 65 first. My original suggestion was editor/typing;
 the owner's priority overrides that. Polish one agreed part per chat.
 

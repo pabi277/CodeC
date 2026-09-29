@@ -22,6 +22,13 @@
     <string name="terminal_copy_empty">Nothing to copy</string>
     <string name="terminal_restart">Restart shell</string>
     <string name="terminal_install_userland">Install userland</string>
+    <!-- Phase 71.1 — ⬇ asks before it closes every session. -->
+    <string name="terminal_userland_confirm_title">Reinstall the Linux tools?</string>
+    <string name="terminal_userland_confirm_body">This closes all terminal sessions and downloads the Linux tools again. Anything running in them stops. Your projects and files are not touched.</string>
+    <string name="terminal_userland_confirm_action">Reinstall</string>
+    <string name="terminal_userland_setup_title">Set up the Linux tools?</string>
+    <string name="terminal_userland_setup_body">This downloads CodeC\'s Linux tools once and restarts the terminal. Keep the app open while it runs.</string>
+    <string name="terminal_userland_setup_action">Set up</string>
     <string name="terminal_clipboard_empty">Clipboard is empty</string>
     <string name="session_list">Sessions</string>
     <string name="session_new">New session</string>
@@ -431,6 +438,13 @@
     <string name="install_label_retry">RETRY</string>
     <string name="install_progress">%1$s %2$d%%</string>
     <string name="install_finished">%1$s installed — ready to run.</string>
+    <!-- Phase 71.1 — the row learns the real result from pkg; the pin on a card. -->
+    <string name="install_failed_retry">%1$s did not install — the Terminal shows why. Tap RETRY to try again.</string>
+    <string name="packages_pinned_header">Pinned</string>
+    <string name="package_pinned">%1$s pinned to the top</string>
+    <string name="package_unpinned">%1$s unpinned</string>
+    <string name="package_pin_action">Pin %1$s to the top</string>
+    <string name="package_unpin_action">Unpin %1$s</string>
     <string name="install_failed">%1$s did not install. The terminal shows why — tap the row to retry.</string>
 
     <!-- Phase 51.4 — the one haptics switch (the app's eight moments). -->

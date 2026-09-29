@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
@@ -57,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,14 +84,23 @@ import com.codeci.ide.R
 import com.codeci.ide.ui.modules.InstallFacts
 import com.codeci.ide.ui.modules.InstallLabel
 import com.codeci.ide.ui.modules.InstallMoment
+import com.codeci.ide.ui.modules.InstallOutcome
+import com.codeci.ide.ui.modules.InstallOutcomes
+import com.codeci.ide.ui.modules.PackagePins
+import com.codeci.ide.ui.modules.PkgResult
 import com.codeci.ide.ui.modules.PackageCatalog
 import com.codeci.ide.ui.modules.PackageItem
 import com.codeci.ide.ui.modules.PackageSection
 import com.codeci.ide.ui.modules.PkgState
 import com.codeci.ide.ui.modules.QuickAction
 import com.codeci.ide.ui.services.EmbeddedCompiler
+import com.codeci.ide.ui.terminal.SessionLabel
 import com.codeci.ide.ui.terminal.SetupAction
+import com.codeci.ide.ui.settings.SettingsManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.codeci.ide.ui.terminal.SetupGatePolicy
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -123,6 +135,12 @@ fun ModulesScreen(
     }
     val setupRefusal = installVerdict.message?.takeIf { !installVerdict.allowed }
     val prefixDir = remember(context) { ShellEnvironment.prefixDir(context.filesDir) }
+    // Phase 71.1 — the toast names the session the command is about to run in.
+    val sessions by terminalViewModel.sessions.collectAsState()
+    val activeSessionId by terminalViewModel.activeSessionId.collectAsState()
+    val activeSession = sessions.firstOrNull { it.id == activeSessionId } ?: sessions.firstOrNull()
+    val sessionNumber = activeSession?.sessionNumber
+    val sessionTitle = activeSession?.displayTitle
     val runGated: (String, String) -> Unit = { command, label ->
         // A command that could actually run (CodeC's own `cc`, a compiled
         // executable, anything present in the userland or in /system/bin) is
@@ -130,7 +148,11 @@ fun ModulesScreen(
         val action = SetupGatePolicy.actionForCommand(command, prefixDir)
         val verdict = SetupGatePolicy.can(action, setupFacts)
         if (verdict.allowed) {
-            Toast.makeText(context, "Running: $label", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                SessionLabel.sentence("Running $label", sessionNumber, sessionTitle),
+                Toast.LENGTH_SHORT
+            ).show()
             terminalViewModel.sendCommand(command)
             onNavigateToTerminal()
         } else {
@@ -143,6 +165,25 @@ fun ModulesScreen(
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+    // Phase 71.1 — the 📌 on a card. Stored as one string of catalog ids (most
+    // recently pinned first); a pinned card rises into a "Pinned" group.
+    val settingsManager = remember(context) { SettingsManager(context) }
+    val pinnedRaw by settingsManager.pinnedPackagesFlow.collectAsState(initial = "")
+    val pins = remember(pinnedRaw) {
+        PackagePins.parse(pinnedRaw, PackageCatalog.ALL_PACKAGES.map { it.id }.toSet())
+    }
+    val pinScope = rememberCoroutineScope()
+    val togglePin: (PackageItem) -> Unit = { item ->
+        val wasPinned = PackagePins.isPinned(pins, item.id)
+        pinScope.launch {
+            settingsManager.setPinnedPackages(PackagePins.serialize(PackagePins.toggle(pins, item.id)))
+        }
+        Toast.makeText(
+            context,
+            context.getString(if (wasPinned) R.string.package_unpinned else R.string.package_pinned, item.name),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
     // Phase 33.2 — the "Unix tools" section is collapsed by default; a tap on
     // its header expands it. The language section is always open.
@@ -232,18 +273,49 @@ fun ModulesScreen(
                     }
                 }
             } else if (searchQuery.isNotBlank()) {
-                items(filteredPackages, key = { it.id }) { item ->
+                val (pinnedHits, otherHits) = PackagePins.arrange(filteredPackages, pins)
+                items(pinnedHits + otherHits, key = { it.id }) { item ->
                     PackageCardRow(
                         item = item,
                         context = context,
                         terminalViewModel = terminalViewModel,
                         onNavigateToTerminal = onNavigateToTerminal,
                         setupRefusal = setupRefusal,
+                        pinned = PackagePins.isPinned(pins, item.id),
+                        onTogglePin = { togglePin(item) },
+                        sessionNumber = sessionNumber,
+                        sessionTitle = sessionTitle,
                     )
                 }
             } else {
+                // Phase 71.1 — the pinned group leads the list, in pin order; the
+                // sections below hold everything that is not pinned.
+                val (pinnedItems, unpinnedItems) = PackagePins.arrange(filteredPackages, pins)
+                if (pinnedItems.isNotEmpty()) {
+                    item(key = "section_PINNED") {
+                        PackageSectionHeader(
+                            title = stringResource(R.string.packages_pinned_header),
+                            expanded = true,
+                            collapsible = false,
+                            onToggle = {},
+                        )
+                    }
+                    items(pinnedItems, key = { "pinned_${it.id}" }) { item ->
+                        PackageCardRow(
+                            item = item,
+                            context = context,
+                            terminalViewModel = terminalViewModel,
+                            onNavigateToTerminal = onNavigateToTerminal,
+                            setupRefusal = setupRefusal,
+                            pinned = true,
+                            onTogglePin = { togglePin(item) },
+                            sessionNumber = sessionNumber,
+                            sessionTitle = sessionTitle,
+                        )
+                    }
+                }
                 PackageSection.ordered.forEach { section ->
-                    val sectionItems = filteredPackages.filter { PackageCatalog.sectionOf(it) == section }
+                    val sectionItems = unpinnedItems.filter { PackageCatalog.sectionOf(it) == section }
                     if (sectionItems.isEmpty()) return@forEach
                     val expanded = section == PackageSection.LANGUAGES_INTELLISENSE || unixToolsExpanded
                     item(key = "section_${section.name}") {
@@ -262,6 +334,10 @@ fun ModulesScreen(
                                 terminalViewModel = terminalViewModel,
                                 onNavigateToTerminal = onNavigateToTerminal,
                                 setupRefusal = setupRefusal,
+                                pinned = false,
+                                onTogglePin = { togglePin(item) },
+                                sessionNumber = sessionNumber,
+                                sessionTitle = sessionTitle,
                             )
                         }
                     }
@@ -368,6 +444,10 @@ private fun PackageCardRow(
     terminalViewModel: TerminalViewModel,
     onNavigateToTerminal: () -> Unit,
     setupRefusal: String? = null,
+    pinned: Boolean = false,
+    onTogglePin: () -> Unit = {},
+    sessionNumber: Int? = null,
+    sessionTitle: String? = null,
 ) {
     val haptics = rememberCodecHaptics()
     val motion = rememberMotionSpecs()
@@ -383,12 +463,25 @@ private fun PackageCardRow(
     var installedNow by remember(item.id) { mutableStateOf(firstCheck) }
     var installRequested by remember(item.id) { mutableStateOf(false) }
     var celebrated by remember(item.id) { mutableStateOf(false) }
+    // Phase 71.1 — how the install ENDED, as `pkg` reports it. Before this the
+    // row only asked "is the binary on disk?", so a failed install (offline, no
+    // space) sat on a disabled INSTALLING button forever.
+    var installFailed by remember(item.id) { mutableStateOf(false) }
+    var installStartedAtSec by remember(item.id) { mutableStateOf(0L) }
+    val packageNames = remember(item.id) { PkgResult.installTargets(item.installCommand) }
+    val userlandPrefix = remember(context) { ShellEnvironment.prefixDir(context.filesDir) }
     LaunchedEffect(item.id, installRequested, installedNow) {
         if (!installRequested || installedNow) return@LaunchedEffect
         var observed = PkgState.NOT_INSTALLED
-        while (!installedNow) {
+        while (!installedNow && installRequested) {
             delay(1_500)
-            val now = if (checkIsInstalled(context, item)) PkgState.INSTALLED else PkgState.NOT_INSTALLED
+            // Disk work off the main thread. The result is read FIRST: a `0`
+            // result then means pkg had finished before the disk was looked at.
+            val (result, onDisk) = withContext(Dispatchers.IO) {
+                val r = PkgResult.read(userlandPrefix)
+                r to checkIsInstalled(context, item)
+            }
+            val now = if (onDisk) PkgState.INSTALLED else PkgState.NOT_INSTALLED
             if (InstallMoment.celebrateOnFinish(observed, now) && !celebrated) {
                 celebrated = true
                 haptics.perform(HapticMoment.INSTALL_FINISHED)
@@ -399,7 +492,17 @@ private fun PackageCardRow(
                 ).show()
             }
             observed = now
-            installedNow = now == PkgState.INSTALLED
+            when (InstallOutcomes.decide(packageNames, installStartedAtSec, onDisk, result)) {
+                InstallOutcome.INSTALLED -> installedNow = true
+                InstallOutcome.FAILED -> {
+                    installFailed = true
+                    installRequested = false
+                }
+                // pkg ended cleanly but installed nothing (declined, or nothing to do):
+                // the row goes back to INSTALL rather than waiting on nobody.
+                InstallOutcome.ENDED_WITHOUT_INSTALL -> installRequested = false
+                InstallOutcome.WAITING -> Unit
+            }
         }
     }
     val isInstalled = installedNow
@@ -422,9 +525,9 @@ private fun PackageCardRow(
         },
         running = installRequested,
         progress = null,
-        // Failure is the terminal's to report (Phase 44's law): the row never
-        // guesses. `refuse()` below already names the place to look.
-        failed = false,
+        // Phase 71.1 — no longer a guess: `pkg` wrote a non-zero exit status for
+        // THIS install (PkgResult). The terminal still holds the reason.
+        failed = installFailed,
     )
     val installLabel = InstallMoment.labelFor(installFacts)
     val installLabelText = when (installLabel) {
@@ -443,6 +546,14 @@ private fun PackageCardRow(
         isInstalled = isInstalled,
         installLabelText = installLabelText,
         installInFlight = installLabel == InstallLabel.INSTALLING,
+        installFailedText = if (InstallMoment.failureKind(installFacts) != null) {
+            stringResource(R.string.install_failed_retry, item.name)
+        } else {
+            null
+        },
+        pinned = pinned,
+        onTogglePin = onTogglePin,
+        onViewProgress = onNavigateToTerminal,
         crossfadeSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec),
         setupRefusal = setupRefusal?.takeIf { gated && !isInstalled },
         packageActionsBlocked = gated,
@@ -453,9 +564,15 @@ private fun PackageCardRow(
             } else {
                 // The moment the user's own install starts — the only state in
                 // which the row polls the disk for the finish below.
+                installFailed = false
+                installStartedAtSec = System.currentTimeMillis() / 1000
                 installRequested = true
                 celebrated = false
-                Toast.makeText(context, "Installing ${item.name}…", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    SessionLabel.sentence("Installing ${item.name}", sessionNumber, sessionTitle),
+                    Toast.LENGTH_SHORT
+                ).show()
                 terminalViewModel.sendCommand(item.installCommand)
                 onNavigateToTerminal()
             }
@@ -464,7 +581,11 @@ private fun PackageCardRow(
             if (runBlocked) {
                 refuse()
             } else {
-                Toast.makeText(context, "Launching ${item.name}…", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    SessionLabel.sentence("Launching ${item.name}", sessionNumber, sessionTitle),
+                    Toast.LENGTH_SHORT
+                ).show()
                 terminalViewModel.sendCommand(item.runCommand)
                 onNavigateToTerminal()
             }
@@ -473,7 +594,11 @@ private fun PackageCardRow(
             if (gated) {
                 refuse()
             } else {
-                Toast.makeText(context, "Uninstalling ${item.name}…", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    SessionLabel.sentence("Uninstalling ${item.name}", sessionNumber, sessionTitle),
+                    Toast.LENGTH_SHORT
+                ).show()
                 terminalViewModel.sendCommand("pkg uninstall -y ${item.id}")
                 onNavigateToTerminal()
             }
@@ -625,6 +750,13 @@ private fun PackageItemCard(
     installLabelText: String,
     /** Phase 51.3 — true while the user's own install is in flight. */
     installInFlight: Boolean = false,
+    /** Phase 71.1 — the one sentence under the command when the install failed. */
+    installFailedText: String? = null,
+    /** Phase 71.1 — the 📌 state and its toggle. */
+    pinned: Boolean = false,
+    onTogglePin: () -> Unit = {},
+    /** Phase 71.1 — INSTALLING is a door to the Terminal, where the progress is. */
+    onViewProgress: () -> Unit = {},
     /** Phase 51.3 — the shared spec for the badge's state change (50.4). */
     crossfadeSpec: androidx.compose.animation.core.FiniteAnimationSpec<Float>,
     onInstall: () -> Unit,
@@ -713,6 +845,24 @@ private fun PackageItemCard(
                         }
                     }
                 }
+                // Phase 71.1 — 📌 pin to the top of the list. A real IconButton (the
+                // 48 dp floor is the component's own), named for TalkBack.
+                IconButton(onClick = onTogglePin) {
+                    Icon(
+                        imageVector = if (pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        contentDescription = if (pinned) {
+                            stringResource(R.string.package_unpin_action, item.name)
+                        } else {
+                            stringResource(R.string.package_pin_action, item.name)
+                        },
+                        tint = if (pinned) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
@@ -763,6 +913,17 @@ private fun PackageItemCard(
                 }
             }
 
+            if (installFailedText != null) {
+                // Phase 71.1 — one sentence, the truth, and where to look
+                // (Phase 44's law for failures); RETRY is the button below.
+                Spacer(modifier = Modifier.height(CodecTokens.space(Space.S)))
+                Text(
+                    text = installFailedText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             Spacer(modifier = Modifier.height(CodecTokens.space(Space.M)))
 
             // ACTIONS
@@ -808,7 +969,9 @@ private fun PackageItemCard(
                         Text("VIEW SETUP")
                     }
                 } else {
-                    Button(onClick = onInstall, enabled = !installInFlight) {
+                    // Phase 71.1 — while the install runs the button is a door to
+                    // the Terminal (where the progress is), not a dead control.
+                    Button(onClick = if (installInFlight) onViewProgress else onInstall) {
                         Icon(
                             Icons.Default.Download,
                             contentDescription = null,

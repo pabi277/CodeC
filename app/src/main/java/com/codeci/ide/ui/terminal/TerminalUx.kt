@@ -132,3 +132,28 @@ object TerminalStatusLabel {
      */
     fun showsDontCloseBar(stage: SetupStage): Boolean = stage != SetupStage.READY
 }
+
+/**
+ * Phase 71.1 — which terminal session a message is about.
+ *
+ * Packages' INSTALL / RUN / UNINSTALL and the Quick Actions send their command
+ * into the ACTIVE session and jump to the Terminal, and the top bar showed only
+ * a bare digit. Owner's choice (2026-09-29): *"Name the session — the toast and
+ * the top bar say the session"*. A session with the default title already reads
+ * "Session 2"; one the user renamed, or whose shell set a title, reads
+ * "2 · build" so the number is never lost.
+ */
+object SessionLabel {
+    fun titled(number: Int, displayTitle: String): String {
+        val title = displayTitle.trim()
+        return if (title.isEmpty() || title.equals("Session $number", ignoreCase = true)) {
+            "Session $number"
+        } else {
+            "$number · $title"
+        }
+    }
+
+    /** "Installing git in Session 2…" — [verb] is the caller's, the place is ours. */
+    fun sentence(verb: String, number: Int?, displayTitle: String?): String =
+        if (number == null || displayTitle == null) "$verb…" else "$verb in ${titled(number, displayTitle)}…"
+}
