@@ -288,7 +288,22 @@ class TerminalBuffer(
         for (y in 0 until rows) all.add(screen[y])
         val cursorRowInAll = scrollback.size + cursorY
         val result = Reflow.reflow(all, c, cursorRowInAll, cursorX)
-        val emitted = result.rows
+        // Phase 71.1 (pinch-zoom gap, owner screenshot 2026-09-29) — the screen's
+        // empty rows BELOW the cursor hold nothing, yet Reflow emits them, so a
+        // zoom (which changes columns AND rows, hence this path) that shrank the
+        // grid pushed the prompt into scrollback and clamped the cursor onto a
+        // blank row; the zoom back then restored the prompt far above the
+        // cursor, and the shell drew its next prompt at the cursor: two
+        // `codec $` lines with a gap between. Drop that blank tail first, exactly
+        // as resizeRowsOnly does, so the cursor never leaves its own content.
+        val emitted: List<Row> = run {
+            var keep = result.rows.size
+            while (keep - 1 > result.cursorRow &&
+                !result.rows[keep - 1].wrapped &&
+                result.rows[keep - 1].cells.all { it.isBlank() }
+            ) keep--
+            if (keep == result.rows.size) result.rows else result.rows.subList(0, keep)
+        }
         // Repartition: the bottom r rows become the screen, everything above
         // goes to scrollback (oldest rows beyond the budget are dropped).
         val firstScreen = (emitted.size - r).coerceAtLeast(0)

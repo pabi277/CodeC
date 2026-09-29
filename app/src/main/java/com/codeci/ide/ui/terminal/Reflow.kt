@@ -56,7 +56,12 @@ object Reflow {
                 for (r in i until cursorRow) logicalCursor += rows[r].cells.size
             }
 
-            trimTrailingBlanks(line)
+            // Phase 71.1 — the trim must stop AT the cursor: a prompt is `codec $ `
+            // with the cursor one blank past the `$`, and trimming that blank
+            // left the cursor beyond the line, so it fell through to the LAST
+            // emitted row (wherever the screen's blank tail ended) — the
+            // pinch-zoom gap between two prompts.
+            trimTrailingBlanks(line, keepAtLeast = if (cursorIsHere) logicalCursor else 0)
 
             if (line.isEmpty()) {
                 emitted.add(Row(c))
@@ -104,9 +109,9 @@ object Reflow {
     }
 
     /** Drops trailing *default* blank cells (keeps styled blanks intact). */
-    private fun trimTrailingBlanks(line: MutableList<Cell>) {
+    private fun trimTrailingBlanks(line: MutableList<Cell>, keepAtLeast: Int = 0) {
         var end = line.size
-        while (end > 0 && line[end - 1].isBlank()) end--
+        while (end > keepAtLeast && line[end - 1].isBlank()) end--
         if (end < line.size) {
             line.subList(end, line.size).clear()
         }

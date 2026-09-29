@@ -182,4 +182,73 @@ class TerminalBufferTest {
 
         assertTrue(buf.visibleText().contains("below"))
     }
+
+    // ---- Phase 71.1 — pinch-zoom (columns AND rows change) must not split a prompt from its cursor ----
+    // Owner screenshot 2026-09-29: after zooming in and out, `codec $` sat high up the
+    // screen and the cursor (with the shell's next prompt) far below it.
+
+    private fun bashPromptScreen(cols: Int = 40, rows: Int = 30): TerminalBuffer {
+        val buf = TerminalBuffer(cols = cols, rows = rows)
+        fun line(t: String) { t.forEach { buf.print(it.code) }; buf.carriageReturn(); buf.lineFeed() }
+        line("userland: marker valid")
+        line("CodeC terminal")
+        line("snake")
+        "codec $ ".forEach { buf.print(it.code) }   // the real PS1: a blank AFTER the `$`
+        return buf
+    }
+
+    @Test
+    fun `the cursor stays on the prompt line when a reflow trims the blank after the dollar`() {
+        val buf = bashPromptScreen()
+        assertEquals(3, buf.cursorY)
+        assertEquals(8, buf.cursorX)
+
+        buf.resize(28, 30)   // columns only: the full reflow path
+
+        assertEquals(3, buf.cursorY)
+        assertEquals(8, buf.cursorX)
+    }
+
+    @Test
+    fun `pinch zoom in then out leaves the prompt and the cursor together`() {
+        val buf = bashPromptScreen()
+        val before = buf.visibleText()
+
+        buf.resize(28, 18)   // zoom in: fewer columns AND fewer rows
+        assertEquals(3, buf.cursorY)          // the bug: clamped to the bottom row, prompt in history
+        assertEquals(0, buf.scrollbackSize)
+        buf.resize(40, 30)   // zoom out
+
+        assertEquals(before, buf.visibleText())
+        assertEquals(3, buf.cursorY)          // the bug: row 29, a 26-row gap under the prompt
+        assertEquals(8, buf.cursorX)
+        assertEquals(0, buf.scrollbackSize)
+    }
+
+    @Test
+    fun `zoom with the cursor at column zero on a blank row keeps it under its content`() {
+        val buf = TerminalBuffer(cols = 40, rows = 30)
+        "snake".forEach { buf.print(it.code) }
+        buf.carriageReturn(); buf.lineFeed()   // cursor on the empty row 1, column 0
+
+        buf.resize(28, 12)
+
+        assertEquals(1, buf.cursorY)
+        assertEquals(0, buf.scrollbackSize)
+    }
+
+    @Test
+    fun `a zoom that cannot fit the content still keeps the cursor on the last row`() {
+        val buf = TerminalBuffer(cols = 20, rows = 6)
+        for (i in 1..6) {
+            "line$i".forEach { buf.print(it.code) }
+            if (i < 6) { buf.carriageReturn(); buf.lineFeed() }
+        }
+        "$ ".forEach { buf.print(it.code) }   // sits on row 5 after the scroll
+
+        buf.resize(14, 4)
+
+        assertEquals(3, buf.cursorY)
+        assertTrue(buf.visibleText().trimEnd().endsWith("$"))
+    }
 }

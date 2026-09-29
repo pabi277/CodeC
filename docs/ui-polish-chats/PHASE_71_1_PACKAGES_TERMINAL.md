@@ -138,3 +138,30 @@ Window widened to 900 (the gate itself is unchanged and still required). Run 2 `
 (tip `375165c`): ✅ **GREEN**, `Build APK` 12 m 0 s; release APK 6,872,780 B. This is the first
 Gradle compile of `ModulesScreen`/`TerminalScreen` — none of the guessed identifiers failed.
 **Still no device pass.**
+
+## Follow-up — pinch zoom splits the prompt from its cursor (owner screenshot, 2026-09-29)
+
+**Owner, verbatim:** *"I zoom in and out it's create a gap and separate 2 1 codec$ in a distance see"* —
+with a screenshot: three `codec $` groups (six stacked near the top, one mid-screen, one at the
+bottom with the cursor), big empty gaps between them.
+
+**Measured** (kotlinc harness on the real `TerminalBuffer`/`Reflow`; 40 × 30 grid, prompt `codec $ `
+on row 3): zoom in (28 × 18) → the cursor is on the **bottom row, row 17**, the prompt already in
+history; zoom back out (40 × 30) → the prompt is restored on row 3 and the cursor sits on **row 29**.
+The shell then draws its next prompt at the cursor: two `codec $` with a 26-row gap. Two causes, both
+in the full-reflow path (a pinch changes columns AND rows, so it never takes the rows-only path the
+keyboard fix covered):
+1. `Reflow` trimmed trailing blanks *before* mapping the cursor. A real prompt is `codec $ ` with the
+   cursor one blank past the `$`; the trim removed that blank, the cursor fell "beyond the line" and
+   was mapped to the **last emitted row** (the bottom of the screen's blank tail). Fix: the trim stops
+   at the cursor (`keepAtLeast`).
+2. Reflow also emits the screen's empty rows below the cursor, so a shrinking zoom pushed the prompt
+   into history and clamped the cursor. Fix: drop that blank tail before repartitioning (the same rule
+   `resizeRowsOnly` got for the keyboard).
+
+**Tests:** `TerminalBufferTest` +4 (cursor stays after a reflow; zoom in/out round trip; column-0 cursor
+on a blank row; content taller than the screen keeps the cursor on the last row), `ReflowTest` two
+expectations moved (they had pinned the old "empty row overflows the top into scrollback" behaviour —
+both halves now stay on screen). Old code fails 5, new code passes 28 in the harness. **Not
+explained:** the six consecutive prompts at the top of the screenshot (each could be Enter presses or a
+prompt per SIGWINCH — not measured). **No device pass.**

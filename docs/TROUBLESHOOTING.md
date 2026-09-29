@@ -2019,3 +2019,10 @@ pushed rows to scrollback regardless of content and clamped the cursor, the grow
 full. Fixed in `TerminalBuffer` (`blankRowsBelowCursor`, `ReflowTest` + `TerminalBufferTest`). Not
 device-verified; if lines still appear, capture whether they come from bash redrawing its prompt
 after SIGWINCH (each ime resize resizes the PTY) and reopen.
+
+**Pinch zoom leaves a gap between two `codec $` prompts (owner screenshot, 2026-09-29).** Cause:
+`Reflow` lost the cursor when it trimmed the blank after the prompt's `$` (mapped to the last row), and
+kept the screen's empty tail so a shrinking zoom pushed the prompt into history. Fixed in `Reflow`
+(`keepAtLeast`) and `TerminalBuffer.resize` (blank tail dropped); record in the 71.1 brief. Not
+device-verified.
+
