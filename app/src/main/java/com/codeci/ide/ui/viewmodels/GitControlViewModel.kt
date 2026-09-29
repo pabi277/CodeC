@@ -753,29 +753,13 @@ class GitControlViewModel : ViewModel() {
         )
     }
 
-    /**
-     * Phase 15/16 — per-file stage/unstage (the mockup's +/− row button):
-     * staged rows unstage (`git reset -- <path>`), unstaged rows stage
-     * (`git add -- <path>`). The porcelain `x` column tells us the side the
-     * file is currently on.
-     */
-    fun toggleStage(context: Context, projectRoot: File, change: GitFileChange) {
-        val staged = change.isStaged
-        val name = change.path.substringAfterLast('/')
-        runGitOperation(
-            context,
-            projectRoot,
-            if (staged) "Unstaging $name…" else "Staging $name…"
-        ) { git ->
-            if (staged) {
-                git.unstageFile(projectRoot, change.path)
-                "Unstaged $name"
-            } else {
-                git.stageFile(projectRoot, change.path)
-                "Staged $name"
-            }
-        }
-    }
+    // Phase 15/16 added a per-file stage/unstage toggle (the mockup's +/− row
+    // button: staged rows unstage via `git reset -- <path>`, unstaged rows
+    // stage via `git add -- <path>`). Phase 73.1 removed it: the one commit
+    // action in this sheet, [commitAndPush], always calls `git.stageAll()`
+    // first, so the toggle changed the git index without ever changing what
+    // got committed. [GitManager.stageFile]/[GitManager.unstageFile] remain —
+    // [markResolved] below still uses `stageFile` to clear a conflict mark.
 
     /** Called only after a named-file confirmation; no optimistic row removal. */
     fun discardUnstaged(context: Context, projectRoot: File, change: GitFileChange) {

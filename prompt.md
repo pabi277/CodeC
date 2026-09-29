@@ -1,13 +1,13 @@
-> **Latest owner instruction — 2026-09-29 (after Phases 70.1 + 72.1):** *"Yes all test
-> passed complete docs and merge to main"* → the 70.1 + 72.1 branch (`arena/01a0e84c-codec`:
-> the five-tab preview console, the run Output Panel, preview render rounds 1–4, the phone
-> pass, the project card that opens the editor, and the `SoraEditorHost` composing-replay
-> fix — TROUBLESHOOTING §47) is **owner-tested and merged via
-> [PR #93](https://github.com/pabi277/CodeC/pull/93)**; last code commit `308441e`, CI ✅
-> `36467347590`. The PR records the merge commit. The polish series' remaining discussion
-> drafts are **65.1, 73.1, 74.1** (2026-09-29 addendum: 68.1 was merged in PR #90, and **71.1 is owner-device-tested and merged** — see `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`) — the owner names the next one; nothing starts
-> on the agent's own. The operative handoff is the **CURRENT HANDOFF — 2026-09-29** block
-> below; every block after it is history.
+> **Latest owner instruction — 2026-09-29 (after Phase 71.1 + the pinch-zoom follow-up):**
+> *"Device test passed record everything and merge with main"* → merged via
+> [PR #94](https://github.com/pabi277/CodeC/pull/94); `main` tip `69c4b5316b3f2072bed05f96e22698b4d26da9d0`,
+> CI ✅ `36515609337`. Record: `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`. A later
+> session on `main` @ that tip then discussed **73.1 Source control and GitHub** (owner's pick
+> from the offered drafts) and implemented it — see the **CURRENT HANDOFF — 2026-09-29 (after
+> PR #94)** block below for its state. The polish series' remaining discussion drafts after 73.1
+> are **65.1** and **74.1** — the owner names the next one; nothing starts on the agent's own.
+> The operative handoff is the **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below;
+> every block after it is history.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -42,40 +42,55 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-29, after PR #93 (Phases 70.1 + 72.1, owner-tested and
-merged).** Read `rule.md`, `docs/NEXT_STEPS.md` (head entry), `docs/chat-phase70/README.md`
-and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the historical entries below.
+**CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 implemented this
+session, CI pending).** Read `rule.md`, `docs/NEXT_STEPS.md` (head entry),
+`docs/ui-polish-chats/PHASE_73_1_GIT.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the
+historical entries below.
 
-*State to verify first, never assume:* `main` should be at the merge commit of
-[PR #93](https://github.com/pabi277/CodeC/pull/93) (`gh pr view 93 --json mergeCommit,state`);
-your session is a fresh `arena/*` branch off that `main` — confirm with `git status`,
-`git log -1`, `git ls-remote origin main`, `gh pr list`, `gh run list --limit 3`. The Arena
-sandbox can silently reset local HEAD to the base commit between turns while the files stay
-newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
+*State to verify first, never assume:* `main` should be at `69c4b5316b3f2072bed05f96e22698b4d26da9d0`
+(the merge commit of [PR #94](https://github.com/pabi277/CodeC/pull/94), Phase 71.1 + the
+pinch-zoom follow-up); your session is a fresh `arena/*` branch off that `main` — confirm with
+`git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`, `gh run list --limit 3`.
+The Arena sandbox can silently reset local HEAD to the base commit between turns while the files
+stay newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
 reset --mixed FETCH_HEAD` and check `git status --short` shows only your own edits. Never
-`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were open when
-#93 merged (#83, #42) — leave them to the owner.
+`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were open at #94's
+merge (#83, #42) — leave them to the owner.
 
 *What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`
-§5) has 64, 66.1, 67.1, 69.1–69.4, 70.1 and 72.1 delivered, owner-tested and merged. The
+§5) has 64, 66.1, 67.1, 69.1–69.4, 70.1, 71.1 and 72.1 delivered, owner-tested and merged. The
 editor's replay path (`SoraEditorHost`: one `Content.replace` delta, `restartInput()` before and
 after it only while `hasComposingText()`), the preview WebView's `MATCH_PARENT` birth and its
 page-box instrument line, the tools panel's phone geometry (half the page area; the keyboard
-slides under a panel and page that keep their size), the run panel's 40 % default, and the hub's
-tap-opens-editor / ⋮ → Browse files are all device-passed — do not re-debug them without a new
-symptom (rule.md §6, last bullet).
+slides under a panel and page that keep their size), the run panel's 40 % default, the hub's
+tap-opens-editor / ⋮ → Browse files, and 71.1's install-result/pin/session-name/confirm/resize
+behaviour are all device-passed — do not re-debug them without a new symptom (rule.md §6, last
+bullet).
 
-*What is next — the owner decides, you ask:* the remaining discussion drafts are **65.1 Shell and
-navigation**, **68.1 Editor chrome, tabs and file actions**, **71.1 Packages, installation and
-Terminal**, **73.1 Source control and GitHub**, **74.1 Settings, support and final consistency**
-(briefs in `docs/ui-polish-chats/`). Your first message reports the verified state, then asks the
-owner which part (or which bug) comes next — offer the five, with one line each on what the brief
-proposes; do not recommend a redesign (owner, 2026-09-27: keep the current look). If the owner
-reports a bug instead, run the rule.md §4 lifecycle: evidence first (his words, screenshots,
-console lines), measure in the checkout, ask when a decision is his, fix host-testably with pins,
-CI, docs in the same commit, report — and stop at the merge gate (§3) unless he commands the merge
-in the same chat. Record his answers verbatim; never claim device evidence he did not give;
-when he delegates a choice ("your choice"), say in the record that the choice was the chat's.
+*73.1 (this session, not yet on `main`):* the owner picked **73.1 Source control and GitHub**
+from the offered drafts (65.1/73.1/74.1) and answered "your choice" to all three questions asked
+(focus, a stage-toggle finding, a colour check) — every design decision is recorded as the chat's,
+not the owner's. Found by reading the code (not a reported bug): the per-file +/− stage toggle in
+the "Changes" list drew the same icon whether a file was staged or not, AND had no effect on what
+got committed (`commitAndPush` always `git.stageAll()`s first). Fix: removed that toggle from
+ordinary change rows (Mark Resolved on conflict rows, which does a real `git.stageFile`, is
+untouched); `GitControlViewModel.toggleStage()` deleted as orphaned. Discard safety, push
+readiness/help-links and the push result card were reviewed and left untouched — they already
+match the brief. Full record, evidence split (source tests / Android tests / device) and CI state:
+`docs/ui-polish-chats/PHASE_73_1_GIT.md`. **If CI is not yet green or the owner has not merged,
+finish that first** (push, watch `Build APK`, fix for-cause failures, update the doc, report, stop
+at the merge gate) before starting anything new.
+
+*What is next — the owner decides, you ask:* once 73.1 is settled, the remaining discussion drafts
+are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in
+`docs/ui-polish-chats/`). Ask which part (or which bug) comes next — offer both, with one line
+each on what the brief proposes; do not recommend a redesign (owner, 2026-09-27: keep the current
+look). If the owner reports a bug instead, run the rule.md §4 lifecycle: evidence first (his
+words, screenshots, console lines), measure in the checkout, ask when a decision is his, fix
+host-testably with pins, CI, docs in the same commit, report — and stop at the merge gate (§3)
+unless he commands the merge in the same chat. Record his answers verbatim; never claim device
+evidence he did not give; when he delegates a choice ("your choice"), say in the record that the
+choice was the chat's.
 
 *Working habits this series proved:* read sora/Compose/Chromium sources before touching their
 behaviour (the tag is sora 0.24.6; `git clone --depth 1 --branch 0.24.6 --sparse` works in the

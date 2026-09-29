@@ -1,3 +1,30 @@
+**2026-09-29 — Phase 73.1 (Source control and GitHub) 🚧 IMPLEMENTED, CI pending.** Verified state
+first: `main` @ `69c4b5316b3f2072bed05f96e22698b4d26da9d0` (PR #94, Phase 71.1 + the pinch-zoom
+follow-up), CI green, PRs #83/#42 untouched. Owner picked **73.1** from the offered drafts (65.1,
+73.1, 74.1). Reading `GitControlView.kt`/`GitControlViewModel.kt` end to end found: no
+staged/unstaged grouping (one flat "Changes N" list); and, more materially, the per-file +/−
+stage toggle drew the identical icon whether a file was staged or not and had **zero effect** on
+what got committed — `commitAndPush` always `git.stageAll()`s before `git.commit()` (confirmed one
+call site), matching the existing "what will be committed" preview, which already assumes
+add-everything. Asked three questions (focus, the stage-toggle fix, whether to check the
+COMMIT & PUSH button's hardcoded lavender colour for contrast); **owner answer verbatim: "Your
+choice"** for all three — every decision below is recorded as the chat's, not the owner's. Chat's
+choices: beginner-focused (matches the brief's own starting recommendation); keep "stage
+everything" as the one-tap model and remove the now-misleading per-file toggle from ordinary
+change rows (Mark Resolved on conflict rows is untouched — it calls `git.stageFile` directly and
+is a real action); measured the button's contrast (7.58:1 enabled, passes AA/AAA; its disabled
+state is WCAG §1.4.3-exempt) and left it unchanged per the Phase 40.5 colour law ("values that
+already pass are not restyled"). Discard safety, push readiness/help-link, conflicts and the push
+result card were reviewed and are untouched — they already do what the brief asked for. Shipped:
+`GitChangeRow`'s trailing control now renders only for a conflict row (Mark Resolved);
+`GitControlViewModel.toggleStage()` removed (its only caller was gone). Tests:
+`GitDiscardWiringTest` amended (`existing git affordances still delegate to the one engine` drops
+the removed pin) + new case `the ordinary change row has no stage toggle, only Mark Resolved does`.
+Pre-validated with a local kotlinc 2.4.20 + JRE 25 syntax check (no parse errors; unresolved-
+reference cascades only, expected without the Android/Compose classpath) — a syntax reading, not
+CI. Record: `docs/ui-polish-chats/PHASE_73_1_GIT.md`. **CI: pending push.** No device pass; none
+claimed. Remaining discussion drafts: 65.1, 74.1.
+
 **2026-09-29 — Phase 71.1 (Packages, installation and Terminal) ✅ COMPLETE — owner device-tested and MERGED on
 his command** (*"Device test passed record everything and merge with main"*; no device/OS/build named). Owner said "71.1 start"; asked four questions
 (`detect_exit`, ⬇ `confirm`, `name_in_toast`, `review_more`), then reported three device problems

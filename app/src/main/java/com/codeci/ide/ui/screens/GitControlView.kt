@@ -459,9 +459,6 @@ fun GitControlSheet(
                                     onOpenDiff = {
                                         viewModel.openDiff(context, projectRoot, change.path)
                                     },
-                                    onToggleStage = {
-                                        viewModel.toggleStage(context, projectRoot, change)
-                                    },
                                     onDiscard = if (GitDiscardPolicy.canDiscard(change)) {
                                         { pendingDiscard = change }
                                     } else null
@@ -1005,20 +1002,26 @@ private fun GitFileIcon(name: String) {
 }
 
 /**
- * One change row. The trailing button is the Phase 16 +/− stage toggle, or —
- * for a conflicted file ([markResolvedMode]) — Spck's ✓ "Mark Resolved".
+ * One change row. For a conflicted file ([markResolvedMode]) the trailing
+ * control is Spck's ✓ "Mark Resolved". An ordinary change row has no stage
+ * toggle: Phase 73.1 removed it — COMMIT & PUSH always stages everything
+ * (`stageAll` before `commit`, matching the "what will be committed" preview,
+ * which already projects every listed change as if `add -A` had run), so the
+ * old +/− button changed the git index without ever changing what the one
+ * commit action in this sheet would commit. Kept for its actual use — marking
+ * a conflict resolved — with the same [onToggleStage] callback, now only
+ * wired when [markResolvedMode] is true.
  */
 @Composable
 private fun GitChangeRow(
     change: GitFileChange,
     projectFolderName: String,
     onOpenDiff: () -> Unit,
-    onToggleStage: () -> Unit,
+    onToggleStage: (() -> Unit)? = null,
     markResolvedMode: Boolean = false,
     onDiscard: (() -> Unit)? = null,
 ) {
     val accent = badgeColor(change.state)
-    val staged = change.isStaged
     val fileName = change.path.substringAfterLast('/')
     val parent = change.path.substringBeforeLast('/', "")
     val folderPath = if (parent.isEmpty()) "/$projectFolderName" else "/$projectFolderName/$parent"
@@ -1073,43 +1076,31 @@ private fun GitChangeRow(
         if (onDiscard != null) {
             TextButton(onClick = onDiscard) { Text(stringResource(R.string.discard)) }
         }
-        // Per-file stage/unstage toggle (+/−), mockup-exact outlined square —
-        // or the Phase 17 ✓ "Mark Resolved" for a conflicted path.
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .border(
-                    width = 1.dp,
-                    color = if (markResolvedMode) {
+        // Phase 17 ✓ "Mark Resolved" for a conflicted path — the ordinary
+        // (non-conflict) row has no trailing control here any more.
+        if (markResolvedMode && onToggleStage != null) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(
+                        width = 1.dp,
                         // Phase 40.5 — 0.6 alpha measured 2.55:1; opaque conflict
                         // purple is 4.81:1 (an inactive control is exempt, but the
                         // boundary still identifies the button, so it uses outline).
-                        ConflictPurple
-                    } else {
-                        MaterialTheme.colorScheme.outline
-                    },
-                    shape = RoundedCornerShape(10.dp)
+                        color = ConflictPurple,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .clickable(onClick = onToggleStage),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = stringResource(R.string.git_mark_resolved),
+                    modifier = Modifier.size(20.dp),
+                    tint = ConflictPurple
                 )
-                .clickable(onClick = onToggleStage),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                if (markResolvedMode) Icons.Default.Check else SpckIcons.PlusMinus,
-                contentDescription = stringResource(
-                    when {
-                        markResolvedMode -> R.string.git_mark_resolved
-                        staged -> R.string.git_unstage
-                        else -> R.string.git_stage
-                    }
-                ),
-                modifier = Modifier.size(20.dp),
-                tint = if (markResolvedMode) {
-                    ConflictPurple
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
+            }
         }
     }
 }
