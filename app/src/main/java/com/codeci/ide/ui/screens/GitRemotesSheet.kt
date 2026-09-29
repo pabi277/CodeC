@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.codeci.ide.R
 import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.GitRemoteEntry
@@ -204,8 +205,7 @@ fun GitRemotesSheet(
                     Text(stringResource(R.string.cancel))
                 }
             },
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
         )
     }
 }

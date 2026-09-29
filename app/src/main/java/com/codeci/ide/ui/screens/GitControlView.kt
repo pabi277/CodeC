@@ -939,8 +939,7 @@ fun GitControlSheet(
                     Text(stringResource(R.string.cancel))
                 }
             },
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
         )
     }
 
