@@ -251,7 +251,9 @@ class GitErrorsTest {
         val err = GitErrors.notInstalled()
         assertEquals(GitErrorKind.NOT_INSTALLED, err.kind)
         assertTrue(err.message.contains("installed", ignoreCase = true))
-        assertTrue(err.message.contains("pkg install git"))
+        // Phase 73.8 — the install step is the panel's own INSTALL GIT
+        // card now, not a Terminal command.
+        assertTrue(err.message.contains("INSTALL GIT"))
     }
 
     @Test
