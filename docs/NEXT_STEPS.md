@@ -8,8 +8,8 @@ install becomes RETRY, no stuck INSTALLING); ⬇ asks first; the session is name
 top bar; pin-to-top favourites (DataStore `pinned_packages`, agent's design); `pkg` refreshes the
 index itself when there are no lists; the terminal buffer no longer keeps phantom blank rows on a
 shrink/grow (source-level cause only — not proven to be the device cause). Record and evidence
-split: `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`. **CI:** see that record (filled
-in after the run). **No device pass.** Remaining drafts: 65.1, 73.1, 74.1 (68.1 merged in PR #90).
+split: `docs/ui-polish-chats/PHASE_71_1_PACKAGES_TERMINAL.md`. **CI:** ✅ GREEN `36511809977` (an earlier run
+`36511449206` was red for cause on one stale look-back window in `SetupGateWiringTest`). **No device pass.** Remaining drafts: 65.1, 73.1, 74.1 (68.1 merged in PR #90).
 
 **2026-09-29 — HEAD: the 70.1 + 72.1 branch is ✅ OWNER-TESTED and MERGED to `main` on the
 owner's command → [PR #93](https://github.com/pabi277/CodeC/pull/93).** Owner, verbatim: *"Yes all

@@ -128,3 +128,13 @@ bump is not verified on a device (the stamp stays `27`).
 - **Source tests** (new/changed, host JVM; CI executes them): `PkgResultTest`, `PackagePinsTest`, `SessionLabelTest`, `PkgIndexAndResultTest` (real `/bin/sh` + mock apt-get/gpgv/curl), `Phase71PackagesTerminalWiringTest`, `TerminalBufferTest` +6, `ReflowTest`, `TouchTargetTest` (20 → 21 IconButtons). The chat ran them in a kotlinc + host-`sh` harness with a JUnit shim (not Gradle): 25 + 12 + 11 + buffer 24 + the touch/icon/token/type/skeleton/chrome/settings guards pass. That is a local reading, **not CI**.
 - **Android tests:** none added. Compose code (`ModulesScreen`, `TerminalScreen`) was **not compiled locally** (no Gradle here); CI's `assembleDebug` is the first compile.
 - **Device evidence:** none. The owner has not tested this build. Device pass required for: a failed install (airplane mode) → RETRY; the ⬇ dialog; toast/top-bar session name; 📌 across an app restart; first `pkg install` on a fresh userland without `pkg update`; keyboard open/close in a terminal with a prompt.
+
+### CI
+
+Run 1 `36511449206` (commit `85af599`): compiled, 2423 tests, **1 red for cause** —
+`SetupGateWiringTest` "every command the Packages tab sends is behind the gate": its 600-char
+look-back no longer reached the gate above the INSTALL send once the session-named toast grew.
+Window widened to 900 (the gate itself is unchanged and still required). Run 2 `36511809977`
+(tip `375165c`): ✅ **GREEN**, `Build APK` 12 m 0 s; release APK 6,872,780 B. This is the first
+Gradle compile of `ModulesScreen`/`TerminalScreen` — none of the guessed identifiers failed.
+**Still no device pass.**
