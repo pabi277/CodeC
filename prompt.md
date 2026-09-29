@@ -12,9 +12,7 @@
 > **merged 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95)**
 > (device pass ✅ 2026-09-29). Records: `docs/ui-polish-chats/PHASE_73_*.md`,
 > `docs/NEXT_STEPS.md` head entries.
-> The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
-> names the next one; nothing starts on the agent's own. The operative handoff is the
-> **CURRENT HANDOFF — 2026-09-29 (after PR #95)** block below; every block after it is history.
+> The owner selected **both 65.1 and 74.1 in one chat** and approved all recommendations. Their changes and the Python indentation/Backspace correction are implemented on the current `arena/*` session branch; CI is pending. No PR/merge without the owner's explicit command. See `docs/chat-phase65/README.md`, `docs/chat-phase74/README.md`, and the head of `docs/NEXT_STEPS.md`.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -49,23 +47,16 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-29 (after PR #95, 73.1–73.9 merged; device pass ✅).**
+**CURRENT HANDOFF — 2026-09-29 (after PR #95; owner-selected 65.1 + 74.1 implemented, CI pending).**
 Read `rule.md`,
 `docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,
 `docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`,
 `docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5
 before the historical entries below (73.1–73.6 records stand as history behind them).
 
-*State to verify first, never assume:* `main` should be at the merge commit of
-[PR #95](https://github.com/pabi277/CodeC/pull/95) (73.1–73.9, the terminal-independent git
-series — the PR records the merge commit); your session is a fresh `arena/*` branch off that
-`main` — confirm with `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`,
-`gh run list --limit 3`.
-The Arena sandbox can silently reset local HEAD to the base commit between turns while the files
-stay newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
-reset --mixed FETCH_HEAD` and check `git status --short` shows only your own edits. Never
-`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were still open at
-#95's merge (#83, #42) — leave them to the owner.
+*State verified for this session:* main and local HEAD both start at PR #95 merge `6c6a98025bb37acd7df5e50e7a1eea6f98c16792`; Build APK run `36603775081` is green; tree was clean before work; PRs #83 and #42 remain open and untouched. Current work is on the fresh `arena/01a0ee39-codec` branch. Recheck `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`, and `gh run list --limit 3` before acting. Before every commit follow rule.md §2.4: fetch the session branch and `git reset --mixed FETCH_HEAD` only if that remote branch exists; inspect status, never reset hard, stash or clean.
+
+*This session — approved scope:* 65.1 and 74.1 were both explicitly requested. 65.1 retained current hide-while-typing navigation by agent recommendation; 74.1 sets editor font default 16sp, inline ghost default off, and starts all 12 Settings groups collapsed while allowing per-visit expansion/search. Feedback-exit prompt and welcome-screen action stay unchanged. Python analyzer now forwards its active language to colon indentation; IME multi-space leading-indent deletion is normalized to one-space Backspace. Tests/docs updated; CI pending; no device result, PR or merge claimed. Detailed records: `docs/chat-phase65/README.md`, `docs/chat-phase74/README.md`.
 
 *What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`
 §5) has 64, 66.1, 67.1, 69.1–69.4, 70.1, 71.1, 72.1 and 73.1–73.9 delivered, owner-tested and

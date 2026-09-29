@@ -154,7 +154,7 @@ fun SettingsScreen(
     val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.VS_CODE_DARK_PLUS)
     val currentTerminalTheme by themeManager.terminalThemeFlow.collectAsState(initial = TerminalThemeType.DRACULA)
 
-    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 14f)
+    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 16f)
     val fontFamily by settingsManager.fontFamilyFlow.collectAsState(initial = "Monospace")
     val tabSize by settingsManager.tabSizeFlow.collectAsState(initial = 4)
     val lineNumbers by settingsManager.lineNumbersFlow.collectAsState(initial = true)
@@ -163,7 +163,7 @@ fun SettingsScreen(
 
     // Phase 27.3 — completion surfaces (master off = the whole feature is gone).
     val completionMaster by settingsManager.completionMasterFlow.collectAsState(initial = true)
-    val completionGhost by settingsManager.completionGhostFlow.collectAsState(initial = true)
+    val completionGhost by settingsManager.completionGhostFlow.collectAsState(initial = false)
     val completionStrip by settingsManager.completionStripFlow.collectAsState(initial = true)
     val completionPanel by settingsManager.completionPanelFlow.collectAsState(initial = true)
     val completionDebounceMs by settingsManager.completionDebounceMsFlow.collectAsState(initial = 120)
@@ -192,11 +192,13 @@ fun SettingsScreen(
     val devModeUnlocked by settingsManager.devModeUnlockedFlow.collectAsState(initial = false)
     val showFilePaths by settingsManager.showFilePathsFlow.collectAsState(initial = false)
 
-    // Phase 62 — Settings, findable. The query and the folded sections are view state, not
-    // preferences: `rememberSaveable` keeps them across a rotation, and the screen forgets them on
-    // the way out, which is what a search box should do.
+    // Phase 62 + 74.1 — search and folds are view state, not preferences. Keep the
+    // query over rotation; folds intentionally use `remember` so a fresh Settings
+    // visit always starts with every section collapsed.
     var settingsQuery by rememberSaveable { mutableStateOf("") }
-    var foldedSectionsCsv by rememberSaveable { mutableStateOf("") }
+    var foldedSectionsCsv by remember {
+        mutableStateOf(SettingsDisclosure.initialCollapsedCsv())
+    }
     val foldedSections = remember(foldedSectionsCsv) { SettingsDisclosure.parse(foldedSectionsCsv) }
     val settingsView = remember(settingsQuery, foldedSections) {
         SettingsViewState(
@@ -1510,15 +1512,15 @@ private fun settingsRowVisible(title: String): Boolean {
 }
 
 /**
- * Phase 62.2 — a section header that folds its section, says how much it is holding, and answers
- * to the search. A section the catalog has no rows for (GitHub Account, Package Repository &
- * Trust, Terminal Extra-Keys & Shortcuts) is not tappable: folding it would hide nothing, and a
- * control that does nothing is the one thing this app does not draw.
+ * Phase 62.2/74.1 — every visible Settings group can fold, including bespoke form groups. A
+ * row-count badge appears only where the catalog has indexed rows; the fold affordance itself
+ * remains available for the GitHub Account, Package Repository & Trust, and Terminal Extra-Keys
+ * & Shortcuts groups too.
  */
 @Composable
 fun SettingsSectionHeader(title: String) {
     val view = LocalSettingsView.current
-    val foldable = SettingsCatalog.isControlSection(title)
+    val foldable = SettingsCatalog.isFoldableSection(title)
     val folded = foldable && !SettingsDisclosure.expanded(title, view.folded)
     Row(
         modifier = Modifier
@@ -1536,7 +1538,9 @@ fun SettingsSectionHeader(title: String) {
         )
         // The count is what a folded header must not keep to itself; while the user is filtering
         // it says how many rows answered — the same number the policy counted.
-        if (folded || SettingsSearch.isActive(view.query)) {
+        if ((folded || SettingsSearch.isActive(view.query)) &&
+            SettingsSearch.sectionMatchCount(view.query, title) > 0
+        ) {
             Text(
                 text = SettingsSearch.sectionMatchCount(view.query, title).toString(),
                 style = MaterialTheme.typography.bodyMedium,

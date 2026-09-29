@@ -129,8 +129,11 @@ object SettingsCatalog {
     /** The row whose label is exactly [title], or null for a row the catalog has not met. */
     fun entryFor(title: String): SettingsEntry? = entries.firstOrNull { it.label == title }
 
-    /** True when [section] is a section of control rows (the form-only sections are not). */
+    /** True when [section] contains indexed control rows (form-only groups have none). */
     fun isControlSection(section: String): Boolean = sections.contains(section)
+
+    /** Every visible Settings group can fold, including bespoke form-only groups. */
+    fun isFoldableSection(section: String): Boolean = allSectionTitles.contains(section)
 }
 
 /**
@@ -150,10 +153,10 @@ object SettingsCatalog {
  *     Terminal Extra-Keys & Shortcuts): their content cannot be indexed, so "github" shows the
  *     GitHub section and clearing the box brings all three back - which is also what makes the
  *     empty state ("nothing matches") true when it appears.
- *  3. **Folding is remembered, never applied over a search.** With an empty box the fold rule
- *     runs and folded sections show only their header, count and chevron. The moment the user
- *     types, every row that matches renders - a folded section must not swallow the result the
- *     search just found - and the fold comes back when the box is cleared.
+ *  3. **Folding is view state, never applied over a search.** With an empty box the fold rule
+ *     runs and folded sections show only their header and chevron (plus a count where rows are
+ *     indexed). The moment the user types, every matching row renders - a folded section must
+ *     not swallow the result the search just found - and the fold comes back when the box clears.
  *
  * [rowVisible] is the single question the screen asks per row; [sectionVisible] the one it asks
  * per header.
@@ -269,6 +272,9 @@ object SettingsDisclosure {
     /** Unit separator: a character no section title contains. */
     const val SEPARATOR = "\u001F"
 
+    /** Every Settings group begins collapsed on a fresh screen visit. */
+    fun initialCollapsedCsv(): String = serialize(SettingsCatalog.allSectionTitles.toSet())
+
     fun parse(csv: String): Set<String> =
         if (csv.isBlank()) emptySet()
         else csv.split(SEPARATOR).filter { it.isNotBlank() }.toSet()
@@ -286,5 +292,5 @@ object SettingsDisclosure {
      * result is never folded away".
      */
     fun expanded(section: String, collapsed: Set<String>): Boolean =
-        !SettingsCatalog.isControlSection(section) || !collapsed.contains(section)
+        !SettingsCatalog.isFoldableSection(section) || !collapsed.contains(section)
 }

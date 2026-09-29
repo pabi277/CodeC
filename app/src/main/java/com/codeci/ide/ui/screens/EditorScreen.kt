@@ -300,7 +300,7 @@ fun EditorScreen(
     val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.VS_CODE_DARK_PLUS)
     val editorColors = getEditorTheme(currentEditorTheme)
 
-    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 14f)
+    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 16f)
     val fontFamilyName by settingsManager.fontFamilyFlow.collectAsState(initial = "Monospace")
     val tabSize by settingsManager.tabSizeFlow.collectAsState(initial = 4)
     val showLineNumbers by settingsManager.lineNumbersFlow.collectAsState(initial = true)
@@ -438,7 +438,7 @@ fun EditorScreen(
     val codecKeysLayoutJson by settingsManager.codecKeysLayoutJsonFlow.collectAsState(initial = "")
     // Phase 27.3 — completion law settings + the ONE completion model.
     val completionMaster by settingsManager.completionMasterFlow.collectAsState(initial = true)
-    val completionGhostOn by settingsManager.completionGhostFlow.collectAsState(initial = true)
+    val completionGhostOn by settingsManager.completionGhostFlow.collectAsState(initial = false)
     val completionStripOn by settingsManager.completionStripFlow.collectAsState(initial = true)
     val completionPanelOn by settingsManager.completionPanelFlow.collectAsState(initial = true)
     val completionDebounceMs by settingsManager.completionDebounceMsFlow.collectAsState(initial = 120)

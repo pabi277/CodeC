@@ -1,3 +1,5 @@
+> **2026-09-29 — Python indentation and Backspace:** Python `def` indented but `for` did not. The Sora language adapter had dropped the active language when asking the shared indent rule, causing the Python colon rule to be bypassed on that path. The adapter now forwards the language, and leading indentation deletes are normalized to one space per Backspace when an input event removes a multi-space prefix. This is source/test coverage, not a device claim; CI is pending. [Phase record](chat-phase65/README.md).
+
 > **2026-09-27 update — Phase 64:** installation no longer locks tabs or the
 > editor drawer, and the guide/tour/typing tips are removed. “Help & guide” and
 > “Reset tips” no longer exist. To inspect/retry userland setup, use Terminal’s

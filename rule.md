@@ -1,3 +1,5 @@
+> **Owner's latest phase instruction — 2026-09-29:** the owner explicitly selected both remaining polish drafts, 65.1 and 74.1, for this chat and approved all recommendations. That one-chat authorization is spent once those parts are completed; wait for the next explicit selection afterward. The merge gate in §3 remains unchanged.
+>
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
 > progress stays in Terminal/Output, no new app-wide indicator. These select

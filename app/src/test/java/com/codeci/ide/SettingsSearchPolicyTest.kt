@@ -88,6 +88,15 @@ class SettingsSearchPolicyTest {
     // ---- the catalog is the screen ------------------------------------------
 
     @Test
+    fun `settings starts with all sections collapsed`() {
+        val collapsed = SettingsDisclosure.parse(SettingsDisclosure.initialCollapsedCsv())
+        assertEquals(SettingsCatalog.allSectionTitles.toSet(), collapsed)
+        SettingsCatalog.allSectionTitles.forEach { section ->
+            assertFalse("$section starts folded", SettingsDisclosure.expanded(section, collapsed))
+        }
+    }
+
+    @Test
     fun `the catalog holds every control row the screen renders`() {
         assertEquals(
             "the screen's Settings* call sites and the catalog must be the same 64 rows",
@@ -331,18 +340,12 @@ class SettingsSearchPolicyTest {
     }
 
     @Test
-    fun `only sections that hold rows can fold`() {
-        listOf("GitHub Account", "Package Repository & Trust", "Terminal Extra-Keys & Shortcuts")
-            .forEach { section ->
-                assertTrue(
-                    "$section has no rows of its own, so folding it would hide nothing but a form",
-                    SettingsDisclosure.expanded(section, setOf(section))
-                )
-            }
-        assertFalse(
-            "a row-bearing section really folds",
-            SettingsDisclosure.expanded("Appearance", setOf("Appearance"))
-        )
+    fun `every Settings group can fold, including the bespoke forms`() {
+        SettingsCatalog.allSectionTitles.forEach { section ->
+            assertTrue("$section is a foldable group", SettingsCatalog.isFoldableSection(section))
+            assertFalse("$section folds when requested", SettingsDisclosure.expanded(section, setOf(section)))
+        }
+        assertTrue("unknown sections remain expanded", SettingsDisclosure.expanded("Unknown", setOf("Unknown")))
     }
 
     @Test

@@ -218,7 +218,7 @@ class CodeCLanguage private constructor(
 
     override fun getIndentAdvance(content: ContentReference, line: Int, column: Int): Int {
         if (line !in 0 until content.lineCount) return 0
-        return indentAdvanceFor(content.getLine(line))
+        return indentAdvanceFor(content.getLine(line), language)
     }
 
     override fun useTab(): Boolean = false

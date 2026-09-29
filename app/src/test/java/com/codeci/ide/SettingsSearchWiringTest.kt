@@ -58,6 +58,18 @@ class SettingsSearchWiringTest {
         "Feedback & Support", "Developer Options",
     )
 
+    @Test
+    fun `owner-approved defaults are wired through storage and first composition`() {
+        val manager = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/settings/SettingsManager.kt").readText()
+        val editor = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt").readText()
+        assertTrue(manager.contains("it[FONT_SIZE] ?: 16f"))
+        assertTrue(manager.contains("it[COMPLETION_GHOST] ?: false"))
+        assertTrue(editor.contains("fontSizeFlow.collectAsState(initial = 16f)"))
+        assertTrue(editor.contains("completionGhostFlow.collectAsState(initial = false)"))
+        assertTrue(raw.contains("fontSizeFlow.collectAsState(initial = 16f)"))
+        assertTrue(raw.contains("completionGhostFlow.collectAsState(initial = false)"))
+    }
+
     // ---- 1. the box ---------------------------------------------------------
 
     @Test
@@ -228,18 +240,19 @@ class SettingsSearchWiringTest {
     // ---- 4. folding ---------------------------------------------------------
 
     @Test
-    fun `a header folds its section, counts it, and only when there is something to fold`() {
+    fun `every section header can fold and indexed row groups show counts` {
         assertTrue(
-            "only a section that holds rows is foldable",
-            code.contains("val foldable = SettingsCatalog.isControlSection(title)")
+            "every Settings group is foldable, including form sections",
+            code.contains("val foldable = SettingsCatalog.isFoldableSection(title)")
         )
         assertTrue(
-            "so a form-only section is not given a tap that hides nothing",
+            "including the bespoke forms, every Settings group has a fold affordance",
             code.contains(".then(if (foldable) Modifier.clickable { view.onToggleSection(title) } else Modifier)")
         )
         assertTrue(
-            "the fold state is remembered across a rotation and re-parsed from one string",
-            raw.contains("var foldedSectionsCsv by rememberSaveable { mutableStateOf(\"\") }") &&
+            "each fresh screen visit initializes the folds collapsed and re-parses them from one string",
+            raw.contains("var foldedSectionsCsv by remember {") &&
+                raw.contains("mutableStateOf(SettingsDisclosure.initialCollapsedCsv())") &&
                 code.contains("SettingsDisclosure.parse(foldedSectionsCsv)") &&
                 code.contains("SettingsDisclosure.serialize(") &&
                 code.contains("SettingsDisclosure.toggle(foldedSections, section)")
@@ -254,7 +267,8 @@ class SettingsSearchWiringTest {
         )
         assertTrue(
             "and while the user is filtering it says how many rows answered",
-            code.contains("if (folded || SettingsSearch.isActive(view.query))")
+            code.contains("(folded || SettingsSearch.isActive(view.query))") &&
+                code.contains("SettingsSearch.sectionMatchCount(view.query, title) > 0")
         )
         assertEquals("Expand section", stringValue("settings_section_expand"))
         assertEquals("Collapse section", stringValue("settings_section_collapse"))
