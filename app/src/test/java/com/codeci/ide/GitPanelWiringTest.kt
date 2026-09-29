@@ -38,7 +38,7 @@ class GitPanelWiringTest {
         // Spck's count badge on the Repository glyph only; zero draws none.
         assertTrue(sidePanel.contains("if (slot == RailPanel.REPOSITORY && repositoryBadgeCount > 0) {"))
         assertTrue(sidePanel.contains("BadgedBox("))
-        assertTrue(sidePanel.contains("badge = { Badge { Text(\"$repositoryBadgeCount\") } }"))
+        assertTrue(sidePanel.contains("badge = { Badge { Text(\"\$repositoryBadgeCount\") } }"))
         assertFalse(sidePanel.contains("RepositoryPanelState"))
         assertFalse(sidePanel.contains("RepositorySlot("))
         assertFalse(sidePanel.contains("onOpenSourceControl"))
