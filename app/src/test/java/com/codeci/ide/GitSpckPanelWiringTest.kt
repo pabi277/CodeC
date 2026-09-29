@@ -78,7 +78,7 @@ class GitSpckPanelWiringTest {
         assertTrue(dialog.contains("PasswordVisualTransformation()"))
     }
 
-    @Test fun `the credentials dialog matches Spck's shape: provider row, Manage link, token link, Cancel and Ok`() {
+    @Test fun `the credentials dialog matches Spck's shape - provider row, Manage link, token link, Cancel and Ok`() {
         assertTrue(dialog.contains("stringResource(R.string.git_credentials_title)"))
         assertTrue(dialog.contains("stringResource(R.string.git_credentials_provider_label)"))
         assertTrue(dialog.contains("stringResource(R.string.git_credentials_provider_name)"))
