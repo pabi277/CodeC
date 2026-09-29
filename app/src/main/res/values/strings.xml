@@ -733,5 +733,16 @@
     <string name="git_credentials_create_link">GitHub Token</string>
     <string name="git_credentials_ok">Ok</string>
     <string name="git_credentials_saved">GitHub credentials saved ✓</string>
+
+    <!-- Phase 73.6 — the editor drawer's Repository panel went full GUI:
+         its Initialize button used to open Terminal and type `git init`
+         there (wrong folder, no git check). It now runs the engine
+         in-place; when git is missing, this dialog asks first, then the
+         same background install + status bar the sheet uses takes over. -->
+    <string name="git_install_prompt_title">Git is not installed</string>
+    <string name="git_install_prompt_message">Git keeps a history of every change you make and can back your project up to GitHub. Do you want to install it now?</string>
+    <string name="git_install_prompt_action">INSTALL</string>
+    <string name="panel_repository_no_git">Git isn’t installed on this device yet, so this project has no history. Install it to begin:</string>
+    <string name="panel_repository_install_git">INSTALL GIT</string>
 </resources>
 

@@ -192,6 +192,10 @@ fun GitControlSheet(
     var installingGit by remember(projectRoot) { mutableStateOf(false) }
     var gitInstallStartedAtSec by remember(projectRoot) { mutableStateOf(0L) }
     var gitInstallFailed by remember(projectRoot) { mutableStateOf(false) }
+    // Phase 73.6 — the install button asks first (shared prompt); the
+    // 73.2 "no confirmation dialog" decision is superseded by the owner's
+    // explicit ask-first instruction.
+    var showInstallPrompt by remember(projectRoot) { mutableStateOf(false) }
     // Phase 73.5 — elapsed seconds for the install status bar below.
     var gitInstallElapsedSec by remember(projectRoot) { mutableStateOf(0) }
 
@@ -596,7 +600,7 @@ fun GitControlSheet(
                             installing = installingGit,
                             failed = gitInstallFailed,
                             elapsedSec = gitInstallElapsedSec,
-                            onInstall = onInstallGit
+                            onInstall = { showInstallPrompt = true }
                         )
                     } else {
                         SheetGuidance(stringResource(R.string.git_not_installed_message))
@@ -1163,6 +1167,18 @@ fun GitControlSheet(
             },
             onAdd = { name, url -> viewModel.addRemote(context, projectRoot, name, url) },
             onRemove = { name -> viewModel.removeRemote(context, projectRoot, name) }
+        )
+    }
+
+    // Phase 73.6 — the install button asks first (the shared prompt);
+    // confirming starts the background install under the status bar.
+    if (showInstallPrompt) {
+        GitInstallPromptDialog(
+            onConfirm = {
+                showInstallPrompt = false
+                onInstallGit()
+            },
+            onDismiss = { showInstallPrompt = false }
         )
     }
 

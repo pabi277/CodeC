@@ -30,12 +30,16 @@ class GitInstallWiringTest {
         assertTrue(branch.contains("SheetGuidance(stringResource(R.string.git_not_installed_message))"))
     }
 
-    @Test fun `tapping install sends the same command the git package catalog entry uses`() {
+    @Test fun `tapping install asks first, then sends the same command the git package catalog entry uses`() {
         assertTrue(sheet.contains("PackageCatalog.ALL_PACKAGES.first { it.id == \"git\" }"))
+        // Phase 73.6 supersedes the 73.2 "no confirmation dialog"
+        // decision: the button opens the shared prompt (the owner's
+        // explicit ask-first instruction); confirming starts the install.
+        assertTrue(sheet.contains("onInstall = { showInstallPrompt = true }"))
+        assertTrue(sheet.contains("if (showInstallPrompt) {"))
+        assertTrue(sheet.contains("GitInstallPromptDialog("))
         val handler = sheet.substringAfter("val onInstallGit: () -> Unit = {").substringBefore("LaunchedEffect(projectRoot) {")
         assertTrue(handler.contains("terminalViewModel.sendCommand(gitPackage.installCommand)"))
-        // No confirmation dialog before the (small) install starts.
-        assertFalse(handler.contains("AlertDialog"))
         // On success the sheet stays put (refresh in place) instead of
         // navigating away to Terminal, unlike a Packages row.
         assertFalse(sheet.contains("onNavigateToTerminal"))

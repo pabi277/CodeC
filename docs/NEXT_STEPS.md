@@ -1,3 +1,34 @@
+**2026-09-29 — Phase 73.6 (editor-drawer git: full-GUI Initialize + ask-first install prompt) 🚧
+IMPLEMENTED, CI pending.** Owner device report on the 73.5 build, verbatim: "if git is not
+installed it will install automatically in the background with status bar but it's not happened
+… when i click on initialize it opens terminal … So where is gui?" — followed by: install must
+show an option "git is not installed do you want to install it than start install". Reading the
+code first: there are TWO initialize doors and 73.1–73.5 only converted one — the sheet's button
+runs the background engine, but the drawer's Repository Initialize still closed the drawer and
+typed `git init` into the visible shell, which runs in the projects folder (Terminal's default
+cwd), never checked git was installed, and landed the repo at `projects/.git` on `master` (the
+owner's transcript: "no git command" first, then a repo in the wrong folder with default-branch
+hints — the engine's `-b main` shows neither; the REPOSITORY header was never seen because the
+drawer path never opens the sheet). Shipped: drawer Initialize now runs the engine's `init` in
+place (`EditorScreen.runDrawerInit`: scratch-mode toast / no-manager → install prompt with the
+root kept / already-a-repo → refresh + open the sheet / init → refresh + open the sheet /
+failure → classified toast); a shared `GitInstallPromptDialog` ("Git is not installed — …
+Do you want to install it now?", INSTALL/Cancel) shown from the drawer flow AND the sheet's
+INSTALL GIT button (supersedes 73.2's "no confirmation dialog" decision by the owner's explicit
+ask-first instruction); the drawer's Repository slot gained the install/progress/retry/init-busy
+states reusing the exact Packages-tab mechanism (gate + `sendCommand` + `PkgResult`/
+`InstallOutcomes` polling), with a gate-refused plain message (73.2 kept); installs started from
+Initialize auto-continue the pending init on success. Not touched: Run-in-Terminal hand-offs (a
+legitimate terminal use) and the Modules/Packages rows. The stray `projects/.git` is owned by
+one Terminal command from the default prompt (`rm -rf .git`) — nothing in the app auto-deletes
+it. Tests: new `GitDrawerInstallWiringTest.kt` (6 cases) + `GitInstallWiringTest.kt` rewritten to
+pin the ask-first sheet button. No JVM/kotlinc in the sandbox — verified with the Kotlin
+state-machine brace/paren scan (all six touched files balanced) + a Python mirror of every test
+assertion (caught two edit-tool tail-garbage glitches and four silently un-applied edits
+pre-commit). Record: `docs/ui-polish-chats/PHASE_73_6_GIT_DRAWER_GUI.md`. No device pass; none
+claimed. **Not merged** — owner device pass and merge command owed for 73.1–73.6 together
+(rule.md §3).
+
 **2026-09-29 — Phase 73.5 (Git panel: Spck-exact layout, install status bar, inline credentials) 🚧
 IMPLEMENTED, CI ✅ GREEN `36560766234` on `d469d52`.** Owner-reported directly (not a discussion draft), same 4 Spck
 screenshots 73.3 ported the menu *items* from — this phase ports the *layout*: fully

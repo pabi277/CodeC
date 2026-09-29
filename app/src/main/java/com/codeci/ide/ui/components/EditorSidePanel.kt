@@ -35,9 +35,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -111,11 +114,26 @@ data class SearchPanelState(
     val capped: Boolean = false
 )
 
-/** The Repository slot's live state. The empty state is the shot's. */
+/**
+ * The Repository slot's live state. The empty state is the shot's.
+ *
+ * Phase 73.6 — the slot learned the states its Initialize flow can meet:
+ * git missing ([gitInstalled]) with or without install permission
+ * ([canInstallGit], the userland gate), an install in flight
+ * ([installingGit]/[installFailed]/[installElapsedSec], same status bar as
+ * the sheet), and an init running ([initializing]). This file still only
+ * draws and reports — the editor screen owns every check and command.
+ */
 data class RepositoryPanelState(
     val hasRepository: Boolean = false,
     val branch: String? = null,
-    val changeCount: Int = 0
+    val changeCount: Int = 0,
+    val gitInstalled: Boolean = true,
+    val canInstallGit: Boolean = true,
+    val installingGit: Boolean = false,
+    val installFailed: Boolean = false,
+    val installElapsedSec: Int = 0,
+    val initializing: Boolean = false
 )
 
 /**
@@ -141,6 +159,7 @@ fun EditorSidePanel(
     onClearSearch: () -> Unit = {},
     repository: RepositoryPanelState = RepositoryPanelState(),
     onInitializeRepository: () -> Unit = {},
+    onInstallGit: () -> Unit = {},
     onOpenSourceControl: () -> Unit = {}
 ) {
     Surface(
@@ -195,6 +214,7 @@ fun EditorSidePanel(
                 RailPanel.REPOSITORY -> RepositorySlot(
                     state = repository,
                     onInitializeRepository = onInitializeRepository,
+                    onInstallGit = onInstallGit,
                     onOpenSourceControl = onOpenSourceControl
                 )
 
@@ -606,6 +626,7 @@ private fun SearchHitRow(hit: ProjectSearch.Hit, onClick: () -> Unit) {
 private fun RepositorySlot(
     state: RepositoryPanelState,
     onInitializeRepository: () -> Unit,
+    onInstallGit: () -> Unit,
     onOpenSourceControl: () -> Unit
 ) {
     Column(
@@ -614,19 +635,84 @@ private fun RepositorySlot(
             .padding(horizontal = CodecTokens.space(Space.L))
     ) {
         SlotLabel(text = RailPanel.REPOSITORY.label)
-        if (!state.hasRepository) {
+        if (!state.gitInstalled) {
+            // Phase 73.6 — git itself is missing: offer the install here
+            // (the button asks first via GitInstallPromptDialog, then the
+            // same background install + status bar the sheet uses takes
+            // over) instead of an Initialize button that could only fail.
+            // When the userland gate refuses, no install is offered — the
+            // same plain message the sheet shows (the 73.2 decision).
+            if (!state.canInstallGit) {
+                Text(
+                    text = stringResource(R.string.git_not_installed_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (state.installingGit) {
+                Text(
+                    text = stringResource(R.string.git_install_progress, state.installElapsedSec),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(CodecTokens.space(Space.S)))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(CodecTokens.space(Space.S)))
+                Text(
+                    text = stringResource(R.string.git_install_background_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (state.installFailed) {
+                Text(
+                    text = stringResource(R.string.git_install_failed_message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(CodecTokens.space(Space.S)))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    OutlinedButton(onClick = onInstallGit) {
+                        Text(stringResource(R.string.install_label_retry))
+                    }
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.panel_repository_no_git),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(CodecTokens.space(Space.XL)))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Button(onClick = onInstallGit) {
+                        Text(stringResource(R.string.panel_repository_install_git))
+                    }
+                }
+            }
+        } else if (!state.hasRepository) {
             // The shot's empty state: one left-aligned sentence, then a centred
             // button. The sentence is the shot's; the button runs CodeC's own
             // git (never SPCK's engine, and never a screen the shots do not show).
-            Text(
-                text = stringResource(R.string.panel_repository_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(CodecTokens.space(Space.XL)))
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Button(onClick = onInitializeRepository) {
-                    Text(stringResource(R.string.panel_repository_init))
+            // Phase 73.6 — that button is the engine's `init` now, not a
+            // `git init` typed into Terminal (which ran in the projects
+            // folder, not the project, and never checked git was there).
+            if (state.initializing) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(CodecTokens.space(Space.S)))
+                    Text(
+                        text = stringResource(R.string.git_init_busy),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.panel_repository_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(CodecTokens.space(Space.XL)))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Button(onClick = onInitializeRepository) {
+                        Text(stringResource(R.string.panel_repository_init))
+                    }
                 }
             }
         } else {

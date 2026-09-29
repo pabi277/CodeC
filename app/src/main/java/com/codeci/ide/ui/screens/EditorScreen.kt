@@ -205,7 +205,14 @@ import com.codeci.ide.ui.navigation.BackRouter
 import com.codeci.ide.ui.navigation.BackState
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
+import com.codeci.ide.ui.modules.InstallOutcome
+import com.codeci.ide.ui.modules.InstallOutcomes
+import com.codeci.ide.ui.modules.PackageCatalog
+import com.codeci.ide.ui.modules.PkgResult
 import com.codeci.ide.ui.projects.EditorLaunchState
+import com.codeci.ide.ui.projects.GitContext
+import com.codeci.ide.ui.projects.GitErrors
+import com.codeci.ide.ui.projects.GitManager
 import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
@@ -1315,6 +1322,138 @@ fun EditorScreen(
             }
         }
 
+        // ---- Phase 73.6: drawer git without Terminal --------------------
+        // The Repository panel's Initialize used to close the drawer and
+        // type `git init` into the visible shell — which runs in the
+        // projects folder, not the project, and never checked git was
+        // installed (the owner's verbatim report: tapped Initialize, the
+        // app switched to Terminal by itself, first "no git command", then
+        // after a manual install a repo in the wrong folder with `master`).
+        // Initialize now runs the engine's `init` in place; when git is
+        // missing, the shared install prompt asks first, then the same
+        // background install + status bar the sheet uses takes over and
+        // auto-continues into the pending initialize.
+        val drawerTerminalViewModel = activityTerminalViewModel()
+        val drawerSetupFacts by drawerTerminalViewModel.setupFacts.collectAsState()
+        val drawerInstallVerdict = remember(drawerSetupFacts) {
+            SetupGatePolicy.can(SetupAction.INSTALL_PACKAGE, drawerSetupFacts)
+        }
+        val drawerGitPackage = remember { PackageCatalog.ALL_PACKAGES.first { it.id == "git" } }
+        val drawerGitInstallTargets = remember(drawerGitPackage) { PkgResult.installTargets(drawerGitPackage.installCommand) }
+        val drawerUserlandPrefix = remember(context) { ShellEnvironment.prefixDir(context.applicationContext.filesDir) }
+        var drawerGitInstalled by remember { mutableStateOf(true) }
+        var drawerGitCheckTick by remember { mutableStateOf(0) }
+        var drawerInstallingGit by remember { mutableStateOf(false) }
+        var drawerGitInstallStartedAtSec by remember { mutableStateOf(0L) }
+        var drawerInstallFailed by remember { mutableStateOf(false) }
+        var drawerInstallElapsedSec by remember { mutableStateOf(0) }
+        var drawerInitializing by remember { mutableStateOf(false) }
+        var drawerPendingInitRoot by remember { mutableStateOf<File?>(null) }
+        var showGitInstallPrompt by remember { mutableStateOf(false) }
+
+        // Best-effort truth about the git binary (a plain file check, no
+        // process). Defaults true: the worst case before the first check
+        // lands is an Initialize tap that finds no manager and asks to
+        // install — the correct door anyway.
+        LaunchedEffect(currentProject, drawerGitCheckTick) {
+            drawerGitInstalled = withContext(Dispatchers.IO) {
+                GitContext(context.applicationContext).gitBinary() != null
+            }
+        }
+
+        fun startDrawerInstall() {
+            drawerInstallFailed = false
+            drawerGitInstallStartedAtSec = System.currentTimeMillis() / 1000
+            drawerInstallElapsedSec = 0
+            drawerInstallingGit = true
+            Toast.makeText(context, context.getString(R.string.git_installing), Toast.LENGTH_SHORT).show()
+            drawerTerminalViewModel.sendCommand(drawerGitPackage.installCommand)
+        }
+
+        // Declared before the polling loop below: a local fun is only
+        // visible after its declaration, and the INSTALLED branch calls it.
+        fun runDrawerInit(root: File) {
+            uiScope.launch {
+                drawerInitializing = true
+                val git = withContext(Dispatchers.IO) {
+                    runCatching { GitContext(context.applicationContext).manager() }.getOrNull()
+                }
+                if (git == null) {
+                    drawerInitializing = false
+                    drawerGitInstalled = false
+                    drawerPendingInitRoot = root
+                    showGitInstallPrompt = true
+                    return@launch
+                }
+                val already = withContext(Dispatchers.IO) {
+                    runCatching { git.isRepository(root) }.getOrDefault(false)
+                }
+                if (already) {
+                    drawerInitializing = false
+                    viewModel.refreshGitMeta(context)
+                    drawerState.close()
+                    openSourceControl()
+                    return@launch
+                }
+                val error = withContext(Dispatchers.IO) {
+                    runCatching { git.init(root) }.exceptionOrNull()
+                }
+                drawerInitializing = false
+                if (error == null) {
+                    viewModel.refreshGitMeta(context)
+                    drawerGitCheckTick++
+                    drawerState.close()
+                    openSourceControl()
+                } else {
+                    val message = if (error is GitManager.GitCommandException) {
+                        GitErrors.classify(error.message, error.exitCode, hasToken = false).display()
+                    } else {
+                        error.message ?: context.getString(R.string.git_init_busy)
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        LaunchedEffect(drawerInstallingGit) {
+            if (!drawerInstallingGit) return@LaunchedEffect
+            while (drawerInstallingGit) {
+                delay(1_500)
+                val (result, onDisk) = withContext(Dispatchers.IO) {
+                    val read = PkgResult.read(drawerUserlandPrefix)
+                    val installed = GitContext(context.applicationContext).gitBinary() != null
+                    read to installed
+                }
+                when (InstallOutcomes.decide(drawerGitInstallTargets, drawerGitInstallStartedAtSec, onDisk, result)) {
+                    InstallOutcome.INSTALLED -> {
+                        drawerInstallingGit = false
+                        drawerGitInstalled = true
+                        drawerGitCheckTick++
+                        viewModel.refreshGitMeta(context)
+                        // The install was asked for by an Initialize tap:
+                        // continue into it instead of stranding the user.
+                        drawerPendingInitRoot?.let { root ->
+                            drawerPendingInitRoot = null
+                            runDrawerInit(root)
+                        }
+                    }
+                    InstallOutcome.FAILED, InstallOutcome.ENDED_WITHOUT_INSTALL -> {
+                        drawerInstallingGit = false
+                        drawerInstallFailed = true
+                    }
+                    InstallOutcome.WAITING -> Unit
+                }
+            }
+        }
+        LaunchedEffect(drawerInstallingGit) {
+            while (drawerInstallingGit) {
+                delay(1_000)
+                drawerInstallElapsedSec =
+                    ((System.currentTimeMillis() / 1000) - drawerGitInstallStartedAtSec)
+                        .coerceAtLeast(0).coerceAtMost(5999).toInt()
+            }
+        }
+
         // The panel's Search slot: one query, the five glyphs' options, and the
         // same capped, in-project walk the pure engine pins on the host.
         LaunchedEffect(searchQuery, searchOptions, currentProject, sidePanel) {
@@ -1437,17 +1576,31 @@ fun EditorScreen(
                     repository = RepositoryPanelState(
                         hasRepository = gitBranch != null,
                         branch = gitBranch,
-                        changeCount = gitChangeCount
+                        changeCount = gitChangeCount,
+                        gitInstalled = drawerGitInstalled,
+                        canInstallGit = drawerInstallVerdict.allowed,
+                        installingGit = drawerInstallingGit,
+                        installFailed = drawerInstallFailed,
+                        installElapsedSec = drawerInstallElapsedSec,
+                        initializing = drawerInitializing
                     ),
                     onInitializeRepository = {
-                        // The shot's one button, wired to CodeC's real git: the
-                        // repository is created by the same `git init` the
-                        // app's own readiness sentence points at, run in the
-                        // Terminal where the engine lives. No invented screen
-                        // (the shots do not show one).
-                        uiScope.launch { drawerState.close() }
-                        onOpenInTerminal("git init")
+                        // Phase 73.6 — full GUI: the engine's `init` in
+                        // place (see runDrawerInit above). The old path
+                        // closed the drawer and typed `git init` into the
+                        // visible shell — which runs in the projects
+                        // folder, not the project, and never checked git
+                        // was installed (the owner's device report).
+                        val root = currentProject?.let {
+                            runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+                        }
+                        if (root != null) {
+                            runDrawerInit(root)
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.editor_scratch_mode), Toast.LENGTH_SHORT).show()
+                        }
                     },
+                    onInstallGit = { showGitInstallPrompt = true },
                     onOpenSourceControl = openSourceControl,
                     files = {
                 EditorProjectDrawer(
@@ -2774,6 +2927,22 @@ fun EditorScreen(
                     TextButton(onClick = { showGoToLineDialog = false }) {
                         Text(stringResource(R.string.cancel))
                     }
+                }
+            )
+        }
+
+        // Phase 73.6 — the shared install question (drawer install option
+        // + retry). Confirming starts the background install; declining
+        // drops the pending initialize too.
+        if (showGitInstallPrompt) {
+            GitInstallPromptDialog(
+                onConfirm = {
+                    showGitInstallPrompt = false
+                    startDrawerInstall()
+                },
+                onDismiss = {
+                    showGitInstallPrompt = false
+                    drawerPendingInitRoot = null
                 }
             )
         }
