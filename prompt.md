@@ -12,7 +12,7 @@
 > **merged 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95)**
 > (device pass ✅ 2026-09-29). Records: `docs/ui-polish-chats/PHASE_73_*.md`,
 > `docs/NEXT_STEPS.md` head entries.
-> The owner selected **both 65.1 and 74.1 in one chat** and approved all recommendations. Their changes and the Python indentation/Backspace correction are implemented on the current `arena/*` session branch; Build APK round 1 `36607240454` exposed a test declaration syntax error (fixed); round 2 `36607641208` is green on `52420c1`. No PR/merge without the owner's explicit command. See `docs/chat-phase65/README.md`, `docs/chat-phase74/README.md`, and the head of `docs/NEXT_STEPS.md`.
+> **Latest owner instruction — 2026-09-30:** the owner says code-writing needs more attention, requests undoing the typing-related changes from the 65.1/74.1 chat, and asks for a dedicated editor-typing phase. The Python indentation and one-space Backspace reports remain unresolved; their patches were undone. The Settings defaults and navigation decision remain. Draft 75.1 only; wait for the owner to confirm the MCQ scope and explicitly say “Start Phase 75.1” before coding. Current CI after the revert is pending; previous green runs do not validate it. No PR/merge without explicit command. See the phase brief and NEXT_STEPS head.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -47,16 +47,16 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-29 (after PR #95; owner-selected 65.1 + 74.1 implemented, CI pending).**
+**CURRENT HANDOFF — 2026-09-30 (after PR #95; typing fixes reverted; proposed Phase 75.1 awaiting owner scope/start).**
 Read `rule.md`,
 `docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,
 `docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`,
 `docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5
 before the historical entries below (73.1–73.6 records stand as history behind them).
 
-*State verified for this session:* main and local HEAD both start at PR #95 merge `6c6a98025bb37acd7df5e50e7a1eea6f98c16792`; Build APK run `36603775081` is green; tree was clean before work; PRs #83 and #42 remain open and untouched. Current work is on the fresh `arena/01a0ee39-codec` branch. Recheck `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`, and `gh run list --limit 3` before acting. Before every commit follow rule.md §2.4: fetch the session branch and `git reset --mixed FETCH_HEAD` only if that remote branch exists; inspect status, never reset hard, stash or clean.
+*State verified for this follow-up (2026-09-30):* session branch remote is `arena/01a0ee39-codec` at `d65ca64`; remote `main` remains PR #95 merge `6c6a98025bb37acd7df5e50e7a1eea6f98c16792`. The latest pre-revert Build APK run `36608912686` was green on `d65ca64`; it does not validate the requested source reversion. PRs #83 and #42 remain open and untouched. The sandbox had reset local HEAD to `main` while files remained newer; it was realigned safely with `git fetch origin arena/01a0ee39-codec && git reset --mixed FETCH_HEAD` (never hard). Recheck `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`, and `gh run list --limit 3`; before each commit follow rule.md §2.4 and inspect only your changes.
 
-*This session — approved scope:* 65.1 and 74.1 were both explicitly requested. 65.1 retained current hide-while-typing navigation by agent recommendation; 74.1 sets editor font default 16sp, inline ghost default off, and starts all 12 Settings groups collapsed while allowing per-visit expansion/search. Feedback-exit prompt and welcome-screen action stay unchanged. Python analyzer now forwards its active language to colon indentation; IME multi-space leading-indent deletion is normalized to one-space Backspace. Tests/docs updated; first CI run `36607240454` failed for a missing test declaration `()` now fixed; CI `36607641208` is green on `52420c1`. No device result, PR or merge claimed. Detailed records: `docs/chat-phase65/README.md`, `docs/chat-phase74/README.md`.
+*This session — current status:* 65.1 retained navigation; 74.1 Settings defaults are preserved (16sp editor default, ghost off, all 12 sections collapsed, exit/welcome unchanged). Per owner instruction 2026-09-30, the Python indent and one-space Backspace patches/tests were undone and moved to proposed Phase 75.1. Previous CI runs predate the revert; current Build APK is pending. No device pass, PR or merge claimed. Read `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md`; wait for scope answers and “Start Phase 75.1”.
 
 *What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`
 §5) has 64, 66.1, 67.1, 69.1–69.4, 70.1, 71.1, 72.1 and 73.1–73.9 delivered, owner-tested and

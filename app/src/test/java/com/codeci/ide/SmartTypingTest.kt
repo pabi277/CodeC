@@ -13,24 +13,6 @@ import org.junit.Test
 class SmartTypingTest {
 
     @Test
-    fun `indent backspace removes one of several deleted leading spaces`() {
-        val old = TextFieldValue("for item in items:\n    ", TextRange(23))
-        val platformDelete = TextFieldValue("for item in items:\n", TextRange(19))
-        val normalized = SmartTyping.normalizeIndentBackspace(old, platformDelete)
-        assertEquals("for item in items:\n   ", normalized?.text)
-        assertEquals(TextRange(22), normalized?.selection)
-    }
-
-    @Test
-    fun `indent backspace leaves ordinary and non-indent deletions alone`() {
-        val ordinary = TextFieldValue("alpha", TextRange(5))
-        assertEquals(null, SmartTyping.normalizeIndentBackspace(ordinary, TextFieldValue("alph", TextRange(4))))
-        val body = TextFieldValue("    code", TextRange(8))
-        val deleteWord = TextFieldValue("    ", TextRange(4))
-        assertEquals(null, SmartTyping.normalizeIndentBackspace(body, deleteWord))
-    }
-
-    @Test
     fun `typeOver moves caret over matching closer instead of inserting`() {
         val old = TextFieldValue("()", TextRange(1))
         // old caret between '(' and ')', next char is ')'

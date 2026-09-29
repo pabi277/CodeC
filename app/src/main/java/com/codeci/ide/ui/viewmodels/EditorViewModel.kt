@@ -1360,7 +1360,7 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
             // user's first interaction, even if sora's focus callback races it.
             _caretPlaced.value = true
         }
-        var next = SmartTyping.normalizeIndentBackspace(old, newValue) ?: newValue
+        var next = newValue
         // Phase 26.2 — smart typing (pure, host-testable). Runs before autoIndent legacy.
         // suppressAutoPair=true only for the editor key STRIP: its swipe-up single
         // '(' must stay single because the strip has its own `()` pair cap. Every

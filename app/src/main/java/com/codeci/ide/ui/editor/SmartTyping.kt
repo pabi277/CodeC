@@ -139,34 +139,6 @@ object SmartTyping {
         return TextFieldValue(next, TextRange(caret - 1))
     }
 
-    /**
-     * Some IMEs treat a leading indentation run as one Backspace unit. Keep the
-     * editor's space-based indentation predictable: when an input event removes
-     * multiple spaces from the line's leading indent at once, retain all but the
-     * final space (the one immediately before the caret). Other deletions pass
-     * through unchanged.
-     */
-    fun normalizeIndentBackspace(old: TextFieldValue, newValue: TextFieldValue): TextFieldValue? {
-        if (!old.selection.collapsed || !newValue.selection.collapsed) return null
-        if (newValue.text.length >= old.text.length) return null
-        val oldCaret = old.selection.start.coerceIn(0, old.text.length)
-        val newCaret = newValue.selection.start.coerceIn(0, newValue.text.length)
-        val removedCount = old.text.length - newValue.text.length
-        if (removedCount < 2) return null
-        val start = oldCaret - removedCount
-        if (start < 0 || oldCaret > old.text.length) return null
-        val removed = old.text.substring(start, oldCaret)
-        if (removed.length != removedCount || removed.any { it != ' ' }) return null
-        val lineStart = old.text.lastIndexOf('\n', (start - 1).coerceAtLeast(0)).let { it + 1 }
-        if (start < lineStart || old.text.substring(lineStart, oldCaret).any { it != ' ' }) return null
-        // Confirm this input event really removed that exact leading run.
-        val expected = old.text.removeRange(start, oldCaret)
-        if (newValue.text != expected || newCaret != start) return null
-        val deleteAt = oldCaret - 1
-        val normalized = old.text.removeRange(deleteAt, oldCaret)
-        return TextFieldValue(normalized, TextRange(deleteAt))
-    }
-
     // -------------------------------------------------------------------------
     // Auto-indent
     // -------------------------------------------------------------------------

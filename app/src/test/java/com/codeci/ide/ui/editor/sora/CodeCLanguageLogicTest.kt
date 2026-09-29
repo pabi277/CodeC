@@ -1,6 +1,5 @@
 package com.codeci.ide.ui.editor.sora
 
-import com.codeci.ide.RepoFiles
 import com.codeci.ide.ui.utils.LanguageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -20,17 +19,9 @@ class CodeCLanguageLogicTest {
     @Test
     fun `python colon adds one level but comments do not`() {
         assertEquals(1, CodeCLanguage.indentAdvanceFor("def f():", LanguageType.PYTHON))
-        assertEquals(1, CodeCLanguage.indentAdvanceFor("for item in items:", LanguageType.PYTHON))
         assertEquals(0, CodeCLanguage.indentAdvanceFor("# note:", LanguageType.PYTHON))
         // Non-python languages do not treat ':' as an opener.
         assertEquals(0, CodeCLanguage.indentAdvanceFor("case 3:", LanguageType.C))
-    }
-
-    @Test
-    fun `analyzer forwards its active language to the indentation rule`() {
-        val source = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/editor/sora/CodeCAnalyzer.kt")
-            .readText()
-        assertTrue(source.contains("return indentAdvanceFor(content.getLine(line), language)"))
     }
 
     @Test

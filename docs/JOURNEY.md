@@ -1,5 +1,7 @@
 # CodeC — the full journey
 
+**2026-09-30 — Owner requested a focused typing phase.** After 65.1/74.1, the owner said code writing needs more attention and asked to undo the code-writing fixes from that chat. The Python `def`-works/`for`-does-not indentation report and the multi-space Backspace report remain open; the first attempt's analyzer and Backspace patches/tests were reverted on `arena/01a0ee39-codec`. The independent navigation decision and 74.1 Settings changes (16sp editor default, ghost default off, all Settings groups initially collapsed) are retained. Proposed **75.1 Editor typing reliability** is documentation/research only; wait for the owner's MCQ scope answers and explicit start instruction before implementing. Earlier green CI runs predate the revert and do not validate the current branch. Details: [`PHASE_75_1_EDITOR_TYPING.md`](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
+
 > **Owner update — 2026-09-27:** Top-level appearance looks good; further device
 > testing for this delivery is declined, **not passed**. The owner explicitly
 > authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
