@@ -27,11 +27,14 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -114,6 +117,12 @@ fun GitControlSheet(
     onBeforeBranchSwitch: (() -> Unit)? = null,
     /** Phase 39 device follow-up — see [BranchSwitchSheet.onAfterSwitch]. */
     onAfterBranchSwitch: (() -> Unit)? = null,
+    /**
+     * Phase 73.3 — the overflow menu's "Git Credentials" item (Spck parity)
+     * reuses the drawer footer's existing Settings jump; there is no second
+     * credentials screen to build, [SettingsScreen] already owns that UI.
+     */
+    onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
@@ -123,6 +132,13 @@ fun GitControlSheet(
     var showBranchSheet by remember { mutableStateOf(false) }
     // Phase 40.3 — the Publish-to-GitHub dialog (create the remote there isn't one).
     var showPublishSheet by remember { mutableStateOf(false) }
+    // Phase 73.3 — Spck-parity actions: Fetch/Log History/Checkout
+    // Commit/Remotes/Revert All, reached from one overflow menu next to the
+    // branch chip instead of redesigning the header.
+    var showGitMoreMenu by remember { mutableStateOf(false) }
+    var logSheetMode by remember(projectRoot) { mutableStateOf<GitLogSheetMode?>(null) }
+    var showRemotesSheet by remember { mutableStateOf(false) }
+    var pendingRevertAll by remember { mutableStateOf(false) }
 
     // Phase 73.2 — install git in place instead of sending the user to
     // Packages/Terminal and back. Reuses the exact mechanism Phase 71.1 built
@@ -199,40 +215,140 @@ fun GitControlSheet(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                state.status?.branch?.let { branch ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .clickable { showBranchSheet = true }
-                            .border(
-                                width = 1.dp,
-                                // Phase 40.5 — 0.55 alpha measured 2.25:1 (needs
-                                // 3:1 for a control boundary); opaque is 4.56:1.
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = RoundedCornerShape(50)
-                            )
-                            .padding(horizontal = 12.dp, vertical = 5.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                SpckIcons.GitBranch,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.width(6.dp))
+                // Phase 73.3 — a checked-out COMMIT (not a branch) used to
+                // make this chip vanish silently; a beginner who tapped
+                // Checkout Commit would see no branch name anywhere. Show a
+                // distinct, still-tappable chip (opens Switch Branch, the
+                // existing way back) instead of nothing.
+                when {
+                    state.status?.branch != null -> {
+                        val branch = state.status?.branch!!
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable { showBranchSheet = true }
+                                .border(
+                                    width = 1.dp,
+                                    // Phase 40.5 — 0.55 alpha measured 2.25:1 (needs
+                                    // 3:1 for a control boundary); opaque is 4.56:1.
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .padding(horizontal = 12.dp, vertical = 5.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    SpckIcons.GitBranch,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = branch,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Icon(
+                                    Icons.Default.ExpandMore,
+                                    contentDescription = stringResource(R.string.editor_drawer_switch_branch),
+                                    modifier = Modifier.size(15.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                    state.status?.detached == true -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable { showBranchSheet = true }
+                                .border(
+                                    width = 1.dp,
+                                    color = UnpushedAmber,
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .padding(horizontal = 12.dp, vertical = 5.dp)
+                        ) {
                             Text(
-                                text = branch,
+                                // Phase 17 added this string, never wired to
+                                // anything (no path produced detached HEAD
+                                // until 73.3's Checkout Commit); reused as-is.
+                                text = stringResource(R.string.git_detached_head),
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = UnpushedAmber,
                                 maxLines = 1
                             )
-                            Spacer(Modifier.width(4.dp))
+                        }
+                    }
+                }
+                if (state.gitInstalled && state.isRepo) {
+                    Box {
+                        IconButton(onClick = { showGitMoreMenu = true }) {
                             Icon(
-                                Icons.Default.ExpandMore,
-                                contentDescription = stringResource(R.string.editor_drawer_switch_branch),
-                                modifier = Modifier.size(15.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.git_more_actions)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showGitMoreMenu,
+                            onDismissRequest = { showGitMoreMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_fetch_action)) },
+                                onClick = {
+                                    showGitMoreMenu = false
+                                    viewModel.fetch(context, projectRoot)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_log_history_action)) },
+                                onClick = {
+                                    showGitMoreMenu = false
+                                    viewModel.loadCommits(context, projectRoot)
+                                    logSheetMode = GitLogSheetMode.VIEW
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_checkout_commit_action)) },
+                                onClick = {
+                                    showGitMoreMenu = false
+                                    viewModel.loadCommits(context, projectRoot)
+                                    logSheetMode = GitLogSheetMode.CHECKOUT
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_remotes_action)) },
+                                onClick = {
+                                    showGitMoreMenu = false
+                                    viewModel.loadRemotes(context, projectRoot)
+                                    showRemotesSheet = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.git_credentials_action)) },
+                                onClick = {
+                                    showGitMoreMenu = false
+                                    onDismiss()
+                                    onOpenSettings()
+                                }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.git_revert_all_action),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                enabled = state.status?.files?.isNotEmpty() == true &&
+                                    state.status?.noCommits != true,
+                                onClick = {
+                                    showGitMoreMenu = false
+                                    pendingRevertAll = true
+                                }
                             )
                         }
                     }
@@ -274,7 +390,16 @@ fun GitControlSheet(
                     }
                 }
                 !state.isRepo -> {
-                    SheetGuidance(stringResource(R.string.git_not_a_repo_message))
+                    // Phase 73.3 — the owner's follow-up superseded 73.2's
+                    // "wording only" decision for this one screen: `git init`
+                    // was the last normal action still requiring the
+                    // terminal, so it is now a real button, not just clearer
+                    // text. Clone (a working GUI flow already, in Files) is
+                    // still named, not duplicated here.
+                    GitInitGuidance(
+                        busy = state.busy,
+                        onInit = { viewModel.initRepo(context, projectRoot) }
+                    )
                 }
                 else -> {
                     // ---- Phase 40.1: readiness before the attempt ----------
@@ -751,6 +876,74 @@ fun GitControlSheet(
             onAttach = { url -> viewModel.attachRemoteToGitHub(context, projectRoot, url) }
         )
     }
+
+    // Phase 73.3 — Log History / Checkout Commit share one commit list.
+    logSheetMode?.let { mode ->
+        GitLogSheet(
+            mode = mode,
+            commits = state.commits,
+            loading = state.commitsLoading,
+            error = state.commitsError,
+            onDismiss = {
+                logSheetMode = null
+                viewModel.clearCommits()
+            },
+            onCheckout = { entry ->
+                viewModel.checkoutCommit(context, projectRoot, entry)
+                logSheetMode = null
+                viewModel.clearCommits()
+            }
+        )
+    }
+
+    // Phase 73.3 — the general Remotes screen (view/add/remove).
+    if (showRemotesSheet) {
+        GitRemotesSheet(
+            remotes = state.remotes,
+            loading = state.remotesLoading,
+            busy = state.remotesBusy,
+            error = state.remotesError,
+            onDismiss = {
+                showRemotesSheet = false
+                viewModel.clearRemotes()
+            },
+            onAdd = { name, url -> viewModel.addRemote(context, projectRoot, name, url) },
+            onRemove = { name -> viewModel.removeRemote(context, projectRoot, name) }
+        )
+    }
+
+    // Phase 73.3 — Revert All is the one destructive action here that is
+    // not limited to a single file, so it confirms first (matching the
+    // owner's answer, unlike the per-file discard which is already narrow
+    // enough not to need one).
+    if (pendingRevertAll) {
+        AlertDialog(
+            onDismissRequest = { pendingRevertAll = false },
+            title = { Text(stringResource(R.string.git_revert_all_title)) },
+            text = { Text(stringResource(R.string.git_revert_all_confirm)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingRevertAll = false
+                        viewModel.revertAll(context, projectRoot)
+                    }
+                ) {
+                    Text(
+                        stringResource(R.string.git_revert_all_action),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRevertAll = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        )
+    }
+
     pendingDiscard?.let { change ->
         AlertDialog(
             onDismissRequest = { pendingDiscard = null },
@@ -1095,6 +1288,48 @@ private fun GitInstallGuidance(
                 modifier = Modifier.padding(top = 12.dp).height(46.dp)
             ) {
                 Text(stringResource(R.string.git_install_action), letterSpacing = 0.8.sp)
+            }
+        }
+    }
+}
+
+/**
+ * Phase 73.3 — shown instead of [SheetGuidance] for "this folder isn't a Git
+ * repository yet": a real `git init` button, since that was the last normal
+ * Source Control action still requiring the terminal. Cloning an existing
+ * repository (a working GUI flow already, Files → ⋮ → Clone from GitHub) is
+ * named, not duplicated here as a second button.
+ */
+@Composable
+private fun GitInitGuidance(
+    busy: Boolean,
+    onInit: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+        Text(
+            text = stringResource(R.string.git_not_a_repo_message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (busy) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(top = 14.dp)
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.git_init_busy),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        } else {
+            OutlinedButton(
+                onClick = onInit,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.padding(top = 12.dp).height(46.dp)
+            ) {
+                Text(stringResource(R.string.git_init_action), letterSpacing = 0.8.sp)
             }
         }
     }

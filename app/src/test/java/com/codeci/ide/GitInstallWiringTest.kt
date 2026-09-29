@@ -52,11 +52,15 @@ class GitInstallWiringTest {
         assertTrue(loop.contains("gitInstallFailed = true"))
     }
 
-    @Test fun `not-a-repo guidance stays text-only, no new action button`() {
+    @Test fun `not-a-repo guidance grew a real init button in Phase 73_3`() {
+        // Superseded by the owner's Phase 73.3 follow-up: `git init` was the
+        // last normal Source Control action still requiring the terminal, so
+        // it is now a button here, not text-only guidance. The 73.2 wording
+        // rewrite for the message itself is unchanged (see the string test
+        // below) — only the "no buttons" restriction was lifted.
         val branch = sheet.substringAfter("!state.isRepo -> {").substringBefore("else -> {")
-        assertTrue(branch.contains("SheetGuidance(stringResource(R.string.git_not_a_repo_message))"))
-        assertFalse(branch.contains("Button("))
-        assertFalse(branch.contains("onClick"))
+        assertTrue(branch.contains("GitInitGuidance("))
+        assertTrue(branch.contains("onInit = { viewModel.initRepo(context, projectRoot) }"))
     }
 
     @Test fun `new user-facing strings exist and explain git in plain words`() {
@@ -65,11 +69,12 @@ class GitInstallWiringTest {
         )) {
             assertTrue(name, strings.contains("name=\"$name\""))
         }
-        // The rewritten not-a-repo message still points at both existing
-        // recovery paths (clone, or `git init`) — wording changed, not the
-        // recovery options themselves (owner: better wording only).
+        // Phase 73.3 — the message still names Clone as the other recovery
+        // path; the old "type git init in the Terminal" instruction was
+        // dropped once a real button did that instead (see
+        // `GitGuiParityWiringTest`).
         val notARepo = strings.substringAfter("name=\"git_not_a_repo_message\"")
         assertTrue(notARepo.contains("Clone from GitHub"))
-        assertTrue(notARepo.contains("git init"))
+        assertFalse(notARepo.contains("Terminal"))
     }
 }

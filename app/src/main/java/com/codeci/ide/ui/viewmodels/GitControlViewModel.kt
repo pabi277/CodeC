@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.codeci.ide.ui.projects.DiffEngine
 import com.codeci.ide.ui.projects.DiffLine
 import com.codeci.ide.ui.projects.GitBranchList
+import com.codeci.ide.ui.projects.GitCommitEntry
 import com.codeci.ide.ui.projects.GitContext
 import com.codeci.ide.ui.projects.GitCredentialsStore
+import com.codeci.ide.ui.projects.GitRemoteEntry
 import com.codeci.ide.ui.projects.GitFileChange
 import com.codeci.ide.ui.projects.GitErrorKind
 import com.codeci.ide.ui.projects.GitFriendlyError
@@ -116,6 +118,19 @@ class GitControlViewModel : ViewModel() {
         val publishNote: String? = null,
         /** GitHub's own `X-Accepted-GitHub-Permissions` value, when it sent one. */
         val publishNeedsPermission: String? = null,
+        /**
+         * Phase 73.3 — Spck parity: Log History / Checkout Commit. Loaded on
+         * demand when the sheet opens, not on every [refresh] (a repo can
+         * have thousands of commits; nothing else in this pane needs them).
+         */
+        val commits: List<GitCommitEntry> = emptyList(),
+        val commitsLoading: Boolean = false,
+        val commitsError: String? = null,
+        /** Phase 73.3 — the general Remotes screen. Same on-demand loading. */
+        val remotes: List<GitRemoteEntry> = emptyList(),
+        val remotesLoading: Boolean = false,
+        val remotesBusy: Boolean = false,
+        val remotesError: String? = null,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -440,6 +455,167 @@ class GitControlViewModel : ViewModel() {
             git.pull(projectRoot)
             "Pull completed"
         }
+    }
+
+    /**
+     * Phase 73.3 — "Initialize repository": the one action that used to be
+     * CLI-only ("Run `git init` in the terminal"). [runGitOperation] already
+     * works before a repository exists ([GitContext.manager] never checks
+     * for one), so this is the same busy/message/refresh shape as every
+     * other button here.
+     */
+    fun initRepo(context: Context, projectRoot: File) {
+        runGitOperation(context, projectRoot, "Initializing repository…") { git ->
+            git.init(projectRoot)
+            "Repository initialized"
+        }
+    }
+
+    /**
+     * Phase 73.3 — an explicit Fetch, standalone (until now [GitManager.fetch]
+     * only ran implicitly inside the Switch Branch dialog's remote-branch
+     * discovery). Updates remote-tracking refs without touching the working
+     * tree — unlike Pull, nothing local changes.
+     */
+    fun fetch(context: Context, projectRoot: File) {
+        runGitOperation(context, projectRoot, "Fetching…") { git ->
+            git.fetch(projectRoot)
+            "Fetch completed"
+        }
+    }
+
+    /**
+     * Phase 73.3 — "Revert All": the UI confirms before calling this (see
+     * [GitManager.revertAllChanges] — untracked files are never touched).
+     */
+    fun revertAll(context: Context, projectRoot: File) {
+        runGitOperation(context, projectRoot, "Reverting all changes…") { git ->
+            git.revertAllChanges(projectRoot)
+            "All changes reverted"
+        }
+    }
+
+    /**
+     * Phase 73.3 — "Checkout Commit": lands on a specific commit (detached
+     * HEAD). The result message says so in plain words — a beginner who has
+     * never heard "detached HEAD" still needs to know they are not on a
+     * branch and how normal work resumes (switch branches again).
+     */
+    fun checkoutCommit(context: Context, projectRoot: File, entry: GitCommitEntry) {
+        runGitOperation(context, projectRoot, "Checking out ${entry.shortSha}…") { git ->
+            git.checkoutCommit(projectRoot, entry.sha)
+            "Now viewing commit ${entry.shortSha} — not on a branch. Switch branches anytime to return to your work."
+        }
+    }
+
+    /**
+     * Phase 73.3 — Log History / Checkout Commit share one list load. Loaded
+     * on demand (opening the sheet), not on every [refresh].
+     */
+    fun loadCommits(context: Context, projectRoot: File, limit: Int = 50) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(commitsLoading = true, commitsError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    commitsLoading = false,
+                    commitsError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                val list = withContext(Dispatchers.IO) { git.log(projectRoot, limit) }
+                _state.value = _state.value.copy(commitsLoading = false, commits = list)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    commitsLoading = false,
+                    commitsError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun clearCommits() {
+        _state.value = _state.value.copy(commits = emptyList(), commitsError = null)
+    }
+
+    /** Phase 73.3 — the general Remotes screen (view/add/remove). */
+    fun loadRemotes(context: Context, projectRoot: File) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(remotesLoading = true, remotesError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    remotesLoading = false,
+                    remotesError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                val list = withContext(Dispatchers.IO) { git.remotesDetailed(projectRoot) }
+                _state.value = _state.value.copy(remotesLoading = false, remotes = list)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    remotesLoading = false,
+                    remotesError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun addRemote(context: Context, projectRoot: File, name: String, url: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(remotesBusy = true, remotesError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                withContext(Dispatchers.IO) { git.addRemote(projectRoot, name, url) }
+                val list = withContext(Dispatchers.IO) { git.remotesDetailed(projectRoot) }
+                _state.value = _state.value.copy(remotesBusy = false, remotes = list)
+                // A new remote can change PUSH readiness (NO_REMOTE clears).
+                refresh(context, projectRoot)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun removeRemote(context: Context, projectRoot: File, name: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(remotesBusy = true, remotesError = null)
+            val git = gitContext(context).manager()
+            if (git == null) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = GitErrors.notInstalled().display()
+                )
+                return@launch
+            }
+            try {
+                withContext(Dispatchers.IO) { git.removeRemote(projectRoot, name) }
+                val list = withContext(Dispatchers.IO) { git.remotesDetailed(projectRoot) }
+                _state.value = _state.value.copy(remotesBusy = false, remotes = list)
+                refresh(context, projectRoot)
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    remotesBusy = false,
+                    remotesError = friendly(e, git.hasCredentials).display()
+                )
+            }
+        }
+    }
+
+    fun clearRemotes() {
+        _state.value = _state.value.copy(remotes = emptyList(), remotesError = null)
     }
 
     /**

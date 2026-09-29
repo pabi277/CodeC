@@ -6,8 +6,12 @@
 > from the offered drafts), implemented it and got CI ✅ GREEN (`36519004263` on `9acfa34`,
 > branch `arena/01a0eb2d-codec`) — **not yet merged**, owner device pass owed. The same session
 > then took a direct owner bug/improvement report (not a discussion draft) — **73.2, the Git
-> connection: auto-install, clear errors, new-user guidance** — and implemented it too (CI
-> pending); see the **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for both states.
+> connection: auto-install, clear errors, new-user guidance** — implemented it and got CI ✅
+> GREEN (`36523739665`) — **not yet merged**. The same session then took a third direct owner
+> report, 4 Spck screenshots attached — **73.3, the git menu ported to full GUI parity
+> (Fetch/Log History/Checkout Commit/Revert All/Remotes/Git Credentials, everything but install
+> is now a button)** — and implemented it too (CI pending); see the
+> **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all three states.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
 > **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below; every block after it is history.
@@ -46,8 +50,10 @@
 ---
 
 **CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 CI ✅ GREEN, not
-merged; 73.2 implemented this session, CI ✅ GREEN `36523739665`).** Read `rule.md`, `docs/NEXT_STEPS.md`
-(head entry), `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`,
+merged; 73.2 CI ✅ GREEN `36523739665`, not merged; 73.3 implemented this session, CI pending
+this session's push).** Read `rule.md`, `docs/NEXT_STEPS.md`
+(head entry), `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`,
+`docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`,
 `docs/ui-polish-chats/PHASE_73_1_GIT.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the
 historical entries below.
 
@@ -103,7 +109,35 @@ words; `GitErrors.classify()` reviewed and found already good (no change). New t
 device pass and merge command still owed (rule.md §3). Full record:
 `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`.
 
-*What is next — the owner decides, you ask:* once 73.1 and 73.2 are settled, the remaining discussion drafts
+*73.3 (this session, not yet on `main`, not a discussion draft — a direct owner bug/improvement
+report, 4 Spck Editor screenshots attached):* owner verbatim: "Now git is fully depend on
+terminal but want it to be gui not a cli. Mean everything will be from buttons no need terminal
+for that (expect git install). Like spck i also attache some screenshot for help. Analysis all
+the screenshot carefully every small details must be note." Screenshots showed Spck's branch-icon
+dropdown (Branches/Remotes/Log History/Refresh Files) and push-icon dropdown (Commit All/Revert
+All/Checkout Commit/Fetch/Pull/Push/Git Credentials/Provider). Asked three scope questions first;
+owner answers: (1) **full parity** — port the whole menu; (2) **Revert All needs a confirm
+dialog** (bulk discard of staged+unstaged tracked changes, untracked files untouched); (3) **one
+shot**, this session. This supersedes 73.2 decision #3 for the not-a-repo case only: `git init`
+is now a real button (the wording rewrite stays, minus the now-redundant terminal instruction).
+Shipped: new `GitManager` engine methods (`init`/`checkoutCommit`/`revertAllChanges`/
+`removeRemote`/`remotesDetailed`/`log`, + new pure `GitLog.kt`); 10 new `GitControlViewModel`
+functions, all through the sheet's existing operation shapes; a header overflow menu (Fetch/Log
+History/Checkout Commit/Remotes/Git Credentials/Revert All); a detached-HEAD chip (Checkout
+Commit's `git checkout <sha>` used to make the branch chip vanish silently — now shown, using
+Phase 17's previously-unwired `git_detached_head` string); a real init button replacing the old
+not-a-repo text; two new sheets (`GitLogSheet.kt`, `GitRemotesSheet.kt`); Revert All's confirm
+dialog; "Git Credentials" as a Settings shortcut (no second editor built). New tests:
+`GitManagerTest.kt` extended (fake-git-script `init`/`remote`/`log` cases), `GitLogParserTest.kt`
+(new), `GitGuiParityWiringTest.kt` (new, source-scan), `GitInstallWiringTest.kt` updated for the
+superseded not-a-repo test. No JVM/coroutines/JUnit jars were available in this fresh sandbox
+this session (confirmed, network-checked) — verified instead by manual review, brace/paren
+sanity checks, and a `grep -cF` confirmation of every wiring-test anchor against the real file.
+**CI: not yet run this session** — push + poll is the immediate next step. Not merged — owner
+device pass and merge command still owed for 73.1/73.2/73.3 together (rule.md §3). Full record:
+`docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`.
+
+*What is next — the owner decides, you ask:* once 73.1, 73.2 and 73.3 are settled, the remaining discussion drafts
 are **65.1 Shell and navigation** and **74.1 Settings, support and final consistency** (briefs in
 `docs/ui-polish-chats/`). Ask which part (or which bug) comes next — offer both, with one line
 each on what the brief proposes; do not recommend a redesign (owner, 2026-09-27: keep the current

@@ -1,3 +1,50 @@
+**2026-09-29 — Phase 73.3 (Git menu: full GUI parity with Spck) 🚧 IMPLEMENTED, CI pending
+(this session's push).** Owner-reported directly, attached 4 Spck Editor screenshots, verbatim:
+"Now git is fully depend on terminal but want it to be gui not a cli. Mean everything will be
+from buttons no need terminal for that (expect git install). Like spck i also attache some
+screenshot for help. Analysis all the screenshot carefully every small details must be note."
+Screenshots analysed in full: a branch-icon dropdown (Branches/Remotes/Log History/Refresh
+Files — Branches already had full parity via `BranchSwitchSheet`) and a push-icon dropdown
+(Commit All/Revert All/Checkout Commit/Fetch/Pull/Push/Git Credentials/Provider — Commit/
+Push/Pull already existed). Missing: standalone Fetch, Log History, Checkout Commit, Revert
+All, a general multi-remote Remotes screen, a Git Credentials shortcut, and `git init` (the one
+remaining CLI-only escape hatch for a folder that isn't a repo yet). Asked three scope
+questions before coding; owner answered: (1) **full parity** — port the whole menu, not just
+git-init; (2) **Revert All needs a confirm dialog** (bulk discard of staged+unstaged tracked
+changes, untracked files untouched — "this cannot be undone"); (3) **one shot**, this session,
+not staged across chats. This supersedes 73.2 decision #3 for the not-a-repo case specifically:
+`git init` is now a real button, not wording-only (the plain-words rewrite itself stays, minus
+the now-redundant "type git init in the Terminal" sentence). Shipped:
+`GitManager.init/checkoutCommit/revertAllChanges/removeRemote/remotesDetailed/log` (+ new pure
+`GitLog.kt`: `GitCommitEntry`/`GitLogParser`/`GitRemoteEntry`); 10 new `GitControlViewModel`
+functions, all through the existing `runGitOperation`/hand-rolled-`launch` shapes already used
+by every other button in the sheet; a new header overflow menu (Fetch/Log History/Checkout
+Commit/Remotes/Git Credentials/Revert All) visible once git+repo are both ready; the branch
+chip is now a `when` (a detached `HEAD` from Checkout Commit used to make it vanish silently —
+now shows a distinct amber chip using Phase 17's previously-unwired `git_detached_head`
+string); a new `GitInitGuidance` composable (real init button, matching 73.2's
+`GitInstallGuidance` shape) replacing the not-a-repo's old text-only guidance; two new sheets
+(`GitLogSheet.kt`: shared Log History/Checkout Commit list, checkout confirms first in plain
+words; `GitRemotesSheet.kt`: list + add + remove, remove confirms first); Revert All's own
+confirm `AlertDialog` (non-dismissable, matches the per-file discard dialog's shape); "Git
+Credentials" as a menu shortcut into the existing `SettingsScreen` credentials editor (reuses
+both call sites' existing `onOpenSettings` — no second editor built). Out of scope, flagged not
+silently skipped: Spck's Provider item (GitHub-only app, nothing suggests another provider),
+the tree's search-files box (unrelated to git), a dedicated Log History diff view (the existing
+per-file diff view already covers inspecting changes). New tests: `GitManagerTest.kt` extended
+(fake-git-script `init`/`remote`/`log` cases; happy paths + input-validation rejections for
+every new engine method), `GitLogParserTest.kt` (new, pure parser tests), `GitGuiParityWiringTest.kt`
+(new, source-scan wiring pins — no Robolectric render exists for this sheet), and
+`GitInstallWiringTest.kt` updated for the superseded not-a-repo test. No JVM (`java`) or
+coroutines/JUnit jars were available in this fresh sandbox this session (confirmed via `find /`
+and blocked apt/curl network checks) — unlike 73.1/73.2, no local kotlinc syntax check was
+possible; verified instead by line-by-line manual review, production-file brace/paren-count
+sanity checks (balanced), and a direct `grep -cF` confirmation of every source-scan test's
+literal anchor against the real file before trusting it. Record:
+`docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`. **CI: not yet run this session** — push +
+poll is the immediate next step. No device pass; none claimed. **Not merged** — awaiting the
+owner's device pass and merge command for 73.1/73.2/73.3 together (rule.md §3).
+
 **2026-09-29 — Phase 73.2 (Git connection: auto-install, clear errors, new-user guidance) 🚧
 IMPLEMENTED, CI ✅ GREEN `36523739665` on `2f6bf55`.** Owner-reported directly (not a discussion draft), verbatim: "The git
 connection in the editor part make it properly working: 1. If git is not installed auto install

@@ -1321,7 +1321,10 @@ fun FileManagerScreen(
     gitSheetProject?.let { project ->
         GitControlSheet(
             projectRoot = project.root,
-            onDismiss = { gitSheetProject = null }
+            onDismiss = { gitSheetProject = null },
+            // Phase 73.3 — the overflow menu's "Git Credentials" item reuses
+            // this screen's existing Settings jump.
+            onOpenSettings = onOpenSettings
         )
     }
 

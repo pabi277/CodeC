@@ -2789,7 +2789,10 @@ fun EditorScreen(
                 // Phase 39 device follow-up — keep editor buffers in lockstep
                 // with the checked-out branch (flush before, reload after).
                 onBeforeBranchSwitch = { viewModel.prepareForBranchSwitch(context) },
-                onAfterBranchSwitch = { viewModel.reloadAfterBranchSwitch(context) }
+                onAfterBranchSwitch = { viewModel.reloadAfterBranchSwitch(context) },
+                // Phase 73.3 — the overflow menu's "Git Credentials" item
+                // reuses the same jump the drawer footer already has.
+                onOpenSettings = onOpenSettings
             )
         }
 

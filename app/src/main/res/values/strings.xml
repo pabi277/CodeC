@@ -370,7 +370,11 @@
     <string name="git_install_failed_message">The install didn’t finish. Open Terminal to see what happened, then try again.</string>
     <!-- Phase 73.2 — plain-words rewrite: says what Git IS for before it says
          what to do, for a reader who has never used Git. -->
-    <string name="git_not_a_repo_message">Git keeps a history of your code and can back it up to GitHub. This folder isn’t tracked by Git yet — clone an existing repository from Files → ⋮ → Clone from GitHub, or type “git init” in the Terminal to start tracking it here.</string>
+    <!-- Phase 73.3 — the terminal instruction is gone: the button right
+         below this text now does exactly that. Cloning is still named as
+         the other path, for a folder that should match an existing
+         repository instead of starting a brand new history. -->
+    <string name="git_not_a_repo_message">Git keeps a history of your code and can back it up to GitHub. This folder isn’t tracked by Git yet. If it should match an existing repository, clone it instead from Files → ⋮ → Clone from GitHub. Otherwise, start tracking it here:</string>
     <string name="git_detached_head">detached HEAD</string>
     <string name="git_pull">PULL</string>
     <string name="git_working_tree_clean">Working tree clean ✓</string>
@@ -666,5 +670,34 @@
     <string name="git_discard_title">Discard unstaged changes?</string>
     <string name="git_discard_confirm">Restore %1$s from the staged version? Unstaged changes to this file will be lost. Staged changes and other files stay unchanged. This cannot be undone here. If the file has unsaved editor changes, save and review its diff first.</string>
     <string name="git_discard_progress">Discarding unstaged changes…</string>
+
+    <!-- Phase 73.3 — full GUI parity for the git menu (no terminal needed
+         except to install git itself). -->
+    <string name="git_init_action">START TRACKING THIS FOLDER WITH GIT</string>
+    <string name="git_init_busy">Setting up Git…</string>
+    <string name="git_more_actions">More Git actions</string>
+    <string name="git_fetch_action">Fetch</string>
+    <string name="git_log_history_action">Log History</string>
+    <string name="git_checkout_commit_action">Checkout Commit</string>
+    <string name="git_checkout_commit_row_action">Checkout</string>
+    <string name="git_checkout_commit_explainer">Tap a commit to view your project as it was at that point. This does not change your history — you can switch back to a branch anytime.</string>
+    <string name="git_checkout_commit_title">Checkout this commit?</string>
+    <string name="git_checkout_commit_confirm">This opens commit %1$s. You will not be on a branch until you switch back to one — nothing about your history changes.</string>
+    <string name="git_log_empty">No commits yet.</string>
+    <string name="git_credentials_action">Git Credentials</string>
+    <string name="git_remotes_action">Remotes</string>
+    <string name="git_remotes_empty">No remotes configured yet.</string>
+    <string name="git_remotes_no_url">(no URL)</string>
+    <string name="git_remotes_remove">Remove %1$s</string>
+    <string name="git_remotes_add_title">Add a remote</string>
+    <string name="git_remotes_name_label">Name (e.g. origin)</string>
+    <string name="git_remotes_url_label">URL (https://…)</string>
+    <string name="git_remotes_add_action">ADD REMOTE</string>
+    <string name="git_remotes_remove_title">Remove this remote?</string>
+    <string name="git_remotes_remove_confirm">This only forgets the address named “%1$s” on this device. Nothing on GitHub is deleted. If other actions (like Push) rely on this name, set it up again before using them.</string>
+    <string name="git_remotes_remove_action">REMOVE</string>
+    <string name="git_revert_all_action">Revert All</string>
+    <string name="git_revert_all_title">Discard all changes?</string>
+    <string name="git_revert_all_confirm">This restores every tracked file to its last commit, discarding all staged and unstaged edits at once. Files git doesn’t know about yet (untracked/new files) are left alone. This cannot be undone.</string>
 </resources>
 

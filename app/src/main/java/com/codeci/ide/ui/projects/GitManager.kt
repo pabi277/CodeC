@@ -80,6 +80,9 @@ class GitManager(
         /** Remote names safe to pass as argv (`origin`, `upstream`, `fork-2`). */
         private val SAFE_REMOTE_NAME = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
+        /** Phase 73.3 — the same check [addRemote]/[removeRemote] enforce, for the Remotes UI. */
+        fun isSafeRemoteName(name: String): Boolean = SAFE_REMOTE_NAME.matches(name.trim())
+
         /** scp-style remotes (`git@github.com:user/repo.git`) — no shell involved. */
         private val SCP_REMOTE = Regex("^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:[A-Za-z0-9._/-]+$")
 
@@ -130,6 +133,35 @@ class GitManager(
 
     /** True when [root] is a git work tree (has a `.git` directory). */
     fun isRepository(root: File): Boolean = File(root, ".git").isDirectory
+
+    /**
+     * Phase 73.3 — `git init -b main`: the one GUI action the owner's Git
+     * connection was still missing ("this folder isn't a Git repository yet.
+     * Run `git init` in the terminal" was, until now, the only case where a
+     * normal Source Control action required leaving the app). Explicit
+     * `-b main` keeps the initial branch name predictable (matching GitHub's
+     * own default) instead of depending on the packaged git's own
+     * `init.defaultBranch` config, which nothing in CodeC sets.
+     *
+     * `-b`/`--initial-branch` needs git 2.28+; a git old enough to lack it
+     * falls back to a plain `init` (whatever branch name it defaults to)
+     * followed by a best-effort `symbolic-ref HEAD refs/heads/main` — safe
+     * before any commit exists (HEAD is a symref, not yet a real commit).
+     */
+    fun init(root: File) {
+        require(!isRepository(root)) { "Already a Git repository" }
+        val result = runGit(root, listOf("init", "-b", "main"), localTimeoutSeconds)
+        if (result.exitCode == 0) return
+        exec(root, listOf("init"), localTimeoutSeconds, "git init failed")
+        runCatching {
+            exec(
+                root,
+                listOf("symbolic-ref", "HEAD", "refs/heads/main"),
+                localTimeoutSeconds,
+                "git symbolic-ref failed"
+            )
+        }
+    }
 
     /**
      * `git status --porcelain=v1 -b` — branch/upstream plus per-file XY codes.
@@ -414,6 +446,34 @@ class GitManager(
             "git remote add failed"
         )
     }
+
+    /**
+     * Phase 73.3 — a general Remotes screen (Spck parity): remove a
+     * previously configured remote. Refuses a name that is not currently
+     * configured — a stale UI row must not silently no-op against the wrong
+     * remote after an external change.
+     */
+    fun removeRemote(root: File, name: String) {
+        val remote = name.trim()
+        require(remote.isNotEmpty()) { "Remote name cannot be empty" }
+        require(SAFE_REMOTE_NAME.matches(remote)) { "Invalid remote name" }
+        require(hasRemote(root, remote)) { "Remote '$remote' does not exist" }
+        exec(
+            root,
+            listOf("remote", "remove", remote),
+            localTimeoutSeconds,
+            "git remote remove failed"
+        )
+    }
+
+    /**
+     * Phase 73.3 — every configured remote with its URL, for the Remotes
+     * screen. One extra `get-url` per remote (there are rarely more than
+     * one or two); a remote whose URL cannot be read shows a null URL
+     * rather than dropping the row.
+     */
+    fun remotesDetailed(root: File): List<GitRemoteEntry> =
+        remoteNames(root).map { name -> GitRemoteEntry(name, remoteUrl(root, name)) }
 
     /**
      * Pushes, setting the upstream first when the current branch has none.
@@ -852,6 +912,62 @@ class GitManager(
                 "git branch --set-upstream-to failed"
             )
         }
+    }
+
+    /** Full, lowercase git object id — what every row [log] returns, never user-typed. */
+    private val FULL_SHA = Regex("^[0-9a-f]{40}$")
+
+    /**
+     * Phase 73.3 — Spck's "Checkout Commit": look at an older commit
+     * (`git checkout <sha>`), which detaches HEAD. [sha] is always one of
+     * [log]'s own full ids, never typed by the user, but is still checked
+     * against [FULL_SHA] (defence in depth, matching [isSafeExistingBranch]
+     * elsewhere in this file) so nothing resembling a flag can reach argv.
+     */
+    fun checkoutCommit(root: File, sha: String) {
+        val safe = sha.trim().lowercase()
+        require(FULL_SHA.matches(safe)) { "Invalid commit id" }
+        exec(root, listOf("checkout", safe), localTimeoutSeconds, "git checkout failed")
+    }
+
+    /**
+     * Phase 73.3 — Spck's "Revert All": `git reset --hard HEAD` discards
+     * every staged and unstaged change to TRACKED files, restoring them to
+     * the last commit. Deliberately narrower than `git clean`: untracked
+     * (new) files are never touched, matching what most git GUIs call
+     * "discard all changes" — this is the one destructive action in the
+     * sheet that is NOT limited to a single file ([GitDiscardPolicy] is
+     * unstaged-only, one path at a time), so the UI confirms before calling
+     * it.
+     */
+    fun revertAllChanges(root: File) {
+        exec(root, listOf("reset", "--hard", "HEAD"), localTimeoutSeconds, "git reset failed")
+    }
+
+    /**
+     * Phase 73.3 — Spck's "Log History" / "Checkout Commit": recent commits,
+     * newest first. `%x1f`/unit-separator fields keep an arbitrary commit
+     * subject from ever being mistaken for a field boundary (a comma or pipe
+     * in a real commit message would not be safe); the explicit trailing
+     * `%n` makes `--pretty=format:` emit exactly one line per commit (unlike
+     * `tformat:`, plain `format:` does not add one on its own). Best-effort:
+     * a brand new repository with no commits yet fails this command, and
+     * that failure is an empty list, not a thrown error — no history is a
+     * normal, first-run state, not a fault.
+     */
+    fun log(root: File, limit: Int = 50): List<GitCommitEntry> {
+        val result = runGit(
+            root,
+            listOf(
+                "log",
+                "-n", limit.coerceIn(1, 200).toString(),
+                "--date=iso-strict",
+                "--pretty=format:%H%x1f%h%x1f%an%x1f%ad%x1f%s%n"
+            ),
+            localTimeoutSeconds
+        )
+        if (result.exitCode != 0) return emptyList()
+        return GitLogParser.parse(result.stdout)
     }
 
     /**
