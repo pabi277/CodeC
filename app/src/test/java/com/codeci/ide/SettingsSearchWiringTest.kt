@@ -240,7 +240,7 @@ class SettingsSearchWiringTest {
     // ---- 4. folding ---------------------------------------------------------
 
     @Test
-    fun `every section header can fold and indexed row groups show counts` {
+    fun `every section header can fold and indexed row groups show counts`() {
         assertTrue(
             "every Settings group is foldable, including form sections",
             code.contains("val foldable = SettingsCatalog.isFoldableSection(title)")

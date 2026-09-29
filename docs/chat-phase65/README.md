@@ -16,4 +16,4 @@ Some IME deletion updates can remove a whole leading space-run in one edit. `Sma
 
 ## Exit
 
-No PR opened and no merge performed. See `docs/NEXT_STEPS.md` for the session CI status and `rule.md` §3 for the merge gate.
+Build APK round 1 `36607240454` failed at test compilation because a new test function omitted `()`; corrected in the follow-up commit, next run pending. No PR opened and no merge performed. See `docs/NEXT_STEPS.md` and `rule.md` §3.
