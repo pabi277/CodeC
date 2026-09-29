@@ -14,4 +14,4 @@ Changed the DataStore fallbacks and first-composition values together to avoid a
 
 The broader control inventory was reviewed against the current Settings screen and `docs/chat-phase38/SETTINGS_AUDIT.md`; this delivery makes only the agreed default/folding changes and does not invent replacement controls. No device review is claimed.
 
-Build APK round 1 `36607240454` failed at test compilation because a new test function omitted `()`; corrected in the follow-up commit, next run pending. No PR opened and no merge performed; see `rule.md` §3.
+Build APK round 1 `36607240454` failed at test compilation because a new test function omitted `()`; the declaration was corrected. Round 2 ✅ GREEN `36607641208` on `52420c1` (debug/release assembly, host unit/screenshot tests, lint per the workflow). No PR opened and no merge performed; see `rule.md` §3.

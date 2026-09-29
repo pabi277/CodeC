@@ -1,6 +1,6 @@
 # Proposed Phase 65.1 — Shell and navigation
 
-**Status: owner-approved and implemented 2026-09-29 in the same chat as 74.1.** No navigation redesign; existing hide-while-typing behavior retained by delegated agent choice. See [`docs/chat-phase65/README.md`](../chat-phase65/README.md). CI round 1 `36607240454` caught a test declaration syntax error (missing `()`); corrected, next run pending. No PR/merge.
+**Status: owner-approved and implemented 2026-09-29 in the same chat as 74.1.** No navigation redesign; existing hide-while-typing behavior retained by delegated agent choice. See [`docs/chat-phase65/README.md`](../chat-phase65/README.md). CI round 1 `36607240454` caught a test declaration syntax error (missing `()`); corrected, CI round 2 ✅ GREEN `36607641208` on `52420c1`. No PR/merge.
 
 ## Copy into a new chat
 

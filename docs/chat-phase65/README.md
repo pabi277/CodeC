@@ -16,4 +16,4 @@ Some IME deletion updates can remove a whole leading space-run in one edit. `Sma
 
 ## Exit
 
-Build APK round 1 `36607240454` failed at test compilation because a new test function omitted `()`; corrected in the follow-up commit, next run pending. No PR opened and no merge performed. See `docs/NEXT_STEPS.md` and `rule.md` §3.
+Build APK round 1 `36607240454` failed at test compilation because a new test function omitted `()`; the declaration was corrected. Round 2 ✅ GREEN `36607641208` on `52420c1` (debug/release assembly, host unit/screenshot tests, lint per the workflow). No PR opened and no merge performed. See `docs/NEXT_STEPS.md` and `rule.md` §3.
