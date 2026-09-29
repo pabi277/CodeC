@@ -28,9 +28,10 @@ class GitInstallWiringTest {
         assertTrue(branch.contains("installAllowed = installGitVerdict.allowed"))
         assertTrue(branch.contains("setupFacts = setupFacts"))
         // The userland section speaks the Terminal tab's own stage words
-        // (one wording, two screens) with the installer's real % — and
-        // the gate's own refusal sentence as the guidance.
-        assertTrue(sheet.contains("TerminalUx.label("))
+        // (TerminalStatusLabel — one wording, two screens) with the
+        // installer's real % — and the gate's own refusal sentence as
+        // the guidance.
+        assertTrue(sheet.contains("TerminalStatusLabel.label("))
         assertTrue(sheet.contains("stringResource(R.string.git_userland_title)"))
         assertTrue(sheet.contains("SetupGatePolicy.refusal(SetupAction.INSTALL_PACKAGE, progress, setupFacts)"))
         assertTrue(sheet.contains("stringResource(R.string.git_userland_git_wait)"))

@@ -104,7 +104,7 @@ import com.codeci.ide.ui.terminal.SetupGatePolicy
 import com.codeci.ide.ui.terminal.SetupStage
 import com.codeci.ide.ui.terminal.ShellEnvironment
 import com.codeci.ide.ui.terminal.TerminalLifecycle
-import com.codeci.ide.ui.terminal.TerminalUx
+import com.codeci.ide.ui.terminal.TerminalStatusLabel
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
@@ -1609,14 +1609,12 @@ private fun SheetGuidance(text: String) {
  * the user is never redirected there — this bar (elapsed seconds + an
  * indeterminate track, since `pkg` reports no percentage) is the whole
  * progress surface, and it finishes right here in the panel.
- */
-@Composable
-/**
+ *
  * Phase 73.8 — the install card (the owner's "like in package part"):
  * `PackageItemCard`'s shape — a Card with a header row, the command, and
  * a status badge — with git's two install states inside. While the
  * Linux-tools gate refuses, the card shows the USERLAND's live state
- * (the Terminal tab's own stage words via [TerminalUx], with the
+ * (the Terminal tab's own stage words via [TerminalStatusLabel], with the
  * installer's real download % whenever it knows one — nothing here is
  * fabricated); once the gate allows, it shows git's own install
  * (elapsed + the installer's live last line while running, the last
@@ -1775,17 +1773,23 @@ private fun GitInstallCard(
 /**
  * Phase 73.8 — the card's Linux-tools section, shown while the userland
  * gate refuses the git install. The stage words are the Terminal tab's
- * own ([TerminalUx.label] — one wording, two screens); the bar is
+ * own ([TerminalStatusLabel.label] — one wording, two screens); the bar is
  * determinate only while the installer reports a real download %,
  * indeterminate otherwise (an unknown is shown as an unknown).
  */
 @Composable
 private fun UserlandInstallSection(setupFacts: SetupFacts) {
     val progress = setupFacts.progress
-    val stageLabel = if (progress.stage == SetupStage.CHECKING) {
-        stringResource(R.string.git_userland_checking)
-    } else {
-        TerminalUx.label(
+    val stageLabel = when (progress.stage) {
+        // The shared label says "starting shell…" here (its subject is
+        // the shell); the card's subject is the tools, so it says so.
+        SetupStage.CHECKING -> stringResource(R.string.git_userland_checking)
+        // The shared label's FAILED wording points at the Terminal tab's
+        // own retry button; this card has no such button, so it keeps
+        // the stage word and lets the refusal sentence below carry the
+        // guidance instead of quoting a control that isn't here.
+        SetupStage.FAILED -> stringResource(R.string.git_userland_failed)
+        else -> TerminalStatusLabel.label(
             TerminalLifecycle.STARTING,
             progress.stage,
             progress.percent

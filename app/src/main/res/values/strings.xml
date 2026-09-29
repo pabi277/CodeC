@@ -753,6 +753,7 @@
          the beginner hints, and the credential rewordings. -->
     <string name="git_userland_title">Linux tools</string>
     <string name="git_userland_checking">Checking the Linux tools…</string>
+    <string name="git_userland_failed">Linux tools setup incomplete</string>
     <string name="git_userland_git_wait">Git installs after the Linux tools finish.</string>
     <string name="git_install_live_label">Last installer line:</string>
     <string name="git_install_failed_tail_label">Last lines:</string>
