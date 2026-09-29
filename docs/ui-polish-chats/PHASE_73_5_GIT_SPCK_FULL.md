@@ -1,12 +1,12 @@
 # Phase 73.5 — Git panel: Spck-exact layout, install status bar, inline credentials
 
-**Status: 🚧 IMPLEMENTED (2026-09-29), CI pending; session branch
-`arena/01a0eca9-codec` (copied whole from `arena/01a0eb2d-codec`, tip
-`5e242f9`, then this phase on top). Owner device pass owed, not merged
-(rule.md §3). Not one of the numbered UI-polish discussion drafts (65.1/74.1
-remain untouched) — this is a rule.md §4 bug/improvement lifecycle item the
-owner asked for directly, in the same Git area 73.1–73.4 just touched,
-superseding two 73.3 decisions (see below).**
+**Status: 🚧 IMPLEMENTED (2026-09-29), CI ✅ GREEN `36560766234` on tip
+`d469d52`; session branch `arena/01a0eca9-codec` (copied whole from
+`arena/01a0eb2d-codec`, tip `5e242f9`, then this phase on top). Owner device
+pass owed, not merged (rule.md §3). Not one of the numbered UI-polish
+discussion drafts (65.1/74.1 remain untouched) — this is a rule.md §4
+bug/improvement lifecycle item the owner asked for directly, in the same Git
+area 73.1–73.4 just touched, superseding two 73.3 decisions (see below).**
 
 ## The owner's report (verbatim, 2026-09-29)
 
@@ -138,6 +138,9 @@ Settings (only the dialog's Manage link still jumps there).
 
 ## Evidence
 
-- **CI:** pending — pushed on `arena/01a0eca9-codec`, `Build APK` run
-  awaited (record the run id here when green).
+- **CI: ✅ GREEN.** `Build APK` run `36560766234` on tip `d469d52` — both
+  APKs assembled, all host unit tests passed (including the new
+  `GitSpckPanelWiringTest.kt`'s 8 cases). One fixup round: the first push's
+  run `36559721476` failed `compileDebugUnitTestKotlin` (a backtick test
+  name contained a `:`, illegal in a JVM method name — fixed `d469d52`).
 - **Device:** not run this session; none claimed.

@@ -16,7 +16,7 @@
 > installed on** — fixed this session too, CI ✅ GREEN `36551505966`. A further session then
 > copied that whole branch onto `arena/01a0eca9-codec` and implemented the owner's follow-up —
 > **73.5, the Spck-exact Git panel (REPOSITORY header + two menus, install status bar, inline
-> credentials dialog, Commit All without push)** — CI pending on push; see the
+> credentials dialog, Commit All without push)** — CI ✅ GREEN `36560766234`; see the
 > **CURRENT HANDOFF — 2026-09-29 (after PR #94)** block below for all five states.
 > The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
 > names the next one; nothing starts on the agent's own. The operative handoff is the
@@ -56,9 +56,11 @@
 ---
 
 **CURRENT HANDOFF — 2026-09-29 (after PR #94, Phase 71.1 merged; 73.1 CI ✅ GREEN, not
-merged; 73.2 CI ✅ GREEN `36523739665`, not merged; 73.3 implemented this session, CI ✅ GREEN `36544645579`
-this session's push).** Read `rule.md`, `docs/NEXT_STEPS.md`
-(head entry), `docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`,
+merged; 73.2 CI ✅ GREEN `36523739665`, not merged; 73.3 CI ✅ GREEN `36544645579`, not merged;
+73.4 CI ✅ GREEN `36551505966`, not merged; 73.5 implemented this session on
+`arena/01a0eca9-codec`, CI ✅ GREEN `36560766234`).** Read `rule.md`,
+`docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`,
+`docs/ui-polish-chats/PHASE_73_3_GIT_GUI.md`,
 `docs/ui-polish-chats/PHASE_73_2_GIT_INSTALL.md`,
 `docs/ui-polish-chats/PHASE_73_1_GIT.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5 before the
 historical entries below.
@@ -199,8 +201,9 @@ menu (split in two, every action kept) and credentials-as-Settings-jump. Tests: 
 `GitSpckPanelWiringTest.kt` (8 cases); parity/install/discard wiring tests updated. No
 JVM/kotlinc in sandbox — verified with a Kotlin state-machine brace/paren scan + a
 Python mirror of every test assertion pre-push (caught two edit-tool glitches before
-commit). **CI pending** on push; not merged — owner device pass and merge command owed
-for 73.1/73.2/73.3/73.4/73.5 together (rule.md §3). Full record:
+commit). One CI fixup round (backtick test name with an illegal `:` — `d469d52`).
+**CI ✅ GREEN `36560766234`** on tip `d469d52`; not merged — owner device pass and merge
+command owed for 73.1/73.2/73.3/73.4/73.5 together (rule.md §3). Full record:
 `docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`.
 
 *What is next — the owner decides, you ask:* once 73.1, 73.2, 73.3, 73.4 and 73.5 are settled, the remaining discussion drafts

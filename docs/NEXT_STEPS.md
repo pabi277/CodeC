@@ -1,5 +1,5 @@
 **2026-09-29 — Phase 73.5 (Git panel: Spck-exact layout, install status bar, inline credentials) 🚧
-IMPLEMENTED, CI pending.** Owner-reported directly (not a discussion draft), same 4 Spck
+IMPLEMENTED, CI ✅ GREEN `36560766234` on `d469d52`.** Owner-reported directly (not a discussion draft), same 4 Spck
 screenshots 73.3 ported the menu *items* from — this phase ports the *layout*: fully
 terminal-independent Git GUI. Asked four scope questions before coding; owner answered: (1)
 **full Spck-style restyle** (REPOSITORY header + 3 icons, two menus exactly like the
@@ -26,7 +26,8 @@ tip `5e242f9` first (identical content), then this phase on top. Tests: new
 `GitSpckPanelWiringTest.kt` (8 cases), parity/install/discard wiring tests updated (see
 record). No JVM/kotlinc in sandbox — verified with a Kotlin state-machine brace/paren
 scan + a Python mirror of every test assertion before pushing (caught two edit-tool
-glitches pre-commit). Record: `docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`. No
+glitches pre-commit). One CI fixup round (backtick test name with an illegal `:` —
+`d469d52`). Record: `docs/ui-polish-chats/PHASE_73_5_GIT_SPCK_FULL.md`. No
 device pass; none claimed. **Not merged** — owner device pass and merge command owed for
 73.1/73.2/73.3/73.4/73.5 together (rule.md §3).
 
