@@ -9,7 +9,10 @@
 
 **Status: ✅ DEVICE-PASSED (round 1, 2026-10-01) on `arena/01a0f34c-codec` —
 default model changed to `gemini-3-flash-preview` per the owner's report;
-NOT merged (waiting for the owner's merge command).** Levels 2+ are not
+**merged to `main` via [PR #102](https://github.com/pabi277/CodeC/pull/102) on the owner's command** (2026-10-01: *"update all docs file
+and create ui file for next chat than you can merge everything into main"*).
+Next: [Phase 77](../chat-phase77/README.md) — the phone AI UI (floating
+button + bottom chat sheet), briefed for the next chat.** Levels 2+ are not
 authorized.
 
 ## What the user gets

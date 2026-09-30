@@ -2,7 +2,7 @@
 
 **Status: discussion and planning only. No app implementation is authorized by this document.**
 **Level 0 ✅ COMPLETE 2026-09-30:** owner decisions recorded in [`ai-integration/00_LEVEL0_DECISION_RECORD.md`](ai-integration/00_LEVEL0_DECISION_RECORD.md) — read-only first, Gemini BYOK, Keystore-encrypted key, preview every request, open project only, nothing saved. Also decided: 18+ and Google-terms confirmation at key setup, `HttpURLConnection` + stateless `streamGenerateContent` with `store:false` (no new dependency), and a pre-filled Flash model with Test connection. Level 1 is next but still needs the owner's explicit start command.
-**Level 1 🚧 IMPLEMENTED 2026-09-30 (owner: *"Start lavel 1"*) as [Phase 76](../phases/03-editor/chat-phase76/README.md)** — read-only Gemini helper in the fifth side-panel rail slot; device round ✅ passed 2026-10-01 (default model `gemini-3-flash-preview`), not merged. Levels 2+ remain unauthorized.
+**Level 1 🚧 IMPLEMENTED 2026-09-30 (owner: *"Start lavel 1"*) as [Phase 76](../phases/03-editor/chat-phase76/README.md)** — read-only Gemini helper in the fifth side-panel rail slot; device round ✅ passed 2026-10-01 (default model `gemini-3-flash-preview`), merged to `main` 2026-10-01. **Next: [Phase 77](../phases/03-editor/chat-phase77/README.md)** — phone AI UI (floating button + bottom chat sheet; still one question at a time), briefed. Levels 2+ remain unauthorized.
 
 ## Product direction supplied by the owner
 
