@@ -53,7 +53,7 @@ ORIGINAL BACKLOG CONTENT (preserved for audit)
   (git status, gh pr list, gh run list) before acting.
 
 --------------------------------------------------------------------
-A. PHASE 5 ROADMAP CANDIDATES (already in docs/roadmaps)
+A. PHASE 5 ROADMAP CANDIDATES (already in docs/roadmaps/PHASE5_ROADMAP.md)
 --------------------------------------------------------------------
 1. More Termux:API-style capabilities over the existing CodeCApi
    bridge (one wire op + one CLI script + BOOTSTRAP_VERSION bump each):

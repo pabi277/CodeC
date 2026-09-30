@@ -137,8 +137,8 @@ PASS = all five.
   `FileManagerScreen.kt:330-345`, `SettingsManager.kt:79,156-157`,
   `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md`, `SettingsAuditTest.kt:20-60`,
   `SettingsKeysHaveReadersTest.kt:30-40`.
-- `docs/research` §6 (what a first session must teach).
-- `docs/research` §3.1 (dependency survey; the hand-rolled
+- `docs/research/PHONE_UX_ANALYSIS.md` §6 (what a first session must teach).
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §3.1 (dependency survey; the hand-rolled
   decision), §3.3 (the two rules).
 
 ## Deferred / rejected with reasons
@@ -147,7 +147,7 @@ PASS = all five.
   cost; the copy carries the model, and `app_mark` is enough identity. Revisit
   only if the device round says users skip past the text.
 - **A searchable in-app help centre** — that is documentation, and
-  `docs/guides` already exists for the agent/owner; a phone IDE does
+  `docs/guides/TROUBLESHOOTING.md` already exists for the agent/owner; a phone IDE does
   not need a second copy of it in-app.
 - **Video/GIF walkthroughs** — size and load time on the exact devices CodeC
   targets.

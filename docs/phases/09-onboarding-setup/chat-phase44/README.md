@@ -356,7 +356,7 @@ may be described as tested on hardware.
 - CodeC code, 2026-09-12 — every file:line above.
 - [developer.android.com/develop/background-work/services/fgs](https://developer.android.com/develop/background-work/services/fgs)
   — the foreground-service contract (fetched 2026-09-12).
-- `docs/research` §2 (setup UX, Termux/Pydroid/Acode behavior,
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §2 (setup UX, Termux/Pydroid/Acode behavior,
   the WorkManager rejection).
-- `docs/guides` §27 (the Termux-clang fallback wording) and §31 (the
+- `docs/guides/TROUBLESHOOTING.md` §27 (the Termux-clang fallback wording) and §31 (the
   installer test flake) — reused, not rewritten.

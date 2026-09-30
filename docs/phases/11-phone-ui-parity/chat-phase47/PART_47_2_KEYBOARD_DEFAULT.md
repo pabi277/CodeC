@@ -32,7 +32,7 @@ The current default is an explicit earlier owner decision — the code says so a
 // round 2 — turn this off any time to go back to the strip + IME.
 ```
 
-and `docs/research` §5 lists CodeC Keys under *"what I would not
+and `docs/research/PHONE_UX_ANALYSIS.md` §5 lists CodeC Keys under *"what I would not
 change … default ON was right"*. **47.2 reverses that one clause, on the
 owner's instruction, and the reversal is recorded here so the next chat does not
 "restore" it.** The reasoning that made default-ON attractive was power-user
@@ -143,9 +143,9 @@ PASS = all seven; 4 is the compatibility promise.
   `EditorScreen.kt:360-365,401-404,1572,1683`, `ui/keyboard/*`,
   `ui/editor/KeysStayPolicy.kt`, `ui/editor/NavBarPolicy.kt`,
   `MainActivity.kt:735-747`.
-- `docs/research` §9 (the CodeC Keys design history and the
+- `docs/research/EDITOR_MOBILE_RESEARCH.md` §9 (the CodeC Keys design history and the
   L1/L2 decision) — read so this part changes the default and nothing else.
-- `docs/research` §5 (the earlier "default ON was right"
+- `docs/research/PHONE_UX_ANALYSIS.md` §5 (the earlier "default ON was right"
   recommendation, explicitly reversed here on the owner's instruction).
 
 ## Deferred / rejected with reasons

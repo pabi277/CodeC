@@ -5,7 +5,7 @@
 > (owner: "Start phase 30"), all three parts in one build on
 > `arena/01a07646-codec`; `Build APK` GREEN first try (run `34034889209`, tip
 > `641f6e8`, 4m34s: assemble + `:app:testDebugUnitTest` + `:app:lintDebug` +
-> the bench module); device round 1 (`docs/guides` §13, build
+> the bench module); device round 1 (`docs/guides/TROUBLESHOOTING.md` §13, build
 > `ca8ec57`) reported TWO bugs, both fixed in `d63a645` and **device-confirmed
 > PASSED on §14 (owner: "Yes working", 2026-09-07)**; final CI **run
 > `34078739941` GREEN (tip `c2b392e`, 8m33s)**, artifact `CodeC-IDE`
@@ -32,7 +32,7 @@
 > **No PR/merge without the owner's command.**
 >
 > **Device round 1 came back with two bugs — both FIXED on this branch
-> (2026-09-07), retest card `docs/guides` §14:**
+> (2026-09-07), retest card `docs/guides/TROUBLESHOOTING.md` §14:**
 > **(a)** accepting a suggestion left the typed prefix behind (`#in` + tap →
 > `##include <stdio.h>`): the accept span was 22.3's *identifier* word-run and
 > `#`/`@`/`!`/`.`/`>` are not word characters, which was harmless while every

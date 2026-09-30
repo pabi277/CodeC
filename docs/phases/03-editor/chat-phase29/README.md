@@ -4,7 +4,7 @@
 > pending, device round pending.** All three parts built on the session
 > branch (29.1 core + 29.2 language parity + 29.3 regex retirement —
 > records below). The gate is the owner's device round (retest card
-> [`docs/guides` §12](../../../guides/TROUBLESHOOTING.md)) + the 25.1-law
+> [`docs/guides/TROUBLESHOOTING.md` §12](../../../guides/TROUBLESHOOTING.md)) + the 25.1-law
 > budgets (keystroke p95 ≤ 16.7 ms on bench.c; APK delta ≤ +1.5 MiB).
 > No PR/merge without the owner's command.
 >

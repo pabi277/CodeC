@@ -27,7 +27,7 @@ android {
     // Phase 42.1 — versionCode/versionName are release metadata now: a tag
     // `app-v<X.Y.Z>` must name this versionName, and the publish step refuses
     // a versionCode that is not strictly greater than every shipped one
-    // (.github/workflows/build-apk.yml + docs/guides).
+    // (.github/workflows/build-apk.yml + docs/guides/RELEASE_NOTES.md).
     versionCode = 21
     // The device round kept tripping over WHICH apk was installed (three
     // crash reports pasted from a stale build). The CI run number (or a

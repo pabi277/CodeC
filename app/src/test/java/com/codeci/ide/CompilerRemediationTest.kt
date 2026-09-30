@@ -13,7 +13,7 @@ import org.junit.Test
  * the exec "Permission denied" signature yields the four steps, an
  * ordinary compiler diagnostic (or a non-exec permission problem)
  * yields nothing. The four steps are pinned verbatim so the doc copy
- * (`docs/guides` §27) and this string cannot drift apart.
+ * (`docs/guides/TROUBLESHOOTING.md` §27) and this string cannot drift apart.
  */
 class CompilerRemediationTest {
 

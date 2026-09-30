@@ -15,10 +15,10 @@
 ## 0. How phases work (the pattern you already used with Sora)
 
 Every CodeC editor upgrade follows the same loop (`rule.md`, `prompt.md`,
-`docs/journal`):
+`docs/journal/JOURNEY.md`):
 
 1. **Research dossier** (this file; same role as
-   `docs/research` for Sora).
+   `docs/research/EDITOR_MOBILE_RESEARCH.md` for Sora).
 2. **Owner says `"Start Phase N"`** — nothing ships without that sentence.
 3. **Spike + device budgets** if feel/perf is the gate (25.1, 28.1).
 4. **Implementation on the session branch** + host tests + CI green.
@@ -234,7 +234,7 @@ is wasted.
 4. tm4e — [eclipse-tm4e](https://github.com/eclipse-tm4e/tm4e)
 5. AndroidIDE / Squircle CE as Sora+TextMate/LSP consumers (behavior reference; AndroidIDE GPL)
 6. clangd, pylsp/Jedi, typescript-language-server — the VS Code C/Python/JS servers
-7. In-tree: `CodeCAnalyzer.kt`, `CodeCompletionEngine.kt`, `MultiLanguageSyntaxHighlighter.kt`, `docs/research` §4.3 (`editor-lsp` already named as the future)
+7. In-tree: `CodeCAnalyzer.kt`, `CodeCompletionEngine.kt`, `MultiLanguageSyntaxHighlighter.kt`, `docs/research/EDITOR_MOBILE_RESEARCH.md` §4.3 (`editor-lsp` already named as the future)
 
 ---
 

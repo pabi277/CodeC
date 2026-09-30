@@ -13,7 +13,7 @@ at Compose BOM 2024.09.00); A.2 and A.3 shipped in full.
 > stuck, the shortcuts key are not above the keyboard etc"
 >
 > Full research & design rationale:
-> [`docs/research`](../../../research/RESEARCH_NEXT_PHASES.md) §Phase 22.
+> [`docs/research/RESEARCH_NEXT_PHASES.md`](../../../research/RESEARCH_NEXT_PHASES.md) §Phase 22.
 
 ---
 

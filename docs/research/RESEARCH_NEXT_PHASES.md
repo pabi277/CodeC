@@ -7,8 +7,8 @@
 > run model**, and then to **pull the feasible items from groups 3-5 (smarter
 > runs, adaptive device, reach/polish) into the plan now**.
 >
-> Authoritative state lives in `rule.md`, `docs/journal`, `docs/getting-started`,
-> `docs/roadmaps`. This document is an **addendum** - it does not change
+> Authoritative state lives in `rule.md`, `docs/journal/JOURNEY.md`, `docs/getting-started/NEXT_STEPS.md`,
+> `docs/roadmaps/TERMINAL_PLAN.md`. This document is an **addendum** - it does not change
 > those files and does not relax any invariant. Phases 0-19 are COMPLETE; these
 > are *new* owner-requested directions.
 >

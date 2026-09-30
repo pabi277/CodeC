@@ -2,7 +2,7 @@
 
 **Status:** ❌ **CANCELLED 2026-09-04 — permanently dead.** The 25.1 device
 gate chose C-sora: every budget passed on both corpora (decision table:
-[`docs/research`](../../../research/EDITOR_MOBILE_RESEARCH.md) §3.1; raw
+[`docs/research/EDITOR_MOBILE_RESEARCH.md`](../../../research/EDITOR_MOBILE_RESEARCH.md) §3.1; raw
 numbers: [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md) §4.5), and the
 C-compose2 spike itself demonstrated the failure mode the research dossier
 predicted (whole-window recomposition storm: frames locked at ~36 ms at 100 %

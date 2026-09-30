@@ -86,7 +86,7 @@ jobs:
           if [ -z "$KEYSTORE_B64" ]; then
             echo "present=false" >> "$GITHUB_OUTPUT"
             if [ "$PUBLISH" = "true" ]; then
-              echo "::error::missing Actions secret KEYSTORE_B64 (with STORE_PASSWORD/KEY_PASSWORD) — nothing was published or uploaded; one-time setup: docs/guides"
+              echo "::error::missing Actions secret KEYSTORE_B64 (with STORE_PASSWORD/KEY_PASSWORD) — nothing was published or uploaded; one-time setup: docs/guides/UPLOAD_KEY_SETUP.md"
               exit 1
             fi
             echo "::notice::no release signing secrets — this build ships the debug artifact only"

@@ -144,7 +144,7 @@ The eight device checks in the phase README. The two that matter most:
   `SagerNet/sing-box-for-android` `ProfileCodeEditor.kt:238`.
 - The same bug + settle-then-reposition workaround in flutter-quill
   ([issue 2137](https://github.com/singerdmx/flutter-quill/issues/2137)).
-- `docs/research` §5.1-5.3 (mechanism, fix shape, the honest
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §5.1-5.3 (mechanism, fix shape, the honest
   caveat about very short viewports, and the rejected alternatives).
 
 ## Deferred / rejected with reasons

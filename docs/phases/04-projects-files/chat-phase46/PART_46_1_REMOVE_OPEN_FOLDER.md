@@ -23,7 +23,7 @@ step leaves the build green):
 | 7 | `ProjectTransfer.kt:313-345` | `copyDocumentChildren()` |
 | 8 | `strings.xml:348-349` | `hub_sheet_folder`, `hub_sheet_folder_subtitle` |
 | 9 | `docs/phases/13-archive/chat-phase43/PART_43_1_*.md`, `PART_43_2_*.md` | **already deleted** (2026-09-12); the tombstone README stays |
-| 10 | `docs/roadmaps` | Phase 43's row marked ❌ CANCELLED, pointing at the tombstone |
+| 10 | `docs/roadmaps/PHASE38_43_ROADMAP.md` | Phase 43's row marked ❌ CANCELLED, pointing at the tombstone |
 | 11 | new | a source-scan test pinning that `OpenDocumentTree` and `copyDocumentTree` never return |
 
 **After step 7, verify with grep, not by eye:**
@@ -86,7 +86,7 @@ PASS = all six.
 - [`../../13-archive/chat-phase43/README.md`](../../13-archive/chat-phase43/README.md) — why the feature is
   cancelled rather than fixed (one-way copy, unbounded recursion, no persisted
   grant).
-- `docs/research` §4.3.
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §4.3.
 
 ## Deferred / rejected with reasons
 

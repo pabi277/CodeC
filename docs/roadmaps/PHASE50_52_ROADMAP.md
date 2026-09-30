@@ -18,7 +18,7 @@
 > `docs/phases/11-phone-ui-parity/chat-phase50/`, `docs/phases/11-phone-ui-parity/chat-phase51/`, `docs/phases/11-phone-ui-parity/chat-phase52/`.
 >
 > **The phase recipe this series follows is now written down:**
-> [`docs/getting-started`](../getting-started/HOW_TO_CREATE_A_PHASE.md).
+> [`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`](../getting-started/HOW_TO_CREATE_A_PHASE.md).
 >
 > **Renumbered, and the cross-device matrix is ❌ CANCELLED (owner decision,
 > 2026-09-14):** the owner's law is *"number the phases like i go in a row"* —

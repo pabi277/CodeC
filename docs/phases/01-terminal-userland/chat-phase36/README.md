@@ -36,7 +36,7 @@ cutoff, and propagate/seed terminal geometry to avoid switch-only SIGWINCH
 redraws. The owner then reported the follow-up device validation passed.
 The phase is device-passed and merged to `main` via PR #60 on the owner's command.
 
-**Open-source-first reference** (`docs/research` §3):
+**Open-source-first reference** (`docs/research/PHASE34_37_OSS_RESEARCH.md` §3):
 **jackpal Android-Terminal-Emulator (Apache-2.0, archived)** is the canonical
 open Android VT-100 terminal — native PTY + separate emulator/view + multi-window —
 and confirms CodeC's `libcodec-pty.so` + `TerminalEmulator` + `TerminalEmulatorView`

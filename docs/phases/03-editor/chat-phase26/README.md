@@ -1,7 +1,7 @@
 # CodeC Phase 26 — Typing Experience 2.0
 
 > **Status:** 📋 **PLANNED — research complete, no code written.** Research
-> basis: [`docs/research`](../../../research/EDITOR_MOBILE_RESEARCH.md) §2, §5.
+> basis: [`docs/research/EDITOR_MOBILE_RESEARCH.md`](../../../research/EDITOR_MOBILE_RESEARCH.md) §2, §5.
 > **Owner starts with "Start Phase 26"; no PR/merge without explicit command.**
 
 Owner complaint (2026-09-04, restated): *"good typing experience … shortcuts …

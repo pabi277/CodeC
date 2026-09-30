@@ -152,7 +152,7 @@ About "Open-source licenses" line now says "QR encoding — Apache-2.0
 (zxing/zxing core)". **Clean-room law honoured:** the dependency is used
 through its public API only; no code or assets were copied, and the custom
 encoder the spec allowed was rejected in favour of the OSS option (owner's
-open-source-first directive, `docs/research` §4).
+open-source-first directive, `docs/research/PHASE34_37_OSS_RESEARCH.md` §4).
 
 ### Sources (record)
 

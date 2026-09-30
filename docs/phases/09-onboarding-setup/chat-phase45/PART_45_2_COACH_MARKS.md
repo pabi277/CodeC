@@ -120,7 +120,7 @@ PASS = all six.
   (the reveal handle), `ModulesScreen.kt:290-315` (the install card),
   `TerminalScreen.kt:299-310` (the status chip), `SettingsManager.kt` (key +
   reader pattern), `SettingsKeysHaveReadersTest.kt`.
-- `docs/research` §3.1-3.2 (dependency survey; why the plan is
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §3.1-3.2 (dependency survey; why the plan is
   pure and hand-rolled).
 - Behaviour-only precedent: Acode/VS Code first-run highlights (clean-room,
   `rule.md` §6).
@@ -133,7 +133,7 @@ PASS = all six.
 - **Contextual tips tied to state** (e.g. "you have unsaved changes") — that is
   the status bar's job, and it re-nags by definition.
 - **Per-feature "what's new" marks after each release** — a support channel, not
-  a guide; `docs/guides` already covers it.
+  a guide; `docs/guides/RELEASE_NOTES.md` already covers it.
 
 ---
 

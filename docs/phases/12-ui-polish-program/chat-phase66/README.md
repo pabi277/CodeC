@@ -1,7 +1,7 @@
 # Phase 66 — Projects hub and creation (UI polish, owner priority)
 
 **Owner instruction (2026-09-27, verbatim):**
-> Start the discussion for Phase 66.1. Read `docs/journal`
+> Start the discussion for Phase 66.1. Read `docs/journal/UI_POLISH_REVIEW_20260927.md`
 > and `docs/phases/12-ui-polish-program/PHASE_66_1_PROJECTS.md`. Keep the current look.
 > Review the Projects hub, explain what already works, recommend specific
 > improvements, and ask my thoughts before implementing. Do not start other

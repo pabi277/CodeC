@@ -9,7 +9,7 @@ device recipes passed on device.
 · **Blocks:** nothing
 
 > Full research & design rationale:
-> [`docs/research`](../../../research/RESEARCH_NEXT_PHASES.md) §Phase 23.
+> [`docs/research/RESEARCH_NEXT_PHASES.md`](../../../research/RESEARCH_NEXT_PHASES.md) §Phase 23.
 
 ---
 

@@ -8,10 +8,10 @@
 > the predicted whole-window recomposition trap. **25.2 (Sora integration) is
 > the chosen path — starts on the owner's "Start Phase 25.2". 25.3 is
 > ❌ CANCELLED.** Decision table:
-> [`docs/research`](../../../research/EDITOR_MOBILE_RESEARCH.md) §3.1 ·
+> [`docs/research/EDITOR_MOBILE_RESEARCH.md`](../../../research/EDITOR_MOBILE_RESEARCH.md) §3.1 ·
 > raw numbers + CI: [`PART_25_1_SPIKE_BENCH.md`](PART_25_1_SPIKE_BENCH.md)
 > §4.4–§4.6.
-> Research basis: [`docs/research`](../../../research/EDITOR_MOBILE_RESEARCH.md)
+> Research basis: [`docs/research/EDITOR_MOBILE_RESEARCH.md`](../../../research/EDITOR_MOBILE_RESEARCH.md)
 > (GitHub-verified 2026-09-04). **No PR/merge without the owner's explicit
 > command** (`rule.md` §3).
 
@@ -21,7 +21,7 @@ optimized phone editor and also good typing experience … make it best."*
 Phase 25 activates the item Phase 22 explicitly deferred: *"the
 `TextFieldValue` → `TextFieldState` / `bigtext`-style rewrite — the only way
 past the `BasicTextField` layout ceiling, and its own phase"*
-(`docs/getting-started`) — but widened per the research: before rewriting
+(`docs/getting-started/NEXT_STEPS.md`) — but widened per the research: before rewriting
 anything, **benchmark the three candidate cores on the owner's device** and let
 numbers, not taste, decide.
 

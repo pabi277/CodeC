@@ -9,7 +9,7 @@
 > typed `"int ma"` but the ghost prefix is the single identifier run — fixture
 > corrected to typed `"int"`, `6da7f44`); `33944516016` ✅ GREEN (4m51s).
 > Research basis:
-> [`docs/research`](../../../research/EDITOR_MOBILE_RESEARCH.md) §6.
+> [`docs/research/EDITOR_MOBILE_RESEARCH.md`](../../../research/EDITOR_MOBILE_RESEARCH.md) §6.
 > **No PR/merge without the owner's explicit command.** Implementation
 > records: §4 of each part (27.1 ghost via sora inlay hints, 27.2 chip strip
 > + gated native panel, 27.3 the policy surface + Settings surface).

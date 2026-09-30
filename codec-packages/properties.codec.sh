@@ -54,7 +54,7 @@ libcurl
 # of these packages is extracted into the bootstrap and recorded in the
 # dpkg status DB. The first Phase 3 bootstrap extracted/seeded every built
 # .deb — including build tools (doxygen, swig, tcl, tor, …) — bloating the
-# archive (~174 MB) and polluting `dpkg -l`; see docs/getting-started Part B.
+# archive (~174 MB) and polluting `dpkg -l`; see docs/getting-started/NEXT_STEPS.md Part B.
 #
 # coreutils and less join the four manager roots because the terminal UX
 # expects their alternatives to exist on a fresh device: `pager` must be

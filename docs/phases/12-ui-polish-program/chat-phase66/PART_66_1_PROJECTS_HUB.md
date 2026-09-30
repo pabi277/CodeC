@@ -82,7 +82,7 @@ shape. Everything below is behaviour and words.
 - `test/…/ProjectsHubTest.kt` — age expectations in the panel's words, plus
   one agreement test walking minute-by-minute to 24 h and day-by-day to 730 d.
 - `docs/phases/12-ui-polish-program/PHASE_66_1_PROJECTS.md` (status + verbatim answers),
-  `docs/journal` (§5 row), `docs/getting-started`.
+  `docs/journal/UI_POLISH_REVIEW_20260927.md` (§5 row), `docs/getting-started/NEXT_STEPS.md`.
 
 ## Things worth knowing before the next change here
 

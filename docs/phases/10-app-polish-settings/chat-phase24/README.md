@@ -10,7 +10,7 @@
 > **Owner:** "take ideas 3, 4, 5 now (the feasible / low-cost ones)"
 >
 > Full research & design rationale:
-> [`docs/research`](../../../research/RESEARCH_NEXT_PHASES.md) §Phase 24.
+> [`docs/research/RESEARCH_NEXT_PHASES.md`](../../../research/RESEARCH_NEXT_PHASES.md) §Phase 24.
 
 ---
 

@@ -41,7 +41,7 @@
 | `web_docs/README.md` | Folder index + app↔web file map + ground rules |
 | `web_docs/WEBSITE_PLAN.md` | Master spec: 7 pages with content outlines, design, stack, layout, deploy, phases W1–W5, acceptance criteria, open questions |
 | `web_docs/DECISIONS.md` | D1–D9 + open items O1–O5 |
-| `web_docs/getting-started` | Head state (W0 complete, zero code) + owner command table |
+| `web_docs/getting-started/NEXT_STEPS.md` | Head state (W0 complete, zero code) + owner command table |
 | `web_docs/WEB_JOURNEY.md` | Narrative timeline (entry W0) |
 | `web_docs/chat-web1/SUMMARY.md` | This record |
 

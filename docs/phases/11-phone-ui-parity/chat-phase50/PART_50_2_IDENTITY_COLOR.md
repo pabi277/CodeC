@@ -157,7 +157,7 @@ Android 12+, and with the wallpaper switch on) are run by the owner.
 ## Sources (record)
 
 - `PHASE50_52_UX_RESEARCH.md` §2.1, §3.3, §3.5, §4, D1.
-- Phase 40.5 colour law (`docs/journal`, `prompt.md`) — the standing rule
+- Phase 40.5 colour law (`docs/journal/JOURNEY.md`, `prompt.md`) — the standing rule
   this part extends rather than replaces.
 - WCAG 2.2 §1.4.3 (contrast minimum) as already applied by
   `ui/theme/Contrast.kt`.

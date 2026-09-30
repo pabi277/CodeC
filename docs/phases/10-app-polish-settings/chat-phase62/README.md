@@ -55,7 +55,7 @@ specified** — the shots stay the reference for everything they do show.
   three laws, and why the catalog is generated from the screen.
 * [`PART_62_2_COLLAPSIBLE_SECTIONS.md`](PART_62_2_COLLAPSIBLE_SECTIONS.md) — the fold, the count,
   the search-overrides-fold rule, and the one census the phase re-cut.
-* `docs/roadmaps` §62 (the phase's own line, now shipped) and §3 (the
+* `docs/roadmaps/PHASE59_63_UI_PARITY_ROADMAP.md` §62 (the phase's own line, now shipped) and §3 (the
   owner's four answers).
 
 ## Test log (Phase 62 — host JVM)

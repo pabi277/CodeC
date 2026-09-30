@@ -53,7 +53,7 @@ So today the tree is effectively two Material glyphs. The owner wants the
   `SpckIcons` marks (Python/HTML/globe) and use Seti's monochrome glyphs for
   everything else.
 
-> Full dossier: `docs/research` §1.
+> Full dossier: `docs/research/PHASE34_37_OSS_RESEARCH.md` §1.
 
 ## Design
 

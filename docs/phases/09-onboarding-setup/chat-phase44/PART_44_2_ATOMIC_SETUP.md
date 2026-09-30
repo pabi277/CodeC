@@ -255,7 +255,7 @@ zero orphans — pinned by `SwapRecoveryTest`.
   `MainActivity.kt:196-215` (the boot-sweep + `commit()` patterns to copy);
   `ui/crash/StartupLedger.kt` (the ledger shape); `ui/services/TempGc.kt` (the
   bounded-sweep shape).
-- `docs/research` §2.3.
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §2.3.
 - Android's process-death contract (any process may be killed at any time) —
   the reason restartability, not politeness, is the deliverable.
 

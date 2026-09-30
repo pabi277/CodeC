@@ -145,7 +145,7 @@ the owner's own stopwatch in 52.2's R4 records the number).
 
 - `PHASE50_52_UX_RESEARCH.md` §2.4 (the evidence above), §3.1 (50 ms), §3.6
   (first-session value), §4 (splashscreen licence).
-- `docs/journal` Phase 33.1 (the three-tile welcome is the owner's
+- `docs/journal/JOURNEY.md` Phase 33.1 (the three-tile welcome is the owner's
   decision), Phase 38 (the adaptive icon), Phase 44 (why the offline-C line
   matters).
 - `developer.android.com/develop/ui/views/launch/splash-screen` (the compat

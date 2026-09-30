@@ -79,7 +79,7 @@ honest copy**, not a new feature.
 
 1. **CodeC Keys must stay fully working as an opt-in.** Phases 26/27/28/30 built
    ghost accept, chip strip, popups, haptics and the space-bar trackpad on it;
-   `docs/research` §5 lists it under *"what I would not change"*.
+   `docs/research/PHONE_UX_ANALYSIS.md` §5 lists it under *"what I would not change"*.
    47.2 changes **who gets it by default**, never what it does.
 2. **A stored preference always wins over a new default.** Users who already
    chose CodeC Keys keep it — the DataStore key is only absent for people who
@@ -169,10 +169,10 @@ PASS = all nine.
   917-922,958-966,1572,1683,1916-1973`, `EditorProjectDrawer.kt:96-215`,
   `SettingsManager.kt:126`, `SettingsScreen.kt:239-270`,
   `ui/editor/KeysStayPolicy.kt`, `ui/editor/NavBarPolicy.kt`.
-- `docs/research` §6 (back-handling context for 47.1's close
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §6 (back-handling context for 47.1's close
   paths — the *policy* lands in Phase 49; 47.1 ships the visible affordance).
-- `docs/research` §9 (CodeC Keys design history) and
-  `docs/research` §5 (what must not regress).
+- `docs/research/EDITOR_MOBILE_RESEARCH.md` §9 (CodeC Keys design history) and
+  `docs/research/PHONE_UX_ANALYSIS.md` §5 (what must not regress).
 
 ## Deferred, recorded on purpose
 

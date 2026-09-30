@@ -8,7 +8,7 @@
 
 ---
 
-Read `web_docs/README.md`, `web_docs/WEBSITE_PLAN.md`, `web_docs/getting-started`,
+Read `web_docs/README.md`, `web_docs/WEBSITE_PLAN.md`, `web_docs/getting-started/NEXT_STEPS.md`,
 and **`rule.md`** first, before doing anything else, then report what you found
 and the current git/PR/CI state before making any change.
 
@@ -58,7 +58,7 @@ invariants, docs policy) — follow it for the website work too.
 - **Nothing is built, nothing is deployed, there is no `website/` folder
   yet.** If you see website HTML/CSS/JS anywhere that this session did not
   create, verify where it came from before touching it.
-- **App head:** Phase 42 COMPLETE & MERGED to `main` via PR #71 (app-v1.3.17 universal 6.6 MB signed non-debuggable, SHA256 lines, updater version guard, backup include-list, crash-loop guard, export-all, BETA.md, RELEASE_NOTES template), Phase 43 PLANNED (safe folder walk + ProjectLink). Check `git log --oneline -10` and `docs/getting-started` head line.
+- **App head:** Phase 42 COMPLETE & MERGED to `main` via PR #71 (app-v1.3.17 universal 6.6 MB signed non-debuggable, SHA256 lines, updater version guard, backup include-list, crash-loop guard, export-all, BETA.md, RELEASE_NOTES template), Phase 43 PLANNED (safe folder walk + ProjectLink). Check `git log --oneline -10` and `docs/getting-started/NEXT_STEPS.md` head line.
 
 **WHAT THE OWNER MUST SAY TO PROCEED:**
 
@@ -83,11 +83,11 @@ only, still no code.
   Pages workflow when W6 starts) and all `docs/` content are out of bounds
   for website work. `docs/` is the app's history — never rewrite it.
 - **`web_docs/` is the website's history.** Append, don't destructively
-  rewrite. Update `web_prompt.md` (this file), `web_docs/getting-started` (head
+  rewrite. Update `web_prompt.md` (this file), `web_docs/getting-started/NEXT_STEPS.md` (head
   state line) and `web_docs/WEB_JOURNEY.md` (timeline) as web gates close —
   the next chat trusts only what is written there and verified in git.
 - **Clean-room:** website *content* is distilled from the public repo files
-  (`README.md`, `docs/guides`, `docs/guides`, `docs/guides`, `docs/journal`) and the Termux
+  (`README.md`, `docs/guides/TROUBLESHOOTING.md`, `docs/guides/BETA.md`, `docs/guides/RELEASE_NOTES.md`, `docs/journal/JOURNEY.md`) and the Termux
   site's *public structure* (page model, layout ideas) — never paste
   Termux's site source (it is GPL-ish licensed; read the public spec,
   re-implement). No decompilation, no copying of closed-source material.
@@ -123,7 +123,7 @@ only, still no code.
   Total site at completion: **25 pages** (7 product + course home + 17
   chapters).
 - **Content source of truth is the repo itself** — `README.md` first, then
-  `docs/guides`, `docs/guides`, `docs/guides`, `docs/journal`. The site never states
+  `docs/guides/TROUBLESHOOTING.md`, `docs/guides/BETA.md`, `docs/guides/RELEASE_NOTES.md`, `docs/journal/JOURNEY.md`. The site never states
   anything the repo files don't support (feature claims, package list,
   engine table, install steps, icon, backup rules, export-all, LAN server, feedback). When the README changes, the site's affected
   section changes in the same effort — drift is a bug.
@@ -140,7 +140,7 @@ only, still no code.
 3. If the owner **has** commanded implementation: work the current phase
    (W1–W6) strictly per its spec folder `web_docs/web-phaseN/` (v2.2 refreshed), one phase
    at a time, record the phase in `web_docs/chat-webN/`, update
-   `web_prompt.md` / `web_docs/getting-started` / `web_docs/WEB_JOURNEY.md`
+   `web_prompt.md` / `web_docs/getting-started/NEXT_STEPS.md` / `web_docs/WEB_JOURNEY.md`
    in the same commit, push, report (including any **device pass required**
    items: W5 ch-08, W6 P1+P5), stop at the merge gate.
 4. Keep this file and the `web_docs/` living docs updated as gates close.

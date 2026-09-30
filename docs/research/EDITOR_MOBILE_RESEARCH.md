@@ -29,7 +29,7 @@ Facts grounded in the current code (`app/src/main/java/com/codeci/ide/`):
 | Completion | `CodeCompletionEngine.completions(...)` (`ui/editor/CodeCompletionEngine.kt`), `produceState` + 120 ms debounce off-main-thread (Phase 22.1); floating popup anchored near the caret (`EditorScreen.kt` ~L1451) | Popup **occludes the code it is completing**; accept paths are TAB/ENTER via the Phase 22.2 IME strip or tiny item taps; on a soft-only keyboard there is no Tab key under a thumb. |
 | Extra keys | `EditorKeySet` (TAB, `()` `{}` `[]` pairs, arrows…) + context swap to `RunKeySet` while an interactive run waits for input | Keys are tap-only (tap → insert). No long-press popups, no swipe layers, not user-editable. |
 | Selection / caret | System handles + arrows; pinch zoom (`FontSizeZoom`) | No magnifier, no double-tap-word-drag, no fast scroller documented for code. |
-| Deferred from Phase 22 | *"the `TextFieldValue` → `TextFieldState` / `bigtext`-style rewrite — the only way past the `BasicTextField` layout ceiling, and **its own phase**"* (`docs/getting-started`) | **This dossier is the research for that deferred item — it becomes Phase 25.** |
+| Deferred from Phase 22 | *"the `TextFieldValue` → `TextFieldState` / `bigtext`-style rewrite — the only way past the `BasicTextField` layout ceiling, and **its own phase**"* (`docs/getting-started/NEXT_STEPS.md`) | **This dossier is the research for that deferred item — it becomes Phase 25.** |
 
 The two owner complaints decompose cleanly:
 

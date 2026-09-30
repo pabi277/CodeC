@@ -61,7 +61,7 @@ setup steps moved to `ui/editor/CompilerRemediation.kt` (pure,
 exec "Permission denied" signature (shell/wrapper wording, exec markers,
 no `error:` diagnostic lines) gets a `SYSTEM` remedy line in the Output
 Panel (`EditorViewModel.finishFailedBuild`, next to the Phase-33
-no-`main` hint); wording source `docs/guides` §27;
+no-`main` hint); wording source `docs/guides/TROUBLESHOOTING.md` §27;
 `CompilerRemediationTest` pins both directions. The audit
 (`SETTINGS_AUDIT.md`, 43 control rows) deleted three more dead things:
 the Appearance "Terminal Theme" dropdown (exact duplicate of the

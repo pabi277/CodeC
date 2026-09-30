@@ -146,7 +146,7 @@ PASS = all eight; 2 and 6 are the ones that lose work if they fail.
   1000-1010`, `ui/components/EditorStatusBar.kt`, `ui/navigation/Screen.kt`,
   `ui/support/FeedbackDraft.kt` (path-shortening vocabulary),
   `ProjectPathUtils.resolveInside`.
-- `docs/research` §4.1-4.2 (the market's file-vs-project
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §4.1-4.2 (the market's file-vs-project
   models; why "both, made explicit" is the answer).
 
 ## Deferred / rejected with reasons

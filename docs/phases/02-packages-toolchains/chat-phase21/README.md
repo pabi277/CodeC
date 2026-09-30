@@ -8,7 +8,7 @@
 > **Owner decision (2026-09-01):** "remove tcc and use gcc like python and extend it's
 > scope with other languages as per need - make the plan future proof."
 >
-> Full research & design rationale: [`docs/research`](../../../research/RESEARCH_NEXT_PHASES.md)
+> Full research & design rationale: [`docs/research/RESEARCH_NEXT_PHASES.md`](../../../research/RESEARCH_NEXT_PHASES.md)
 > §Phase 21. The `LanguageRunProfile` Kotlin design (with registry code) is in that doc §D.2.
 
 ---

@@ -31,4 +31,4 @@ Read [README.md](README.md) then [PROBLEMS.md](PROBLEMS.md) before writing code.
 
 ## Phase 2 (only in a new chat, only if asked)
 
-Fork termux-packages, `TERMUX_PREFIX=/data/data/com.codeci.ide/files/usr`, bootstrap tarball. See [docs/roadmaps](../../../roadmaps/TERMINAL_PLAN.md) §7. Keep embedded TCC as zero-download fallback.
+Fork termux-packages, `TERMUX_PREFIX=/data/data/com.codeci.ide/files/usr`, bootstrap tarball. See [docs/roadmaps/TERMINAL_PLAN.md](../../../roadmaps/TERMINAL_PLAN.md) §7. Keep embedded TCC as zero-download fallback.

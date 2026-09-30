@@ -195,6 +195,6 @@ If this were my project I would stop adding IDE surface area and spend the next 
 4. **Installs like Acode** (Packages cards for brains, not a distro front page).  
 5. **Uses the screen like Instagram** (hide the tab bar while typing).
 
-The engines for 1–4 are listed in `docs/research`. This file is the **product** order: ease first, marketplace second.
+The engines for 1–4 are listed in `docs/research/OSS_REPLACEMENT_RESEARCH.md`. This file is the **product** order: ease first, marketplace second.
 
 Nothing here starts until you say **Start Phase N**. Specs: Phases **29–33** in `docs/phases/03-editor/chat-phase29/` … `docs/phases/09-onboarding-setup/chat-phase33/` (planned 2026-09-05). Recommended first: **Start Phase 29**.

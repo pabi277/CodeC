@@ -153,7 +153,7 @@ removes any dependence on Gradle's test order. The pack-loaded world is
 ### 3.4 Exit condition status
 
 ```text
-(Device) — ✅ PASSED 2026-09-07 (owner round, card: docs/guides §13)
+(Device) — ✅ PASSED 2026-09-07 (owner round, card: docs/guides/TROUBLESHOOTING.md §13)
 1. Type `for` in C and in Python — more than the old 1–2 snippets; chips scroll.
 2. Type `doc` in HTML — DOCTYPE / html skeleton still appears (regression).
 3. Master completion switch OFF → zero snippets computed (27.3).
@@ -170,7 +170,7 @@ with pack prefixes like `#inc`, `@med`, `def`. Fixed by
 tail, line-bounded, case-insensitive like the 22.6 matching law) wired at both
 accept surfaces; the ghost keeps literal-case alignment because it paints the
 suffix. Re-tested on the `c2b392e` build: **PASSED** (owner: "Yes working");
-card + root causes: `docs/guides` §14, JOURNEY §41.
+card + root causes: `docs/guides/TROUBLESHOOTING.md` §14, JOURNEY §41.
 
 **CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
 `:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the
@@ -211,7 +211,7 @@ Python `for` → 3, `doc` unchanged at 2.)*
 
 ### 3.5 Amendment (2026-09-06, same day — found while writing the device card)
 
-The card in `docs/guides` §13 names exact strings, so every one of
+The card in `docs/guides/TROUBLESHOOTING.md` §13 names exact strings, so every one of
 them was measured first on a host JVM driving the REAL engine over the REAL
 assets (`SnippetLibrary.install {}` reading `app/src/main/assets/snippets/`,
 the same seam the Robolectric tests use). Five strings were wrong in the build

@@ -276,7 +276,7 @@ shrink turns into a blank editor.
 5. The `assets/tcc` decision is recorded with its numbers and the owner's
    choice — including "keep shipping both ABIs in every artifact" if that is
    what the offline-first guarantee costs; and the armv7/x86 "no built-in C
-   compiler" sentence lands in `docs/guides` (42.3's release-notes work).
+   compiler" sentence lands in `docs/guides/BETA.md` (42.3's release-notes work).
 PASS = 1-5; 3 is where the phase is won or lost.
 ```
 

@@ -326,7 +326,7 @@ The shots have no bottom bar under the touch row. CodeC will still have one, by 
 
 The owner says **“Start Phase N”**. The agent then:
 
-1. Verifies git state (`docs/getting-started` step 1).
+1. Verifies git state (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md` step 1).
 2. Does that phase’s research pass, against the shots, and writes the part docs. The bottom-bar exception is re-read from this file before any tab is touched.
 3. Implements only that phase. Pure policy where the decision can be tested without a phone. Wiring pin so the policy is not decoration.
 4. Pushes the session branch. CI is the executor of record. Device rows are marked device-pass-required.

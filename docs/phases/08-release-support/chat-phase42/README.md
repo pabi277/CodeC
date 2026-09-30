@@ -185,7 +185,7 @@ most likely to bite, so it is the one that gets the most test time.
    (ProjectTransferExportAllTest); device spot-check not separately
    reported before merge.
 
-Device items 5/6/7 + the API-tier install are carried to `docs/guides`'s
+Device items 5/6/7 + the API-tier install are carried to `docs/guides/BETA.md`'s
 tester checklist + the part-doc runbooks — Phase 41's own merge sent the
 same precedent (ship on the machine pins + owner's core-device pass; the
 runbooks stay true).

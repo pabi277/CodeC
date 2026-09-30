@@ -182,7 +182,7 @@ PASS = all eight.
 ## Sources
 
 - CodeC 2026-09-12 — every file:line above.
-- `docs/research` §4 (Spck/Acode/Pydroid/Squircle file-vs-project
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §4 (Spck/Acode/Pydroid/Squircle file-vs-project
   models; why deleting the folder feature is honest).
 - [`../../13-archive/chat-phase43/README.md`](../../13-archive/chat-phase43/README.md) — the tombstone for
   the cancelled phase, including the "if anyone asks again" note.

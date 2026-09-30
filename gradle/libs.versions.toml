@@ -114,7 +114,7 @@ sora-language-textmate = { group = "io.github.rosemoe", name = "language-textmat
 # evidence rule).
 sora-editor-lsp = { group = "io.github.rosemoe", name = "editor-lsp", version.ref = "soraEditor" }
 # Phase 37.1 — ZXing core for the "scan to open the phone's server" QR code.
-# Apache-2.0, no transitive dependencies (docs/research §4:
+# Apache-2.0, no transitive dependencies (docs/research/PHASE34_37_OSS_RESEARCH.md §4:
 # "no custom QR encoder needed"). Only `core` is used — never `javase`
 # (that one drags in JAI/ImageIO), and never the Android `android-core`.
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxingCore" }

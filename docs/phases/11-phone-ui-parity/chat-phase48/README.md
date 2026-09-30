@@ -177,4 +177,4 @@ PASS = all eight, on a small screen and a large one.
 - The identical bug and its "wait for the keyboard to settle, then re-trigger
   caret positioning" workaround in another editor:
   [github.com/singerdmx/flutter-quill/issues/2137](https://github.com/singerdmx/flutter-quill/issues/2137).
-- `docs/research` §5.
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §5.

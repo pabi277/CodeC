@@ -140,7 +140,7 @@ PASS = all eight on at least two devices — one 3-button-nav, one gesture-nav.
   press never reaches the root handler" rather than "the dialog is broken".
 - Platform: the back stack's `popUpTo { saveState }` semantics (the code itself
   is the source); gesture navigation sends no back event on a home swipe.
-- `docs/research` §6.3 (the four causes and the "second door"
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §6.3 (the four causes and the "second door"
   decision).
 
 ## Deferred / rejected with reasons

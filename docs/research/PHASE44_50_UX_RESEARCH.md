@@ -114,7 +114,7 @@ plan object. No dependency earns its place for that.
 
 ### 3.2 What the guide must teach (from the product analysis, not from taste)
 
-`docs/research` §6 measured the first session against Pydroid and
+`docs/research/PHONE_UX_ANALYSIS.md` §6 measured the first session against Pydroid and
 Spck and named the gap: *the easy path is "know that this used to be a C IDE,
 open the right tab, survive mediocre colour and empty suggestions."* The guide's
 job is to kill the "know that" part. Five slides, one idea each, in the order

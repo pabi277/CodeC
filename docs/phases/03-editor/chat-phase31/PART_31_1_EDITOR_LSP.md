@@ -128,7 +128,7 @@ CodeC activity does not yet own. The right design is one
 to each new `CodeEditor`), not a one-per-language singleton. That
 moves 31.1 from a wire-up commit to an architecture change.
 
-The bench phase (see `docs/research` §3.1) does NOT
+The bench phase (see `docs/research/EDITOR_MOBILE_RESEARCH.md` §3.1) does NOT
 re-include 31.1; the device recipe is the only validation, and a red
 device round can be retried with a focused fix (the orchestrator's
 L1–L5 already keep a bad provider from blocking the user).

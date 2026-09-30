@@ -60,7 +60,7 @@ records the matrix-specific risks to watch:
   `com.termux` code, no GPL paste, no trademarked logos.
 - **Open-source first** — the owner's 2026-09-09 directive: research the
   free-OSS option before writing custom code. The per-phase findings, licences
-  and verdicts are in **`docs/research`** (Seti MIT +
+  and verdicts are in **`docs/research/PHASE34_37_OSS_RESEARCH.md`** (Seti MIT +
   Compose `PathParser` for 34; sora public API + in-tree typing path for 35;
   jackpal Apache-2.0 / Termux GPL-3.0 reference for 36; NanoHTTPD BSD + ZXing
   Apache-2.0 + framework NSD for 37).

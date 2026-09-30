@@ -116,7 +116,7 @@ change nothing and say so).
 | 57 | About | Wake lock | item | — (info) | — | keep |
 | 58 | About | Vibration | item | — (info) | — | keep |
 | 59 | About | Termux bridge (optional) | item | — (info; declared by Termux, guarded) | — | keep |
-| 60 | About | The full table | item | — (info; points at docs/guides) | — | keep |
+| 60 | About | The full table | item | — (info; points at docs/guides/DATA_AND_PRIVACY.md) | — | keep |
 | 37 | About | Open-source licenses | item | — (info; LGPL/MIT obligations) | — | keep |
 | 38 | About | Check for updates | action | app-release channel check (app-v* only), versioned/SHA-256-verified download or a named refusal | `ApkUpdateManager`+`UpdatePolicy`+`ReleaseFetch` (42.1: the updater no longer installs a bootstrap's "latest") | keep |
 | 39 | Feedback & Support | Send feedback, rate, or report a bug | action | navigates to `Screen.Feedback` | `FeedbackScreen` (Phase 41 follow-up moved the card to its own screen; the exit-prompt switch lives there) | keep |

@@ -18,7 +18,7 @@
 - `git status` / `git log`: session branch `arena/01a064e0-codec`, tip
   `3fa71ab` = `main` (Phase 20.1 merged, PR #43). `git ls-remote origin main`
   → `3fa71abe…` — the local tip and remote `main` agree.
-- Read `rule.md`, `docs/getting-started`, `docs/journal` and all five
+- Read `rule.md`, `docs/getting-started/NEXT_STEPS.md`, `docs/journal/JOURNEY.md` and all five
   `docs/phases/02-packages-toolchains/chat-phase21/` docs before editing.
 - Read the actual call sites the spec's §8 research prompts point at:
   `EditorViewModel.runActiveFile` (the old `when` on `LanguageType`),

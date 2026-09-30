@@ -5,7 +5,7 @@
 for the owner's device round (§4). · **Cost:** `[client-only]` · **Effort:** S
 · **Depends on:** nothing (gate for the whole phase)
 · **Target files:** spike-only (never shipped), feeding a go/no-go note in
-   `docs/research` §9
+   `docs/research/EDITOR_MOBILE_RESEARCH.md` §9
 
 ---
 

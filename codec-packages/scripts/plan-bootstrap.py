@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Plan Phase 3 bootstrap seeding: closure walk + alternatives wiring.
 
-Part B of docs/getting-started fixes three bootstrap content defects:
+Part B of docs/getting-started/NEXT_STEPS.md fixes three bootstrap content defects:
 
 1. Build-dependency pollution: the old assembler extracted and seeded every
    built .deb (doxygen, swig, tcl, tor, ...). This tool computes the

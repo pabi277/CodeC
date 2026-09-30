@@ -255,7 +255,7 @@ capability from the command's own words:
 - [developer.android.com/develop/background-work/services/fgs](https://developer.android.com/develop/background-work/services/fgs)
   (fetched 2026-09-12) — "noticeable to the user" is the test for a FGS, and the
   notification *is* the affordance.
-- `docs/research` §2.2 — Termux's full-screen bootstrap gate,
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §2.2 — Termux's full-screen bootstrap gate,
   Pydroid's zero-setup C-analogue, Acode's per-item progress.
 
 ## Deferred / rejected with reasons

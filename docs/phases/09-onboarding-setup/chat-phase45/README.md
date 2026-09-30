@@ -68,7 +68,7 @@
 
 ## Why a guide is the right fix (research, dossier §3)
 
-`docs/research` §6 measured CodeC's first session against Pydroid
+`docs/research/PHONE_UX_ANALYSIS.md` §6 measured CodeC's first session against Pydroid
 and Spck and named the gap in one line: *the easy path is "know that this used
 to be a C IDE, open the right tab, survive mediocre colour and empty
 suggestions."* Phases 29-33 fixed colour, completions and the first-run tiles.
@@ -192,8 +192,8 @@ PASS = all eight.
   `EditorScreen.kt:726-750`, `SettingsManager.kt:52,79,121-122,156-157`,
   `EditorProjectDrawer.kt:96-106`, `SettingsScreen.kt:914,1168`,
   `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md`.
-- `docs/research` §1, §6 (the measured first-session gap).
-- `docs/research` §3 (OSS survey + licences, the two rules).
+- `docs/research/PHONE_UX_ANALYSIS.md` §1, §6 (the measured first-session gap).
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §3 (OSS survey + licences, the two rules).
 - Behaviour-only precedent (clean-room, `rule.md` §6): Acode's per-screen
   highlights, VS Code's Get Started, Pydroid's zero-setup first run.
 

@@ -68,7 +68,7 @@ demos should remain deleted still need the owner's answer.
 Copy into a new chat:
 
 > Start the discussion for Phase 66.1. Read `docs/phases/09-onboarding-setup/chat-phase64/HANDOFF.md`,
-> `docs/journal`, and
+> `docs/journal/UI_POLISH_REVIEW_20260927.md`, and
 > `docs/phases/12-ui-polish-program/PHASE_66_1_PROJECTS.md`. Verify the current repository
 > and PR state, then review the Projects hub. Keep the current look. Explain
 > what works, recommend bounded improvements, and ask my thoughts before

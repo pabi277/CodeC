@@ -51,7 +51,7 @@ Scoring sheet (fill during device round):
    stay alive as a candidate.
 4. Script the input injector + frame capture identical across candidates.
 5. Run on device ×3 each, record medians in the decision table of
-   `docs/research` §3.
+   `docs/research/EDITOR_MOBILE_RESEARCH.md` §3.
 6. Decision gate: C-sora wins → 25.2; C-compose2 wins → 25.3; C-now wins →
    stop, polish stays-in-Compose follow-ups recorded, 25.2/25.3 cancelled and
    marked so.
@@ -71,7 +71,7 @@ PASS = all three. The gate is evidence; "feels faster" is not a measurement.
 
 The spike is **BUILT**; the device round is the owner's pass. Status: 🚧
 implemented + CI-gated, **device pass required** — the decision table in
-`docs/research` §3.1 stays EMPTY until real device numbers
+`docs/research/EDITOR_MOBILE_RESEARCH.md` §3.1 stays EMPTY until real device numbers
 land, and 25.2/25.3 remain PLANNED behind that gate.
 
 ### 4.1 What was built
@@ -165,7 +165,7 @@ sheet; identical scripted input per scenario):
    time (each does 3 reps with cool-downs). Cold-open is recorded
    automatically on open.
 5. Back on Home → **Copy all** → paste the markdown into chat.
-6. The agent fills the decision table (`docs/research` §3.1),
+6. The agent fills the decision table (`docs/research/EDITOR_MOBILE_RESEARCH.md` §3.1),
    states the gate verdict in writing (25.2 / 25.3 / stay-on-C-now), and the
    follow-on part starts only after that.
 
@@ -240,7 +240,7 @@ Findings:
 ### 4.6 Exit condition status
 
 1. ✅ Decision table filled from device runs —
-   `docs/research` §3.1 (owner export 2026-09-04).
+   `docs/research/EDITOR_MOBILE_RESEARCH.md` §3.1 (owner export 2026-09-04).
 2. ✅ JOURNEY §34 records the winner + raw numbers.
 3. ✅ Follow-on part explicitly started or cancelled in writing —
    **C-sora wins → 25.2 CHOSEN; 25.3 CANCELLED** (top of PART_25_3).

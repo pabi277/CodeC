@@ -25,7 +25,7 @@ Four sub-points → four parts, one shared surface (`EditorScreen` +
 | [35.3](PART_35_3_CURSOR_BOUNCE.md) | Non-bouncy cursor | client-only | S | 🚧 implemented |
 | [35.4](PART_35_4_NO_CARET_ON_OPEN.md) | No caret until first tap | client-only | S | 🚧 implemented |
 
-**Open-source-first reference** (`docs/research` §2): sora-editor
+**Open-source-first reference** (`docs/research/PHASE34_37_OSS_RESEARCH.md` §2): sora-editor
 is an **LGPL-2.1 binary dependency** — its cursor/selection config is read from
 its public API (verified against the resolved 0.24.6 surface), never pasted;
 the cursor target is the solid-caret/no-per-key-reanimation behavior used by

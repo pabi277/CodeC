@@ -187,7 +187,7 @@ but real for markup authoring — CodeC Keys now auto-closes `(`/`[`/`{`/`"`/`'`
 and `{` + Enter splits the pair with the caret indented, so writing the HTML an
 expansion produces no longer means fighting the keyboard. Both device-confirmed
 **PASSED** on the `c2b392e` build (owner: "Yes working"); card:
-`docs/guides` §14.
+`docs/guides/TROUBLESHOOTING.md` §14.
 
 **CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
 `:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the

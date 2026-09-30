@@ -5,7 +5,7 @@
 > The owner's device round merged on the release's own 4/4 pass: exit items
 > 1 (backup on device/bmgr), 2 (forced crash-loop → safe mode → files
 > intact), 3 (export-all round-trip on device) were **not separately
-> reported before merge** — they ride `docs/guides`'s tester checklist +
+> reported before merge** — they ride `docs/guides/BETA.md`'s tester checklist +
 > this doc's runbook (Phase 41's merge set the precedent: machine pins +
 > owner core-device pass; the runbooks stay true). **Cost:** `[client-only]` · **Effort:** S/M
 
@@ -51,7 +51,7 @@
   no reader fails), camera-feature optional, no debuggable/cleartext,
   exactly one exported component, no data-sewer permissions; About rows
   48–60 (build date `BUILD_DATE` UTC, authors, 10-row permission table +
-  pointer); `docs/guides` + `docs/guides` written for a
+  pointer); `docs/guides/DATA_AND_PRIVACY.md` + `docs/guides/BETA.md` written for a
   stranger; release notes already link BETA.md.
 - 🟢 **unit**: 9 suites 85/85 in the local harness; CI runs the full set.
 
@@ -112,7 +112,7 @@ sentence, and a wrong path in it means the reviewer checks the wrong file.)
 `datastore/settings.preferences_pb`, the file that holds the GitHub token.
 Including it would restore the user's theme, keys and sign-in — *and the token
 with it, into somebody else's cloud*. This part leaves it out on purpose, says so
-in `docs/guides` ("a fresh install asks you to sign in to GitHub
+in `docs/guides/DATA_AND_PRIVACY.md` ("a fresh install asks you to sign in to GitHub
 again — that is deliberate"), and lets the device round decide whether the
 *device-transfer* path (direct phone-to-phone, no cloud) may carry it while the
 cloud path never does.
@@ -227,7 +227,7 @@ there is no "all of it", and no discoverability.
   inside the existing About-first-run card or the storage section): *"CodeC
   keeps your projects in app storage. Uninstalling CodeC deletes them — export
   a backup ZIP first."* Same sentence, in the release notes and in
-  `docs/guides`.
+  `docs/guides/BETA.md`.
 - `Storage` section gains the size line 39.1 already adds ("CodeC uses
   X MB: projects / temp / userland"), plus `[EXPORT ALL]`.
 - **Exit condition, because this is data safety:** 3 projects + a nested folder
@@ -268,15 +268,15 @@ tester will see them, plus the checks that keep them true:
   for the update path. **Delete only what has no reader:** a first grep finds no
   reference to `ACCESS_WIFI_STATE`, `WAKE_LOCK` or `VIBRATE` in
   `app/src/main/java` — each is removed in this part, or the row in
-  `docs/guides` names the code that uses it (if `WAKE_LOCK` turns
+  `docs/guides/DATA_AND_PRIVACY.md` names the code that uses it (if `WAKE_LOCK` turns
   out to be required by a vendored Termux-derived service, *that* is the reason
   to write down, not to keep it silently). 43.1's revocable per-folder grant
   gets its own row too. And `ManifestPermissionsTest` pins the declared set
-  against a table in `docs/guides`: a permission with no row, or a
+  against a table in `docs/guides/DATA_AND_PRIVACY.md`: a permission with no row, or a
   row with no reader, **fails the build** — the only way this list stays true
   after the beta.
 - **Licences** — already covered (Phase 30's `LICENSES.md` + snippets, Phase
-  37's zxing line in About); 42.3 only adds a `docs/guides` page
+  37's zxing line in About); 42.3 only adds a `docs/guides/DATA_AND_PRIVACY.md` page
   the About row points to, so the claim has a source and F-Droid-style reviewers
   have something to read.
 - **`BETA.md`** (repo + linked from the release notes): the known-issues list
@@ -306,7 +306,7 @@ tester will see them, plus the checks that keep them true:
    and exporting from inside safe mode works.
 3. Export: the round-trip above, on device, clean.
 4. The privacy text, the permission table, the About row,
-   `docs/guides` and `docs/guides` exist and match a `grep` of the
+   `docs/guides/DATA_AND_PRIVACY.md` and `docs/guides/BETA.md` exist and match a `grep` of the
    manifest (the test): every declared permission has a row **and** a reader in
    `app/src/main/java`, and the two claims the app can actually make — no
    telemetry, nothing leaves the device unless the user starts it — hold when

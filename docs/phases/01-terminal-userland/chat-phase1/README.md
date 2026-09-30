@@ -19,8 +19,8 @@ docs/phases/01-terminal-userland/chat-phase1/
 
 Also read:
 
-- [docs/roadmaps](../../../roadmaps/TERMINAL_PLAN.md) — Mini-Termux roadmap
-- [docs/guides](../../../guides/TROUBLESHOOTING.md) — compiler / W^X / Termux engine
+- [docs/roadmaps/TERMINAL_PLAN.md](../../../roadmaps/TERMINAL_PLAN.md) — Mini-Termux roadmap
+- [docs/guides/TROUBLESHOOTING.md](../../../guides/TROUBLESHOOTING.md) — compiler / W^X / Termux engine
 
 ## Device smoke test (1.3.13)
 

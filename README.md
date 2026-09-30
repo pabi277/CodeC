@@ -276,11 +276,6 @@ fallback, the Output Panel prints these same four steps
 
 ## Troubleshooting
 
-> **Docs map:** start at [docs/README.md](docs/README.md) — the index to every guide, roadmap, research doc and phase record.  
-> **Roadmap (historical):** Mini-Termux plan — [docs/roadmaps](docs/roadmaps/TERMINAL_PLAN.md).  
-> **Full journey (authoritative timeline):** [docs/journal](docs/journal/JOURNEY.md).  
-> **What's next:** [docs/getting-started](docs/getting-started/NEXT_STEPS.md).  
-> **Phase tracker (number → folder):** [docs/phases/README.md](docs/phases/README.md).  
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
 
 ### "The built-in compiler could not start"
@@ -316,7 +311,7 @@ This error has two real causes:
 2. **Switch the engine to Termux** (Settings → Compiler Engine → Termux, setup above).
    Termux's own storage is exempt, so this works even when the bundled compiler is
    blocked.
-3. **Use Termux directly** — see [docs/guides](docs/guides/TROUBLESHOOTING.md) for a
+3. **Use Termux directly** — see [docs/guides/TROUBLESHOOTING.md](docs/guides/TROUBLESHOOTING.md) for a
    complete step-by-step C workflow in Termux.
 4. On a truly `noexec` device (cloud phones, some enterprise ROMs) no local compiler can
    run; use a real phone or an online compiler.

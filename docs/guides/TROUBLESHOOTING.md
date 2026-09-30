@@ -325,7 +325,7 @@ feed the editor at typing speed with the system IME never opening, and does it
 FEEL instant? The 25.1 bench grew two spike cores for it: **K1-codecgrid**
 (today's Compose document path) and **K2-codecgrid** (the shipping sora core).
 Nothing here is in the IDE; the decision lands in
-`docs/research` §9.1.
+`docs/research/EDITOR_MOBILE_RESEARCH.md` §9.1.
 
 **Steps (full detail in `docs/phases/03-editor/chat-phase28/PART_28_1_SPIKE.md` §5):**
 

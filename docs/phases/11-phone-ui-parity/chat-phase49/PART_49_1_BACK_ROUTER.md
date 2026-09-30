@@ -136,7 +136,7 @@ The phase README's ten device checks. The three that this part owns outright:
   `enableOnBackInvokedCallback` is irrelevant to `OnBackPressedCallback`);
   stackoverflow 79247909 (drawer/NavHost handlers sit *above* an activity-level
   one); stackoverflow 76564309 (`BackHandler(enabled = drawerState.isOpen)`).
-- `docs/research` §6.1-6.2 (the audit table and the four
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §6.1-6.2 (the audit table and the four
   hypotheses).
 
 ## Deferred / rejected with reasons

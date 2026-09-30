@@ -6,8 +6,8 @@
 # How to create a new phase in CodeC
 
 > **What this file is.** The phase ceremony, extracted from the repo itself
-> (`rule.md`, `prompt.md`, `docs/roadmaps`,
-> `docs/roadmaps`, `docs/roadmaps` and the
+> (`rule.md`, `prompt.md`, `docs/roadmaps/PHASE34_37_ROADMAP.md`,
+> `docs/roadmaps/PHASE38_43_ROADMAP.md`, `docs/roadmaps/PHASE44_50_ROADMAP.md` and the
 > `docs/chat-phase1…50/` directories that were produced by them). Nothing here
 > is invented: every step below is what those rounds actually did. Read this
 > before numbering a new phase, and follow it in this order.
@@ -127,9 +127,9 @@ reason and what replaces it.
 
 ### Step 7 — docs in the SAME commit (`rule.md` §7)
 - The owning part doc gets its `## Implementation (date)` section.
-- Living docs stay current: `docs/journal` (a new numbered entry, §71 →),
-  `docs/getting-started` (a new **Head:** line at the top),
-  `docs/guides` (owner-facing symptom → fix), `rule.md` §9
+- Living docs stay current: `docs/journal/JOURNEY.md` (a new numbered entry, §71 →),
+  `docs/getting-started/NEXT_STEPS.md` (a new **Head:** line at the top),
+  `docs/guides/TROUBLESHOOTING.md` (owner-facing symptom → fix), `rule.md` §9
   (the state snapshot), `prompt.md` when the handoff changes.
 - Append; never rewrite history.
 

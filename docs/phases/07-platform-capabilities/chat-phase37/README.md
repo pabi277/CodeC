@@ -67,7 +67,7 @@ So the *on-device* preview is done; what is missing is exactly the owner's ask:
 - **QR code** for the URL (Spck shows one) so a second device can join by
   scanning — **ZXing `core` (Apache-2.0, zero-dependency)**: `MultiFormatWriter()
   .encode(url, QR_CODE, w, h)` → `BitMatrix` → bitmap. Confirmed by
-  open-source-first research (`docs/research` §4); no custom
+  open-source-first research (`docs/research/PHASE34_37_OSS_RESEARCH.md` §4); no custom
   QR encoder needed.
 - **Discovery (optional)** — framework **NSD** (`_http._tcp`, no dependency);
   **JmDNS** only as a fallback **and only after verifying the exact version's

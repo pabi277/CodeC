@@ -10,7 +10,7 @@
 > complete, no code written. Owner question (2026-09-04): *"do you think if
 > the app have it's own keyboard possible only for code nothing else and app
 > dedicate not for every app?"* — **Answer: yes.** Details:
-> `docs/research` §9 (L0/L1/L2 layers, mechanisms, precedent,
+> `docs/research/EDITOR_MOBILE_RESEARCH.md` §9 (L0/L1/L2 layers, mechanisms, precedent,
 > honesty table).
 > **No PR/merge without the owner's explicit command.**
 

@@ -151,7 +151,7 @@ for comparison: 16.7 ms per keystroke (25.1 law).
 ### 3.4 Exit condition status
 
 ```text
-(Device) — ✅ PASSED 2026-09-07 (owner round; card: docs/guides §13)
+(Device) — ✅ PASSED 2026-09-07 (owner round; card: docs/guides/TROUBLESHOOTING.md §13)
 1. Type a short prefix in Python — chips scroll; ⌄ shows more than 8.
 2. Ghost still only the top-1; Enter still newline.
 PASS = both.
@@ -164,7 +164,7 @@ WORD-only prefix length for every item, so accepting `#include <stdio.h>` after
 `#in` from the PANEL left `##include …` even once the strip chip was fixed. Both
 surfaces now compute the same `CodeCompletionEngine.replaceSpanLength`. Device-
 confirmed **PASSED** on the `c2b392e` build (owner: "Yes working"); card:
-`docs/guides` §14.
+`docs/guides/TROUBLESHOOTING.md` §14.
 
 **CI:** `Build APK` run `34034889209` GREEN on tip `641f6e8` (4m34s —
 `:app:assembleDebug` + `:app:testDebugUnitTest` + `:app:lintDebug` through the

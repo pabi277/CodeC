@@ -132,5 +132,5 @@ OFF, the system IME visibly returns to the editor; (b) a physical Bluetooth
 keyboard still types into the editor WHILE the grid is up; (c) caret
 movement + selection handles unaffected by the suppression; (d) the one-word
 feel line for the full keyboard: *does it feel instant?* Runbook:
-`docs/guides` §11.
+`docs/guides/TROUBLESHOOTING.md` §11.
 ```

@@ -81,7 +81,7 @@ failure, that the null-manager branch is untouched, that the git-status catch re
 bug (`gitInstalled = true` with no `isRepo` touch) is gone. Every assertion was hand-verified
 against the real file with a small Python script mirroring Kotlin's `substringAfter`/
 `substringBefore`/`substringAfterLast` semantics before being trusted (this session's own
-lesson from the 73.3 CI round — see `docs/getting-started`).
+lesson from the 73.3 CI round — see `docs/getting-started/NEXT_STEPS.md`).
 
 ## What this does **not** claim to fix
 

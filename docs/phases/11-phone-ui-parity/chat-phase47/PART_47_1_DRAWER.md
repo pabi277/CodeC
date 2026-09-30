@@ -142,7 +142,7 @@ PASS = all nine.
 - Phase 25.2 device round 3 (the `gesturesEnabled` comment at `:902-904`) — the
   reason edge-swipe stays off with a file open, and therefore why a visible ✕ is
   mandatory rather than decorative.
-- `docs/research` §6 (back precedence; 49 owns the policy).
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §6 (back precedence; 49 owns the policy).
 
 ## Deferred / rejected with reasons
 

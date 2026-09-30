@@ -5,7 +5,7 @@ future chat. No deadline, dependency, new control or replacement engine promised
 
 ## Copy into a new chat
 
-> Review `docs/journal` and this brief. Re-read the current
+> Review `docs/journal/UI_POLISH_REVIEW_20260927.md` and this brief. Re-read the current
 > implementation and real reference shots. Tell me what already works, what
 > detail you recommend changing, and ask for my thoughts before implementing.
 > Keep Phase 64’s no-guide/no-installation-UI-lock decision. Do not merge or open

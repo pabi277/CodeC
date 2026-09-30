@@ -51,7 +51,7 @@
 
 1. `git status` — on an `arena/*` session branch.
 2. `web_docs/` and `web_prompt.md` exist and match this head state (v2.2 as of 2026-09-12; if newer session doc says otherwise, trust newest dated entry in `WEB_JOURNEY.md`).
-3. `README.md` + `docs/guides` + `docs/guides` + `docs/guides` re-read before writing any page — content rules §4 bind (v2.2 facts).
+3. `README.md` + `docs/guides/BETA.md` + `docs/guides/RELEASE_NOTES.md` + `docs/guides/TROUBLESHOOTING.md` re-read before writing any page — content rules §4 bind (v2.2 facts).
 
 ## History pointer
 

@@ -23,7 +23,7 @@ C.2 not started (depends on C.1's pipeline run). Started on the owner's
 > userland) and expanding to `nodejs`, `php`, `ruby`, `lua54`, and optional heavy
 > compilers (`golang`, `rust`) on demand. **No Kotlin code is written in this phase.**
 >
-> Full research & design rationale: [`docs/research`](../../../research/RESEARCH_NEXT_PHASES.md)
+> Full research & design rationale: [`docs/research/RESEARCH_NEXT_PHASES.md`](../../../research/RESEARCH_NEXT_PHASES.md)
 > §Phase 20 and §D.2.1 (the "gcc = Clang wrapper" reality gate).
 
 ---

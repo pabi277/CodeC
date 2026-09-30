@@ -154,6 +154,6 @@ After D.4 is merged:
 - **`rule.md` §6 invariants:** remove "TCC link order with `-o` last" (no longer
   applicable). Record that D.4 is complete.
 - **`prompt.md` STANDING RULES:** remove the TCC link-order bullet.
-- **`docs/journal`:** append item "Phase 21 — TCC retired, LanguageRunProfile
+- **`docs/journal/JOURNEY.md`:** append item "Phase 21 — TCC retired, LanguageRunProfile
   registry, gcc/g++ via userland, Phase 20 packages."
-- **`docs/getting-started`:** update head state line.
+- **`docs/getting-started/NEXT_STEPS.md`:** update head state line.

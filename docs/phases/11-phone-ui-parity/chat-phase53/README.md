@@ -68,7 +68,7 @@ test, and the repository's law is that CI is the test executor of record
 (`rule.md` §3, §8). Phase 53 is the bridge: **a written procedure that turns
 handset testing into evidence the repo can keep.**
 
-`docs/research` §12 already states the same principle — *"I could
+`docs/research/PHONE_UX_ANALYSIS.md` §12 already states the same principle — *"I could
 not run the app: no device, no emulator, no Gradle cache"* — and lists the
 checks that remained pending. Phase 53 does them.
 
@@ -155,13 +155,13 @@ the ones already declared does not.
    deferral with a reason.
 4. Each part file from 44-49 carries a `## Test log` section with its own rows
    pasted in.
-5. `docs/research`'s pending checks are marked done or superseded.
+5. `docs/research/PHONE_UX_ANALYSIS.md`'s pending checks are marked done or superseded.
 PASS = 1-5 with zero open failures that are not explicitly deferred.
 ```
 
 ## Sources
 
-- `docs/research` §12 (the same limitation, stated earlier) and §8
+- `docs/research/PHONE_UX_ANALYSIS.md` §12 (the same limitation, stated earlier) and §8
   (the five phone-specific risks this matrix is designed to catch).
 - `rule.md` §3 (CI is the test executor of record), §8 (verification law), §4.2
   (evidence before change).

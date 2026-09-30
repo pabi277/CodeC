@@ -51,7 +51,7 @@ check whether it was newer).
   via `gh secret set`, local files deleted) — but the automation token has
   no permission on the Actions secrets API (`HTTP 403`), so nothing was
   stored and the owner route is the live one:
-  **[docs/guides](../../../guides/UPLOAD_KEY_SETUP.md)** (Termux on the
+  **[docs/guides/UPLOAD_KEY_SETUP.md](../../../guides/UPLOAD_KEY_SETUP.md)** (Termux on the
   owner's phone, ~2 min, secrets pasted through the GitHub web UI). Until
   the secrets exist every push still builds (release artifact skipped with a
   notice); a publish run fails early naming the secret. This paragraph is
@@ -164,7 +164,7 @@ law Phase 41 writes down for feedback).
 
 `RELEASE_NOTES.md` template, filled by CI: what's new (by phase — the JOURNEY
 entries make good headings), **what still bites** (the known-issues list, from
-`docs/guides`'s user-visible subset), which APK to install
+`docs/guides/TROUBLESHOOTING.md`'s user-visible subset), which APK to install
 (universal, or the ABI line from About), how to get help (Phase 41's row), and
 that the app stores everything on-device with no telemetry. This is the piece
 that converts "here's an APK, good luck" into something a person will actually

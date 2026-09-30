@@ -302,7 +302,7 @@ No new features. One runbook (`phases/11-phone-ui-parity/chat-phase53/DEVICE_MAT
 a small screen (≤ 5.5"), a tablet/foldable if available, Android 11 / 13 / 15 if
 available, plus the two destructive cases that matter (kill during install,
 revoke storage). The deliverable is a **filled matrix**, not a promise — the
-same standard `docs/guides` and Phase 41's device rounds set.
+same standard `docs/guides/BETA.md` and Phase 41's device rounds set.
 Specs: [`phases/11-phone-ui-parity/chat-phase53/`](../phases/11-phone-ui-parity/chat-phase53/README.md) (moved from `phases/11-phone-ui-parity/chat-phase50/`).
 
 ---
@@ -340,5 +340,5 @@ easy to break by accident in a UX series:
 | Predictive back (`enableOnBackInvokedCallback`) | Whole-app migration; `targetSdk 28` is load-bearing for exec-of-app-data. Deferred, recorded in dossier §6.4. |
 | Opening a SAF folder as a project (old 43.2) | Cancelled by the owner's row 3. If it ever returns it needs the persisted-grant design in the cancelled docs — which the tombstone points at. |
 | A new file manager, external-storage editing, `FileObserver` sync | Same cancellation; nothing in 44–50 depends on them. |
-| New languages, LSP servers, themes, git features | Out of scope for a test-phase series; `docs/journal` still owns them. |
+| New languages, LSP servers, themes, git features | Out of scope for a test-phase series; `docs/journal/IDEA_BACKLOG.md` still owns them. |
 | Redesigning the 5-tab bar | Phase 32.1's hide-while-typing already handles the canvas problem; 48 handles the keyboard problem. |

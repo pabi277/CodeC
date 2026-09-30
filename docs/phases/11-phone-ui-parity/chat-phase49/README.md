@@ -262,7 +262,7 @@ PASS = all ten, on at least two devices (Phase 50 owns the matrix).
   generalises instead of copying).
 - [developer.android.com/codelabs/predictive-back](https://developer.android.com/codelabs/predictive-back)
   — material3 1.3.0-alpha01+ requirement for the drawer's predictive back.
-- `docs/research` §6.
+- `docs/research/PHASE44_50_UX_RESEARCH.md` §6.
 
 ## Deferred, recorded on purpose
 

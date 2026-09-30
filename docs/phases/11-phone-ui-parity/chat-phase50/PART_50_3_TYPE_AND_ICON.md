@@ -139,7 +139,7 @@ description (source scan of the six files); and the device round's L9-L10 rows
 
 - `PHASE50_52_UX_RESEARCH.md` §2.1 (Type.kt evidence), §3.2 (Google's own
   finding that removing labels hurt usability), §4 (the OFL licence question).
-- `ui/theme/EditorThemes.kt:9-17` + `docs/journal` Phase 29.1 (the editor's
+- `ui/theme/EditorThemes.kt:9-17` + `docs/journal/JOURNEY.md` Phase 29.1 (the editor's
   typography is the owner's decision and is out of scope).
 - `rule.md` §6 (licence whitelist; clean-room law).
 

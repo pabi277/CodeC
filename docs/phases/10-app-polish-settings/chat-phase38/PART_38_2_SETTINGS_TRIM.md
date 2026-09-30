@@ -167,7 +167,7 @@ PASS = 1, 4, 5 always; 2-3 as far as the owner's devices allow.
   when the build output matches the exec signature (shell/wrapper
   wording with exec markers; `error:` diagnostic lines are excluded so a
   "cannot open output file … Permission denied" compile error does NOT
-  trigger it). Wording source: `docs/guides` §27 (quoted
+  trigger it). Wording source: `docs/guides/TROUBLESHOOTING.md` §27 (quoted
   verbatim from `CompilerRemediation.STEPS`).
 - **Compiler sections merged**: "Compiler Settings" + "Built-in
   Compiler" → single **Compiler** (renamed header, C Standard / Warning
