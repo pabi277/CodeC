@@ -1,3 +1,5 @@
+**2026-09-30 — AI integration: DISCUSSION / RESEARCH PLAN ONLY (no implementation authorized).** The owner asked for an incremental path from a simple feature to a project-wide agent, user-provided API providers/models, optional device-checked offline inference, and undoable edits. The rechecked repository baseline, open-source research references, level-by-level proposal, dependencies, privacy/security boundaries, and acceptance questions are in [`docs/AI_INTEGRATION/README.md`](AI_INTEGRATION/README.md) and its separate level pages. These are proposals only; begin no app-code work until the owner selects and explicitly starts a level.
+
 **2026-09-29 — Phase 71.1 (Packages, installation and Terminal) ✅ COMPLETE — owner device-tested and MERGED on
 his command** (*"Device test passed record everything and merge with main"*; no device/OS/build named). Owner said "71.1 start"; asked four questions
 (`detect_exit`, ⬇ `confirm`, `name_in_toast`, `review_more`), then reported three device problems
