@@ -207,7 +207,8 @@ on the pushed branch tip `5acac43` (base: `main` @ `dba1361`, the PR #97 merge).
 unit and screenshot tests* success, step 9 *assemble debug APK* success, steps 10–13 the
 release set + weight check success, zero error annotations — one round, no stale pin to move,
 no for-cause fix needed. Artifacts: debug 25,434,005 B, release 6,291,527 B
-(+1,077 B / +0.02 % over the post-PR-#96 run `36675799563`). No local Gradle/Robolectric/lint
+(+1,077 B / +0.02 % over the post-PR-#96 run `36675799563`). The docs follow-up (`b7caa93`)
+re-ran the same gate: ✅ `36681074743`. No local Gradle/Robolectric/lint
 is claimed — the sandbox has no JVM (`rule.md` §5); the pre-run check was a Python mirror of
 every new and changed assertion (72 checks: the block matrix, the Backspace shapes, the pin
 strings), which passed and which is NOT a substitute for this run.
