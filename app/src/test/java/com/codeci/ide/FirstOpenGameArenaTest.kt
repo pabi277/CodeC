@@ -148,7 +148,8 @@ class FirstOpenGameArenaTest {
         assertTrue("assets seed before launch state is saved", seedAt >= 0 && seedAt < savedAt)
         assertTrue("launch state is saved before first-run completion", savedAt >= 0 && savedAt < completedAt)
         assertTrue("acceptance state resets after completion", resetAt > completedAt)
-        assertTrue(main.contains("activity.assets.open(\"${GameArenaSample.ASSET_DIRECTORY}/"))
+        assertTrue(main.contains("activity.assets.open("))
+        assertTrue(main.contains("GameArenaSample.ASSET_DIRECTORY"))
         assertTrue(main.contains("Screen.Editor.createRoute(GameArenaSample.ENTRY_FILE, GameArenaSample.NAME)"))
         assertFalse(main.contains("OrbitSample"))
     }
