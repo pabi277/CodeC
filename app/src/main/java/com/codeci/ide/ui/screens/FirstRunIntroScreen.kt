@@ -68,6 +68,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.navigation.BackAction
+import com.codeci.ide.ui.navigation.BackRouter
+import com.codeci.ide.ui.navigation.BackState
 import com.codeci.ide.ui.theme.CodecMotion
 import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.CodecTokens
@@ -103,8 +106,11 @@ fun FirstRunIntroScreen(
         }
     }
 
-    BackHandler(enabled = page > 0) {
-        page = (page - 1).coerceAtLeast(0)
+    BackHandler(enabled = page > 0 && !showPrivacyDetails) {
+        when (BackRouter.decide(BackState(firstRunIntroPage = page))) {
+            BackAction.PreviousIntroPage -> page = (page - 1).coerceAtLeast(0)
+            else -> Unit
+        }
     }
 
     val background = MaterialTheme.colorScheme.background

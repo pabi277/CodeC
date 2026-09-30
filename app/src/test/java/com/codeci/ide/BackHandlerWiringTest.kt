@@ -31,11 +31,11 @@ class BackHandlerWiringTest {
             "ad-hoc back handlers outside the router: ${offenders.map { it.name }}",
             offenders.isEmpty()
         )
-        // The full list is the three remaining surfaces.
+        // The full list is the four surfaces that now use the shared policy.
         assertEquals(
             listOf(
                 "FileManagerScreen.kt",
-                "MainActivity.kt", "EditorScreen.kt"
+                "MainActivity.kt", "EditorScreen.kt", "FirstRunIntroScreen.kt"
             ).sorted(),
             handlers.map { it.name }.sorted()
         )
