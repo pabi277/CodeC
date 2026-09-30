@@ -78,9 +78,10 @@ import com.codeci.ide.ui.navigation.Screen
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.IncomingImportBridge
 import com.codeci.ide.ui.projects.ProjectManager
-import com.codeci.ide.ui.projects.SnakeSample
+import com.codeci.ide.ui.projects.OrbitSample
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.screens.EditorScreen
+import com.codeci.ide.ui.screens.FirstRunIntroScreen
 import com.codeci.ide.ui.screens.FeedbackScreen
 import com.codeci.ide.ui.screens.FileManagerScreen
 import com.codeci.ide.ui.screens.LogsScreen
@@ -789,61 +790,84 @@ fun MainApp(
      * like the other four.
      */
     val rootRoutes = screens.map { it.route } + Screen.FileManager.route
-    // Phase 33.1 — first-run welcome (three starter tiles). The flag is read
-    // ONCE at startup into local state, so a Settings reset ("show welcome
-    // again") only affects the NEXT launch instead of yanking the user out of
-    // Settings mid-session. Local state also makes a tile tap replace the
-    // welcome immediately, without waiting for the DataStore round-trip.
-    // null = still reading; false = show the welcome; true = normal shell.
+    // The existing first-launch preference is kept as the migration-safe gate:
+    // true means the user has completed the introduction; false means a fresh
+    // install (or an explicit replay request) still needs the short intro and
+    // privacy acknowledgement. A Settings reset is read only on the NEXT launch.
     val settingsManager = remember { SettingsManager(activity) }
     var firstLaunchComplete by remember { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(settingsManager) {
         firstLaunchComplete = settingsManager.firstLaunchCompleteFlow.first()
     }
-    // Only the first-launch sample flag participates in routing. Installation
-    // progress and retired guide preferences never hold the shell closed.
+    // Only this first-run gate participates in routing. Package/userland work
+    // never holds the first frame or the splash open.
     val routeKnown = firstLaunchComplete != null
     androidx.compose.runtime.SideEffect {
         if (routeKnown) launchGate?.startRouteKnown()
     }
-    // Phase 58.1 — the welcome tiles are retired. The first open is the editor,
-    // on the snake sample this app writes (SnakeSample): one project, one page,
-    // nothing to download. What the welcome's tile tap used to do — seed,
-    // remember, hand over — is now one seed on the first launch only.
-    //
-    // The ordering law is 33.1's exit 2, kept: the launch state is saved BEFORE
-    // the flag flips, so the shell that replaces this frame opens the sample and
-    // the next launch resumes it. The flag ALSO flips when the seed fails: a
-    // filesystem that refuses must not leave the user on a blank first frame —
-    // the shell then opens the way it always did (the hub), which is the honest
-    // fallback, not a trap.
+
     var firstOpenSample by remember { mutableStateOf(false) }
+    var firstRunPreparing by remember { mutableStateOf(false) }
+    var firstRunAccepted by androidx.compose.runtime.saveable.rememberSaveable {
+        mutableStateOf(false)
+    }
+    var firstFrameReported by remember { mutableStateOf(false) }
+
+    // Preserve the crash-recovery escape hatch: safe mode does not seed sample
+    // files or keep the user behind first-run UI after a crash loop.
     LaunchedEffect(firstLaunchComplete) {
-        if (firstLaunchComplete != false) return@LaunchedEffect
-        val project = if (com.codeci.ide.ui.crash.SafeMode.active) {
-            // Safe mode does LESS at startup on purpose (Phase 42.3): no seed.
-            null
-        } else {
-            withContext(Dispatchers.IO) {
-                SnakeSample.ensure(ProjectManager(activity).projectsRoot())
-            }
+        if (firstLaunchComplete != false || !com.codeci.ide.ui.crash.SafeMode.active) {
+            return@LaunchedEffect
         }
-        if (project != null) {
-            EditorLaunchState.save(activity, SnakeSample.NAME, SnakeSample.ENTRY_FILE)
+        settingsManager.setFirstLaunchComplete(true)
+        firstLaunchComplete = true
+        firstRunAccepted = false
+    }
+
+    // The intro is the first-run UI, not a second splash. On explicit
+    // acknowledgement, seed the original offline HTML game on IO, save its
+    // launch path BEFORE completing the preference, and then reveal the normal
+    // shell. A seed failure still exits the gate into the normal fallback or
+    // the returning user's saved resume route.
+    LaunchedEffect(firstRunAccepted, firstLaunchComplete) {
+        if (!firstRunAccepted || firstLaunchComplete != false || com.codeci.ide.ui.crash.SafeMode.active) {
+            return@LaunchedEffect
+        }
+        firstRunPreparing = true
+        val sampleIsLaunchable = withContext(Dispatchers.IO) {
+            runCatching {
+                val root = ProjectManager(activity).projectsRoot()
+                OrbitSample.ensure(root)
+                java.io.File(root, OrbitSample.NAME + "/" + OrbitSample.ENTRY_FILE).isFile
+            }.getOrDefault(false)
+        }
+        if (sampleIsLaunchable) {
+            EditorLaunchState.save(activity, OrbitSample.NAME, OrbitSample.ENTRY_FILE)
             firstOpenSample = true
         }
         settingsManager.setFirstLaunchComplete(true)
         firstLaunchComplete = true
+        firstRunPreparing = false
+        firstRunAccepted = false
     }
-    if (firstLaunchComplete == false) {
-        // The seed is running. One frame of nothing, exactly like the flag read
-        // below: a new user never flashes the hub first.
+
+    if (firstLaunchComplete == null) {
+        // Resolve the stored gate before painting either the intro or the shell:
+        // returning users never flash onboarding and fresh installs never flash
+        // the Projects hub underneath their first-run experience.
         return
     }
-    if (firstLaunchComplete == null) {
-        // The flag is still reading: render nothing for the one frame so a
-        // returning user never flashes the welcome and a new user never
-        // flashes the hub.
+    if (firstLaunchComplete == false && !com.codeci.ide.ui.crash.SafeMode.active) {
+        androidx.compose.runtime.SideEffect {
+            if (!firstFrameReported && routeKnown) {
+                firstFrameReported = true
+                onFirstFrame("first-run-intro")
+            }
+        }
+        FirstRunIntroScreen(
+            preparing = firstRunPreparing,
+            onStart = { if (!firstRunPreparing) firstRunAccepted = true },
+        )
         return
     }
     // "Open where I left off": the saved file remains the source of truth for
@@ -892,12 +916,11 @@ fun MainApp(
     // the resume offer is derived from the same one-shot launch facts.
     val startDestination = remember(launchState, firstOpenSample) {
         when {
-            // Phase 58.1 — a first open is the editor, on the sample, and never
-            // the Projects hub: this branch is above the resume offer so a
-            // first-run state (a crash log, a missing file list, whatever the
-            // offer would have said) cannot outrank it.
+            // A fresh user who accepted the intro lands in the editor on the
+            // ready-to-run Orbit Shift project. This branch stays above the
+            // resume offer so first-run state cannot send them to the hub first.
             firstOpenSample ->
-                Screen.Editor.createRoute(SnakeSample.ENTRY_FILE, SnakeSample.NAME)
+                Screen.Editor.createRoute(OrbitSample.ENTRY_FILE, OrbitSample.NAME)
             resumeOffer == com.codeci.ide.ui.projects.ResumeOffer.CONTINUE_IN_PLACE ->
                 launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
                     ?: Screen.FileManager.route
@@ -910,24 +933,18 @@ fun MainApp(
     var resumeHandled by androidx.compose.runtime.saveable.rememberSaveable {
         mutableStateOf(false)
     }
-    var firstFrameReported by remember { mutableStateOf(false) }
     androidx.compose.runtime.SideEffect {
         if (!firstFrameReported && routeKnown) {
             firstFrameReported = true
             onFirstFrame(startDestination)
         }
     }
-    // Phase 58.2 — the first-run DIVERT to the Terminal is retired with the
-    // strip, and for the same owner row: a fresh install opens the editor (58.1
-    // puts it on the snake sample) and the setup is not something the user is
-    // marched to watch. The 58 exit says it in one line — *"not a locked
-    // terminal"*. Nothing else moved: the Terminal tab is where it always was,
-    // its intro card still names the missing userland and starts the install, and
-    // the session (and the download) keep running when the user walks away.
-    //
-    // The welcome's old hand-over effect — *"open the starter once the setup
-    // settles"* — is gone with the welcome itself (58.1 seeds and opens the
-    // sample before the shell exists, so there is nothing left to hand over).
+    // The first-run divert to the Terminal stays retired: setup is not
+    // something a new user is marched through before they can see the editor.
+    // The Terminal tab is where it always was, its intro card names the missing
+    // userland and starts the install, and a running session/download survives
+    // while the user moves elsewhere. The sample is the offline Orbit Shift
+    // project created only after the user completes the intro.
 
     // Phase 24.7 — an "Open with CodeC" file/ZIP arrives outside navigation
     // (onNewIntent); the bridge carries it in and the editor opens the import.

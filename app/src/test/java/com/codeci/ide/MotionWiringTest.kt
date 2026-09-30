@@ -5,10 +5,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 50.4 — the six transitions use the shared specs, the spec
- * constructors live in exactly one file, and the animation-free zones
- * (sora host, coach marks, back navigation) stay animation-free
- * (source scan).
+ * Shared motion specs keep their constructors in one file; the first-run
+ * introduction adds a seventh, reduced-motion-aware transition. The editor
+ * host and back navigation stay animation-free (source scan).
  */
 class MotionWiringTest {
 
@@ -50,6 +49,16 @@ class MotionWiringTest {
         assertTrue(editor.contains("CodecMotion.panelExit"))
         assertTrue(editor.contains("CodecMotion.findEnter"))
         assertTrue(editor.contains("CodecMotion.findExit"))
+    }
+
+    @Test
+    fun `the first-run intro reveal uses the shared reduced-motion-aware specs`() {
+        val intro = mainSource(
+            "app/src/main/java/com/codeci/ide/ui/screens/FirstRunIntroScreen.kt",
+        )
+        assertTrue(intro.contains("rememberMotionSpecs()"))
+        assertTrue(intro.contains("CodecMotion.introReveal"))
+        assertTrue(intro.contains("motion.floatOrSnap(CodecMotion.crossfadeSpec)"))
     }
 
     @Test

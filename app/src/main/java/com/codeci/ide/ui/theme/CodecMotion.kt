@@ -39,17 +39,20 @@ import androidx.compose.ui.unit.IntSize
  * them on [MotionSpecs.useSpring], so Android's own "remove animations"
  * switch makes the app genuinely instant.
  *
- * The six transitions, and only six: (1) forward navigation fades (the tab
+ * The seven transitions: (1) forward navigation fades (the tab
  * switch is the most frequent one; the NavHost cannot scope narrower, so
  * every forward navigate shares the 150 ms fade — pops are always instant,
  * because Phase 49 decides back); (2) the output panel expand/collapse;
  * (3) the find bar, on the shared spec instead of defaults; (4) the editor
  * chrome crossfade on file open/close (chrome only — never the code view);
  * (5) the RUN ▶ → output reveal (the run-state summary crossfade plus the
- * panel); (6) the hub's empty ↔ list crossfade.
+ * panel); (6) the hub's empty ↔ list crossfade; (7) the first-run
+ * introduction's one-shot reveal and page crossfade. The onboarding motion is
+ * confined to that screen, uses this same reduced-motion-aware vocabulary,
+ * and never delays its buttons or the splash handoff.
  *
  * Laws (Phases 44–49 stay intact): no animation inside `SoraEditorHost`,
- * the terminal emulator, any surface the IME resizes, or the coach marks;
+ * the terminal emulator, or any surface the IME resizes;
  * nothing delays a back navigation; motion follows state, it never gates
  * an action (45.2's single-click law).
  */
@@ -89,6 +92,10 @@ object CodecMotion {
     /** 300 ms emphasized fade — for the transitions that carry meaning. */
     val fadeSpecMedium: FiniteAnimationSpec<Float> =
         tween(Duration.MEDIUM, easing = Easing.EMPHASIZED)
+
+    /** One-shot position reveal for the first-run illustrations. */
+    val introReveal: FiniteAnimationSpec<Float> =
+        tween(Duration.LONG, easing = Easing.EMPHASIZED)
 
     /** Genuinely instant — what every transition becomes with motion off. */
     val snapFloat: FiniteAnimationSpec<Float> = snap()

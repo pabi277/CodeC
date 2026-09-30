@@ -8,15 +8,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 33.1's starter tiles — C / Python / HTML — and what is left of their law
- * after Phase 58.1 retired the screen they were born on.
+ * Phase 33.1's starter tiles — C / Python / HTML — and their current home.
  *
- * The tiles were the first-run welcome's whole content. The owner's row for 58
- * is *"first open is the editor, on a snake sample we write"*, so the welcome is
- * gone; the tiles themselves are not, because they are also what the Projects
- * empty state offers a user who has no project yet (33.3). These are the pins
- * that still describe something real: three languages, each naming the file it
- * opens, rendered by one loop, from one list.
+ * The old language-tile welcome stays retired. First-run now has a separate
+ * short introduction and a single Orbit Shift starter; these tiles remain what
+ * the Projects empty state offers a user who has no project yet (33.3). The
+ * pins below still describe something real: three languages, each naming the
+ * file it opens, rendered by one loop, from one list.
  */
 class StarterTilesTest {
 
@@ -63,7 +61,7 @@ class StarterTilesTest {
     }
 
     @Test
-    fun `the first-run screen really is retired`() {
+    fun `the old language-tile welcome stays retired`() {
         assertFalse(
             "58.1 retired the welcome screen; a new screen with the same name is a reversal, not a tidy-up",
             File(

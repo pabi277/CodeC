@@ -865,7 +865,13 @@ The owner's practice-project model, end to end, on the Code-with-C repo:
 **Result:** all steps behave as the owner described; the owner commanded the
 merge ("Then merge") → **✅ MERGED to `main` via PR #57**.
 
-## 24. Phase 33.1–33.3 first-hour UX — device round (owner runbook, 2026-09-09)
+## 24. Phase 33.1–33.3 first-hour UX — historical device round (owner runbook, 2026-09-09)
+
+> **Historical:** this checklist records the original C/Python/HTML welcome flow.
+> New installs now use the animated first-run introduction and Orbit Shift
+> described in [`README.md`](../README.md)
+> and [`FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md`](FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md).
+> Keep the 2026-09-09 results below as history, not as the current launch checklist.
 
 **Goal:** a fresh install opens on three starter tiles, the Packages hub opens
 on Languages, and the app no longer calls itself a C-only IDE.

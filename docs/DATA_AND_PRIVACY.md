@@ -37,6 +37,24 @@ it once, in Android Settings, and you can take it back any time without
 breaking already-open projects. **42.3 does not hide this row:** Settings
 → About → Privacy & permissions lists it first.
 
+## First-run privacy acknowledgement (2026-09-30)
+
+A fresh install shows a short introduction before entering the editor. Its final
+screen presents the following acknowledgement: projects live in app storage by
+default; CodeC has no ads, analytics, tracking or automatic crash-report
+uploads; Git/package/update network work starts only when the user starts it;
+shared-folder access is optional; and crash records stay local unless shared by
+the user.
+
+This is an acknowledgement of that plain-language summary, **not** a claim that
+CodeC has a separate Terms of Service. It grants no Android permission and
+starts no network request. Outside the crash-recovery safe-mode bypass, users
+can skip the educational pages but cannot skip the summary acknowledgement.
+Safe mode intentionally bypasses onboarding and sample seeding so recovery is
+not blocked. **Settings → About → Replay the CodeC introduction** shows the flow
+again on the next launch. The full permission table and
+the implementation behind every claim remain below.
+
 ## Permissions — every one, why, and the code that uses it
 
 | Permission (short name) | Why it exists (one line) | Reader in `app/src/main/java` |

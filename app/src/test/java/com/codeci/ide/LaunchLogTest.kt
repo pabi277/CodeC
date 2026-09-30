@@ -13,6 +13,7 @@ class LaunchLogTest {
         assertTrue(main.contains("\"Launch\""))
         assertTrue(main.contains("firstFrameMs="))
         assertTrue(main.contains("route=${'$'}route"))
+        assertTrue(main.contains("onFirstFrame(\"first-run-intro\")"))
     }
 
     @Test fun `continuous frame callbacks were not added to the app`() {

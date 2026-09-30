@@ -1054,14 +1054,14 @@ fun SettingsScreen(
                     )
                 }
             }
-            // Phase 33.1 — a "show welcome once" reset for testers (and for
-            // anyone who wants to re-run the first-launch flow).
+            // Replay the first-run introduction on the next launch without
+            // interrupting the current Settings session.
             SettingsAction(
-                title = "Show the welcome screen again",
-                actionText = "SHOW",
+                title = "Replay the CodeC introduction",
+                actionText = "REPLAY",
                 onClick = {
                     scope.launch { settingsManager.setFirstLaunchComplete(false) }
-                    Toast.makeText(context, "The welcome screen will show on the next launch", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "CodeC's introduction will show on the next launch", Toast.LENGTH_SHORT).show()
                 }
             )
             var versionTaps by remember { mutableStateOf(0) }

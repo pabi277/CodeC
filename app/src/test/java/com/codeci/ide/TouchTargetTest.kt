@@ -28,6 +28,7 @@ class TouchTargetTest {
         "ModulesScreen.kt",
         "TerminalScreen.kt",
         "SettingsScreen.kt",
+        "FirstRunIntroScreen.kt",
     )
 
     /** The call header: from the opening paren to its match. */
@@ -75,8 +76,8 @@ class TouchTargetTest {
     fun `the scan really visits buttons`() {
         // A pin that never matches is a pin that never fails: the core files
         // held twenty IconButtons before Phase 71.1 (6 editor + 5 hub + 2 packages +
-        // 6 terminal + 1 settings — the first-run welcome held none, and Phase
-        // 58.1 retired that screen). Settings' first one is Phase 62's ✕: the
+        // 6 terminal + 1 settings — the new first-run intro adds none). Settings'
+        // first one is Phase 62's ✕: the
         // search field offers it only when there is something to clear, and it
         // is an IconButton like every other one here, so the 48 dp rule holds.
         // The editor's count went

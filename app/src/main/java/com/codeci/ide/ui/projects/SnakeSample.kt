@@ -3,18 +3,18 @@ package com.codeci.ide.ui.projects
 import java.io.File
 
 /**
- * Phase 58.1 — the file a brand-new user lands in.
+ * Legacy sample retained for users who already have a `snake` project.
  *
- * The reference's first open is the editor, on a page, with the bottom bar and
- * nothing to set up. This checkout had no snake sample anywhere (searched
- * 2026-09-22) and the reference's own page is not ours to copy, so the sample is
- * **written here, original**: one project, one self-contained `index.html`.
+ * Since the 2026-09-30 first-run refresh, new installs start with Orbit Shift;
+ * this sample is no longer seeded or opened by MainActivity. Existing project
+ * files are deliberately left untouched, and this source stays available for
+ * historical references and tests that need to inspect the old game.
  *
- * Why HTML and not Python or C: a fresh install can honestly promise exactly two
- * runnable things — the **HTML preview** (the app's own in-process server, no
- * download) and **C** (the bundled TCC compiler). Snake is a page, so RUN ▶ on it
- * opens the preview with nothing to install; that is the first impression the
- * roadmap asks for (*"C and HTML preview must run without waiting on userland"*).
+ * The old sample used HTML so it could be previewed without the optional Linux
+ * userland, while the bundled TCC compiler kept C available offline. Snake's
+ * first-run role is retired: Orbit Shift now supplies the starter-game flow,
+ * and MainActivity no longer calls this object. This source remains a legacy
+ * implementation; existing on-disk projects do not depend on it.
  *
  * Shape follows [DemoProjects], the sample that already ships: [ensure] seeds the
  * project exactly like the wizard would (`ProjectConfig.defaultFor` metadata
@@ -42,7 +42,7 @@ object SnakeSample {
         get() = listOf(ScaffoldFile(ENTRY_FILE, PAGE))
 
     private val README = """
-        # snake — CodeC's first-open sample
+        # snake — legacy CodeC game sample
 
         A complete little game in one file. Tap RUN ▶ (or open Web Preview):
         no download, no setup — the page runs in the app's own server.
@@ -98,8 +98,8 @@ object SnakeSample {
 
     /**
      * The whole game, one file. Two rules kept on purpose: no external URL of any
-     * kind (a sample that needs the network is not a sample a fresh install can
-     * run), and no template literals — the page is a Kotlin raw string here, and
+     * kind (the legacy sample remains playable offline), and no template
+     * literals — the page is a Kotlin raw string here, and
      * `$` in it would have to be escaped at every use.
      */
     private val PAGE = """<!doctype html>
