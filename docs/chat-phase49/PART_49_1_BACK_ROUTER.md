@@ -9,6 +9,11 @@
 > will [close] the file view and show the editor not full app close"* —
 > clarification 2026-09-12: **both** the editor drawer and the hub file tree,
 > plus *"C. The back botton all screen behavior please recheck and refine"*.
+>
+> **Current-code note (2026-09-30):** the original 49.1 table has since gained
+> explicit IME and WebView-history rows. The current Web Preview behavior and
+> updated row order are documented in [Phase 49.3](PART_49_3_WEBVIEW_HISTORY.md);
+> the dated implementation snapshots below preserve the original phase record.
 
 ## Step 1 — reproduce before changing anything
 

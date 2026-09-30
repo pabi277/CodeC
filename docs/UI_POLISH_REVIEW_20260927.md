@@ -88,7 +88,7 @@ and reliable interaction**, not another collection of features or a new editor.
 
 | Surface | Already implemented / owning code | What I would review next — not a proven defect |
 |---|---|---|
-| Startup and shell | MainActivity, SnakeSample, ResumePolicy, safe mode, four bottom tabs | First-frame clarity; resume/failure paths; navigation remains available during installs |
+| Startup and shell | MainActivity, OrbitSample, ResumePolicy, safe mode, four bottom tabs | First-run intro/acknowledgement and seed/replay/failure paths; returning-user resume; navigation remains available during installs |
 | Side panel | EditorSidePanel, SidePanelPlan; navigation/files/search/repository plus reserved slot | Selected destination, width, close behaviour, long labels; leave removed Guide space non-interactive |
 | Projects | FileManagerScreen, ProjectsHub, ProjectMark | Name/path clarity, cards versus density, empty/search/recent states; import/clone/export feedback |
 | File tree / single files | EditorProjectDrawer, DrawerPolicy, EditorFileTree | Project versus file selection, tree expansion, rename/delete feedback, narrow-screen actions |
@@ -106,9 +106,10 @@ and reliable interaction**, not another collection of features or a new editor.
 
 ### Concrete follow-up questions found in code
 
-1. Settings still says **“Show the welcome screen again”**, while first launch
-   now seeds a sample rather than showing the old welcome screen. This label is
-   a candidate for correction; I did not silently change its behaviour here.
+1. **Resolved 2026-09-30:** Settings now says **“Replay the CodeC introduction”**.
+   Fresh installs get the short, animated Orbit Shift walkthrough and required
+   privacy-summary acknowledgement; the action replays it on the next launch.
+   See [`FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md`](FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md).
 2. `DemoProjects.ensure` still re-creates a missing Flask demo, a policy earlier
    justified by the guide. Removing the guide does not require deleting demo
    files. Ask whether deleting a bundled demo should now be permanent.
@@ -141,8 +142,10 @@ adaptive-layout library would need its own compatibility/licence/budget review.
 
 **Rejected:** wholesale redesign; replacing Sora or the terminal to solve
 spacing; treating reference store art as the real UI; adding AI/account/shop;
-removing internal install safety locks; another forced tour; claiming Android
-behaviour from a browser preview or source scan.
+removing internal install safety locks; a long, unskippable feature tour;
+claiming Android behaviour from a browser preview or source scan. The later
+short, skippable first-run walkthrough is documented separately in
+[`FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md`](FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md).
 
 ## 5. Proposed future phases — one part, one chat
 

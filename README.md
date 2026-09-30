@@ -106,30 +106,15 @@ CodeC ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`):
    bootstrap release `userland-v2-dev` (SHA-256 verified, staged, atomic) and
    provides 25+ packages including `git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, and more.
 
-#### The one-time setup you can see (Phase 44)
+#### Optional Linux tools — only when you ask for them
 
-The first launch downloads CodeC's Linux tools **once** (SHA-256-verified,
-staged, atomic). While that runs:
-
-- a slim **setup bar sits at the top of every tab** —
-  `Setting up CodeC's Linux tools — 42 % · C works right now`;
-- a **fresh install opens the Terminal tab first**, with
-  `Don't close CodeC — it is finishing a one-time setup (42 %)` above a status
-  chip that reads `downloading userland 42 %`;
-- the **status bar shows the same percentage** for the whole download (a
-  foreground service + wake lock keep it alive while the screen is off);
-- **C keeps working** — `RUN ▶` on a `.c` file and `cc` in the terminal are
-  never gated by setup, at any percentage;
-- the **Packages** tab refuses an install with one honest sentence and a
-  **VIEW SETUP** button, instead of silently queuing `pkg` into a prefix that
-  has none;
-- if the app **is** killed mid-install, the next launch repairs the prefix (an
-  interrupted swap is renamed back, orphan `usr.old-*` / `.userland-staging-*`
-  directories are swept) and says so once in the bar.
-
-Offline during setup: `CodeC needs the network once to finish setting up its
-Linux tools. C works offline right now.` — tap **⬇** in the terminal toolbar
-when you are back online.
+CodeC does **not** download its Linux userland on first launch. C runs with the
+built-in compiler and HTML previews locally, so the first project works without
+setup or a network connection. Start a userland download from the Terminal only
+when you want Linux commands or a language toolchain that needs it; progress,
+retry and recovery belong to that install flow, not first-run onboarding. Setup
+and package work do not lock editor navigation. If an install is interrupted,
+the next launch repairs the staged prefix before the Terminal needs it.
 
 #### Installation does not lock navigation
 
@@ -141,12 +126,26 @@ that require unavailable Linux tools explain that requirement. Package-operation
 serialization, checksum/signature verification, and interrupted-install recovery
 remain in place.
 
-#### First launch without a guide
+#### First launch — a quick intro, then CodeC Arcade
 
-The first launch opens the bundled Snake sample (or the Projects fallback if
-seeding fails). There are no guide slides, spotlight tours, or typing-tip popups.
-The Guide, Help & guide, and Reset tips entries have been removed. Existing
-projects, sample files, and unrelated preferences are not deleted.
+A fresh install gets CodeC's branded Android splash, then a short, animated
+three-step introduction: what the mobile IDE does, a preview of **CodeC
+Arcade**, and a plain-language privacy summary. Users can skip straight to the
+acknowledgement; there are no permission prompts or account setup during
+onboarding. The last step requires one explicit acknowledgement of the privacy
+summary before entering the editor. It is not presented as a separate Terms of
+Service.
+
+After acknowledgement, CodeC seeds a modular, offline web project and opens
+its `index.html` in the editor. Tap **RUN ▶** to open the arena: **Snake**,
+**Block Party** (an original block-placement puzzle), and **Tic-Tac-Toe**.
+The HTML, CSS, and JavaScript are separate, ordinary project files to inspect
+and edit. The starter is created once and never overwrites user edits; deleting
+it stays deleted. Existing projects and all other user data remain untouched.
+Returning launches still resume the file the user last had open. The
+introduction can be replayed from **Settings → About**. Design research and
+verification notes:
+[`FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md`](docs/FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md).
 
 ### Package & Command Hub (Packages tab)
 
@@ -184,15 +183,17 @@ Spck-grade skin:
 - **Back does the obvious thing, everywhere (Phase 49)**: one rule table for
   every screen — unsaved changes ask first, then the editor drawer, the hub's
   project tree (**back closes the tree, never the app**), open sheets, the
-  find bar, the output panel. At a root tab the exit prompt appears on every
-  device (the decision comes from where you are, not from the navigation
-  stack), and Settings → Feedback & Support → **"Tell us before you go"**
-  opens the same dialog any time — even on phones whose home swipe never
-  sends a back event.
+  find bar, and the output panel. In Web Preview, both system Back and the
+  toolbar arrow traverse WebView page history one step at a time before
+  returning to the editor; the IME and open menus/dialogs keep their own Back
+  behavior. At a root tab the exit prompt appears on every device (the
+  decision comes from where you are, not from the navigation stack), and
+  Settings → Feedback & Support → **"Tell us before you go"** opens the same
+  dialog any time — even on phones whose home swipe never sends a back event.
 - **Spck-style editor**: nav-drawer file tree with in-tree git status letters,
   tabs in the app bar (dirty dot, close), a snippet/extra-keys row above the
   status bar, and a Source Control sheet with per-file stage toggle. The app
-  **opens straight into the file you left in** (first launch → Projects hub),
+  **opens straight into the file you left in** after the first-run intro (new installs → CodeC Arcade),
   and edits **autosave** ~2 s after you stop typing.
 - **Switch Branch**: branch list (local + remote, plus **New branch…**) with
   Spck's promise — dirty work is stashed and restored when you come back.
@@ -249,7 +250,8 @@ The earlier foundations:
   follows.
 - **Web preview**: HTML files preview in-app served by a loopback HTTP server over the
   whole project folder, so relative CSS/JS, `fetch("data.json")` and ES modules work;
-  live reload on save. Console output shows under the page.
+  live reload on save. Console output shows under the page. System and toolbar Back
+  move through the page's own history before leaving the preview.
 
 To rebuild the embedded TCC bundles (e.g. to add more ABIs), run `scripts/build-tcc.sh`
 with a musl cross toolchain — the script is self-contained and CI-ready.

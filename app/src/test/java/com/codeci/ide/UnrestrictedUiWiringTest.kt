@@ -40,10 +40,12 @@ class UnrestrictedUiWiringTest {
     }
 
     @Test
-    fun `first launch waits only for the sample flag and not retired guide preferences`() {
+    fun `first launch waits for the intro acknowledgement and not retired guide preferences`() {
         val main = source("MainActivity.kt")
         assertTrue(main.contains("val routeKnown = firstLaunchComplete != null"))
-        assertTrue(main.contains("SnakeSample.ensure("))
+        assertTrue(main.contains("FirstRunIntroScreen("))
+        assertTrue(main.contains("!firstRunAccepted"))
+        assertTrue(main.contains("GameArenaSample.ensure("))
         assertTrue(main.contains("settingsManager.setFirstLaunchComplete(true)"))
         assertFalse(main.contains("guideCompleted"))
         assertFalse(main.contains("coachSeen"))

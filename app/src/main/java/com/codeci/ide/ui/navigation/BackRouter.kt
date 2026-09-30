@@ -42,11 +42,15 @@ data class BackState(
     val findBarOpen: Boolean = false,
     /** The editor's output panel is expanded. */
     val outputPanelExpanded: Boolean = false,
+    /** The first-run intro page, or null outside that screen. */
+    val firstRunIntroPage: Int? = null,
     /**
      * The soft keyboard is up: back is the user closing it — the platform
-     * already does that, and the router must not eat it (the row-6 guard).
+     * already does that, and the router must not eat it (rows 7 and 9).
      */
     val keyboardVisible: Boolean = false,
+    /** The preview WebView has a previous page in its own history. */
+    val webViewCanGoBack: Boolean = false,
     /** A navigation entry exists below the current one. */
     val canPopRoute: Boolean = false,
     /** The current route is one of the five tab roots ([BackRouter.isRoot]). */
@@ -61,7 +65,8 @@ data class BackState(
 
 enum class BackAction {
     ShowUnsavedDialog, CloseEditorDrawer, CloseHubProject,
-    CloseFindBar, CollapseOutputPanel, PopRoute, ShowExitPrompt, ExitApp, None
+    CloseFindBar, CollapseOutputPanel, PreviousIntroPage,
+    GoBackInWebView, PopRoute, ShowExitPrompt, ExitApp, None
 }
 
 object BackRouter {
@@ -75,29 +80,38 @@ object BackRouter {
      * 2  editorDrawerOpen                      -> CloseEditorDrawer
      * 3  hubProjectOpen                        -> CloseHubProject
      * 4  sheetOrDialogOpen                     -> None
-     * 5  findBarOpen                           -> CloseFindBar
-     * 6  outputPanelExpanded && !keyboardVisible -> CollapseOutputPanel
-     * 7  exitPromptVisible                     -> ExitApp
-     * 8  canPopRoute                           -> PopRoute
-     * 9  atRootDestination                     -> ShowExitPrompt (or ExitApp
+     * 5  firstRunIntroPage > 0                 -> PreviousIntroPage
+     * 6  findBarOpen                           -> CloseFindBar
+     * 7  outputPanelExpanded && !keyboardVisible -> CollapseOutputPanel
+     * 8  exitPromptVisible                     -> ExitApp
+     * 9  keyboardVisible                       -> None
+     * 10 webViewCanGoBack                      -> GoBackInWebView
+     * 11 canPopRoute                           -> PopRoute
+     * 12 atRootDestination                     -> ShowExitPrompt (or ExitApp
      *       when the switch is off / safe mode)
-     * 10 else                                  -> None
+     * 13 else                                  -> None
      * ```
      *
-     * Three deliberate choices, kept from the spec:
+     * Deliberate choices, kept from the spec and extended for onboarding:
      * - **`sheetOrDialogOpen -> None` sits AFTER the drawer/hub rows.** A
      *   Material3 sheet's own handler lives in its own window and wins the
      *   dispatch anyway; returning `None` is what lets it work, and if its
      *   handler is ever missing we want to SEE that, not paper over it.
-     * - **Row 6 is guarded by `!keyboardVisible`.** With the keyboard up,
-     *   back is the user closing the keyboard — the platform already does
-     *   that and the router must not eat it.
-     * - **Rows 7-9 belong to the ROOT handler only.** Only `MainActivity`
-     *   fills `canPopRoute` / `atRootDestination` / `exitPrompt*` /
-     *   `safeMode`; a screen-local handler constructs the state with those
-     *   defaults (false / true / false / false) and can therefore never pop
-     *   navigation or exit the app behind its own screen's back. (The
-     *   defaults make `exitPromptEnabled` true so a state that reaches row 9
+     * - **Row 5 moves through the onboarding pages only.** The first page
+     *   leaves back with the platform, and the privacy dialog keeps its own
+     *   back handling.
+     * - **Rows 7 and 9 leave the keyboard to the platform.** The output
+     *   panel cannot collapse while the keyboard is up, and a preview's
+     *   system Back never consumes the press meant to close the IME.
+     * - **Row 10 is the WebView's own history.** The preview supplies the
+     *   live `canGoBack()` fact, so an in-page Back wins over popping the
+     *   preview route.
+     * - **Rows 11-12 are navigation/root actions.** `MainActivity` supplies
+     *   the real route/root/exit facts; WebPreview sets `canPopRoute` only
+     *   because its `onNavigateBack` callback explicitly pops that route.
+     *   Other screen-local handlers leave the navigation fields at their
+     *   defaults and cannot pop or exit behind their own screen. (The
+     *   defaults make `exitPromptEnabled` true so a state that reaches row 12
      *   with the field unfilled still answers honestly; the root always
      *   passes the real switch.)
      */
@@ -106,9 +120,12 @@ object BackRouter {
         s.editorDrawerOpen -> BackAction.CloseEditorDrawer
         s.hubProjectOpen -> BackAction.CloseHubProject
         s.sheetOrDialogOpen -> BackAction.None
+        s.firstRunIntroPage?.let { it > 0 } == true -> BackAction.PreviousIntroPage
         s.findBarOpen -> BackAction.CloseFindBar
         s.outputPanelExpanded && !s.keyboardVisible -> BackAction.CollapseOutputPanel
         s.exitPromptVisible -> BackAction.ExitApp
+        s.keyboardVisible -> BackAction.None
+        s.webViewCanGoBack -> BackAction.GoBackInWebView
         s.canPopRoute -> BackAction.PopRoute
         s.atRootDestination ->
             if (s.safeMode || !s.exitPromptEnabled) BackAction.ExitApp

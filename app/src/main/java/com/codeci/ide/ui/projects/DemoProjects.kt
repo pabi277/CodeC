@@ -19,8 +19,8 @@ import java.io.File
  * hub card look broken (the card never left the list — `deleteProject` reloads
  * the list, and the reload re-seeded it) and made the hub's designed empty
  * state unreachable on a real device. The marker file in the projects root is
- * therefore the gate again, exactly as [SnakeSample] is seeded once on the
- * first launch: a `demo_flask` the user deleted stays deleted. A user who wants
+ * therefore the gate again, exactly as [GameArenaSample] is seeded once after the
+ * user accepts first-run: a `demo_flask` the user deleted stays deleted. A user who wants
  * it back creates a *Flask Web Server* project from the `+` sheet — the same
  * scaffold, one tap.
  *

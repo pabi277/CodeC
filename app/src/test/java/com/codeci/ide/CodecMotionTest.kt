@@ -58,6 +58,13 @@ class CodecMotionTest {
     }
 
     @Test
+    fun `the story timer uses its full linear reading interval`() {
+        assertEquals(10_000, CodecMotion.Duration.STORY)
+        val timer = CodecMotion.storyTimer(CodecMotion.Duration.STORY) as TweenSpec<*>
+        assertEquals(CodecMotion.Duration.STORY, timer.durationMillis)
+    }
+
+    @Test
     fun `the instant spec is a snap`() {
         assertTrue(CodecMotion.snapFloat is SnapSpec)
     }

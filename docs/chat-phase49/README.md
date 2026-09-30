@@ -19,16 +19,32 @@
 ```text
   49.1  BackRouter: one pure precedence table, every screen wired to it
   49.2  The exit prompt, decided from state instead of from popBackStack()
+  49.3  Web Preview Back traverses page history before leaving the preview
 ```
 
 | Part | Title | Effort | Status |
 |---|---|---|---|
 | [49.1](PART_49_1_BACK_ROUTER.md) | The back router (policy + wiring) | M | 🚧 IMPLEMENTED |
 | [49.2](PART_49_2_EXIT_PROMPT_CONSISTENCY.md) | Exit prompt on every device, or nowhere | S/M | 🚧 IMPLEMENTED |
+| [49.3](PART_49_3_WEBVIEW_HISTORY.md) | Web Preview Back traverses page history | S | ✅ IMPLEMENTED |
 
 ---
 
-## The audit: what back does on every screen today
+## Current follow-up (2026-09-30)
+
+Phase 49.3 extends the original BackRouter for the Web Preview: both system Back
+and the toolbar arrow visit one prior WebView page at a time, and the preview
+returns to its caller only after WebView history is empty. The screen checks
+native `canGoBack()` at press time and dispatches through the shared policy;
+the IME, dropdowns, and dialogs retain their own system-Back behavior. See
+[PART_49_3_WEBVIEW_HISTORY.md](PART_49_3_WEBVIEW_HISTORY.md) for the policy rows,
+implementation, tests, and CI record.
+
+The audit below is the **original pre-implementation snapshot from 2026-09-13**;
+its handler count and behaviors are historical, not a description of the current
+app.
+
+## Original audit snapshot (pre-implementation, 2026-09-13)
 
 Only **two** `BackHandler` call sites exist in the whole app
 (`grep -rn "BackHandler" app/src/main` → `MainActivity.kt:801`,
@@ -74,7 +90,7 @@ H4 matters beyond the drawer: it is one of the two real explanations for 5.B,
 and it cannot be fixed in code — only explained, and then designed around
 (the prompt is reachable from Settings → Feedback too).
 
-## Design
+## Original design snapshot (2026-09-13)
 
 ### 49.1 — `BackRouter`: one precedence table, pinned by CI
 

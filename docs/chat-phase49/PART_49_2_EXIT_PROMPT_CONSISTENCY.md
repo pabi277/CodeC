@@ -72,8 +72,9 @@ plus the doc, not more code.
 
 ## Design
 
-1. **Decide from state, not from `popBackStack()`** — row 10 of the
-   `BackRouter` table (`PART_49_1_BACK_ROUTER.md`):
+1. **Decide from state, not from `popBackStack()`** — the root row of the
+   `BackRouter` table (`PART_49_1_BACK_ROUTER.md`; currently row 12 after the
+   WebView-history follow-up in Phase 49.3, originally row 10):
 
    ```kotlin
    val atRoot = BackRouter.isRoot(currentRoute, screens)   // pure; parameterised-route safe
@@ -156,8 +157,9 @@ PASS = all eight on at least two devices — one 3-button-nav, one gesture-nav.
 
 ## Implementation (2026-09-13)
 
-**The decision moved from navigation to state — row 9/10 of the router.**
-`MainActivity`'s root handler no longer asks `popBackStack()`; it asks
+**The decision moved from navigation to state — the route/root rows of the
+router (currently 11/12; originally 9/10).** `MainActivity`'s root handler no
+longer asks `popBackStack()`; it asks
 `BackRouter.isRoot(currentDestination?.route, screens.map { it.route })`
 (parameterised-route safe, `BackRouterRootTest`), so:
 
