@@ -65,7 +65,7 @@ object AiBubblePolicy {
      * RIGHT, the thumb's side for most people); the height becomes a fraction
      * clamped away from the very top/bottom. Garbage in → the default out.
      */
-    fun snap(xPx: Float, yPx: Float, areaW: Float, areaH: Float): AiBubblePosition {
+    fun snapToEdge(xPx: Float, yPx: Float, areaW: Float, areaH: Float): AiBubblePosition {
         if (!xPx.isFinite() || !yPx.isFinite() || !areaW.isFinite() || !areaH.isFinite() || areaW <= 0f || areaH <= 0f) {
             return DEFAULT
         }

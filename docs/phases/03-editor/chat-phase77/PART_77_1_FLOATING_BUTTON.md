@@ -37,7 +37,7 @@ object AiBubblePolicy {
     const val MAX_Y_FRACTION = 0.95f
 
     /** Release after a drag: nearest edge wins; y clamped into the code area. */
-    fun snap(xPx: Float, yPx: Float, areaW: Float, areaH: Float): AiBubblePosition
+    fun snapToEdge(xPx: Float, yPx: Float, areaW: Float, areaH: Float): AiBubblePosition
 
     /** Where to draw it now; lifts above the keyboard (never under it). */
     fun offsetPx(p: AiBubblePosition, areaW: Float, areaH: Float, imeTopPx: Float?, bubblePx: Float, marginPx: Float): Pair<Float, Float>

@@ -92,7 +92,7 @@ fun AiFloatingButton(
                         },
                         onDragEnd = {
                             dragging?.let { top ->
-                                onMoved(AiBubblePolicy.snap(top.x + touchPx / 2f, top.y + touchPx / 2f, areaW, areaH))
+                                onMoved(AiBubblePolicy.snapToEdge(top.x + touchPx / 2f, top.y + touchPx / 2f, areaW, areaH))
                             }
                             dragging = null
                         },

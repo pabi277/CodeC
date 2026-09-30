@@ -2139,3 +2139,5 @@ Three fixes work together:
 - **Back closes the chat one step at a time** — FULL → half → closed, through `BackRouter` (AI-sheet row above the drawer/output rows). With the keyboard up, Back is the platform's and hides the keyboard first, like every other panel.
 - **"Explain with AI" is missing on Output** — by design it shows only when the last run failed **and** AI is ready.
 - **No "Ask AI" in the text-selection menu** — skipped on purpose: Sora 0.24.6's `EditorTextActionWindow` has no add-item API (only a fork or runtime view injection would work). Select code, then tap the bubble: the chat opens with "Explain selection" ready to preview.
+
+**Build lesson (Phase 77, CI run `36784200759`, red for cause):** `MotionWiringTest` bans `spring(` / `tween(` / `snap(` / `cubicBezier(` outside `CodecMotion.kt` (word-boundary scan of code). A pure bubble function named `snap(` tripped it, so it is `AiBubblePolicy.snapToEdge(`. Before naming a new helper, grep the `RepoFiles.mainKotlinSources()` scans (`MotionWiringTest`, `TypeAdoptionTest`, `TokenAdoptionTest`) for the word.

@@ -19,32 +19,32 @@ class AiBubblePolicyTest {
 
     @Test
     fun `a release in the left half snaps left and in the right half snaps right`() {
-        assertEquals(AiBubbleEdge.LEFT, AiBubblePolicy.snap(10f, 300f, w, h).edge)
-        assertEquals(AiBubbleEdge.LEFT, AiBubblePolicy.snap(199.9f, 300f, w, h).edge)
-        assertEquals(AiBubbleEdge.RIGHT, AiBubblePolicy.snap(390f, 300f, w, h).edge)
+        assertEquals(AiBubbleEdge.LEFT, AiBubblePolicy.snapToEdge(10f, 300f, w, h).edge)
+        assertEquals(AiBubbleEdge.LEFT, AiBubblePolicy.snapToEdge(199.9f, 300f, w, h).edge)
+        assertEquals(AiBubbleEdge.RIGHT, AiBubblePolicy.snapToEdge(390f, 300f, w, h).edge)
     }
 
     @Test
     fun `the exact middle goes right`() {
-        assertEquals(AiBubbleEdge.RIGHT, AiBubblePolicy.snap(200f, 300f, w, h).edge)
+        assertEquals(AiBubbleEdge.RIGHT, AiBubblePolicy.snapToEdge(200f, 300f, w, h).edge)
     }
 
     @Test
     fun `the height becomes a fraction of the area`() {
-        assertEquals(0.5f, AiBubblePolicy.snap(10f, 400f, w, h).yFraction, 0.0001f)
+        assertEquals(0.5f, AiBubblePolicy.snapToEdge(10f, 400f, w, h).yFraction, 0.0001f)
     }
 
     @Test
     fun `a release above the top or below the bottom is clamped into range`() {
-        assertEquals(AiBubblePolicy.MIN_Y_FRACTION, AiBubblePolicy.snap(10f, -500f, w, h).yFraction, 0.0001f)
-        assertEquals(AiBubblePolicy.MAX_Y_FRACTION, AiBubblePolicy.snap(10f, 5000f, w, h).yFraction, 0.0001f)
+        assertEquals(AiBubblePolicy.MIN_Y_FRACTION, AiBubblePolicy.snapToEdge(10f, -500f, w, h).yFraction, 0.0001f)
+        assertEquals(AiBubblePolicy.MAX_Y_FRACTION, AiBubblePolicy.snapToEdge(10f, 5000f, w, h).yFraction, 0.0001f)
     }
 
     @Test
     fun `garbage or an empty area snaps to the default instead of crashing`() {
-        assertEquals(AiBubblePolicy.DEFAULT, AiBubblePolicy.snap(Float.NaN, 10f, w, h))
-        assertEquals(AiBubblePolicy.DEFAULT, AiBubblePolicy.snap(10f, 10f, 0f, h))
-        assertEquals(AiBubblePolicy.DEFAULT, AiBubblePolicy.snap(10f, 10f, w, -1f))
+        assertEquals(AiBubblePolicy.DEFAULT, AiBubblePolicy.snapToEdge(Float.NaN, 10f, w, h))
+        assertEquals(AiBubblePolicy.DEFAULT, AiBubblePolicy.snapToEdge(10f, 10f, 0f, h))
+        assertEquals(AiBubblePolicy.DEFAULT, AiBubblePolicy.snapToEdge(10f, 10f, w, -1f))
     }
 
     @Test
