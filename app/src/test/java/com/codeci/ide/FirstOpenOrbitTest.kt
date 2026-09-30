@@ -102,6 +102,25 @@ class FirstOpenOrbitTest {
     }
 
     @Test
+    fun `first run opens with a one second logo and timed swipe stories`() {
+        assertTrue(intro.contains("const val FIRST_RUN_LOGO_DURATION_MS = 1_000L"))
+        assertTrue(main.contains("firstRunLaunchStartedAtMs = launchStartedAtMs"))
+        assertTrue(main.contains("SystemClock.elapsedRealtime() - startedAt"))
+        assertTrue(intro.contains("logoRemainingMs: Long"))
+        assertTrue(intro.contains("delay(logoRemainingMs)"))
+        assertTrue(intro.contains("detectHorizontalDragGestures"))
+        assertTrue(intro.contains("horizontalDrag < -swipeThresholdPx"))
+        assertTrue(intro.contains("CodecMotion.storyTimer(remainingMs)"))
+        assertTrue(intro.contains("private const val INTRO_PAGE_COUNT = 5"))
+        assertTrue(intro.contains("if (page < INTRO_PAGE_COUNT - 1) page++"))
+        assertTrue(intro.contains("progressBarRangeInfo = ProgressBarRangeInfo"))
+        assertTrue(intro.contains("Pause timer"))
+        assertTrue(intro.contains("Keep the whole loop together."))
+        assertTrue(intro.contains("Nothing downloads during this tour."))
+        assertTrue(intro.contains("Meet Orbit Shift."))
+    }
+
+    @Test
     fun `the privacy acknowledgement is a real gate and is skippable only to the agreement`() {
         assertTrue(intro.contains("Skip to agreement"))
         assertTrue(intro.contains("I understand and accept this privacy summary."))

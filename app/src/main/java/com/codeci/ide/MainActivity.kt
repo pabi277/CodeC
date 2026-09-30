@@ -81,6 +81,7 @@ import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.OrbitSample
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.screens.EditorScreen
+import com.codeci.ide.ui.screens.FIRST_RUN_LOGO_DURATION_MS
 import com.codeci.ide.ui.screens.FirstRunIntroScreen
 import com.codeci.ide.ui.screens.FeedbackScreen
 import com.codeci.ide.ui.screens.FileManagerScreen
@@ -441,7 +442,8 @@ class MainActivity : ComponentActivity() {
                             "Launch",
                             "firstFrameMs=${(SystemClock.elapsedRealtime() - launchStartedAtMs).coerceAtLeast(0L)} route=$route"
                         )
-                    }
+                    },
+                    firstRunLaunchStartedAtMs = launchStartedAtMs,
                 )
                 // Phase 25.2 device-round instrumentation: if the previous
                 // run crashed, surface the report in-app (no root / file
@@ -743,6 +745,8 @@ fun MainApp(
     launchGate: com.codeci.ide.ui.crash.LaunchGate? = null,
     /** Phase 52.2 — one first-paint sample, kept out of the shipping UI state. */
     onFirstFrame: (route: String) -> Unit = {},
+    /** Monotonic Activity start, used only to make the first-run mark total 1 s. */
+    firstRunLaunchStartedAtMs: Long? = null,
 ) {
     val navController = rememberNavController()
     val activity = requireNotNull(LocalActivity.current) as ComponentActivity
@@ -858,6 +862,13 @@ fun MainApp(
         return
     }
     if (firstLaunchComplete == false && !com.codeci.ide.ui.crash.SafeMode.active) {
+        // Measure from Activity creation only once the first-run route is
+        // actually known, so time spent resolving DataStore is not replayed.
+        val firstRunLogoRemainingMs = remember(firstRunLaunchStartedAtMs, firstLaunchComplete) {
+            val startedAt = firstRunLaunchStartedAtMs ?: SystemClock.elapsedRealtime()
+            (FIRST_RUN_LOGO_DURATION_MS - (SystemClock.elapsedRealtime() - startedAt))
+                .coerceIn(0L, FIRST_RUN_LOGO_DURATION_MS)
+        }
         androidx.compose.runtime.SideEffect {
             if (!firstFrameReported && routeKnown) {
                 firstFrameReported = true
@@ -867,6 +878,7 @@ fun MainApp(
         FirstRunIntroScreen(
             preparing = firstRunPreparing,
             onStart = { if (!firstRunPreparing) firstRunAccepted = true },
+            logoRemainingMs = firstRunLogoRemainingMs,
         )
         return
     }

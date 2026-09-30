@@ -59,6 +59,7 @@ class MotionWiringTest {
         assertTrue(intro.contains("rememberMotionSpecs()"))
         assertTrue(intro.contains("CodecMotion.introReveal"))
         assertTrue(intro.contains("motion.floatOrSnap(CodecMotion.crossfadeSpec)"))
+        assertTrue(intro.contains("CodecMotion.storyTimer(remainingMs)"))
     }
 
     @Test

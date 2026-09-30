@@ -11,6 +11,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.InfiniteRepeatableSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.snap
@@ -37,7 +38,8 @@ import androidx.compose.ui.unit.IntSize
  * /`snap(` (pinned by `MotionWiringTest`): call sites take
  * ready-made specs ([tabEnter], [panelEnter], [crossfadeSpec], …) and gate
  * them on [MotionSpecs.useSpring], so Android's own "remove animations"
- * switch makes the app genuinely instant.
+ * switch makes decorative movement genuinely instant. The status-story timer
+ * is elapsed reading time, not decorative motion, so its progress stays timed.
  *
  * The seven transitions: (1) forward navigation fades (the tab
  * switch is the most frequent one; the NavHost cannot scope narrower, so
@@ -78,6 +80,8 @@ object CodecMotion {
         const val SHORT = 150
         const val MEDIUM = 300
         const val LONG = 500
+        /** A readable status-story interval; the final acknowledgement never auto-dismisses. */
+        const val STORY = 10_000
     }
 
     /** The one easing curve. */
@@ -96,6 +100,13 @@ object CodecMotion {
     /** One-shot position reveal for the first-run illustrations. */
     val introReveal: FiniteAnimationSpec<Float> =
         tween(Duration.LONG, easing = Easing.EMPHASIZED)
+
+    /**
+     * Linear elapsed-time indicator for the swipeable first-run stories. Unlike
+     * visual transitions, it must not snap when reduced motion is enabled.
+     */
+    fun storyTimer(durationMillis: Int): FiniteAnimationSpec<Float> =
+        tween(durationMillis = durationMillis.coerceAtLeast(1), easing = LinearEasing)
 
     /** Genuinely instant — what every transition becomes with motion off. */
     val snapFloat: FiniteAnimationSpec<Float> = snap()
