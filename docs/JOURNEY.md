@@ -1313,3 +1313,7 @@ state), and the branch went to `main` through PR #93 — twenty-nine commits, fr
 console to the `restartInput()` bracket, all of them answers to things he saw on his phone. Of the
 polish series, five drafts remain (shell, editor chrome, packages, git, settings). Which one comes
 next is his to say; the next chat's first job is to read, verify, and ask.
+
+## 2026-09-30 — Settings search reaches bespoke controls
+
+The owner asked to make the Settings search improvement recommended after the Phase 65/74 review, update the docs, and merge with `main`. The gap was concrete: search indexed the 64 standard Settings rows and section titles, but the three custom form groups—terminal Extra-Key shortcuts, repository trust/status, and GitHub credentials—had no searchable field terms. Added a separate fixed-descriptor index for those forms. Queries such as `token`, `commit email`, `keyring`, `OpenPGP`, and `custom shortcut` now surface the existing section; no entered values, credentials, repository URL, or runtime status is read by the search index. The standard 64-row audit catalog remains unchanged, and the previously approved Phase 74 defaults/folding plus Phase 65 nav behavior are preserved. Regression coverage and docs updated. Build APK, PR, and merge state are pending and must be recorded after CI.
