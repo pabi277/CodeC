@@ -48,7 +48,7 @@ exception** (D7): `.github/workflows/pages.yml` + one line in the root
    once (Home, 6 product, /learn, ch-01…ch-17); confirm the Pages build
    is green in Actions; record live-URL checks in `LINK_SWEEP.md`
    (live section).
-4. **Close the arc:** update `web_docs/NEXT_STEPS.md` head state with the
+4. **Close the arc:** update `web_docs/getting-started` head state with the
    **live URL**; `WEB_JOURNEY.md` entry (W6 closed, site live);
    `web_prompt.md` state line (W6 complete); mark O2/O4/O7 as answered or
    still-open truthfully.

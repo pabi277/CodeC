@@ -1,5 +1,5 @@
 #!/bin/bash
-# Phase 42.1 — fills docs/RELEASE_NOTES.md (template guarded by
+# Phase 42.1 — fills docs/guides (template guarded by
 # check_release_notes.sh) into build/release-notes.md for the publish step:
 #   scripts/build_release_notes.sh <app-vX.Y.Z> <versionCode> <apk-file...>
 # The sha256: lines it emits are EXACTLY the format the in-app updater's
@@ -31,14 +31,14 @@ if [ -n "$PREV" ]; then
   CHANGELOG="$(git log --oneline --no-decorate "${PREV}..${TAG}" | sed 's/^/- /')"
   [ -n "$CHANGELOG" ] || CHANGELOG="- (no commits since $PREV)"
 else
-  CHANGELOG="- First app release on the app-v* channel (see docs/JOURNEY.md for the full story)."
+  CHANGELOG="- First app release on the app-v* channel (see docs/journal for the full story)."
 fi
 
 python3 - "$VERSION" "$VERSION_CODE" "$DATE" "$SHA_LINES" "$CHANGELOG" <<'PY'
 import pathlib, sys
 
 version, version_code, date, sha_lines, changelog = sys.argv[1:6]
-template = pathlib.Path("docs/RELEASE_NOTES.md").read_text()
+template = pathlib.Path("docs/guides").read_text()
 out = (template
        .replace("{{VERSION}}", version)
        .replace("{{VERSION_CODE}}", version_code)

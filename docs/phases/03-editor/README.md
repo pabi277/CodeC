@@ -1,0 +1,24 @@
+# Editor & languages
+
+The code editor core: typing feel, autocomplete, the CodeC Keys keyboard, TextMate colour, snippets/Emmet, LSP, file icons.
+
+Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/README.md`](../README.md)
+
+## Phases in this category
+
+| Phase | Title |
+|---|---|
+| [9](chat-phase9/) | Editor foundation |
+| [12](chat-phase12/) | Python & multi-language intelligence |
+| [15](chat-phase15/) | Spck-style editor & project experience (parts 15–17) |
+| [22](chat-phase22/) | Editor touch smoothness & keyboard shortcuts |
+| [25](chat-phase25/) | Mobile-first editor core |
+| [26](chat-phase26/) | Typing experience 2.0 |
+| [27](chat-phase27/) | Phone-native autocomplete |
+| [28](chat-phase28/) | CodeC Keys — the in-app code keyboard |
+| [29](chat-phase29/) | VS Code colour (TextMate) |
+| [30](chat-phase30/) | Offline completeness — snippets + Emmet |
+| [31](chat-phase31/) | IntelliSense as packages (LSP) |
+| [32](chat-phase32/) | Phone canvas — see the code |
+| [34](chat-phase34/) | Official file icons |
+| [35](chat-phase35/) | Editor typing feel |

@@ -9,7 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Phase 9 — undo/redo history semantics (`docs/chat-phase9/PART_9_EDITOR.md` §2.1). */
+/** Phase 9 — undo/redo history semantics (`docs/phases/03-editor/chat-phase9/PART_9_EDITOR.md` §2.1). */
 class EditorUndoManagerTest {
 
     private fun tv(text: String, cursor: Int = text.length) =

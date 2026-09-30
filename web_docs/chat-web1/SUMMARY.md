@@ -41,7 +41,7 @@
 | `web_docs/README.md` | Folder index + app↔web file map + ground rules |
 | `web_docs/WEBSITE_PLAN.md` | Master spec: 7 pages with content outlines, design, stack, layout, deploy, phases W1–W5, acceptance criteria, open questions |
 | `web_docs/DECISIONS.md` | D1–D9 + open items O1–O5 |
-| `web_docs/NEXT_STEPS.md` | Head state (W0 complete, zero code) + owner command table |
+| `web_docs/getting-started` | Head state (W0 complete, zero code) + owner command table |
 | `web_docs/WEB_JOURNEY.md` | Narrative timeline (entry W0) |
 | `web_docs/chat-web1/SUMMARY.md` | This record |
 
@@ -97,7 +97,7 @@ O1 screenshots · O2 domain · O3 copy tone · O4 phase order · O5 in-app link.
 
 **Owner command:** create the website's implementation phases as fully
 spec'd docs (mirroring the app project's pre-code phase docs
-`docs/chat-phase20/` … `docs/chat-phase24/`). No code — rule unchanged.
+`docs/phases/02-packages-toolchains/chat-phase20/` … `docs/phases/10-app-polish-settings/chat-phase24/`). No code — rule unchanged.
 
 **What was created (35 docs, markdown only):**
 

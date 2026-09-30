@@ -573,7 +573,7 @@ fi
 
 # CodeC invariant: never overwrite cc. $PREFIX/bin/cc is the app's own TCC
 # frontend written by ShellEnvironment; a package must never shadow it
-# (docs/TERMINAL_PLAN.md §B/§J). At the pinned revision there is no standalone
+# (docs/roadmaps §B/§J). At the pinned revision there is no standalone
 # packages/gcc recipe — upstream removed it — and clang is a subpackage of
 # packages/libllvm. The clang subpackage's include list ships compatibility
 # symlinks bin/cc, bin/gcc, bin/g++, bin/c++, bin/cpp -> clang-<major>

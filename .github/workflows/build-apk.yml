@@ -59,7 +59,7 @@ jobs:
 
       # Phase 42.1 — release signing material lives in Actions secrets ONLY
       # (KEYSTORE_B64 + STORE_PASSWORD + KEY_PASSWORD, documented in
-      # docs/chat-phase42/PART_42_1_RELEASE_CHANNEL.md; never in git).
+      # docs/phases/08-release-support/chat-phase42/PART_42_1_RELEASE_CHANNEL.md; never in git).
       # Missing secrets are fine for a normal push (debug artifact only)
       # but FAIL a publish run before anything is uploaded, naming the
       # missing secret.
@@ -86,7 +86,7 @@ jobs:
           if [ -z "$KEYSTORE_B64" ]; then
             echo "present=false" >> "$GITHUB_OUTPUT"
             if [ "$PUBLISH" = "true" ]; then
-              echo "::error::missing Actions secret KEYSTORE_B64 (with STORE_PASSWORD/KEY_PASSWORD) — nothing was published or uploaded; one-time setup: docs/UPLOAD_KEY_SETUP.md"
+              echo "::error::missing Actions secret KEYSTORE_B64 (with STORE_PASSWORD/KEY_PASSWORD) — nothing was published or uploaded; one-time setup: docs/guides"
               exit 1
             fi
             echo "::notice::no release signing secrets — this build ships the debug artifact only"

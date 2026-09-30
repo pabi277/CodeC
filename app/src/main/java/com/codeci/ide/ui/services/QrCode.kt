@@ -8,7 +8,7 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 /**
  * Phase 37.1 — the QR code for a LAN URL, encoded with ZXing `core`
  * (Apache-2.0, zero transitive dependencies — the open-source-first verdict
- * in `docs/PHASE34_37_OSS_RESEARCH.md` §4: never hand-roll a QR encoder).
+ * in `docs/research` §4: never hand-roll a QR encoder).
  *
  * The result is deliberately **not** an `Android Bitmap`: [QrModules] is the
  * raw module grid, so the encoder runs (and is round-trip tested) on a plain

@@ -36,7 +36,7 @@
 6. **The rules of this repository** — signed metadata (`signed-by=`, never
    `trusted=yes`), SHA-256-verified bootstrap, atomic installs, never
    official `com.termux` packages — six lines, plainly (depth link
-   `docs/chat-phase3/REPOSITORY_SIGNING.md` as "go deeper" footnote).
+   `docs/phases/02-packages-toolchains/chat-phase3/REPOSITORY_SIGNING.md` as "go deeper" footnote).
 
 - **Try it:** (1) install `ripgrep`, run it on your project folder
   (`rg "int main" .` — wait for the output, read one hit); (2) run

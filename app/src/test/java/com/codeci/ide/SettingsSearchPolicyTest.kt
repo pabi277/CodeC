@@ -19,7 +19,7 @@ import org.junit.Test
  * can never offer a label the screen does not render.
  *
  * The audit-table check is the second half of the same idea: the 64 rows
- * `docs/chat-phase38/SETTINGS_AUDIT.md` pins as *one row, one effect* are
+ * `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md` pins as *one row, one effect* are
  * exactly the rows the user can now search, counted per section.
  */
 class SettingsSearchPolicyTest {
@@ -33,7 +33,7 @@ class SettingsSearchPolicyTest {
         get() = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
 
     private val auditDoc: String
-        get() = RepoFiles.mainSource("docs/chat-phase38/SETTINGS_AUDIT.md").readText()
+        get() = RepoFiles.mainSource("docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md").readText()
 
     private val controlComposables =
         listOf("SettingsSwitch", "SettingsDropdown", "SettingsSlider", "SettingsItem", "SettingsAction")

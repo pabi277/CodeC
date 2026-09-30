@@ -3,7 +3,7 @@
 
 Renders the chrome agreed from the 2026-09-22 SPCK phone shots:
 no bottom project bar, rooms in the side panel, status line + touch row
-at the bottom. Output is docs/spck-ui/*.png.
+at the bottom. Output is docs/reference/spck-ui/*.png.
 """
 
 from __future__ import annotations

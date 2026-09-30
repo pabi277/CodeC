@@ -18,7 +18,7 @@ class ManifestPermissionsTest {
         get() = RepoFiles.mainSource("app/src/main/AndroidManifest.xml").readText()
 
     private val privacyDoc: String
-        get() = RepoFiles.mainSource("docs/DATA_AND_PRIVACY.md").readText()
+        get() = RepoFiles.mainSource("docs/guides").readText()
 
     private fun mainSources(): String =
         RepoFiles.mainKotlinSources().joinToString("\n") { it.readText() }
@@ -74,7 +74,7 @@ class ManifestPermissionsTest {
 
     /**
      * 42.3's stronger pin: each manifest permission MUST have a row in
-     * `docs/DATA_AND_PRIVACY.md` (the short name appears in the doc) AND a
+     * `docs/guides` (the short name appears in the doc) AND a
      * live reader symbol in `app/src/main/java`. A permission with no row,
      * or a row whose code is gone, fails the build — the only way the list
      * stays true after the beta.
@@ -85,7 +85,7 @@ class ManifestPermissionsTest {
         permitted.forEach { (perm, pair) ->
             val shortName = perm.substringAfterLast('.')
             assertTrue(
-                "docs/DATA_AND_PRIVACY.md has no row naming '$shortName' — " +
+                "docs/guides has no row naming '$shortName' — " +
                     "the promise 'About can say this with a straight face' is empty",
                 privacyDoc.contains("`$shortName`")
             )
@@ -112,7 +112,7 @@ class ManifestPermissionsTest {
         assertTrue(
             "README/privacy doc must link the BETA/known-issues page for a stranger (42.3's 'difference between a beta and a dump')",
             privacyDoc.contains("BETA.md") ||
-                RepoFiles.mainSource("docs/RELEASE_NOTES.md").readText().contains("BETA.md")
+                RepoFiles.mainSource("docs/guides").readText().contains("BETA.md")
         )
     }
 

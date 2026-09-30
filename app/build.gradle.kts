@@ -27,7 +27,7 @@ android {
     // Phase 42.1 — versionCode/versionName are release metadata now: a tag
     // `app-v<X.Y.Z>` must name this versionName, and the publish step refuses
     // a versionCode that is not strictly greater than every shipped one
-    // (.github/workflows/build-apk.yml + docs/RELEASE_NOTES.md).
+    // (.github/workflows/build-apk.yml + docs/guides).
     versionCode = 21
     // The device round kept tripping over WHICH apk was installed (three
     // crash reports pasted from a stale build). The CI run number (or a
@@ -225,7 +225,7 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   // Phase 25.2 — sora-editor, the edit core (LGPL-2.1, BINARY dependency
-  // only — no source vendored; see docs/chat-phase25/PART_25_2_SORA_PATH.md).
+  // only — no source vendored; see docs/phases/03-editor/chat-phase25/PART_25_2_SORA_PATH.md).
   implementation(libs.sora.editor)
   // Phase 29.1 — TextMate: VS Code grammars + themes through sora's
   // language-textmate module (same BOM version; binary dependency only).

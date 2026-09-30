@@ -2,7 +2,7 @@ package com.codeci.ide.ui.terminal
 
 /**
  * Phase 44.1 — the one observable truth about CodeC's one-time userland setup
- * (spec: docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md §1).
+ * (spec: docs/phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md §1).
  *
  * Symptom being closed: the bootstrap download starts the moment the app opens
  * (`TerminalViewModel.init` → `startInternal` → `installUserlandInternal`) and

@@ -4,7 +4,7 @@ package com.codeci.ide.ui.editor
  * Phase 51.2 — what the editor says when it has no file of its own to show.
  *
  * The plan's premise was *"with no file open the tab bar collapses and the user
- * is looking at an empty frame"* (`docs/chat-phase51/PART_51_2`, evidence read
+ * is looking at an empty frame"* (`docs/phases/11-phone-ui-parity/chat-phase51/PART_51_2`, evidence read
  * on `62cfe7b`). Implementation round 1 checked that premise against the code
  * and found it **half right**, and the half that is wrong matters:
  *

@@ -54,7 +54,7 @@ libcurl
 # of these packages is extracted into the bootstrap and recorded in the
 # dpkg status DB. The first Phase 3 bootstrap extracted/seeded every built
 # .deb — including build tools (doxygen, swig, tcl, tor, …) — bloating the
-# archive (~174 MB) and polluting `dpkg -l`; see docs/NEXT_STEPS.md Part B.
+# archive (~174 MB) and polluting `dpkg -l`; see docs/getting-started Part B.
 #
 # coreutils and less join the four manager roots because the terminal UX
 # expects their alternatives to exist on a fresh device: `pager` must be
@@ -92,7 +92,7 @@ curl
 # tools for a C IDE, chosen so the incremental closure stays within the CI
 # build budget. Decisions (package list, repository-only scope, recipe
 # overrides, deferred items) are recorded in
-# docs/chat-phase4/PART_4_5_CATALOG_EXPANSION.md. New packages are
+# docs/phases/02-packages-toolchains/chat-phase4/PART_4_5_CATALOG_EXPANSION.md. New packages are
 # repository-only: CODEC_PACKAGE_MANAGER_BOOTSTRAP_PACKAGES and
 # CODEC_BOOTSTRAP_SEED_PACKAGES are unchanged, so the bootstrap archive stays
 # byte-identical to the published userland-v2-dev assets (verified in CI by
@@ -118,7 +118,7 @@ curl
 # Round 4 (Phase 20.1, 2026-09-01): language toolchains for the Phase 21
 # LanguageRunProfile registry. Research was done against the pinned
 # TERMUX_PACKAGES_REF before adding anything — full record in
-# docs/chat-phase20/PART_20_1_TOOLCHAINS.md §7:
+# docs/phases/02-packages-toolchains/chat-phase20/PART_20_1_TOOLCHAINS.md §7:
 #   libllvm  — root recipe for Clang 21 (there is no packages/gcc or
 #              packages/clang at the pinned revision: upstream removed the
 #              old gcc shim recipe, and clang is a subpackage of libllvm).

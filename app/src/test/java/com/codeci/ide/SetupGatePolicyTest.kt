@@ -20,7 +20,7 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * Phase 44.1 — the setup gate matrix (spec:
- * docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md §1 "The gate law").
+ * docs/phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md §1 "The gate law").
  *
  * The regression this pins: **C is never gated.** TCC lives in the APK and
  * Phase 21 made `.c` files install-gate-free permanently, so a setup surface

@@ -8,7 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Phase 9 — find/replace engine semantics (`docs/chat-phase9/PART_9_EDITOR.md` §2.2). */
+/** Phase 9 — find/replace engine semantics (`docs/phases/03-editor/chat-phase9/PART_9_EDITOR.md` §2.2). */
 class FindReplaceTest {
 
     private fun matches(text: String, query: String, options: FindOptions = FindOptions()): List<IntRange> =

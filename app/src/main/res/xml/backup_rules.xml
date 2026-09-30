@@ -24,7 +24,7 @@
       - files/datastore/settings.preferences_pb — the settings DataStore,
         which holds the GitHub token (GitCredentialsStore). A fresh install
         asks the user to sign in again; that is intentional, see
-        docs/DATA_AND_PRIVACY.md.
+        docs/guides.
       - files/usr, files/home — the downloaded userland/toolchain + dpkg
         state (hundreds of MB, ABI- and device-specific).
       - files/CodeC/temp, files/CodeC/modules, files/CodeC/tcc —

@@ -17,7 +17,7 @@ handoff file (the website's `prompt.md`).
 | [`WEBSITE_PLAN.md`](WEBSITE_PLAN.md) | **The master spec (v2.2, 2026-09-12)**: two wings — product site (7 pages) + learning wing ("Master CodeC from Zero to Advanced", `/learn` + 17 chapters) — per-page content (synced with app Phases 21–43: universal APK 6.6 MB, Auto engine only, >_ mark, file icons, LAN server, outputs temporary, GitHub truth, feedback hardcoded, backup include-list, crash-loop guard, export-all, safe walk planned), self-dependent rules, design, stack, repo layout, deployment, phases W1–W6, acceptance criteria | the owner changes scope/design/stack or app Phases add new facts (sync to v2.2 done 2026-09-12) |
 | [`DECISIONS.md`](DECISIONS.md) | Decision log (numbered D1, D2, …) with date, owner/agent attribution, and rationale | any decision is made or reversed |
 | [`NEXT_STEPS.md`](NEXT_STEPS.md) | Head state line + what happens next (what the owner says to move) | every session that closes a gate |
-| [`WEB_JOURNEY.md`](WEB_JOURNEY.md) | Narrative timeline of all website work (numbered entries, like `docs/JOURNEY.md`) | every session that closed something |
+| [`WEB_JOURNEY.md`](WEB_JOURNEY.md) | Narrative timeline of all website work (numbered entries, like `docs/journal`) | every session that closed something |
 | `chat-webN/` | One folder per chat session on the website: what was asked, what was decided, what was done, evidence, next step (like `docs/chat-phaseN/`) | every session, before it ends |
 | [`web-phase1/` … `web-phase6/`](web-phase1/README.md) | **The fully spec'd implementation phases W1–W6** (2026-09-02): each folder = phase README (status, cost, depends/blocks, parts table, ground rules) + one `PART_*` doc per page/chapter (design, implementation steps, exit condition) — the website's `docs/chat-phase20…24` equivalent. Owner starts one by saying **"Start W1"** … **"Start W6"**. | a phase's scope changes (update the part docs; record in DECISIONS.md) |
 
@@ -43,7 +43,7 @@ records (what happened), `web-phaseN` = planned phases (what will be built).
 3. **Append, don't destructively rewrite history** — session folders are
    permanent; living docs (`NEXT_STEPS.md`, `WEB_JOURNEY.md`, `WEBSITE_PLAN.md`)
    get their state summaries updated.
-4. **Clean-room:** content is distilled from the repo's own public files (`README.md`, `docs/TROUBLESHOOTING.md`, `docs/BETA.md`, `docs/RELEASE_NOTES.md`, `docs/JOURNEY.md`); the
+4. **Clean-room:** content is distilled from the repo's own public files (`README.md`, `docs/guides`, `docs/guides`, `docs/guides`, `docs/journal`); the
    Termux site is a structural reference only — never copy its source.
 5. **The website writes no code until the owner commands implementation**
    ("Build the website" / "start W1"). Until then this folder is edited only.

@@ -13,7 +13,7 @@
 #
 # The previous versionCodes are read from the `versionCode: N` metadata
 # line the publish step embeds in each release's notes (see
-# docs/RELEASE_NOTES.md) via the releases API. No prior app-v* release →
+# docs/guides) via the releases API. No prior app-v* release →
 # any positive versionCode passes.
 set -euo pipefail
 

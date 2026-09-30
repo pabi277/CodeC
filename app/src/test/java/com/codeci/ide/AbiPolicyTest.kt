@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 42.2 — [docs/chat-phase42/PART_42_2_APK_WEIGHT.md]: after the
+ * Phase 42.2 — [docs/phases/08-release-support/chat-phase42/PART_42_2_APK_WEIGHT.md]: after the
  * 2026-09-11 revert, ONE universal APK per build type is the whole
  * shipping set. The per-ABI split machinery measured 0.94-1.77 % savings
  * under the assets/tcc trap and was reverted by the exit-4 law + the

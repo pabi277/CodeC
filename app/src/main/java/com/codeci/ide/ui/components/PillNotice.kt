@@ -29,7 +29,7 @@ import com.codeci.ide.ui.theme.CodecTokens.Space
 /**
  * Phase 57.3 — one pill, for the short messages the shots show.
  *
- * The reference (`docs/spck-ui` 122157) floats it above the editor's bottom
+ * The reference (`docs/reference/spck-ui` 122157) floats it above the editor's bottom
  * edge: a rounded dark surface, one small icon, one bold line — “Refreshed
  * Files”. Not a dialog (nothing to answer), not a dump (nothing to scroll),
  * and not a `Toast` (the screen owns its lifetime, so it cannot outlive the

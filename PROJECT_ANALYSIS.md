@@ -8,7 +8,7 @@
 > Projects & file tree (Phase 8) and the Editor Foundation with device rounds 9.1/9.2
 > (tabs, undo/redo, find/replace, format, squiggles, single files, in-editor folders,
 > loopback preview server) — is complete and accepted. The authoritative timeline is
-> [docs/JOURNEY.md](docs/JOURNEY.md); the current handoff prompt is
+> [docs/journal](docs/journal/JOURNEY.md); the current handoff prompt is
 > [prompt.md](prompt.md).
 >
 > **Addendum 2026-09-01:** through Phase 18 (CodeCApi device capabilities,

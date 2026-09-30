@@ -9,7 +9,7 @@
     whether device-transfer MAY also carry the settings DataStore (no cloud
     copy in that path) — the device round decides; until then both channels
     are identical, so the GitHub token never leaves this device by backup at
-    all (docs/DATA_AND_PRIVACY.md; host-pinned by BackupRulesTest).
+    all (docs/guides; host-pinned by BackupRulesTest).
 
     THE LAW, same as backup_rules.xml: ONE include per channel and NO
     exclude elements — under an include-list lint's [FullBackupContent]

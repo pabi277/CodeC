@@ -17,7 +17,7 @@ import org.junit.Test
  * fails here instead of quietly changing the code view's height (the one
  * measurement Phase 48's caret policy keys on).
  *
- * Phase 57.1 — the reference (docs/spck-ui 122157/124105) re-shaped the top of
+ * Phase 57.1 — the reference (docs/reference/spck-ui 122157/124105) re-shaped the top of
  * that chrome, and this file is where the change is *pinned*, not merely made:
  * the run action is a bare green ▶ (no label), the top row carries NO overflow
  * icon, the tab row is a row of its own below the bar, and the retired ⋮'s

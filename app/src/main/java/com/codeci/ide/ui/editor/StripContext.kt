@@ -19,7 +19,7 @@ import com.codeci.ide.ui.utils.LanguageType
  *  - The row HEIGHT never changes between contexts (no IME flicker).
  *  - Phase 57.2: the CHIP row belongs to a typing surface. With no keyboard
  *    up the row is the touch row (`Keys`), never candidates — the reference
- *    (`docs/spck-ui` 122157 keyboard-down vs 124105 keyboard-up) docks the
+ *    (`docs/reference/spck-ui` 122157 keyboard-down vs 124105 keyboard-up) docks the
  *    predictions only while the IME is on screen. The keys themselves are
  *    always there; the chips are the part that waits.
  */

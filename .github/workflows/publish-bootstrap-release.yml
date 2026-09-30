@@ -62,7 +62,7 @@ jobs:
       # Artifact names carry the build group since the Phase 20.1 split:
       # the Phase 3 bootstrap is built and validated only by the "base" leg
       # of each arch (see package-repository.yml matrix + D11 of
-      # docs/chat-phase20/PART_20_1_TOOLCHAINS.md).
+      # docs/phases/02-packages-toolchains/chat-phase20/PART_20_1_TOOLCHAINS.md).
       - name: Download aarch64 bootstrap artifact
         uses: actions/download-artifact@v4
         with:

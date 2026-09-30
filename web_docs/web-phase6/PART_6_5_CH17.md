@@ -6,7 +6,7 @@
 · **Depends on:** W3.3 (the /faq content — same sources, deeper form)
 · **Target file:** `website/ch-17.html`
 
-> Source: `README.md` §Troubleshooting + `docs/TROUBLESHOOTING.md` —
+> Source: `README.md` §Troubleshooting + `docs/guides` —
 > same answers as `/faq`, in course depth, in the chapter template.
 
 ---
@@ -58,7 +58,7 @@
 1. Build `ch-17.html` (crumb "Chapter 17 of 17" — the last; **next →
    learn.html** ("Back to the course home") and prev → ch-16; note the
    course-complete one-liner in the closing box).
-2. Answers diffed against `/faq` + `docs/TROUBLESHOOTING.md` (drift = repo
+2. Answers diffed against `/faq` + `docs/guides` (drift = repo
    wins, both pages fixed in the same commit if needed); source notes in
    `chat-web6/`.
 3. Self-dependent sweep.
