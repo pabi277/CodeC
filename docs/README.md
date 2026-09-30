@@ -9,8 +9,8 @@ top-level areas. **If you are looking for one phase, use the
 | [getting-started/](getting-started/) | How to work on this repo: the phase ceremony and the current next steps |
 | [guides/](guides/) | Owner/user-facing guides: beta notes, privacy, troubleshooting, release notes, upload key |
 | [journal/](journal/) | The story: full journey log, idea backlog, owner handoffs and reviews |
-| [roadmaps/](roadmaps/) | Per-series roadmaps and plans (PHASE34_37, PHASE44_50, …) |
-| [research/](research/) | Research dossiers behind the roadmaps (UX + OSS), plus mockup images |
+| [roadmaps/](roadmaps/) | Per-series roadmaps and plans, including the [staged AI integration roadmap](roadmaps/AI_INTEGRATION_ROADMAP.md) and its [level specs](roadmaps/ai-integration/) |
+| [research/](research/) | Research dossiers behind the roadmaps, including the [AI integration repository map and OSS/runtime research](research/AI_INTEGRATION_RESEARCH_20260930.md), plus UX/OSS dossiers and mockups |
 | [phases/](phases/) | **All 75 phases**, grouped into 13 topics — see the [phase tracker](phases/README.md) |
 | [reference/](reference/) | External reference material (Spck Editor screenshots) |
 | [brand/](brand/) | Brand assets — the app icon masters (load-bearing for the icon pipeline) |
