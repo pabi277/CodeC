@@ -1,6 +1,6 @@
 # Proposed Phase 74.1 — Settings, support and final consistency
 
-**Status: owner-approved; initial decisions implemented 2026-09-29, with a search-discoverability follow-up authorized 2026-09-30.** See [`docs/chat-phase74/README.md`](../chat-phase74/README.md). Initial CI round 1 `36607240454` caught a test declaration syntax error (missing `()`); corrected, round 2 ✅ GREEN `36607641208` on `52420c1`. Follow-up search index implementation is in progress; final CI/PR/merge state will be recorded there.
+**Status: owner-approved and implemented; search-discoverability follow-up authorized 2026-09-30.** See [`docs/chat-phase74/README.md`](../chat-phase74/README.md). Initial CI round 1 `36607240454` caught a test declaration syntax error (missing `()`); corrected, round 2 ✅ GREEN `36607641208` on `52420c1`. Follow-up PR #96 Build APK round 1 failed on a bad expected count; round 2 ✅ GREEN `36674331533` on `f29f3f3`. Owner authorized merge with `main`; merge SHA and post-merge status are recorded in the chat README.
 
 ## Copy into a new chat
 
