@@ -175,11 +175,8 @@ object SettingsCatalog {
  *     their section), and "more" finds the completion-panel row even though its label opens
  *     with a quote mark.
  *  2. **While the box has something in it, the query decides.** A section shows iff the query
- *     names it or one of its rows, and a row shows iff the query matches it. That includes the
- *     three sections the catalog has no rows for (GitHub Account, Package Repository & Trust,
- *     Terminal Extra-Keys & Shortcuts): their content cannot be indexed, so "github" shows the
- *     GitHub section and clearing the box brings all three back - which is also what makes the
- *     empty state ("nothing matches") true when it appears.
+ *     names it or one of its rows. The three bespoke form groups answer to fixed field labels and
+ *     aliases; runtime form values, credentials, and repository data are never indexed.
  *  3. **Folding is view state, never applied over a search.** With an empty box the fold rule
  *     runs and folded sections show only their header and chevron (plus a count where rows are
  *     indexed). The moment the user types, every matching row renders - a folded section must

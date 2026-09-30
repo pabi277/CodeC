@@ -213,7 +213,7 @@ class SettingsSearchPolicyTest {
     fun `a query that names a section is never "nothing matched"`() {
         assertEquals(
             "repository terms match the bespoke trust-status form entry",
-            1, SettingsSearch.matchCount("repository")
+            2, SettingsSearch.matchCount("repository")
         )
         assertFalse(SettingsSearch.isEmptyResult("repository"))
         assertTrue(SettingsSearch.sectionVisible("repository", "Package Repository & Trust"))
