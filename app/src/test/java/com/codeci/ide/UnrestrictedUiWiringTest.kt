@@ -45,7 +45,7 @@ class UnrestrictedUiWiringTest {
         assertTrue(main.contains("val routeKnown = firstLaunchComplete != null"))
         assertTrue(main.contains("FirstRunIntroScreen("))
         assertTrue(main.contains("!firstRunAccepted"))
-        assertTrue(main.contains("OrbitSample.ensure("))
+        assertTrue(main.contains("GameArenaSample.ensure("))
         assertTrue(main.contains("settingsManager.setFirstLaunchComplete(true)"))
         assertFalse(main.contains("guideCompleted"))
         assertFalse(main.contains("coachSeen"))

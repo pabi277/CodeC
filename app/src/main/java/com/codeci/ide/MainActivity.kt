@@ -78,7 +78,7 @@ import com.codeci.ide.ui.navigation.Screen
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.IncomingImportBridge
 import com.codeci.ide.ui.projects.ProjectManager
-import com.codeci.ide.ui.projects.OrbitSample
+import com.codeci.ide.ui.projects.GameArenaSample
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.screens.EditorScreen
 import com.codeci.ide.ui.screens.FIRST_RUN_LOGO_DURATION_MS
@@ -829,7 +829,7 @@ fun MainApp(
     }
 
     // The intro is the first-run UI, not a second splash. On explicit
-    // acknowledgement, seed the original offline HTML game on IO, save its
+    // acknowledgement, seed the offline multi-game arena on IO, save its
     // launch path BEFORE completing the preference, and then reveal the normal
     // shell. A seed failure still exits the gate into the normal fallback or
     // the returning user's saved resume route.
@@ -841,12 +841,16 @@ fun MainApp(
         val sampleIsLaunchable = withContext(Dispatchers.IO) {
             runCatching {
                 val root = ProjectManager(activity).projectsRoot()
-                OrbitSample.ensure(root)
-                java.io.File(root, OrbitSample.NAME + "/" + OrbitSample.ENTRY_FILE).isFile
+                GameArenaSample.ensure(root) { assetPath ->
+                    activity.assets.open("${GameArenaSample.ASSET_DIRECTORY}/$assetPath")
+                        .bufferedReader(Charsets.UTF_8)
+                        .use { it.readText() }
+                }
+                java.io.File(root, GameArenaSample.NAME + "/" + GameArenaSample.ENTRY_FILE).isFile
             }.getOrDefault(false)
         }
         if (sampleIsLaunchable) {
-            EditorLaunchState.save(activity, OrbitSample.NAME, OrbitSample.ENTRY_FILE)
+            EditorLaunchState.save(activity, GameArenaSample.NAME, GameArenaSample.ENTRY_FILE)
             firstOpenSample = true
         }
         settingsManager.setFirstLaunchComplete(true)
@@ -929,10 +933,10 @@ fun MainApp(
     val startDestination = remember(launchState, firstOpenSample) {
         when {
             // A fresh user who accepted the intro lands in the editor on the
-            // ready-to-run Orbit Shift project. This branch stays above the
+            // ready-to-run CodeC Arcade project. This branch stays above the
             // resume offer so first-run state cannot send them to the hub first.
             firstOpenSample ->
-                Screen.Editor.createRoute(OrbitSample.ENTRY_FILE, OrbitSample.NAME)
+                Screen.Editor.createRoute(GameArenaSample.ENTRY_FILE, GameArenaSample.NAME)
             resumeOffer == com.codeci.ide.ui.projects.ResumeOffer.CONTINUE_IN_PLACE ->
                 launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
                     ?: Screen.FileManager.route
@@ -955,7 +959,7 @@ fun MainApp(
     // something a new user is marched through before they can see the editor.
     // The Terminal tab is where it always was, its intro card names the missing
     // userland and starts the install, and a running session/download survives
-    // while the user moves elsewhere. The sample is the offline Orbit Shift
+    // while the user moves elsewhere. The sample is the offline CodeC Arcade
     // project created only after the user completes the intro.
 
     // Phase 24.7 — an "Open with CodeC" file/ZIP arrives outside navigation

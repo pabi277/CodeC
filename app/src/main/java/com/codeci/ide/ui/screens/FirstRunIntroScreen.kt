@@ -64,8 +64,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -84,9 +82,6 @@ import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.ui.theme.rememberMotionSpecs
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
@@ -117,7 +112,7 @@ fun FirstRunIntroScreen(
     FirstRunStories(preparing = preparing, onStart = onStart)
 }
 
-const val FIRST_RUN_LOGO_DURATION_MS = 1_000L
+const val FIRST_RUN_LOGO_DURATION_MS = 2_000L
 
 @Composable
 private fun IntroLogoOpening() {
@@ -331,14 +326,14 @@ private fun FirstRunStories(
                                 )
                             }
                             3 -> {
-                                OrbitArtwork(progress = heroReveal.value)
+                                ArcadeArtwork(progress = heroReveal.value)
                                 IntroHeading(
                                     eyebrow = "YOUR FIRST PROJECT",
-                                    title = "Meet Orbit Shift.",
-                                    body = "Open index.html and tap RUN. Tap INNER or OUTER to switch orbits, collect gold shards, and dodge comets. Change a color near the top of the file, save, then run it again.",
+                                    title = "Meet CodeC Arcade.",
+                                    body = "Tap RUN to open your game arena. Pick Snake, Block Party (a block-blast-style puzzle), or Tic-Tac-Toe. The home screen, styles, game rules, and controls live in separate files—play first, then explore one piece at a time.",
                                 )
                                 Text(
-                                    text = "A self-contained first game: no signup, install, or network connection needed.",
+                                    text = "Three familiar games, ready offline. No account, install, or network connection needed.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -861,11 +856,12 @@ private fun ToolPill(modifier: Modifier, label: String) {
 }
 
 @Composable
-private fun OrbitArtwork(progress: Float) {
+private fun ArcadeArtwork(progress: Float) {
     val mint = Color(CodecPalette.IDENTITY_GREEN)
+    val orange = Color(CodecPalette.WARNING)
     val violet = MaterialTheme.colorScheme.tertiary
+    val blue = Color(0xFF8CDCFF)
     val surface = Color(CodecPalette.SURFACE_PANEL)
-    val danger = MaterialTheme.colorScheme.error
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -876,68 +872,71 @@ private fun OrbitArtwork(progress: Float) {
                     listOf(surface, MaterialTheme.colorScheme.surfaceVariant, surface),
                 )
             )
-            .semantics { contentDescription = "Orbit Shift illustration: a small ship circles a violet planet between two rings." },
+            .semantics { contentDescription = "CodeC Arcade illustration with Snake, a block puzzle, and Tic-Tac-Toe." },
     ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val centerX = size.width * 0.5f
-            val centerY = size.height * 0.53f
-            val outer = size.minDimension * 0.37f
-            val inner = outer * 0.62f
-            val planet = size.minDimension * 0.105f
+        Canvas(Modifier.fillMaxSize().alpha(progress.coerceIn(0f, 1f))) {
+            val cardWidth = size.width * 0.23f
+            val cardHeight = size.height * 0.52f
+            val gap = size.width * 0.035f
+            val startX = (size.width - (cardWidth * 3f + gap * 2f)) / 2f
+            val top = size.height * 0.22f
+            val cardColors = listOf(mint, orange, violet)
+            for (index in 0..2) {
+                val left = startX + index * (cardWidth + gap)
+                drawRoundRect(
+                    color = cardColors[index].copy(alpha = 0.13f),
+                    topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                    size = androidx.compose.ui.geometry.Size(cardWidth, cardHeight),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(18f),
+                )
+            }
+            // Snake: a short trail and its bright head.
+            val snakeX = startX + cardWidth * 0.2f
+            val snakeY = top + cardHeight * 0.47f
+            for (index in 0..2) {
+                drawRoundRect(
+                    color = mint.copy(alpha = 0.5f + index * 0.16f),
+                    topLeft = androidx.compose.ui.geometry.Offset(snakeX + index * cardWidth * 0.2f, snakeY),
+                    size = androidx.compose.ui.geometry.Size(cardWidth * 0.19f, cardWidth * 0.19f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f),
+                )
+            }
             drawCircle(
-                color = Color.White.copy(alpha = 0.06f),
-                radius = outer * 1.28f,
-                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
+                color = orange,
+                radius = cardWidth * 0.055f,
+                center = androidx.compose.ui.geometry.Offset(startX + cardWidth * 0.7f, top + cardHeight * 0.28f),
             )
-            drawCircle(
-                color = violet.copy(alpha = 0.44f),
-                radius = outer,
-                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-                style = Stroke(width = CodecTokens.space(CodecTokens.Space.XXS).toPx()),
-            )
-            drawCircle(
-                color = mint.copy(alpha = 0.48f),
-                radius = inner,
-                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-                style = Stroke(width = CodecTokens.space(CodecTokens.Space.XXS).toPx()),
-            )
-            drawCircle(
-                brush = Brush.radialGradient(listOf(violet.copy(alpha = 0.95f), violet.copy(alpha = 0.3f)), radius = planet * 1.5f),
-                radius = planet,
-                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-            )
-            drawCircle(
-                color = Color.White.copy(alpha = 0.55f),
-                radius = planet * 0.21f,
-                center = androidx.compose.ui.geometry.Offset(centerX - planet * 0.3f, centerY - planet * 0.26f),
-            )
-            val sweep = -PI.toFloat() * 0.72f + (PI.toFloat() * 1.12f * progress.coerceIn(0f, 1f))
-            val shipX = centerX + cos(sweep) * outer
-            val shipY = centerY + sin(sweep) * outer
-            drawCircle(color = mint.copy(alpha = 0.18f), radius = CodecTokens.space(CodecTokens.Space.M).toPx(), center = androidx.compose.ui.geometry.Offset(shipX, shipY))
-            drawCircle(color = mint, radius = CodecTokens.space(CodecTokens.Space.XS).toPx(), center = androidx.compose.ui.geometry.Offset(shipX, shipY))
-            val shardAngle = 2.55f
-            drawCircle(
-                color = Color(CodecPalette.WARNING),
-                radius = CodecTokens.space(CodecTokens.Space.XS).toPx(),
-                center = androidx.compose.ui.geometry.Offset(centerX + cos(shardAngle) * inner, centerY + sin(shardAngle) * inner),
-            )
-            val cometAngle = 4.05f
-            drawLine(
-                color = danger.copy(alpha = 0.78f),
-                start = androidx.compose.ui.geometry.Offset(centerX + cos(cometAngle) * inner, centerY + sin(cometAngle) * inner),
-                end = androidx.compose.ui.geometry.Offset(centerX + cos(cometAngle) * inner - CodecTokens.space(CodecTokens.Space.M).toPx(), centerY + sin(cometAngle) * inner + CodecTokens.space(CodecTokens.Space.XS).toPx()),
-                strokeWidth = CodecTokens.space(CodecTokens.Space.XS).toPx(),
-                cap = StrokeCap.Round,
-            )
+            // Block puzzle: three pieces of a tiny grid.
+            val blockX = startX + cardWidth + gap + cardWidth * 0.22f
+            val blockY = top + cardHeight * 0.3f
+            for ((dx, dy) in listOf(0 to 0, 1 to 0, 1 to 1, 2 to 1)) {
+                drawRoundRect(
+                    color = orange.copy(alpha = 0.78f),
+                    topLeft = androidx.compose.ui.geometry.Offset(blockX + dx * cardWidth * 0.19f, blockY + dy * cardWidth * 0.19f),
+                    size = androidx.compose.ui.geometry.Size(cardWidth * 0.17f, cardWidth * 0.17f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f),
+                )
+            }
+            // Tic-Tac-Toe: a three-by-three board with two bright marks.
+            val gridX = startX + (cardWidth + gap) * 2f + cardWidth * 0.23f
+            val gridY = top + cardHeight * 0.31f
+            val gridSize = cardWidth * 0.54f
+            for (line in 1..2) {
+                val offset = gridSize * line / 3f
+                drawLine(violet.copy(alpha = 0.8f), androidx.compose.ui.geometry.Offset(gridX + offset, gridY), androidx.compose.ui.geometry.Offset(gridX + offset, gridY + gridSize), strokeWidth = 2f)
+                drawLine(violet.copy(alpha = 0.8f), androidx.compose.ui.geometry.Offset(gridX, gridY + offset), androidx.compose.ui.geometry.Offset(gridX + gridSize, gridY + offset), strokeWidth = 2f)
+            }
+            drawCircle(mint, radius = gridSize * 0.09f, center = androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.5f, gridY + gridSize * 0.17f))
+            drawLine(blue, androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.15f, gridY + gridSize * 0.55f), androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.3f, gridY + gridSize * 0.7f), strokeWidth = 3f)
+            drawLine(blue, androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.3f, gridY + gridSize * 0.55f), androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.15f, gridY + gridSize * 0.7f), strokeWidth = 3f)
         }
         Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(CodecTokens.space(CodecTokens.Space.M)),
         ) {
-            Text("ORBIT SHIFT", style = MaterialTheme.typography.labelLarge, color = mint, fontWeight = FontWeight.Bold)
-            Text("A CodeC original", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("CODEC ARCADE", style = MaterialTheme.typography.labelLarge, color = mint, fontWeight = FontWeight.Bold)
+            Text("Three classics. One project.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(
             modifier = Modifier
@@ -945,15 +944,15 @@ private fun OrbitArtwork(progress: Float) {
                 .padding(bottom = CodecTokens.space(CodecTokens.Space.S)),
             horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
         ) {
-            OrbitChip("INNER", mint)
-            OrbitChip("SHIFT", Color.White)
-            OrbitChip("OUTER", violet)
+            ArenaChip("SNAKE", mint)
+            ArenaChip("BLOCK PARTY", orange)
+            ArenaChip("TIC-TAC-TOE", violet)
         }
     }
 }
 
 @Composable
-private fun OrbitChip(label: String, color: Color) {
+private fun ArenaChip(label: String, color: Color) {
     Surface(
         shape = CircleShape,
         color = Color(CodecPalette.SURFACE_PANEL).copy(alpha = 0.86f),
@@ -961,9 +960,10 @@ private fun OrbitChip(label: String, color: Color) {
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = CodecTokens.space(CodecTokens.Space.S), vertical = CodecTokens.space(CodecTokens.Space.XS)),
+            modifier = Modifier.padding(horizontal = CodecTokens.space(CodecTokens.Space.XS), vertical = CodecTokens.space(CodecTokens.Space.XS)),
             style = MaterialTheme.typography.labelSmall,
             color = color,
+            maxLines = 1,
         )
     }
 }

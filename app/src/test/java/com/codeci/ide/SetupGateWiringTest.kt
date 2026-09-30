@@ -318,11 +318,11 @@ class SetupGateWiringTest {
         assertTrue(src.contains("val setupLaunchDivert = remember {"))
         assertTrue(src.contains("setupNeedsWatching = setupLaunchDivert"))
         assertTrue(src.contains("SetupGatePolicy.startOnTerminal("))
-        // After first-run agreement, the editor opens on the original offline
-        // game the app writes — never on the Projects hub first.
+        // After first-run agreement, the editor opens on the offline multi-game
+        // arena the app writes — never on the Projects hub first.
         assertTrue(src.contains("firstOpenSample ->"))
         assertTrue(
-            src.contains("Screen.Editor.createRoute(OrbitSample.ENTRY_FILE, OrbitSample.NAME)")
+            src.contains("Screen.Editor.createRoute(GameArenaSample.ENTRY_FILE, GameArenaSample.NAME)")
         )
     }
 

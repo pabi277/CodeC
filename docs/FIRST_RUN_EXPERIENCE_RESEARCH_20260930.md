@@ -1,4 +1,6 @@
-# CodeC first-run experience + Orbit Shift
+# CodeC first-run experience + game arena
+
+> **Current direction, 2026-09-30:** the Orbit Shift design and one-file implementation documented below are historical and superseded by the user's request for a lightweight game arena. The current starter is CodeC Arcade: Snake, a block-placement puzzle, and Tic-Tac-Toe behind a dedicated home screen, delivered as separate HTML, CSS, and JavaScript project files. The animated CodeC introduction, required privacy acknowledgement, and two-second in-app logo remain. Current implementation files live under `app/src/main/assets/game-arena/` and are seeded by `GameArenaSample`.
 
 - **Research and implementation record:** 2026-09-30 (UTC)
 - **Scope:** cold-start handoff, first-run education and privacy acknowledgement, replacement starter game

@@ -11,7 +11,7 @@ import org.junit.Test
  * Phase 33.1's starter tiles — C / Python / HTML — and their current home.
  *
  * The old language-tile welcome stays retired. First-run now has a separate
- * short introduction and a single Orbit Shift starter; these tiles remain what
+ * short introduction and a multi-game CodeC Arcade starter; these tiles remain what
  * the Projects empty state offers a user who has no project yet (33.3). The
  * pins below still describe something real: three languages, each naming the
  * file it opens, rendered by one loop, from one list.

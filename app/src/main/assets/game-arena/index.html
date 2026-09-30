@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11130f">
+  <title>CodeC Arcade</title>
+  <link rel="stylesheet" href="./styles/arena.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="CodeC Arcade home">
+        <span class="brand-mark" aria-hidden="true">c<span>.</span></span>
+        <span class="brand-word">CODEC <b>ARCADE</b></span>
+      </a>
+      <span class="offline-pill"><span class="status-dot" aria-hidden="true"></span> OFFLINE READY</span>
+    </header>
+
+    <main>
+      <section class="home-screen" id="home-screen" aria-labelledby="home-title">
+        <div class="hero-panel">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="eyebrow-line"></span> THE POCKET ARCADE</p>
+            <h1 id="home-title">Pick your<br><span>next favorite.</span></h1>
+            <p class="hero-description">Three feel-good classics. Quick to learn, fun to master, and ready whenever you are.</p>
+            <div class="hero-note"><span class="hero-note-icon" aria-hidden="true">✳</span> No downloads. No accounts. Just play.</div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="art-orbit art-orbit-one"></div>
+            <div class="art-orbit art-orbit-two"></div>
+            <div class="art-snake"><i></i><i></i><i></i><i></i><b></b></div>
+            <div class="art-fruit"></div>
+            <div class="art-block art-block-one"></div>
+            <div class="art-block art-block-two"></div>
+            <div class="art-block art-block-three"></div>
+            <span class="art-caption">PLAY A LITTLE</span>
+          </div>
+        </div>
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">YOUR ARCADE</p>
+            <h2>Choose a game</h2>
+          </div>
+          <span class="game-count">03 <i>GAMES</i></span>
+        </div>
+
+        <a class="game-card featured-card" href="#snake" data-open-game="snake" aria-label="Play Snake. Eat, grow, and beat your best score.">
+          <div class="card-art snake-art" aria-hidden="true">
+            <span class="snake-piece piece-a"></span><span class="snake-piece piece-b"></span>
+            <span class="snake-piece piece-c"></span><span class="snake-piece piece-d"></span>
+            <span class="snake-piece piece-head"></span><span class="snake-fruit"></span>
+          </div>
+          <div class="card-copy">
+            <div class="card-meta"><span>CLASSIC 01</span><span class="tag tag-lime">ONE-THUMB</span></div>
+            <h3>Snake</h3>
+            <p>Eat, grow, and keep your tail out of trouble.</p>
+            <div class="card-bottom"><span class="best-label">BEST <b data-best="snake">0</b></span><span class="play-link">PLAY SNAKE <span aria-hidden="true">↗</span></span></div>
+          </div>
+        </a>
+
+        <div class="game-grid">
+          <a class="game-card compact-card" href="#blocks" data-open-game="blocks" aria-label="Play Block Party, a relaxing block-placement puzzle.">
+            <div class="card-art block-art" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="card-copy">
+              <div class="card-meta"><span>PUZZLE 02</span><span class="tag tag-orange">NO TIMER</span></div>
+              <h3>Block Party</h3>
+              <p>Fit the pieces. Clear a line. Find your flow.</p>
+              <div class="card-bottom"><span class="best-label">BEST <b data-best="blocks">0</b></span><span class="play-link">PLAY <span aria-hidden="true">↗</span></span></div>
+            </div>
+          </a>
+
+          <a class="game-card compact-card" href="#tic-tac-toe" data-open-game="tic-tac-toe" aria-label="Play Tic-Tac-Toe against the pocket CPU.">
+            <div class="card-art ttt-art" aria-hidden="true">
+              <span class="mark-x">×</span><span class="mark-o">○</span><span class="mark-x">×</span>
+              <span class="mark-o">○</span><span></span><span class="mark-x">×</span>
+              <span></span><span class="mark-o">○</span><span class="mark-x">×</span>
+            </div>
+            <div class="card-copy">
+              <div class="card-meta"><span>QUICK MATCH 03</span><span class="tag tag-violet">VS CPU</span></div>
+              <h3>Tic-Tac-Toe</h3>
+              <p>A tiny classic. One clever move at a time.</p>
+              <div class="card-bottom"><span class="best-label">WINS <b data-wins="tic-tac-toe">0</b></span><span class="play-link">PLAY <span aria-hidden="true">↗</span></span></div>
+            </div>
+          </a>
+        </div>
+
+        <footer class="home-footer">
+          <span>MADE FOR LITTLE BREAKS</span>
+          <span>EDIT IT. PLAY IT. MAKE IT YOURS.</span>
+        </footer>
+      </section>
+
+      <section class="game-screen" id="snake-screen" data-game-screen="snake" hidden aria-labelledby="snake-title">
+        <div class="game-nav"><button class="back-button" type="button" data-home><span aria-hidden="true">←</span> ALL GAMES</button><span class="game-number">CLASSIC 01 / 03</span></div>
+        <div class="game-heading">
+          <div><p class="eyebrow">SIMPLE TO START. TOUGH TO TOP.</p><h2 id="snake-title">Snake</h2><p class="game-subtitle">Eat the fruit. Don't meet your tail.</p></div>
+          <div class="score-card"><span>SCORE</span><strong id="snake-score">0</strong><small>BEST <b id="snake-best">0</b></small></div>
+        </div>
+        <div class="snake-stage" id="snake-stage">
+          <canvas id="snake-board" width="360" height="360" role="img" aria-label="Snake game board. Swipe or use the arrow buttons to guide the snake to fruit.">Use the arrow buttons to guide the snake to the fruit.</canvas>
+          <div class="snake-overlay" id="snake-overlay" hidden>
+            <p class="eyebrow" id="snake-overlay-kicker">NICE RUN</p>
+            <h3 id="snake-overlay-title">Run complete</h3>
+            <p id="snake-overlay-copy">Ready for another?</p>
+            <button class="primary-button" id="snake-again" type="button">PLAY AGAIN <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
+        <div class="snake-toolbar">
+          <p id="snake-status" role="status" aria-live="polite">Swipe the board or tap an arrow to steer.</p>
+          <button class="quiet-button" id="snake-pause" type="button">PAUSE</button>
+        </div>
+        <div class="direction-pad" aria-label="Snake direction controls">
+          <button type="button" data-direction="up" aria-label="Move up">↑</button>
+          <button type="button" data-direction="left" aria-label="Move left">←</button>
+          <button type="button" data-direction="down" aria-label="Move down">↓</button>
+          <button type="button" data-direction="right" aria-label="Move right">→</button>
+        </div>
+        <p class="control-hint">Swipe, tap the arrows, or use your keyboard. The game pauses when you leave.</p>
+      </section>
+
+      <section class="game-screen" id="blocks-screen" data-game-screen="blocks" hidden aria-labelledby="blocks-title">
+        <div class="game-nav"><button class="back-button" type="button" data-home><span aria-hidden="true">←</span> ALL GAMES</button><span class="game-number">PUZZLE 02 / 03</span></div>
+        <div class="game-heading">
+          <div><p class="eyebrow">NO CLOCK. NO RUSH.</p><h2 id="blocks-title">Block Party</h2><p class="game-subtitle">Place a piece. Fill a row or column to clear it.</p></div>
+          <div class="score-card"><span>SCORE</span><strong id="blocks-score">0</strong><small>BEST <b id="blocks-best">0</b></small></div>
+        </div>
+        <div class="puzzle-panel">
+          <div class="puzzle-topline"><span>8 × 8 BOARD</span><span id="blocks-lines">LINES 0</span></div>
+          <div class="block-grid" id="block-grid" role="group" aria-label="Block Party 8 by 8 placement board"></div>
+          <div class="piece-instruction" id="block-status" role="status" aria-live="polite">The first two long pieces can clear a row when placed end-to-end. Tap a highlighted top-left square.</div>
+        </div>
+        <div class="piece-section">
+          <div class="piece-heading"><span>YOUR PIECES</span><button class="quiet-button" id="blocks-new-game" type="button">NEW GAME</button></div>
+          <div class="piece-tray" id="piece-tray" aria-label="Available block shapes"></div>
+        </div>
+        <p class="control-hint">Every full row or column clears. No timer—take your time.</p>
+      </section>
+
+      <section class="game-screen" id="tic-tac-toe-screen" data-game-screen="tic-tac-toe" hidden aria-labelledby="ttt-title">
+        <div class="game-nav"><button class="back-button" type="button" data-home><span aria-hidden="true">←</span> ALL GAMES</button><span class="game-number">QUICK MATCH 03 / 03</span></div>
+        <div class="game-heading">
+          <div><p class="eyebrow">YOU'RE × · POCKET CPU IS ○</p><h2 id="ttt-title">Tic-Tac-Toe</h2><p class="game-subtitle">Three in a row wins the round.</p></div>
+          <div class="score-card ttt-record"><span>YOUR WINS</span><strong id="ttt-wins">0</strong><small>DRAWS <b id="ttt-draws">0</b></small></div>
+        </div>
+        <div class="ttt-panel">
+          <p class="ttt-status" id="ttt-status" role="status" aria-live="polite">Your turn. Choose any open square.</p>
+          <div class="ttt-board" id="ttt-board" role="group" aria-label="Tic-Tac-Toe board">
+            <button type="button" data-square="0" aria-label="Row 1, column 1, empty"></button>
+            <button type="button" data-square="1" aria-label="Row 1, column 2, empty"></button>
+            <button type="button" data-square="2" aria-label="Row 1, column 3, empty"></button>
+            <button type="button" data-square="3" aria-label="Row 2, column 1, empty"></button>
+            <button type="button" data-square="4" aria-label="Row 2, column 2, empty"></button>
+            <button type="button" data-square="5" aria-label="Row 2, column 3, empty"></button>
+            <button type="button" data-square="6" aria-label="Row 3, column 1, empty"></button>
+            <button type="button" data-square="7" aria-label="Row 3, column 2, empty"></button>
+            <button type="button" data-square="8" aria-label="Row 3, column 3, empty"></button>
+          </div>
+          <button class="primary-button ttt-reset" id="ttt-reset" type="button">NEW ROUND <span aria-hidden="true">↻</span></button>
+        </div>
+        <p class="control-hint">No rush. Look for a line—and block the CPU if you spot one.</p>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
