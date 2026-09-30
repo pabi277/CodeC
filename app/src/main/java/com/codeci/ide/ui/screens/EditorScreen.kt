@@ -1038,9 +1038,9 @@ fun EditorScreen(
     // panel — is pinned by BackRouterTest instead of living in registration
     // order. editorDrawerOpen keys on targetValue (H2, same as closeDrawer
     // above). With the soft keyboard up, back is the user closing it — the
-    // platform owns that press (the router's row-6 guard, and rows 8+ are
-    // root-only fields this screen never fills, so the editor's handler can
-    // never pop navigation or exit the app).
+    // platform owns that press (the router's row-9 guard). This screen leaves
+    // the route/root fields at their defaults, so it cannot pop navigation or
+    // exit the app behind its own editor surface.
     val editorBackAction = BackRouter.decide(
         BackState(
             unsavedChanges = isDirty,

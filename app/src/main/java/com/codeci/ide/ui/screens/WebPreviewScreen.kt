@@ -3,6 +3,7 @@ package com.codeci.ide.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -96,6 +97,9 @@ import com.codeci.ide.ui.utils.FileNameUtils
 import com.codeci.ide.ui.utils.MarkdownPreview
 import com.codeci.ide.ui.utils.WebFileSupport
 import com.codeci.ide.ui.viewmodels.WebPreviewViewModel
+import com.codeci.ide.ui.navigation.BackAction
+import com.codeci.ide.ui.navigation.BackRouter
+import com.codeci.ide.ui.navigation.BackState
 import java.io.File
 
 /**
@@ -323,6 +327,35 @@ fun WebPreviewScreen(
         viewModel.requestReload()
     }
 
+    // WebView history is native state, so query it at the moment of each
+    // press instead of mirroring it in Compose state that could lag a page
+    // transition. Both Back affordances share the router decision: traverse
+    // page history first, then pop this preview route when history is empty.
+    val previewTransientSurfaceOpen = menuOpen || zoomDialog || resolutionDialog
+    fun performPreviewBack(fromToolbar: Boolean) {
+        val action = BackRouter.decide(
+            BackState(
+                sheetOrDialogOpen = !fromToolbar && previewTransientSurfaceOpen,
+                keyboardVisible = !fromToolbar && imeDp > 0f,
+                webViewCanGoBack = webView?.canGoBack() == true,
+                // This screen owns an explicit route-back callback; unlike a
+                // generic screen-local handler, it may pop its own route.
+                canPopRoute = true
+            )
+        )
+        when (action) {
+            BackAction.GoBackInWebView -> webView?.goBack()
+            BackAction.PopRoute -> onNavigateBack()
+            else -> Unit
+        }
+    }
+    // A dropdown/dialog and the IME keep their own system-Back behavior.
+    // The toolbar arrow is an explicit action and uses the same history-first
+    // route even if one of those transient surfaces happens to be open.
+    BackHandler(enabled = !previewTransientSurfaceOpen && imeDp <= 0f) {
+        performPreviewBack(fromToolbar = false)
+    }
+
     // The console's command line is the only text field on this screen and it
     // lives inside the tools panel, so the keyboard's inset is reserved only
     // while that panel is open: a keyboard that is not there must never shorten
@@ -347,7 +380,7 @@ fun WebPreviewScreen(
             },
             navigationIcon = {
                 IconButton(
-                    onClick = onNavigateBack
+                    onClick = { performPreviewBack(fromToolbar = true) }
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }

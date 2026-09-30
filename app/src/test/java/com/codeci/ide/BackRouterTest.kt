@@ -29,6 +29,7 @@ class BackRouterTest {
                 "introPage" -> state.copy(firstRunIntroPage = value as Int)
                 "keyboard" -> state.copy(keyboardVisible = value as Boolean)
                 "promptVisible" -> state.copy(exitPromptVisible = value as Boolean)
+                "webViewBack" -> state.copy(webViewCanGoBack = value as Boolean)
                 "canPop" -> state.copy(canPopRoute = value as Boolean)
                 "atRoot" -> state.copy(atRootDestination = value as Boolean)
                 "promptEnabled" -> state.copy(exitPromptEnabled = value as Boolean)
@@ -89,6 +90,14 @@ class BackRouterTest {
     }
 
     @Test
+    fun `row 4 over row 10 - a dialog owns Back before WebView history`() {
+        assertEquals(
+            BackAction.None,
+            decide("sheet" to true, "webViewBack" to true, "canPop" to true)
+        )
+    }
+
+    @Test
     fun `row 5 - system back returns to the previous onboarding page`() {
         assertEquals(BackAction.PreviousIntroPage, decide("introPage" to 2))
     }
@@ -126,12 +135,28 @@ class BackRouterTest {
     }
 
     @Test
-    fun `row 9 - a non-start tab pops to the start tab`() {
+    fun `row 9 - the keyboard keeps system Back for the platform`() {
+        assertEquals(
+            BackAction.None,
+            decide("keyboard" to true, "webViewBack" to true, "canPop" to true)
+        )
+    }
+
+    @Test
+    fun `row 10 - WebView history is traversed before popping the preview route`() {
+        assertEquals(
+            BackAction.GoBackInWebView,
+            decide("webViewBack" to true, "canPop" to true)
+        )
+    }
+
+    @Test
+    fun `row 11 - a non-start tab pops to the start tab`() {
         assertEquals(BackAction.PopRoute, decide("canPop" to true))
     }
 
     @Test
-    fun `row 10 - at the root with the switch on, the prompt shows`() {
+    fun `row 12 - at the root with the switch on, the prompt shows`() {
         assertEquals(
             BackAction.ShowExitPrompt,
             decide("atRoot" to true, "promptEnabled" to true)
@@ -139,7 +164,7 @@ class BackRouterTest {
     }
 
     @Test
-    fun `row 10 - at the root with the switch off, back exits directly`() {
+    fun `row 12 - at the root with the switch off, back exits directly`() {
         assertEquals(
             BackAction.ExitApp,
             decide("atRoot" to true, "promptEnabled" to false)
@@ -147,7 +172,7 @@ class BackRouterTest {
     }
 
     @Test
-    fun `row 10 - safe mode never shows the prompt`() {
+    fun `row 12 - safe mode never shows the prompt`() {
         // The Phase 42.3 law, carried as a table row instead of a
         // when-branch.
         assertEquals(
@@ -157,14 +182,14 @@ class BackRouterTest {
     }
 
     @Test
-    fun `row 11 - nothing applies means the library owns it`() {
+    fun `row 13 - nothing applies means the library owns it`() {
         assertEquals(BackAction.None, decide())
     }
 
     @Test
-    fun `screen-local states never reach the navigation rows`() {
-        // The defaults the screen-local handlers rely on: rows 8-10 need the
-        // root's fields, which a screen never fills.
+    fun `screen-local states never reach the root navigation rows`() {
+        // The defaults the screen-local handlers rely on: rows 11-12 need
+        // navigation/root fields, which ordinary screens never fill.
         assertEquals(BackAction.None, decide("keyboard" to true))
         assertEquals(BackAction.None, decide("output" to true, "keyboard" to true, "sheet" to false))
     }

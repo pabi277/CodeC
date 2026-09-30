@@ -1059,7 +1059,7 @@ fun MainApp(
     // IS the second press (ExitFeedbackDialog's onDismissRequest = exit) —
     // exactly one exit path, kept from Phase 41.
     // Phase 42.3 — the exit survey is a BRIDGE/SNACKS surface outside the
-    // safe-mode boundary; the router's row 9 carries the rule (safe mode →
+    // safe-mode boundary; the router's root branch carries the rule (safe mode →
     // ExitApp), so it survives the refactor as policy, not as a when-branch.
     val rootBackAction = BackRouter.decide(
         BackState(
