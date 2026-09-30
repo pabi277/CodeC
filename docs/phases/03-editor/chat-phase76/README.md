@@ -7,8 +7,9 @@
 > Research: [`AI_INTEGRATION_RESEARCH_20260930.md`](../../../research/AI_INTEGRATION_RESEARCH_20260930.md)
 > (Addenda A–B).
 
-**Status: 🚧 IMPLEMENTED on `arena/01a0f34c-codec` (CI rounds below), device
-round owed, NOT merged.** Levels 2+ are not
+**Status: ✅ DEVICE-PASSED (round 1, 2026-10-01) on `arena/01a0f34c-codec` —
+default model changed to `gemini-3-flash-preview` per the owner's report;
+NOT merged (waiting for the owner's merge command).** Levels 2+ are not
 authorized.
 
 ## What the user gets
@@ -20,7 +21,7 @@ Gemini**:
 1. **Key setup (once):** the user's own Gemini API key, Google's terms
    linked, the free-tier and EEA/CH/UK notes, and the required checkbox
    *"I am 18 or older and I accept Google's Gemini API terms for my key."*
-   Model pre-filled `gemini-3.8-flash`, editable.
+   Model pre-filled `gemini-3-flash-preview` (device-proven), editable.
 2. **Explain selection** / **Explain last error**, with an optional question.
 3. **Preview every time:** model, character count, free-tier note and the
    *exact* text (instruction + user text) that will leave the phone. Nothing
@@ -80,4 +81,9 @@ Device checks: [DEVICE_ROUND.md](DEVICE_ROUND.md).
 - **CI round 1 — `36755116931` 🔴 red for-cause:** everything compiled; 2599 host tests ran, **1 failed** — `TypeAdoptionTest › hardcoded platform monospace survives only in the font-setting maps`. The preview box used `FontFamily.Monospace`; the house law (Phase 50 type system) is that code text uses the bundled JetBrains Mono via `CodecType.codeFamily`. Fixed in `AiPanel.SentText`. Lesson: grep `TypeAdoptionTest`/`TokenAdoptionTest` scopes before styling new text.
 - Same follow-up commit: the stored-key **literal** scrub (`FeedbackInput.extraSecrets`, loaded in `FeedbackSectionCard`) — the Level 0 record §4.2 requires both shape and literal; an earlier draft of this phase had dropped the literal half, caught against the record before the docs commit.
 - **CI round 2 — `36755705695` ✅ GREEN** on `813dfd1` (assemble + unit tests + lint, 8m 23s). Artifacts: `CodeC-IDE-release` 6,372,115 B (+79,588 B vs the Phase 75.3 build's 6,292,527 B), `CodeC-IDE-debug` 25,628,418 B.
-- Device round: [DEVICE_ROUND.md](DEVICE_ROUND.md) — owed.
+- Device round: [DEVICE_ROUND.md](DEVICE_ROUND.md).
+
+## Device round 1 (2026-10-01) — ✅ passed, one change
+
+Owner, on the run `36755705695` build: ***"Every test passed just i have to use gemini-3-flash-preview this model"***.
+All rows A1–D5 passed. The pre-filled `gemini-3.8-flash` (taken from Google's docs at briefing time) did not work for his key; `gemini-3-flash-preview` did. Fix: `AiModel.DEFAULT = "gemini-3-flash-preview"`, pinned in `AiPolicyTest` and `GeminiRequestTest`; the `MODEL_INVALID` example text follows it. A model already saved on a phone is kept (the default only pre-fills a fresh setup). Lesson: a model id is a device fact, not a docs fact — O3's "editable model + Test connection" is what made this a one-line fix.

@@ -74,7 +74,7 @@ object AiCopy {
     // ---- problems ---------------------------------------------------------
 
     const val SETUP_INCOMPLETE = "Enter a key and tick the confirmation first."
-    const val MODEL_INVALID = "Model names use lowercase letters, digits, dots and dashes (for example gemini-3.8-flash)."
+    const val MODEL_INVALID = "Model names use lowercase letters, digits, dots and dashes (for example gemini-3-flash-preview)."
     const val SAVE_FAILED = "Couldn't save securely on this phone. Try again."
     const val KEY_UNREADABLE = "Your saved key can't be read anymore. Please enter it again."
 

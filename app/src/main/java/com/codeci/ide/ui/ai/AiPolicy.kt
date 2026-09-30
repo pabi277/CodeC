@@ -118,11 +118,13 @@ object AiKeySetup {
 
 object AiModel {
     /**
-     * O3 — pre-filled, editable. Re-read from Google's model list when this
-     * phase was briefed (2026-09-30: `gemini-3.8-flash` is listed as a
-     * current Flash model on ai.google.dev).
+     * O3 — pre-filled, editable. Phase 76 device round 1 (owner, 2026-10-01):
+     * *"Every test passed just i have to use gemini-3-flash-preview this
+     * model"* — `gemini-3.8-flash` (read off Google's docs when the phase was
+     * briefed) did not answer for his key; `gemini-3-flash-preview` did, on a
+     * real phone. The device result wins over the docs.
      */
-    const val DEFAULT = "gemini-3.8-flash"
+    const val DEFAULT = "gemini-3-flash-preview"
 
     private val ID = Regex("^[a-z0-9][a-z0-9.\\-]{1,62}[a-z0-9]$")
 

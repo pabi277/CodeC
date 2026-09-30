@@ -123,3 +123,5 @@ Rules:
 ## 6. Level 0 exit condition — met
 
 O1–O3 were answered on 2026-09-30 (§4), so **Level 0 is complete.** The next step is a **Level 1 brief**: a numbered phase under `docs/phases/<category>/chat-phaseNN/`, following [`HOW_TO_CREATE_A_PHASE.md`](../../getting-started/HOW_TO_CREATE_A_PHASE.md), built from §2–§4 of this record. **Writing that brief, and any Level 1 code, still requires the owner's explicit start command.** Nothing here authorizes code, dependencies, permissions or privacy-guide changes, and the `rule.md` §3 merge gate applies.
+
+> **Update 2026-10-01 (O3, Phase 76 device round 1):** the pre-filled model is `gemini-3-flash-preview`, the id that worked on the owner's phone (*"i have to use gemini-3-flash-preview this model"*); `gemini-3.8-flash`, named above from the docs, did not answer for his key. The decision itself (a pre-filled, editable Flash model plus Test connection) is unchanged.

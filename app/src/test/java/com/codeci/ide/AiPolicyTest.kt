@@ -78,11 +78,12 @@ class AiPolicyTest {
     // ---- O3: pre-filled Flash model, editable, URL-safe ----------------
 
     @Test
-    fun `the default model is the pre-filled Flash id and is valid`() {
-        assertEquals("gemini-3.8-flash", AiModel.DEFAULT)
+    fun `the default model is the device-proven Flash id and is valid`() {
+        // Phase 76 device round 1: the id that actually answered on the owner's phone.
+        assertEquals("gemini-3-flash-preview", AiModel.DEFAULT)
         assertTrue(AiModel.isValid(AiModel.DEFAULT))
         assertTrue(AiModel.isValid("gemini-2.5-pro"))
-        assertTrue(AiModel.isValid(" gemini-3.8-flash "))
+        assertTrue(AiModel.isValid(" gemini-3-flash-preview "))
     }
 
     @Test

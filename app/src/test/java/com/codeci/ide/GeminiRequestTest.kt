@@ -29,8 +29,8 @@ class GeminiRequestTest {
     @Test
     fun `the stream URL is Google's host, the model segment and alt=sse`() {
         assertEquals(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse",
-            GeminiRequest.streamUrl(" gemini-3.8-flash ")
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse",
+            GeminiRequest.streamUrl(" gemini-3-flash-preview ")
         )
         assertNull(GeminiRequest.streamUrl("x/../../y"))
         assertNull(GeminiRequest.streamUrl("x?key=abc"))
@@ -43,7 +43,7 @@ class GeminiRequestTest {
         val h = GeminiRequest.headers(key)
         assertEquals(key, h["x-goog-api-key"])
         assertEquals(1, h.values.count { it.contains(key) })
-        assertFalse(GeminiRequest.streamUrl("gemini-3.8-flash")!!.contains("key"))
+        assertFalse(GeminiRequest.streamUrl("gemini-3-flash-preview")!!.contains("key"))
         assertFalse(GeminiRequest.body(prompt()).contains(key))
         assertEquals("text/event-stream", h["Accept"])
     }

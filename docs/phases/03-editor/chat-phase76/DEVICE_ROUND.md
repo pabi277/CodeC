@@ -1,5 +1,10 @@
 # Phase 76 — device round 1 (AI Level 1, read-only Gemini helper)
 
+> **Result (owner, 2026-10-01): ✅ all rows passed** — *"Every test passed just
+> i have to use gemini-3-flash-preview this model"*. The default model is now
+> `gemini-3-flash-preview`; rows that mention `gemini-3.8-flash` below are kept
+> as run.
+
 Build: `CodeC-IDE-release` (or `-debug`) from **Build APK run `36755705695`** (tip `813dfd1`, ✅ green) on `arena/01a0f34c-codec` — https://github.com/pabi277/CodeC/actions/runs/36755705695
 You need: a Gemini API key from https://aistudio.google.com/apikey, internet,
 and a CodeC project with a file that can fail (e.g. a Python file with a typo).
