@@ -1,7 +1,6 @@
 # Proposed Phase 65.1 — Shell and navigation
 
-**Status: discussion draft, not approved for implementation.** One part = one
-future chat. No deadline, dependency, new control or replacement engine promised.
+**Status: owner-approved and implemented 2026-09-29 in the same chat as 74.1.** No navigation redesign; existing hide-while-typing behavior retained by delegated agent choice. See [`docs/chat-phase65/README.md`](../chat-phase65/README.md). CI round 1 `36607240454` caught a test declaration syntax error (missing `()`); corrected, CI round 2 ✅ GREEN `36607641208` on `52420c1`. No PR/merge.
 
 ## Copy into a new chat
 
@@ -32,8 +31,7 @@ First launch sample; return to last file; safe mode; four bottom tabs; hide/reve
 
 Suggested starting point, not your decision: Keep the current hide-while-typing behaviour until the owner says otherwise.
 
-**Owner answer:** pending. Record it verbatim here when given; do not present the
-recommendation as approval.
+**Owner instruction:** “I don't understand the 65 phase so everything in your hand” (agent delegated the design choice); all recommendations approved. Keep the current hide-while-typing behavior.
 
 ## Implementation and exit, after agreement
 

@@ -154,7 +154,7 @@ and record your answer before implementing the part.
 
 | Proposed phase / chat | Area | My starting recommendation |
 |---|---|---|
-| [65.1](ui-polish-chats/PHASE_65_1_SHELL.md) | Shell and navigation | Keep navigation; refine behaviour. |
+| [65.1](ui-polish-chats/PHASE_65_1_SHELL.md) | Shell and navigation | Keep navigation; refine behaviour. **Reviewed 2026-09-29** (kept existing hide-while-typing behavior). The typing defects are now deferred to the focused proposed [75.1](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md); initial fixes were undone at the owner's request. |
 | [66.1](ui-polish-chats/PHASE_66_1_PROJECTS.md) | Projects hub and creation | Keep hub; improve clarity. **Discussed and implemented 2026-09-27** on `arena/01a0e220-codec` (owner: keep cards; deleted demo stays deleted; (a)+(b)+(c) in one part; after Create keep the hub tree) — [record](chat-phase66/README.md). Owner device-verified; delivered via [PR #88](https://github.com/pabi277/CodeC/pull/88). |
 | [67.1](ui-polish-chats/PHASE_67_1_FILES_SEARCH.md) | Files, drawer and project search | Screenshot-style tree, safe file actions, file finding and single-file download/share merged to `main`; [record and CI](chat-phase67/README.md). |
 | [68.1](ui-polish-chats/PHASE_68_1_EDITOR_TABS.md) | Editor chrome, tabs and file actions | Protect code space and tab geometry. |
@@ -171,45 +171,9 @@ and record your answer before implementing the part.
 | [73.7](ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md) | Git moves into the editor panel: Spck-ditto dialogs, no sheets | Owner follow-up with 8 Spck screenshots, scope locked by four answers (full-panel, ditto-dialogs, all-dialogs, provider-row). **Implemented 2026-09-29** (panel hosted in the drawer slot, sheet + 73.6 slot deleted; Commit All + Push dialogs; centered Remotes/Log dialogs; rail badge; hub ⋮ routes to the panel) — CI ✅ GREEN `36583980074`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md). |
 | [73.8](ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md) | Git page owns credentials, the install card, and beginner hints | Owner punch-list on the 73.7 build, scope locked by five answers. **Implemented 2026-09-29** (⋮ push-menu trigger; package-style install card — userland live state, git elapsed + live transcript line + in-box fail tail, no fake %; token/install texts repointed at the git page; clone dialog opens credentials inline; three one-line hints) — CI ✅ GREEN `36593360018`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md). |
 | [73.9](ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md) | Manual-first no-remote flow, origin by default | Owner premise fix: most tokens lack the repo-create permission, so Publish fails. **Implemented 2026-09-29** (readiness row links github.com/new + ADD REMOTE opens the Remotes dialog; New Remote name starts at `origin`; PUBLISH off the row, Publish dialog kept for permissioned tokens) — CI ✅ GREEN `36597542971`, owner device pass ✅ 2026-09-29, merged via PR #95; [record](ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md). |
-| [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. |
-**Owner-selected starting area (2026-09-27): Projects and files.** Start the
-next discussion with 66.1 (hub/creation), then 67.1 (files/search), unless the
-owner names a particular file detail first. *State on 2026-09-29:* 64, 66.1,
-67.1, 69.1–69.4, 70.1, 71.1 and 72.1 are delivered and merged; **73.1 is
-implemented this session (CI ✅ GREEN `36519004263`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.2 (owner-reported Git connection fixes — auto-install,
-clear errors, new-user guidance — not a discussion draft) is also
-implemented this session (CI ✅ GREEN `36523739665`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.3 (owner-reported, not a discussion draft: the whole git
-menu ported to buttons, Spck-parity, per 4 attached screenshots) is also
-implemented this session (CI ✅ GREEN `36544645579`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.4 (device fix: a git-refresh catch-all mis-reported
-"installed" after any error, letting "Initialize repository" show on a
-project git was never installed on — found from the owner's own "Auto
-install not working" report) is also implemented this session (CI ✅ GREEN
-`36551505966`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.5 (owner-reported,
-not a discussion draft: Spck-exact Git panel layout, install status bar,
-inline credentials, Commit All without push — same 4 screenshots) is
-implemented this session on `arena/01a0eca9-codec` (CI ✅ GREEN
-`36560766234`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.6 (owner-reported
-device follow-up, not a discussion draft: the editor drawer's Initialize
-typed into the visible shell and init'd the projects folder — now the
-engine's `init` in place, with an ask-first install prompt shared by the
-drawer and the sheet) is implemented this session on
-`arena/01a0eca9-codec` (CI ✅ GREEN `36566495685`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.7 (owner follow-up with 8 Spck screenshots, scope locked
-by four answers: git lives in the editor's Repository slot, sheets
-deleted, Spck's Commit All + Push + Remotes/Log dialogs, rail badge, hub
-⋮ routes to the panel) is implemented this session on
-`arena/01a0eca9-codec` (CI ✅ GREEN `36583980074`, owner device pass ✅ 2026-09-29, merged via PR #95);
-73.8 (owner punch-list, scope locked by five answers: ⋮ trigger, package-style install card with
-the live installer line + in-box fail tail, credentials and install texts on the git page, inline
-clone credentials, three beginner hints) is implemented this session on `arena/01a0eca9-codec`
-(CI ✅ GREEN `36593360018`, owner device pass ✅ 2026-09-29, merged via PR #95); 73.9 (owner premise
-fix: most tokens lack the create permission, so the no-remote flow is create-on-GitHub then
-paste-the-link with `origin` default) is implemented this session on `arena/01a0eca9-codec`
-(CI ✅ GREEN `36597542971`, owner device pass ✅ 2026-09-29, merged via PR #95);
-65.1 and 74.1 remain discussion drafts**
-(68.1 merged in PR #90) — the owner picks the
-next discussion draft. The part numbers are stable IDs, not a requirement
-to execute 65 first. My original suggestion was editor/typing; the owner's
-priority overrides that. Polish one agreed part per chat.
+| [74.1](ui-polish-chats/PHASE_74_1_SETTINGS_SUPPORT.md) | Settings, support and final consistency | Truthful controls and cross-screen consistency. **Implemented 2026-09-29** (16sp editor default, ghost off, every section starts collapsed; exit prompt/welcome control unchanged); [record](chat-phase74/README.md). Earlier CI green; post-revert CI `36625653233` ✅ on `902c9f6` (typing reports remain open). |
+| [75.1](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md) | Editor typing reliability | Dedicated typing-only phase requested 2026-09-30; Python `def` vs `for` indent and one-space Backspace reports remain open. Draft only; waiting for scope answers and “Start Phase 75.1”. |
+**Current owner instruction (2026-09-30):** preserve the independent 74.1 Settings work (16sp default, ghost off, all sections collapsed) and the 65.1 navigation decision, but undo code-writing changes from that chat. The Python `def`/`for` indentation and indentation-Backspace reports remain unresolved and are now scoped under the new proposed Phase 75.1, dedicated to typing experience. The source fixes were reverted on the session branch; post-revert Build APK `36625653233` is green on `902c9f6`; typing reports remain open. Phase 75.1 is a discussion draft only, not implementation approval. No PR/merge is authorized. See [`docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md`](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
 
 ## 6. Gate for every chat
 

@@ -1,3 +1,5 @@
+**2026-09-30 — Phase 74.1 Settings search follow-up (owner authorized): IMPLEMENTED; PR #96.** Adds safe searchable aliases for the three bespoke forms (Extra-Key shortcuts, repository trust/status, GitHub credentials); no entered values or secrets are indexed, and the audited 64 real Settings rows are unchanged. Existing defaults/fold behavior remain. Build APK round 1 `36673923025` exposed an incorrect expected count (`repository` matches both the trust form and GitHub's repository-content-permission descriptor); corrected. Round 2 ✅ GREEN `36674331533` on `f29f3f3`. Owner-authorized merge to `main` is in progress. Phase 65 behavior unchanged. Typing fixes remain reverted and Phase 75.1 remains proposal-only/unstarted.
+
 **2026-09-29 — Phase 73.9 (manual-first no-remote flow, origin by default) ✅
 IMPLEMENTED, CI ✅ GREEN `36597542971` on `e4f8d6a`.** Owner premise fix on the 73.8 build: most users
 will not give their token the repo-create permission, so Publish fails for them — "focus no remote

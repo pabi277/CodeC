@@ -12,9 +12,7 @@
 > **merged 73.1–73.9 together via [PR #95](https://github.com/pabi277/CodeC/pull/95)**
 > (device pass ✅ 2026-09-29). Records: `docs/ui-polish-chats/PHASE_73_*.md`,
 > `docs/NEXT_STEPS.md` head entries.
-> The polish series' remaining discussion drafts are still **65.1** and **74.1** — the owner
-> names the next one; nothing starts on the agent's own. The operative handoff is the
-> **CURRENT HANDOFF — 2026-09-29 (after PR #95)** block below; every block after it is history.
+> **Latest owner instruction — 2026-09-30:** the Python indentation and one-space Backspace patches remain reverted; Phase 75.1 is proposal-only and must not be started until the owner explicitly says “Start Phase 75.1.” The owner has now authorized a bounded Phase 74 Settings-search improvement: index fixed labels/keywords for the Extra-Key shortcut, repository trust/status, and GitHub credential forms; never search entered values or secrets. Preserve the prior Settings defaults/folds and Phase 65 navigation behavior. Implement, document, push this session branch, and run Build APK; the owner explicitly asked to merge with main, so after green CI open the PR and merge it. See `docs/chat-phase74/README.md`.
 
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
@@ -49,23 +47,16 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-29 (after PR #95, 73.1–73.9 merged; device pass ✅).**
+**CURRENT HANDOFF — 2026-09-30 (after PR #95; typing fixes reverted; proposed Phase 75.1 awaiting owner scope/start).**
 Read `rule.md`,
 `docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,
 `docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`,
 `docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5
 before the historical entries below (73.1–73.6 records stand as history behind them).
 
-*State to verify first, never assume:* `main` should be at the merge commit of
-[PR #95](https://github.com/pabi277/CodeC/pull/95) (73.1–73.9, the terminal-independent git
-series — the PR records the merge commit); your session is a fresh `arena/*` branch off that
-`main` — confirm with `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`,
-`gh run list --limit 3`.
-The Arena sandbox can silently reset local HEAD to the base commit between turns while the files
-stay newer (rule.md §2.4): before every commit run `git fetch origin <session-branch> && git
-reset --mixed FETCH_HEAD` and check `git status --short` shows only your own edits. Never
-`reset --hard`, never stash/clean the tree. Two older PRs from other sessions were still open at
-#95's merge (#83, #42) — leave them to the owner.
+*State verified for this follow-up (2026-09-30):* session branch remote is `arena/01a0ee39-codec` at `d65ca64`; remote `main` remains PR #95 merge `6c6a98025bb37acd7df5e50e7a1eea6f98c16792`. The latest pre-revert Build APK run `36608912686` was green on `d65ca64`; it does not validate the requested source reversion. PRs #83 and #42 remain open and untouched. The sandbox had reset local HEAD to `main` while files remained newer; it was realigned safely with `git fetch origin arena/01a0ee39-codec && git reset --mixed FETCH_HEAD` (never hard). Recheck `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`, and `gh run list --limit 3`; before each commit follow rule.md §2.4 and inspect only your changes.
+
+*This session — current status:* 65.1 retained navigation; 74.1 Settings defaults are preserved (16sp editor default, ghost off, all 12 sections collapsed, exit/welcome unchanged). Per owner instruction 2026-09-30, the Python indent and one-space Backspace patches/tests were undone and moved to proposed Phase 75.1. Previous CI runs predate the revert; post-revert Build APK `36625653233` is green on `902c9f6`, without claiming typing fixes. No device pass, PR or merge claimed. Read `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md`; wait for scope answers and “Start Phase 75.1”.
 
 *What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`
 §5) has 64, 66.1, 67.1, 69.1–69.4, 70.1, 71.1, 72.1 and 73.1–73.9 delivered, owner-tested and

@@ -166,7 +166,7 @@ class SettingsManager(private val context: Context) {
     // Phase 27.3 — autocomplete surfaces. Defaults: ghost ON, strip ON,
     // panel on-demand (⌄ more), 120 ms beat.
     val completionMasterFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_MASTER] ?: true }
-    val completionGhostFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_GHOST] ?: true }
+    val completionGhostFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_GHOST] ?: false }
     val completionStripFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_STRIP] ?: true }
     val completionPanelFlow: Flow<Boolean> = context.dataStore.data.map { it[COMPLETION_PANEL] ?: true }
     val completionDebounceMsFlow: Flow<Int> = context.dataStore.data.map { it[COMPLETION_DEBOUNCE_MS] ?: 120 }
@@ -187,7 +187,7 @@ class SettingsManager(private val context: Context) {
         context.dataStore.edit { it[FEEDBACK_EXIT_PROMPT] = v }
     }
 
-    val fontSizeFlow: Flow<Float> = context.dataStore.data.map { it[FONT_SIZE] ?: 14f }
+    val fontSizeFlow: Flow<Float> = context.dataStore.data.map { it[FONT_SIZE] ?: 16f }
     val fontFamilyFlow: Flow<String> = context.dataStore.data.map { it[FONT_FAMILY] ?: "Monospace" }
     val tabSizeFlow: Flow<Int> = context.dataStore.data.map { it[TAB_SIZE] ?: 4 }
     val lineNumbersFlow: Flow<Boolean> = context.dataStore.data.map { it[LINE_NUMBERS] ?: true }

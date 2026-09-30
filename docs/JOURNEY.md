@@ -1,5 +1,7 @@
 # CodeC — the full journey
 
+**2026-09-30 — Owner requested a focused typing phase.** After 65.1/74.1, the owner said code writing needs more attention and asked to undo the code-writing fixes from that chat. The Python `def`-works/`for`-does-not indentation report and the multi-space Backspace report remain open; the first attempt's analyzer and Backspace patches/tests were reverted on `arena/01a0ee39-codec`. The independent navigation decision and 74.1 Settings changes (16sp editor default, ghost default off, all Settings groups initially collapsed) are retained. Proposed **75.1 Editor typing reliability** is documentation/research only; wait for the owner's MCQ scope answers and explicit start instruction before implementing. Earlier green CI runs predate the revert; post-revert Build APK run `36625653233` is green on `902c9f6`, validating the restored source but not the typing behavior. Details: [`PHASE_75_1_EDITOR_TYPING.md`](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
+
 > **Owner update — 2026-09-27:** Top-level appearance looks good; further device
 > testing for this delivery is declined, **not passed**. The owner explicitly
 > authorised merging via [PR #86](https://github.com/pabi277/CodeC/pull/86),
@@ -1311,3 +1313,7 @@ state), and the branch went to `main` through PR #93 — twenty-nine commits, fr
 console to the `restartInput()` bracket, all of them answers to things he saw on his phone. Of the
 polish series, five drafts remain (shell, editor chrome, packages, git, settings). Which one comes
 next is his to say; the next chat's first job is to read, verify, and ask.
+
+## 2026-09-30 — Settings search reaches bespoke controls
+
+The owner asked to make the Settings search improvement recommended after the Phase 65/74 review, update the docs, and merge with `main`. The gap was concrete: search indexed the 64 standard Settings rows and section titles, but the three custom form groups—terminal Extra-Key shortcuts, repository trust/status, and GitHub credentials—had no searchable field terms. Added a separate fixed-descriptor index for those forms. Queries such as `token`, `commit email`, `keyring`, `OpenPGP`, and `custom shortcut` now surface the existing section; no entered values, credentials, repository URL, or runtime status is read by the search index. The standard 64-row audit catalog remains unchanged, and the previously approved Phase 74 defaults/folding plus Phase 65 nav behavior are preserved. Regression coverage and docs updated. PR #96 was opened as explicitly requested. Build APK round 1 `36673923025` exposed one bad test expectation—not a behavior defect—because `repository` also matches the static GitHub permissions descriptor. Corrected; round 2 ✅ GREEN `36674331533` on `f29f3f3`. Owner-authorized merge to `main` is in progress; merge SHA and post-merge check remain to record.

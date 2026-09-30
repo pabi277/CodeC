@@ -1,7 +1,6 @@
 # Proposed Phase 74.1 — Settings, support and final consistency
 
-**Status: discussion draft, not approved for implementation.** One part = one
-future chat. No deadline, dependency, new control or replacement engine promised.
+**Status: owner-approved and implemented; search-discoverability follow-up authorized 2026-09-30.** See [`docs/chat-phase74/README.md`](../chat-phase74/README.md). Initial CI round 1 `36607240454` caught a test declaration syntax error (missing `()`); corrected, round 2 ✅ GREEN `36607641208` on `52420c1`. Follow-up PR #96 Build APK round 1 failed on a bad expected count; round 2 ✅ GREEN `36674331533` on `f29f3f3`. Owner authorized merge with `main`; merge SHA and post-merge status are recorded in the chat README.
 
 ## Copy into a new chat
 
@@ -32,8 +31,7 @@ Keep the searchable sections and finish a truthful control inventory. Review mis
 
 Suggested starting point, not your decision: Discuss both explicitly: guide removal does not authorise deleting feedback or changing reset semantics. Keep credentials and destructive actions clearly separated.
 
-**Owner answer:** pending. Record it verbatim here when given; do not present the
-recommendation as approval.
+**Owner instruction:** “All recommended approved”. Keep the exit-feedback prompt and “Show the welcome screen again” behavior unchanged. Additional approved choices: editor font default 16sp; every Settings group always starts collapsed; inline ghost text defaults off.
 
 ## Implementation and exit, after agreement
 

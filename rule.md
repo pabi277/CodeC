@@ -1,3 +1,5 @@
+> **Owner's latest phase instruction — 2026-09-30:** preserve the independent 65.1 navigation and 74.1 Settings decisions, undo the code-writing/typing patches from that chat, and prepare a dedicated typing-only editor phase (proposed 75.1). The fixes are undone and not approved for reimplementation yet. Await the owner's answers to the phase MCQs and explicit “Start Phase 75.1” before coding. The §3 merge gate remains unchanged.
+>
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
 > progress stays in Terminal/Output, no new app-wide indicator. These select

@@ -1,3 +1,5 @@
+> **2026-09-29 — Python indentation and Backspace report (deferred):** the owner reported that Python `def` indents but `for` does not, and Backspace over indentation jumps by a whole indent instead of one space. Initial source fixes were later undone at the owner's request so the writing path can be handled as a single focused editor phase. Current post-revert Build APK run `36625653233` is green on `902c9f6`; it validates the restored source, not the typing behavior. These issues remain unresolved; see [Phase 75.1](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
+
 > **2026-09-27 update — Phase 64:** installation no longer locks tabs or the
 > editor drawer, and the guide/tour/typing tips are removed. “Help & guide” and
 > “Reset tips” no longer exist. To inspect/retry userland setup, use Terminal’s
