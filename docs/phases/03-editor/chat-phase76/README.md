@@ -79,4 +79,5 @@ Device checks: [DEVICE_ROUND.md](DEVICE_ROUND.md).
 - Code commit `424e327`: `ui/ai/*` (12 files), rail slot, editor wiring, `AIza` shape redaction, 6 new test files + side-panel pins moved.
 - **CI round 1 — `36755116931` 🔴 red for-cause:** everything compiled; 2599 host tests ran, **1 failed** — `TypeAdoptionTest › hardcoded platform monospace survives only in the font-setting maps`. The preview box used `FontFamily.Monospace`; the house law (Phase 50 type system) is that code text uses the bundled JetBrains Mono via `CodecType.codeFamily`. Fixed in `AiPanel.SentText`. Lesson: grep `TypeAdoptionTest`/`TokenAdoptionTest` scopes before styling new text.
 - Same follow-up commit: the stored-key **literal** scrub (`FeedbackInput.extraSecrets`, loaded in `FeedbackSectionCard`) — the Level 0 record §4.2 requires both shape and literal; an earlier draft of this phase had dropped the literal half, caught against the record before the docs commit.
-- Round 2: see the final report / NEXT_STEPS head.
+- **CI round 2 — `36755705695` ✅ GREEN** on `813dfd1` (assemble + unit tests + lint, 8m 23s). Artifacts: `CodeC-IDE-release` 6,372,115 B (+79,588 B vs the Phase 75.3 build's 6,292,527 B), `CodeC-IDE-debug` 25,628,418 B.
+- Device round: [DEVICE_ROUND.md](DEVICE_ROUND.md) — owed.

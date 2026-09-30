@@ -1,6 +1,6 @@
 # Phase 76 — device round 1 (AI Level 1, read-only Gemini helper)
 
-Build: the `Build APK` artifact of the Phase 76 tip on `arena/01a0f34c-codec`.
+Build: `CodeC-IDE-release` (or `-debug`) from **Build APK run `36755705695`** (tip `813dfd1`, ✅ green) on `arena/01a0f34c-codec` — https://github.com/pabi277/CodeC/actions/runs/36755705695
 You need: a Gemini API key from https://aistudio.google.com/apikey, internet,
 and a CodeC project with a file that can fail (e.g. a Python file with a typo).
 
