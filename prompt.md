@@ -71,7 +71,7 @@ Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.
 and `docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md` (binding AI laws D1–D6, O1–O3).
 
 *Status:* Phase 77 is 🚧 IMPLEMENTED (✨ slot = AI home; floating bubble; HIDDEN/HALF/FULL chat sheet;
-"Explain with AI" on a failed run; both Output-conflict variants A/B built). Owed: the owner's device
+"Explain with AI" on a failed run; both Output-conflict variants A/B built). CI ✅ green `36784685021`. Owed: the owner's device
 round — he picks A or B, then the loser (and the temporary A/B rows in ✨ home) is deleted and the pick
 recorded in the part docs. "Ask AI" in the selection menu was skipped (Sora has no add-item API).
 Do NOT merge without the owner's command. Levels 2+ of the AI roadmap remain unauthorized. Next free

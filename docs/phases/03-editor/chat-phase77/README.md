@@ -1,6 +1,6 @@
 # Phase 77 — AI UI for phones: floating AI button + bottom chat sheet
 
-> **Status: 🚧 BUILT, CI + device round pending (2026-10-01).** All three parts are
+> **Status: 🚧 BUILT, CI ✅ green `36784685021` (tip `3661264`), device round pending (2026-10-01).** All three parts are
 > implemented; both Output-conflict variants (A/B) are in the build for the owner to
 > pick on the phone — see `DEVICE_ROUND.md`. Not merged. Builds on
 > [Phase 76](../chat-phase76/README.md) (AI Level 1, ✅ device-passed, merged).
