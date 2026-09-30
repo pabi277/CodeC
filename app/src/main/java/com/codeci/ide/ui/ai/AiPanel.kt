@@ -44,11 +44,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.ui.theme.CodecTokens.Space
 
 /**
@@ -297,7 +297,7 @@ private fun SentText(text: String) {
             .padding(CodecTokens.space(Space.S))
     ) {
         SelectionContainer {
-            Text(text, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+            Text(text, fontFamily = CodecType.codeFamily, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

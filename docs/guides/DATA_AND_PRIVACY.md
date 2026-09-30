@@ -18,7 +18,8 @@
    ONLY when you choose a Share/Copy/Send-report action.
 2. **Nothing leaves the device unless you start it.** Every outbound
    connection CodeC makes is one you triggered, listed in the table below
-   under INTERNET. If you never clone/fetch/install/update, CodeC never
+   under INTERNET. If you never clone/fetch/install/update or send an AI
+   helper request, CodeC never
    sends a byte (verify: watch a cold start + a file open through a proxy
    or logcat — only `api.github.com`/your git host/curl mirrors appear,
    and only from the actions named).
@@ -55,11 +56,37 @@ not blocked. **Settings → About → Replay the CodeC introduction** shows the 
 again on the next launch. The full permission table and
 the implementation behind every claim remain below.
 
+## The AI helper (Phase 76) — what it sends, where, and what it keeps
+
+The side panel's ✨ slot is an optional, read-only Gemini helper that uses
+**your own** Google Gemini API key. Your use of Gemini is covered by your own
+agreement with Google ([Gemini API terms](https://ai.google.dev/gemini-api/terms)).
+
+- **Sent only when you tap Send** (or **Test connection**, which sends one
+  fixed line and no code). Every request is shown first, word for word: the
+  selection you chose or the tail of a failed run, plus CodeC's fixed
+  instruction. Nothing is sent in the background.
+- **Sent only to** `generativelanguage.googleapis.com`, with your key in a
+  request header (never in the URL), and `store:false` so Google does not keep
+  the conversation server-side. On Google's free tier Google may use what you
+  send to improve its products and human reviewers may read it; the panel says
+  so at setup and in every preview.
+- **Kept on the phone:** your key, encrypted with an Android Keystore
+  AES-256-GCM key, in `no_backup/ai/` — never backed up, never written in
+  plain text; if it can't be decrypted it is deleted and you are asked again.
+  Beside it, the non-secret model name and the date you confirmed 18+ and
+  Google's terms. **Delete key** removes the key, its Keystore entry and that
+  confirmation.
+- **Not kept:** questions and answers live in memory only and vanish on New
+  question, a project switch, or when the app closes.
+- **Not available** in single-file mode — only inside an open CodeC project.
+- Feedback reports scrub Google API keys (`AIza…`) and your stored key.
+
 ## Permissions — every one, why, and the code that uses it
 
 | Permission (short name) | Why it exists (one line) | Reader in `app/src/main/java` |
 |---|---|---|
-| `INTERNET` | Repo/package downloads, git clone/fetch/push, the SHA-256-verified updater (42.1), the LAN dev-server surface | `HttpURLConnection` |
+| `INTERNET` | Repo/package downloads, git clone/fetch/push, the SHA-256-verified updater (42.1), the LAN dev-server surface, the AI helper's Gemini requests (Phase 76, only on Send / Test connection) | `HttpURLConnection` |
 | `ACCESS_NETWORK_STATE` | "Is any network up?" before fetches; the LAN-address hint | `ConnectivityManager` |
 | `ACCESS_WIFI_STATE` | The classic Wi-Fi fallback for `LanAddressProvider` (37.1) | `WifiManager` |
 | `READ_EXTERNAL_STORAGE` | Opening your project folders on legacy devices | `READ_EXTERNAL_STORAGE` |
@@ -114,6 +141,8 @@ in the manifest — the test above fails if any ever is.
 - `files/CodeC/tcc out/` — build output; clears with your project clean
 - `files/CodeC/usr/` + `files/CodeC/modules/` — the compiler userland +
   packages; re-downloadable
+- `no_backup/ai/` — the AI helper's encrypted key + its non-secret settings
+  (Phase 76); never backed up
 
 ## How to verify a claim in this document
 

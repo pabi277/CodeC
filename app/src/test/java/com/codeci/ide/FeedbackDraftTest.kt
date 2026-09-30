@@ -215,6 +215,16 @@ class FeedbackDraftTest {
     }
 
     @Test
+    fun `Phase 76 - the stored AI key literal is scrubbed whatever its format`() {
+        // A future key format no shape knows is still caught by its literal.
+        val key = "future-format.key_0123456789"
+        val redacted = FeedbackDraft.redact(listOf("got $key back"), extraSecrets = listOf(key))
+        assertFalse(redacted[0].contains(key))
+        // Too-short "secrets" are ignored so they cannot shred the report.
+        assertEquals(listOf("abc def"), FeedbackDraft.redact(listOf("abc def"), extraSecrets = listOf("abc")))
+    }
+
+    @Test
     fun `a custom files dir shortens through the factory`() {
         val paths = FeedbackDraft.RedactionPaths.forApp("/data/data/com.codeci.ide/files")
         val redacted = FeedbackDraft.redact(

@@ -2121,5 +2121,12 @@ Three fixes work together:
 
 **Status (2026-09-30):** `Build APK` ✅ GREEN on `26dbf9e` (`36701799600`, 7m 48s); owner device pass ✅ (*"Ok device test passed … You can complete the docs part and merged"*); merged to `main` via [PR #98](https://github.com/pabi277/CodeC/pull/98).
 
+## 52. AI helper: "the ✨ panel only says open a project" / "Google rejected this API key" / "my saved key can't be read anymore" (Phase 76)
 
-
+- **"Open a project to use the AI helper"** — by design (owner decision D5) the helper works only in a project opened in the editor (Projects hub ⋮ → Open in editor), never in single-file mode or the scratch editor. Gate: `AiGate.availability(EditorOpenMode, …)`.
+- **"Google rejected this API key"** — the key was mistyped, revoked, or has no Gemini access. Create a key at https://aistudio.google.com/apikey, then ✨ → ⚙ → Delete key → paste the new one. HTTP 401/403 and `API_KEY_INVALID` map here (`AiErrors.forHttp`).
+- **"This model name was not found"** — ✨ → ⚙ → set the model back to `gemini-3.8-flash` (or a current id from Google's model list) → Save model → Test connection.
+- **"Gemini is not available for this key here"** — Google refused the region or billing state (`FAILED_PRECONDITION` / "location is not supported"). In the EEA, Switzerland and the UK only paid keys are permitted.
+- **"Your saved key can't be read anymore"** — the Android Keystore entry was lost (OS update, restore to a new phone, OEM keystore reset). CodeC deleted the unreadable key on purpose (no plaintext fallback, decision D3). Enter the key again; the 18+ confirmation is asked again too.
+- **The answer ends with "cut short"** — Gemini hit the output limit (`MAX_TOKENS`) or you tapped Stop. Ask a narrower question or select less code.
+- **The answer vanished** — by design (D6): answers are never saved; New question, a project switch, or closing the app clears them. Copy what you need.

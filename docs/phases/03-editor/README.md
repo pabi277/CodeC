@@ -22,3 +22,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [32](chat-phase32/) | Phone canvas — see the code |
 | [34](chat-phase34/) | Official file icons |
 | [35](chat-phase35/) | Editor typing feel |
+| [76](chat-phase76/) | AI Level 1 — read-only Gemini helper (fifth rail slot) |

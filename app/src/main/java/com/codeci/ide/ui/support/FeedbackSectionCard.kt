@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.codeci.ide.BuildConfig
+import com.codeci.ide.ui.ai.AiKeyStore
 import com.codeci.ide.ui.crash.CrashLog
 import com.codeci.ide.ui.projects.EditorLaunchState
 import com.codeci.ide.ui.projects.GitCredentialsStore
@@ -101,6 +102,7 @@ fun FeedbackSectionCard(
     var crashKnown by remember { mutableStateOf(false) }
     var lastProject by remember { mutableStateOf<String?>(null) }
     var secret by remember { mutableStateOf<String?>(null) }
+    var aiKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         // One sink, one reader list: the crash record comes from the SAME
@@ -113,6 +115,9 @@ fun FeedbackSectionCard(
                 runCatching { gitStore.stored().token.ifBlank { null } }.getOrNull()
             )
         }
+        // Phase 76 — the AI helper's key, decrypted ONLY so its literal can be
+        // scrubbed from log/crash lines (Level 0 record §4.2). Never rendered.
+        aiKey = withContext(Dispatchers.IO) { runCatching { AiKeyStore(context).loadKey() }.getOrNull() }
         crashRecord = loaded.first
         crashKnown = true
         lastProject = loaded.second
@@ -141,6 +146,7 @@ fun FeedbackSectionCard(
             crashRecord = if (state.includeCrash) crashRecord else null,
             maxChars = maxChars,
             secretToScrub = secret,
+            extraSecrets = listOfNotNull(aiKey),
             paths = FeedbackDraft.RedactionPaths.forApp(context.filesDir.absolutePath)
         )
     )

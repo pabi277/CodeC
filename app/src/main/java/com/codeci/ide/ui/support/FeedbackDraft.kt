@@ -24,6 +24,8 @@ import com.codeci.ide.ui.projects.GitRedactor
  *   FULL REPORT escape hatch, which has no length limit.
  * @param secretToScrub the stored git token, ONLY so [FeedbackDraft.redact]
  *   can scrub its literal from log/crash lines. It is never rendered.
+ * @param extraSecrets Phase 76 — other stored secrets scrubbed the same way
+ *   (today: the AI helper's Gemini key, whatever its format). Never rendered.
  */
 data class FeedbackInput(
     val appVersion: String,
@@ -41,6 +43,7 @@ data class FeedbackInput(
     val crashRecord: String? = null,
     val maxChars: Int = FeedbackDraft.WHATSAPP_BUDGET,
     val secretToScrub: String? = null,
+    val extraSecrets: List<String> = emptyList(),
     val paths: FeedbackDraft.RedactionPaths = FeedbackDraft.RedactionPaths()
 )
 
@@ -130,12 +133,12 @@ object FeedbackDraft {
         // Redaction BEFORE truncation (the law): a budget cut can never keep
         // a secret a later line would have cut.
         val logAll = if (i.includeLog && i.logTail.isNotEmpty()) {
-            redact(i.logTail, i.secretToScrub, i.paths).takeLast(MAX_LOG_LINES)
+            redact(i.logTail, i.secretToScrub, i.paths, i.extraSecrets).takeLast(MAX_LOG_LINES)
         } else {
             emptyList()
         }
         val crashAll = if (i.includeCrash && !i.crashRecord.isNullOrBlank()) {
-            redact(i.crashRecord.lines(), i.secretToScrub, i.paths).take(MAX_CRASH_LINES)
+            redact(i.crashRecord.lines(), i.secretToScrub, i.paths, i.extraSecrets).take(MAX_CRASH_LINES)
         } else {
             emptyList()
         }
@@ -219,11 +222,16 @@ object FeedbackDraft {
     fun redact(
         lines: List<String>,
         secret: String? = null,
-        paths: RedactionPaths = RedactionPaths()
+        paths: RedactionPaths = RedactionPaths(),
+        extraSecrets: List<String> = emptyList()
     ): List<String> {
         if (lines.isEmpty()) return lines
-        val shaped = lines.map(::redactTokenShapes)
-        return GitRedactor(secret).redactAll(shaped).map { shortenPaths(it, paths) }
+        var scrubbed = GitRedactor(secret).redactAll(lines.map(::redactTokenShapes))
+        // Exact literals first-class too: a secret whose format no shape knows.
+        for (extra in extraSecrets) {
+            if (extra.length >= 8) scrubbed = GitRedactor(extra).redactAll(scrubbed)
+        }
+        return scrubbed.map { shortenPaths(it, paths) }
     }
 
     /** GitHub classic PAT (real ones are 36–40 chars; 8 is the safer floor — a truncated paste is still a secret). */
