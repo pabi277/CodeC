@@ -1,4 +1,16 @@
-> **Owner's latest phase instruction — 2026-09-30:** preserve the independent 65.1 navigation and 74.1 Settings decisions, undo the code-writing/typing patches from that chat, and prepare a dedicated typing-only editor phase (proposed 75.1). The fixes are undone and not approved for reimplementation yet. Await the owner's answers to the phase MCQs and explicit “Start Phase 75.1” before coding. The §3 merge gate remains unchanged.
+> **Owner's latest phase instruction — 2026-09-30 (later the same day): Phase 75.1 is STARTED
+> and IMPLEMENTED.** His words: *“1st you read this file than find the problems with relevant
+> with this and fix after that i will test on device give you latter instructions”* — which is the
+> explicit go-ahead the note below was waiting for. Scope taken as the phase doc's recommended
+> narrow one: the two reported defects (Python block indent on both Enter routes; one space per
+> Backspace inside indentation) plus directly affected regressions — no editor redesign, no new
+> Settings key, no dependency, the sora replay path untouched, non-Python brace indentation left
+> as it is (its unit finding is recorded for the owner to call). The 65.1 navigation and 74.1
+> Settings decisions below remain preserved and untouched. **The device round is his; the §3 merge
+> gate is unchanged — no PR, no merge, nothing to `main` until he commands it.** Record:
+> `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` §“Implementation record”.
+>
+> **Owner's earlier instruction — 2026-09-30, superseded by the block above:** preserve the independent 65.1 navigation and 74.1 Settings decisions, undo the code-writing/typing patches from that chat, and prepare a dedicated typing-only editor phase (proposed 75.1). The fixes are undone and not approved for reimplementation yet. Await the owner's answers to the phase MCQs and explicit “Start Phase 75.1” before coding. The §3 merge gate remains unchanged.
 >
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation

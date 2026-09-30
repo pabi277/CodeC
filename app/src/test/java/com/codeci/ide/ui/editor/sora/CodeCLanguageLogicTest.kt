@@ -16,12 +16,66 @@ class CodeCLanguageLogicTest {
         assertEquals(1, CodeCLanguage.indentAdvanceFor("if (x) {   "))
     }
 
+    /**
+     * Phase 75.1 — this pin moved, with its reason. Sora's contract for
+     * `Language.getIndentAdvance` is a *delta count of indent spaces* (0.24.6
+     * `CodeEditor.commitText`: the copied indentation plus the delta is handed
+     * straight to `TextUtils.createIndent`), so a Python level is the tab size
+     * and not `1`. And the Python branch could never run at all until 75.1 —
+     * the adapter called this helper without its language argument, which is
+     * the "`def` indents, `for` does not" the owner reported.
+     */
     @Test
-    fun `python colon adds one level but comments do not`() {
-        assertEquals(1, CodeCLanguage.indentAdvanceFor("def f():", LanguageType.PYTHON))
+    fun `a python block header asks for one level in spaces`() {
+        assertEquals(4, CodeCLanguage.indentAdvanceFor("def f():", LanguageType.PYTHON))
+        assertEquals(4, CodeCLanguage.indentAdvanceFor("for item in items:", LanguageType.PYTHON))
+        assertEquals(
+            2,
+            CodeCLanguage.indentAdvanceFor("for item in items:", LanguageType.PYTHON, indentStep = 2)
+        )
+        assertEquals(4, CodeCLanguage.indentAdvanceFor("for i in items:  # walk", LanguageType.PYTHON))
         assertEquals(0, CodeCLanguage.indentAdvanceFor("# note:", LanguageType.PYTHON))
+        assertEquals(0, CodeCLanguage.indentAdvanceFor("x:", LanguageType.PYTHON))
         // Non-python languages do not treat ':' as an opener.
         assertEquals(0, CodeCLanguage.indentAdvanceFor("case 3:", LanguageType.C))
+    }
+
+    @Test
+    fun `the brace delta keeps the number it shipped with`() {
+        // Phase 75.1 is a Python typing fix; the brief says the non-Python
+        // brace indentation stays as it is. Its 1-space delta (a level would be
+        // the tab size) is recorded in the phase doc as found-not-changed, for
+        // the owner to call in its own pass.
+        assertEquals(1, CodeCLanguage.indentAdvanceFor("int main() {", LanguageType.C, 4))
+        assertEquals(0, CodeCLanguage.indentAdvanceFor("int main()", LanguageType.C, 4))
+    }
+
+    @Test
+    fun `both Enter routes agree on which line opens a python block`() {
+        // The bug was two rules that could not see each other. Whatever the
+        // line, Sora's delta and the VM's level must answer the same question.
+        for (line in listOf(
+            "def f():",
+            "for item in items:",
+            "    while True:",
+            "else:",
+            "try:",
+            "for i in x:  # c",
+            "# note:",
+            "x:",
+            "d[\"k\"]:",
+            "if x: print(1)",
+            "plain = 1",
+            "}",
+            ""
+        )) {
+            val soraAdds = CodeCLanguage.indentAdvanceFor(line, LanguageType.PYTHON, 4) > 0
+            assertEquals(
+                "the two Enter routes disagree on: $line",
+                com.codeci.ide.ui.editor.SmartTyping.opensPythonBlock(line),
+                soraAdds
+            )
+        }
     }
 
     @Test

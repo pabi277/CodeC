@@ -127,6 +127,18 @@ fun SoraEditorHost(
         editor.apply {
             setSelectionHandleStyle(HandleStyleDrop(hostContext))
             setUndoEnabled(false) // VM EditorUndoManager is canonical
+            // Phase 75.1 — the owner's Backspace law: one space per press.
+            // `deleteEmptyLineFast` is ON in sora by default and answers a
+            // single Backspace on a line that holds nothing but indentation
+            // with "the whole indent, plus the line break" — the reported
+            // "backspace at the indentation of a for loop jumps back by the
+            // whole indent". `deleteMultiSpaces` is pinned to its one-space
+            // value so a future default can never turn one press into a
+            // tab-width erase. What an IME asks for by itself is corrected in
+            // the buffer instead (SmartTyping.handleIndentBackspace), so this
+            // stays a preference about sora's own behaviour, nothing more.
+            props.deleteEmptyLineFast = false
+            props.deleteMultiSpaces = 1
             // Phase 35.3 — disable sora's animated cursor travel. The blink
             // period is switched to solid only during active typing below.
             setCursorAnimationEnabled(false)
@@ -260,6 +272,12 @@ fun SoraEditorHost(
             com.codeci.ide.ui.editor.snippets.SnippetLibrary.warmUp(appContext, listOf(language))
             TextMateSupport.createLanguage(language, fileName)
         }
+        // Phase 75.1 — sora asks the LANGUAGE for the indent delta, in spaces,
+        // and the editor's own tab width is the number the VM rule is given per
+        // call. A fresh language must therefore start on the current width, or
+        // the IME route and the CodeC Keys route would indent by different
+        // amounts on a file opened after a Settings change.
+        lang.indentStepSpaces = editor.tabWidth
         // Fresh Language per editor (sora: one language instance serves one editor).
         editor.setEditorLanguage(lang)
     }
@@ -294,7 +312,13 @@ fun SoraEditorHost(
             }
         )
     }
-    LaunchedEffect(tabSize) { editor.setTabWidth(tabSize) }
+    LaunchedEffect(tabSize) {
+        editor.setTabWidth(tabSize)
+        // Phase 75.1 — the language answers sora in SPACES, so it has to know
+        // the width the editor just moved to. One step for every Enter route.
+        val attached = editor.editorLanguage
+        if (attached is CodeCLanguage) attached.indentStepSpaces = tabSize
+    }
     LaunchedEffect(wordWrap) { editor.setWordwrap(wordWrap) }
     LaunchedEffect(showLineNumbers) { editor.setLineNumberEnabled(showLineNumbers) }
 

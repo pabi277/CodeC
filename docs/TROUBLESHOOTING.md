@@ -2028,3 +2028,30 @@ kept the screen's empty tail so a shrinking zoom pushed the prompt into history.
 (`keepAtLeast`) and `TerminalBuffer.resize` (blank tail dropped); record in the 71.1 brief. Not
 device-verified.
 
+## 49. "`def` auto-indents but `for` does not" / "backspace at the indentation jumps back by the whole indent" (owner report, 2026-09-30, Phase 75.1)
+
+**The `def`/`for` difference.** Pressing Enter is answered twice in CodeC, and until Phase 75.1
+the two answers never met. The system keyboard's Enter belongs to the editor widget: it copies the
+line's current indentation and asks the language for one more step. CodeC answered that question in
+its C default, so for Python the extra step was always zero. The in-app keyboard's Enter belongs to
+the editor's own typing rules — which do know Python — but those rules only run when the buffer grew
+by a single character, which stops being true as soon as a copied indentation rides along. A `def`
+at the left margin therefore indented; a `for` one level inside it did not. Now one rule decides it
+for both keyboards: a Python line opens a block when it ends with `:` (after any `#` comment) and
+starts with one of the block keywords — `def`, `class`, `for`, `while`, `if`, `elif`, `else`, `try`,
+`except`, `finally`, `with`, `async`, `match`, `case`. A comment, a dict key, a stray colon or a
+colon inside a string still invents nothing.
+
+**Backspace taking the whole indent.** The editor widget ships a fast-delete for this: one press on
+a line that holds nothing but indentation removes the indentation *and* joins the line above. Inside
+a Python body that is exactly "it jumps back by the whole indent". CodeC now turns that fast path off
+and, whatever the keyboard asks for, a Backspace inside leading indentation removes **one space** —
+four presses walk one level down, a fifth joins the line as before. Normal typing is untouched: a
+selection deletes the selection, backspace in code and prose deletes what it always did, `(|)` still
+deletes both brackets, and the ⌫ flick-up on the in-app keyboard is still a word delete.
+
+**If it still misbehaves on a phone, say which keyboard.** The device is the only place this can be
+proved, and what a particular keyboard sends cannot be seen from the source. Useful details: the
+keyboard's name, the exact line typed, what Enter produced, and what one Backspace press removed —
+plus the editor transcript if the wrong thing happened mid-word (the completion ghost rides the same
+two routes). Nothing in the Phase 75.1 record claims a device pass; the owner's round decides.

@@ -2,6 +2,7 @@ package com.codeci.ide.ui.editor.sora
 
 import android.os.Bundle
 import com.codeci.ide.ui.editor.CodeCompletionEngine
+import com.codeci.ide.ui.editor.SmartTyping
 import com.codeci.ide.ui.editor.lsp.LspManager
 import com.codeci.ide.ui.editor.lsp.LspRequestContext
 import com.codeci.ide.ui.utils.LanguageType
@@ -114,9 +115,10 @@ class LineColumnCursor(private val text: String) {
  *   results to sora's NATIVE panel at the caret. The TextMate language is
  *   created with `collectIdentifiers = false` — its own identifier
  *   completion never runs.
- * - **Indent:** [indentAdvanceFor] gives one level after a line that opens a
- *   block (`{`, or `:` for Python); sora preserves the current line's
- *   indentation itself.
+ * - **Indent:** [indentAdvanceFor] is the delta in spaces on the new line
+ *   after a line that opens a block; sora preserves the current line's own
+ *   indentation. The Python block test is the VM's own
+ *   [SmartTyping.opensPythonBlock] (Phase 75.1) — one rule, both Enter routes.
  * - **Symbol pairs:** standard C-family pairs + quotes, so `(` auto-closes
  *   and typing `)` over `)` skips (the 25.1 device evidence).
  * - **Formatter:** no-op — CodeC formats through the VM (clang-format /
@@ -218,8 +220,27 @@ class CodeCLanguage private constructor(
 
     override fun getIndentAdvance(content: ContentReference, line: Int, column: Int): Int {
         if (line !in 0 until content.lineCount) return 0
-        return indentAdvanceFor(content.getLine(line))
+        // Phase 75.1 — the language travels with the call, and so does the
+        // caret column. This line used to run `indentAdvanceFor` on its C
+        // default, so on the IME route a Python block header got a delta of
+        // zero and the new line kept ONLY the indentation Sora copied — the
+        // owner's "def auto-indents, for does not" (a `def` at column 0 left
+        // the whole decision to the VM rule, which does know Python; a `for`
+        // one level down never reached it, because the copied indent makes the
+        // change longer than the single character that rule looks for).
+        val lineText = content.getLine(line)
+        val head = if (column in 0 until lineText.length) lineText.substring(0, column) else lineText
+        return indentAdvanceFor(head, language, indentStepSpaces)
     }
+
+    /**
+     * Phase 75.1 — spaces in one indent level, kept in step with
+     * `CodeEditor.setTabWidth` by the host. Sora's contract for
+     * [getIndentAdvance] is a count of SPACES, not of levels, so the host's
+     * tab size has to reach the rule that answers it.
+     */
+    @Volatile
+    var indentStepSpaces: Int = INDENT_STEP_DEFAULT
 
     override fun useTab(): Boolean = false
 
@@ -236,6 +257,9 @@ class CodeCLanguage private constructor(
     }
 
     companion object {
+
+        /** One indent level in spaces, before the editor's tab size is known. */
+        const val INDENT_STEP_DEFAULT = 4
 
         /**
          * Build the language for a file. The TextMate grammar set for
@@ -254,15 +278,30 @@ class CodeCLanguage private constructor(
             return CodeCLanguage(language, fileName, textMate, CodeCAnalyzer(language))
         }
 
-        /** Pure indent rule: one more level after a block-opener. Host-tested. */
-        fun indentAdvanceFor(lineText: String, language: LanguageType = LanguageType.C): Int {
+        /**
+         * Pure indent rule, in SPACES of extra indentation for the line that
+         * follows the break (Sora's `Language.getIndentAdvance` contract is "a
+         * delta count of indent spaces"); Sora preserves the current line's own
+         * indentation itself. Host-tested.
+         *
+         * A brace opener keeps CodeC's long-standing delta — Phase 75.1 is a
+         * Python typing fix, and the owner's brief says the non-Python brace
+         * indentation stays as it is (its 1-vs-a-level unit is recorded there
+         * as a found-not-changed note for the owner to call). The Python rule
+         * is NOT restated here: [SmartTyping.opensPythonBlock] is the single
+         * owner for both Enter routes, which is what stops them drifting again.
+         */
+        fun indentAdvanceFor(
+            lineText: String,
+            language: LanguageType = LanguageType.C,
+            indentStep: Int = INDENT_STEP_DEFAULT
+        ): Int {
             val trimmed = lineText.trimEnd()
             if (trimmed.isEmpty()) return 0
             return when {
                 trimmed.endsWith('{') -> 1
-                language == LanguageType.PYTHON &&
-                    trimmed.endsWith(':') &&
-                    !trimmed.trimStart().startsWith("#") -> 1
+                language == LanguageType.PYTHON && SmartTyping.opensPythonBlock(trimmed) ->
+                    indentStep.coerceIn(2, 8)
                 else -> 0
             }
         }

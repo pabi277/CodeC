@@ -1352,7 +1352,8 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         newValue: TextFieldValue,
         autoIndent: Boolean = false,
         tabSize: Int = 4,
-        suppressAutoPair: Boolean = false
+        suppressAutoPair: Boolean = false,
+        indentBackspaceGuard: Boolean = true
     ) {
         val old = _codeText.value
         if (!_caretPlaced.value && (newValue.text != old.text || newValue.selection != old.selection)) {
@@ -1368,7 +1369,9 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         run {
             val lang = LanguageType.fromFileName(_fileName.value)
             val cfg = smartTypingConfig
-            val smart = SmartTyping.transform(old, next, lang, tabSize, cfg, suppressAutoPair)
+            val smart = SmartTyping.transform(
+                old, next, lang, tabSize, cfg, suppressAutoPair, indentBackspaceGuard
+            )
             if (smart !== next) next = smart
         }
         if (autoIndent && next === newValue && isSingleNewlineInsert(old, newValue)) {
@@ -1423,7 +1426,12 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         updateCode(
             com.codeci.ide.ui.editor.EditorKeySet.apply(key, _codeText.value, tabSize),
             autoIndent = autoIndent,
-            tabSize = tabSize
+            tabSize = tabSize,
+            // Phase 75.1 — the one-space Backspace law belongs to ⌫. The
+            // word-delete cap (the ⌫ flick-up, 26.2) means "a word": on an
+            // indented line its whole whitespace run IS the word, so it keeps
+            // deleting the run instead of being corrected to one space.
+            indentBackspaceGuard = key !is com.codeci.ide.ui.editor.EditorKey.DeleteWord
         )
     }
 
