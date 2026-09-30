@@ -435,4 +435,40 @@ class SmartTypingTest {
         assertEquals("x =  ", mid.text)
         assertEquals(5, mid.selection.start)
     }
+
+    // ---- Phase 75.3 device round 2: `{` after `int main()` ------------------
+
+    @Test
+    fun `typing open brace inside empty parens steps outside to form function body`() {
+        // Owner report: "in c coding I tried to write int main() then curly
+        // brackets it sent the brackets inside the first brackets like ({})".
+        val old = TextFieldValue("int main()", TextRange(9)) // int main(|)
+        // Step 1: single `{` insert at index 9.
+        val step1 = SmartTyping.transform(
+            old,
+            TextFieldValue("int main({)", TextRange(10)),
+            LanguageType.C, 4, SmartTyping.Config()
+        )
+        assertEquals("int main(){}", step1.text)
+        assertEquals(11, step1.selection.start) // int main(){|}
+
+        // Step 2: if Sora's SymbolPairMatch follows up with `}` inside `({|})`
+        // before the next frame's replay, keep `int main(){|}`.
+        val step2 = SmartTyping.transform(
+            step1,
+            TextFieldValue("int main({})", TextRange(11)),
+            LanguageType.C, 4, SmartTyping.Config()
+        )
+        assertEquals("int main(){}", step2.text)
+        assertEquals(11, step2.selection.start)
+
+        // Batch `{}` insert inside empty `(|)` also steps outside `)`.
+        val batch = SmartTyping.transform(
+            old,
+            TextFieldValue("int main({})", TextRange(10)),
+            LanguageType.C, 4, SmartTyping.Config()
+        )
+        assertEquals("int main(){}", batch.text)
+        assertEquals(11, batch.selection.start)
+    }
 }

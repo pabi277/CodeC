@@ -706,13 +706,18 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         // span rule as the ghost: the identifier run, or the longer line tail
         // the insert text literally continues. Tapping `#include <stdio.h>`
         // after typing `#in` used to delete only `in` and leave `##include …`.
-        val span = CodeCompletionEngine.replaceSpanLength(v.text, caret, item.insertText)
+        val insert = CodeCompletionEngine.suggestionInsertText(item)
+        val span = CodeCompletionEngine.replaceSpanLength(v.text, caret, insert)
         val start = item.replaceLength?.let { (caret - it).coerceIn(0, caret) }
             ?: (caret - span).coerceIn(0, caret)
-        val insert = item.insertText
         // Phase 30 — park the caret at the snippet's first tabstop / the
-        // expansion's first empty element when the item declares one.
-        val park = item.caretOffset?.takeIf { it in 0..insert.length } ?: insert.length
+        // expansion's first empty element when the item declares one and its
+        // full template is kept; a suggestion-word insert parks after the word.
+        val park = if (insert == item.insertText) {
+            item.caretOffset?.takeIf { it in 0..insert.length } ?: insert.length
+        } else {
+            insert.length
+        }
         val next = TextFieldValue(
             v.text.substring(0, start) + insert + v.text.substring(caret),
             TextRange(start + park)
@@ -1414,19 +1419,24 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
      * "arrow keys not working well". Reading `_codeText.value` at commit
      * time makes every tap AND every 40 ms repeat tick count exactly once.
      */
-    fun applyEditorKey(key: com.codeci.ide.ui.editor.EditorKey, autoIndent: Boolean = false, tabSize: Int = 4) {
+    fun applyEditorKey(
+        key: com.codeci.ide.ui.editor.EditorKey,
+        autoIndent: Boolean = false,
+        tabSize: Int = 4,
+        suppressAutoPair: Boolean = false
+    ) {
         placeCaretForKeyPress()
-        // Phase 30 device round (2026-09-07) — the ONLY caller is CodeC Keys'
-        // live-buffer commit path, i.e. a TYPING surface: `(` must close to
-        // `()` with the caret inside, exactly like the IME (where sora's own
-        // SymbolPairMatch does it). These commits never reach sora's matcher —
-        // they are programmatic VM edits replayed wholesale — so suppressing
-        // the pure rule here left the IME-free keyboard closing nothing. The
-        // editor key strip keeps its suppression (it has an explicit `()` cap).
+        // Phase 30 device round (2026-09-07) — CodeC Keys' live-buffer commit
+        // path is a TYPING surface (`suppressAutoPair = false` default): `(`
+        // closes to `()` with the caret inside, exactly like the IME.
+        // Phase 75.3 — `EditorKeysRow` also commits against the live buffer
+        // now (with `suppressAutoPair = true` because the strip has its own
+        // `()` / `{}` / `[]` caps and swipe-up single-char variants).
         updateCode(
             com.codeci.ide.ui.editor.EditorKeySet.apply(key, _codeText.value, tabSize),
             autoIndent = autoIndent,
             tabSize = tabSize,
+            suppressAutoPair = suppressAutoPair,
             // Phase 75.1 — the one-space Backspace law belongs to ⌫. The
             // word-delete cap (the ⌫ flick-up, 26.2) means "a word": on an
             // indented line its whole whitespace run IS the word, so it keeps

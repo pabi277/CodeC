@@ -400,6 +400,20 @@ fun SoraEditorHost(
                 // the VM back and ping-ponged replays — the 25.2 device
                 // crash. Same guard as pushToVm.
                 if (pushing[0]) return@EventReceiver
+                // Phase 75.3 — CodeEditor (`contentListeners[0]`) dispatches
+                // `SelectionChangeEvent(CAUSE_TEXT_MODIFICATION)` inside its own
+                // `afterInsert`/`afterDelete` BEFORE our `contentListener`
+                // (`contentListeners[1]`, `pushToVm`) runs. At that instant
+                // `syncedText` is still the pre-edit text while `event.left` is
+                // the post-edit cursor — pushing that pair into `updateCode`
+                // shifted `old.selection` ahead by 1 before `pushToVm` arrived
+                // and broke `SmartTyping` (`handleTypeOver`, `handleAutoPair`,
+                // `handleAutoIndent`) whenever any char followed the caret
+                // (e.g. `)` in `int main(|)`). `pushToVm` delivers the text and
+                // cursor together on the very next listener step.
+                if (event.cause == SelectionChangeEvent.CAUSE_TEXT_MODIFICATION) {
+                    return@EventReceiver
+                }
                 // A tap can dispatch selection before the platform focus
                 // callback. Mark it here so the exact sora-selected offset is
                 // retained rather than replaced with the typing origin.
@@ -410,22 +424,15 @@ fun SoraEditorHost(
                     // with the empty synced snapshot.
                     return@EventReceiver
                 }
-                // Selection-only move: reuse the synced snapshot — no O(n)
-                // copy. Clamp against the snapshot: an event racing the
-                // first replay (or arriving between replays) can carry
-                // indices for text the VM has never seen — a TextFieldValue
-                // whose selection exceeds its text is poison downstream.
-                // NOTE (device round 2026-09-05): deliberately NO
-                // `hasComposingText()` gate here or at apply time. On a soft
-                // keyboard (Gboard with suggestions) the IME holds a
-                // composing span around the current word for autocorrect, so
-                // composing is true during almost ALL normal phone typing and
-                // the gate kept the ghost permanently invisible while every
-                // other affordance (TAB ▸, pill, chips) still worked. The
-                // point-anchored inlay auto-shifts on replace, so real CJK
-                // composition cannot corrupt it either; G7's selection /
-                // find-dialog / run / scroll suppressions still hold.
                 val base = syncedText
+                // Phase 75.3 — if the VM already holds a newer buffer waiting
+                // for the next Compose frame's `AndroidView.update` replay (a
+                // strip key, suggestion chip, or SmartTyping correction), a
+                // selection event from Sora's pre-replay buffer must never push
+                // `syncedText` back over `_codeText.value` and erase the edit.
+                if (base != viewModel.codeText.value.text) {
+                    return@EventReceiver
+                }
                 val left = event.left
                 val right = event.right
                 val startIdx = left.index.coerceIn(0, base.length)
@@ -619,10 +626,18 @@ fun SoraEditorHost(
                     }
                     // Opening a file must not replay its default zero
                     // selection into a visible caret. A placed edit replays
-                    // only when sora does not already hold that selection.
-                    if (caretPlaced && target.selection != syncedSelection) {
-                        val start = target.selection.start.coerceIn(0, target.text.length)
-                        val end = target.selection.end.coerceIn(0, target.text.length)
+                    // when `target.selection` differs from `syncedSelection` OR
+                    // when `ed.text.replace` / `ed.setText` moved sora's real
+                    // cursor away from `target.selection` (Phase 75.3: e.g.
+                    // `SmartTyping.handleTypeOver` deletes the duplicate `)` in
+                    // `int main())`, shifting `ed.cursor.left` back to 9 while
+                    // `target.selection` and `syncedSelection` are both 10).
+                    val start = target.selection.start.coerceIn(0, target.text.length)
+                    val end = target.selection.end.coerceIn(0, target.text.length)
+                    val cursorDrifted = runCatching {
+                        ed.cursor.left != start || ed.cursor.right != end
+                    }.getOrDefault(false)
+                    if (caretPlaced && (target.selection != syncedSelection || cursorDrifted)) {
                         val indexer = ed.text.indexer
                         val startPos = indexer.getCharPosition(start)
                         val endPos = indexer.getCharPosition(end)
@@ -665,15 +680,20 @@ fun SoraEditorHost(
                 val indexer = ed.text.indexer
                 val startPos = indexer.getCharPosition(start)
                 val endPos = indexer.getCharPosition(end)
-                if (start == end) {
-                    ed.setSelection(startPos.line, startPos.column)
-                } else {
-                    ed.setSelectionRegion(
-                        startPos.line, startPos.column,
-                        endPos.line, endPos.column
-                    )
+                pushing[0] = true
+                try {
+                    if (start == end) {
+                        ed.setSelection(startPos.line, startPos.column)
+                    } else {
+                        ed.setSelectionRegion(
+                            startPos.line, startPos.column,
+                            endPos.line, endPos.column
+                        )
+                    }
+                    syncedSelection = target.selection
+                } finally {
+                    pushing[0] = false
                 }
-                syncedSelection = target.selection
                 // Phase 48 — same follow for the text-unchanged moves
                 // (find-next, quick fix, the CodeC Keys caret trackpad):
                 // the caret the VM just moved is the caret that must be on

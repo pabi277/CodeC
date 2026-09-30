@@ -69,19 +69,21 @@ class CompletionCapacityTest {
         assertTrue("C snippets for `for`: ${c.map { it.label }}", c.size >= 4)
         assertTrue(c.any { it.insertText.contains("for (") || it.insertText.contains("for(") })
 
-        // Phase 75.2 — in Python the completed block keyword (`for`, `for `) is
-        // quiet so the strip does not push `for value in iterable:\n    pass`
-        // once the user has already written the keyword; the prefix on the way
-        // there (`fo`) still surfaces the whole pack family plus the tail.
-        val py = CodeCompletionEngine.completions("fo", 2, LanguageType.PYTHON, "a.py")
+        val py = CodeCompletionEngine.completions("for", 3, LanguageType.PYTHON, "a.py")
             .filter { it.kind == CompletionKind.SNIPPET }
-        assertTrue("Python snippets for `fo`: ${py.map { it.label }}", py.size >= 2)
+        assertTrue("Python snippets for `for`: ${py.map { it.label }}", py.size >= 2)
         assertTrue(py.any { it.insertText.contains("for ") && it.insertText.contains(":") })
-        assertTrue(
-            "completed Python `for` must stay quiet (Phase 75.2)",
-            CodeCompletionEngine.completions("for", 3, LanguageType.PYTHON, "a.py")
-                .none { it.kind == CompletionKind.SNIPPET }
-        )
+        // Phase 75.3 — and accepting any of those `for` or `if` suggestions on
+        // the strip writes only the suggestion word (`for`, `if`), never the
+        // condition or body.
+        assertEquals("for", CodeCompletionEngine.suggestionInsertText(c.first()))
+        assertEquals("for", CodeCompletionEngine.suggestionInsertText(py.first()))
+        val cIf = CodeCompletionEngine.completions("if", 2, LanguageType.C, "main.c")
+            .first { it.kind == CompletionKind.SNIPPET }
+        assertEquals("if", CodeCompletionEngine.suggestionInsertText(cIf))
+        val pyDef = CodeCompletionEngine.completions("def", 3, LanguageType.PYTHON, "a.py")
+            .first { it.kind == CompletionKind.SNIPPET }
+        assertEquals("def", CodeCompletionEngine.suggestionInsertText(pyDef))
 
         // The real widening is the pack itself: 84 C and 76 Python snippets
         // where the tables had 7 and 9.
@@ -135,20 +137,14 @@ class CompletionCapacityTest {
             "Shell `if `: ${sh.map { it.label }}",
             sh.any { it.insertText.contains("then") && it.insertText.contains("fi") }
         )
-        // Phase 75.2 — in Python the completed `def` / `def ` keyword moment is
-        // quiet (owner: *"If i write def it's auto completes it def fname():
-        // pass … i have to cut that and again write another thing"*); the
-        // prefix on the way there (`de`) and explicit abbreviations (`deft`)
-        // still surface the pack's `def` first and CodeC's `def function():`.
+        val pyDef = CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON, "a.py")
         assertTrue(
-            "Python `def ` must stay quiet (Phase 75.2)",
-            CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON, "a.py").isEmpty()
+            "Python `def `: ${pyDef.map { it.label }}",
+            pyDef.any { it.label == "def" && it.insertText.contains("def ") }
         )
-        val pyDe = CodeCompletionEngine.completions("de", 2, LanguageType.PYTHON, "a.py")
-            .filter { it.kind == CompletionKind.SNIPPET }
-        assertTrue("Python `de`: ${pyDe.map { it.label }}", pyDe.any { it.label == "def" })
-        assertEquals("def", pyDe.first().label)
-        assertTrue(pyDe.size >= 4)
+        assertEquals("def", pyDef.first().label)
+        assertEquals("def", CodeCompletionEngine.suggestionInsertText(pyDef.first()))
+        assertTrue(pyDef.size >= 4)
         // The 16-item whole-pack dump is gone: a trigger offers the blocks it
         // names, not every shell snippet that happens to start with `if`.
         assertTrue("Shell `if ` grew to ${sh.map { it.label }}", sh.size <= 4)

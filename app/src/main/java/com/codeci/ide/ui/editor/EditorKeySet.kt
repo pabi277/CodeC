@@ -248,11 +248,27 @@ object EditorKeySet {
             is EditorKey.Pair -> {
                 val selected = text.substring(start, end)
                 val body = key.open + selected + key.close
-                val next = text.substring(0, start) + body + text.substring(end)
                 if (selected.isEmpty()) {
+                    // Phase 75.3 (owner, device round 2: *"in c coding I tried
+                    // to write int main() then curly brackets it sent the
+                    // brackets inside the first brackets like ({})"*): when
+                    // `()` was just inserted or auto-paired, the caret is
+                    // parked at `(|)`. Tapping `{}` there is the block body
+                    // after `()`, so step past `)` to produce `(){|}`.
+                    val at = if (
+                        key.open == "{" && key.close == "}" &&
+                        start > 0 && start < text.length &&
+                        text[start - 1] == '(' && text[start] == ')'
+                    ) {
+                        start + 1
+                    } else {
+                        start
+                    }
+                    val next = text.substring(0, at) + body + text.substring(at)
                     // Empty caret: land it between the two characters.
-                    TextFieldValue(next, TextRange(start + key.open.length))
+                    TextFieldValue(next, TextRange(at + key.open.length))
                 } else {
+                    val next = text.substring(0, start) + body + text.substring(end)
                     // Surround: keep the original text selected inside the pair.
                     TextFieldValue(
                         next,

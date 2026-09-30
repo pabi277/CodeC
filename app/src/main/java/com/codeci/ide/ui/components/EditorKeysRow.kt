@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,8 +81,21 @@ fun EditorKeysRow(
      * Phase 27.1 — first refusal on a resolved key (the dual-mood ghost caps).
      * Return true = consumed; return false/null = [EditorKeySet.apply] as usual.
      */
-    onInterceptKey: ((EditorKey) -> Boolean)? = null
+    onInterceptKey: ((EditorKey) -> Boolean)? = null,
+    /**
+     * Phase 75.3 — live-buffer commit path (same contract as [CodecKeyboard]'s
+     * `commitKey` from Phase 28.2 round 2). When provided, each key press
+     * applies against the ViewModel's live `_codeText.value` instead of a
+     * captured Compose snapshot `textFieldValue`.
+     */
+    commitKey: ((EditorKey) -> Unit)? = null
 ) {
+    val currentValue by rememberUpdatedState(textFieldValue)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    val currentTabSize by rememberUpdatedState(tabSize)
+    val currentOnCommentToggle by rememberUpdatedState(onCommentToggle)
+    val currentOnInterceptKey by rememberUpdatedState(onInterceptKey)
+    val currentCommitKey by rememberUpdatedState(commitKey)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -94,12 +108,15 @@ fun EditorKeysRow(
             EditorKeyCap(
                 def = def,
                 onKey = { key ->
-                    if (onInterceptKey?.invoke(key) == true) {
+                    if (currentOnInterceptKey?.invoke(key) == true) {
                         // consumed upstream (ghost accept) — buffer untouched
                     } else if (key is EditorKey.CommentToggle) {
-                        onCommentToggle?.invoke() ?: onValueChange(EditorKeySet.apply(key, textFieldValue, tabSize))
+                        currentOnCommentToggle?.invoke()
+                            ?: currentCommitKey?.invoke(key)
+                            ?: currentOnValueChange(EditorKeySet.apply(key, currentValue, currentTabSize))
                     } else {
-                        onValueChange(EditorKeySet.apply(key, textFieldValue, tabSize))
+                        currentCommitKey?.invoke(key)
+                            ?: currentOnValueChange(EditorKeySet.apply(key, currentValue, currentTabSize))
                     }
                 }
             )
@@ -227,6 +244,7 @@ private fun EditorKeyCap(
     // the scroll (owner: *"even i want to drag for other keys it's types which
     // ever i am scrolling"*).
     val scrollSlopPx = LocalViewConfiguration.current.touchSlop
+    val currentOnKey by rememberUpdatedState(onKey)
 
     Box(
         modifier = Modifier
@@ -234,6 +252,7 @@ private fun EditorKeyCap(
             .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .pointerInput(def) {
+                val onKey: (EditorKey) -> Unit = { currentOnKey(it) }
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     var isLongPress = false
@@ -418,6 +437,7 @@ private fun RunKeyCap(
     // the scroll (owner: *"even i want to drag for other keys it's types which
     // ever i am scrolling"*).
     val scrollSlopPx = LocalViewConfiguration.current.touchSlop
+    val currentOnKeyAction by rememberUpdatedState(onKeyAction)
 
     Box(
         modifier = Modifier
@@ -425,6 +445,7 @@ private fun RunKeyCap(
             .clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .pointerInput(def) {
+                val onKeyAction: (RunKey) -> Unit = { currentOnKeyAction(it) }
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     var isLongPress = false

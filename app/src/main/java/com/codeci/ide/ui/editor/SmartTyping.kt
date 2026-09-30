@@ -622,8 +622,66 @@ object SmartTyping {
             if (kind == TokenKind.STRING && incoming[0] !in setOf('"', '\'', '`')) return null
         }
         val caret = old.selection.start.coerceIn(0, old.text.length)
-        val next = old.text.substring(0, caret) + incoming + closer + old.text.substring(caret)
-        return TextFieldValue(next, TextRange(caret + 1))
+        // Phase 75.3 (owner, device round 2: *"in c coding I tried to write
+        // int main() then curly brackets it sent the brackets inside the first
+        // brackets like ({})"*): when `()` is empty and the caret sits at
+        // `(|)`, typing `{` is the block opener after `()`, so step past `)`
+        // to produce `(){|}`.
+        val at = if (
+            incoming == "{" &&
+            caret > 0 &&
+            caret < old.text.length &&
+            old.text[caret - 1] == '(' &&
+            old.text[caret] == ')'
+        ) {
+            caret + 1
+        } else {
+            caret
+        }
+        val next = old.text.substring(0, at) + incoming + closer + old.text.substring(at)
+        return TextFieldValue(next, TextRange(at + 1))
+    }
+
+    /**
+     * Phase 75.3 — companion to [handleAutoPair]'s `(|)` + `{` -> `(){|}` step
+     * for two multi-char arrival shapes:
+     *  1. A caller or batch edit inserts `"{}"` directly inside empty `(|)`.
+     *  2. Sora's `SymbolPairMatch` commits `"{"` in two synchronous steps
+     *     (`replace("{")` then `insert("}")`): step 1 already transformed `old`
+     *     to `"...(){}"` (caret at `pos`, inside `{|}`), and step 2 arrives
+     *     with Sora's un-stepped `"...({})"` of the same length — keep `old`.
+     */
+    fun handleBraceInEmptyParens(
+        old: TextFieldValue,
+        newValue: TextFieldValue,
+        config: Config = Config()
+    ): TextFieldValue? {
+        if (!config.emptyPairBackspace || !old.selection.collapsed) return null
+        val caret = old.selection.start.coerceIn(0, old.text.length)
+        // Shape 1: old had `(|)` at `caret` and newValue inserted `"{}"` inside `()`.
+        if (newValue.text.length == old.text.length + 2 &&
+            caret > 0 && caret < old.text.length &&
+            old.text[caret - 1] == '(' && old.text[caret] == ')'
+        ) {
+            val inside = old.text.substring(0, caret) + "{}" + old.text.substring(caret)
+            if (newValue.text == inside) {
+                val outside = old.text.substring(0, caret + 1) + "{}" + old.text.substring(caret + 1)
+                return TextFieldValue(outside, TextRange(caret + 2))
+            }
+        }
+        // Shape 2: step 1 already stepped `old` to `(){|}` (caret at `(` + 3),
+        // and Sora's step 2 arrives with `({})` at the same span.
+        if (newValue.text.length == old.text.length &&
+            caret >= 3 && caret < old.text.length &&
+            old.text.substring(caret - 3, caret + 1) == "(){}"
+        ) {
+            val soraSecondHalf =
+                old.text.substring(0, caret - 3) + "({})" + old.text.substring(caret + 1)
+            if (newValue.text == soraSecondHalf) {
+                return old
+            }
+        }
+        return null
     }
 
     // -------------------------------------------------------------------------
@@ -655,6 +713,11 @@ object SmartTyping {
         // ⌫").
         if (indentBackspaceGuard) {
             handleIndentBackspace(old, newValue)?.let { return it }
+        }
+
+        // Phase 75.3 — `{` or `{}` inside empty `(|)` steps past `)` to `(){|}`.
+        if (!suppressAutoPair) {
+            handleBraceInEmptyParens(old, newValue, config)?.let { return it }
         }
 
         // Detect single char insertion.

@@ -294,4 +294,35 @@ class EditorKeySetTest {
         assertNull(EditorShellUi.firstError(listOf(diagnostics[0])))
         assertNull(EditorShellUi.firstError(emptyList()))
     }
+
+    // ---- Phase 75.3 device round 2: C quick keys sequence -------------------
+
+    @Test
+    fun `curly brace pair key inside empty parens steps outside to form block`() {
+        val atEmptyParens = TextFieldValue("int main()", TextRange(9)) // int main(|)
+        val afterBraces = EditorKeySet.apply(EditorKey.Pair("{", "}"), atEmptyParens)
+        assertEquals("int main(){}", afterBraces.text)
+        assertEquals(TextRange(11), afterBraces.selection)
+    }
+
+    @Test
+    fun `c quick keys sequence keeps include header and places braces after main parens`() {
+        val cKeys = EditorKeySet.keysFor(LanguageType.C)
+        val includeKey = cKeys.first { it.label == "#include" }.key
+        val intKey = cKeys.first { it.label == "int" }.key
+        val parensKey = cKeys.first { it.label == "()" }.key
+        val bracesKey = cKeys.first { it.label == "{}" }.key
+
+        var buf = TextFieldValue("", TextRange(0))
+        buf = EditorKeySet.apply(includeKey, buf)
+        assertEquals("#include <stdio.h>\n", buf.text)
+        buf = EditorKeySet.apply(intKey, buf)
+        buf = EditorKeySet.apply(EditorKey.Insert("main"), buf)
+        buf = EditorKeySet.apply(parensKey, buf)
+        assertEquals("#include <stdio.h>\nint main()", buf.text)
+        assertEquals(28, buf.selection.start) // inside `(|)`
+        buf = EditorKeySet.apply(bracesKey, buf)
+        assertEquals("#include <stdio.h>\nint main(){}", buf.text)
+        assertEquals(30, buf.selection.start) // inside `{|}`
+    }
 }

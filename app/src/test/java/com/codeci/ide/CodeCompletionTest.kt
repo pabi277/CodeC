@@ -35,51 +35,63 @@ class CodeCompletionTest {
     }
 
     /**
-     * Phase 75.2 — this pin used to demand the skeleton, and the owner's device
-     * round asked for it back: *"If i write def it's auto completes it def
-     * fname(): pass … i have to cut that and again write another thing"*. At the
-     * keyword moment (the word at the caret IS `def`, `if`, `for`, …) the engine
-     * offers no snippet at all, on any surface, because the block is what Enter
-     * now does (Phase 75.1). One keystroke that inserts text to be cut is the
-     * one thing a phone keyboard cannot afford.
+     * Phase 75.3 (owner, device round 2, 2026-09-30: *"I wanted like that when
+     * I type if and click on the suggestions it only write the suggestions and
+     * not the full if condition etc other parts"*): suggestions stay visible
+     * when typing `if`, `def`, `for`, `while`, `main`, etc., and accepting any
+     * of those suggestion items resolves to ONLY the suggestion word — never
+     * the `(condition) { … }` or `fname(): pass` body skeleton.
      */
     @Test
-    fun `the python keyword moment offers no skeleton`() {
-        for (word in listOf(
-            "def", "class", "if", "elif", "else", "for", "while", "try",
-            "except", "finally", "with", "async", "match", "case"
+    fun `clicking a code suggestion writes only the suggestion word and not the condition or body`() {
+        for ((lang, typed, expectedWord) in listOf(
+            Triple(LanguageType.C, "if", "if"),
+            Triple(LanguageType.C, "for", "for"),
+            Triple(LanguageType.C, "while", "while"),
+            Triple(LanguageType.C, "pr", "printf"),
+            Triple(LanguageType.PYTHON, "def", "def"),
+            Triple(LanguageType.PYTHON, "if", "if"),
+            Triple(LanguageType.PYTHON, "for", "for"),
+            Triple(LanguageType.PYTHON, "tr", "try"),
+            Triple(LanguageType.PYTHON, "pr", "print"),
+            Triple(LanguageType.SHELL, "if", "if"),
+            Triple(LanguageType.SHELL, "for", "for"),
+            Triple(LanguageType.SHELL, "while", "while")
         )) {
-            val afterSpace = CodeCompletionEngine.completions("$word ", word.length + 1, LanguageType.PYTHON)
-            assertTrue(
-                "`$word ` still offered a snippet: ${afterSpace.map { it.label }}",
-                afterSpace.none { it.kind == CompletionKind.SNIPPET }
+            val items = CodeCompletionEngine.completions(typed, typed.length, lang)
+            assertTrue("`$typed` in $lang must offer suggestions", items.isNotEmpty())
+            val first = items.first()
+            val committed = CodeCompletionEngine.suggestionInsertText(first)
+            assertEquals(
+                "accepting `${first.label}` for `$typed` in $lang must write only `$expectedWord`",
+                expectedWord,
+                committed
             )
-            val bare = CodeCompletionEngine.completions(word, word.length, LanguageType.PYTHON)
             assertTrue(
-                "`$word` still offered a snippet: ${bare.map { it.label }}",
-                bare.none { it.kind == CompletionKind.SNIPPET }
+                "must not contain condition parens or newlines: <$committed>",
+                !committed.contains("(") && !committed.contains("\n") && !committed.contains("{")
             )
-            // The keyword itself stays offered as a keyword — the list is quiet,
-            // not empty, and the language's words are still there to complete.
-            if (word in setOf("def", "class", "if", "else", "for", "while", "try", "with")) {
-                assertTrue("`$word` lost its keyword", bare.any { it.kind == CompletionKind.KEYWORD })
-            }
         }
+        // Single-line `#include` directives, shebangs, and HTML markup keep their insertText.
+        val includeItem = CodeCompletionEngine.completions("#in", 3, LanguageType.C)
+            .first { it.label.startsWith("#include") }
+        assertEquals("#include <stdio.h>\n", CodeCompletionEngine.suggestionInsertText(includeItem))
+        val doctypeItem = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML)
+            .first { it.label.contains("DOCTYPE") }
+        assertTrue(CodeCompletionEngine.suggestionInsertText(doctypeItem).startsWith("<!DOCTYPE html>"))
     }
 
-    /**
-     * …and nothing else about the trigger or prefix world changed: a partial
-     * prefix (`de`, `func`) or a non-block trigger (`import `) still surfaces
-     * Python snippets, shell `if ` (where Enter CANNOT build the block — the
-     * keyword needs `then`/`fi`) keeps its block snippet, and C `for` is
-     * untouched.
-     */
     @Test
     fun `non-block triggers and partial prefixes still surface snippets`() {
         val partial = CodeCompletionEngine.completions("de", 2, LanguageType.PYTHON)
         assertTrue(
             "partial `de`: ${partial.map { it.label }}",
             partial.any { it.kind == CompletionKind.SNIPPET && it.insertText.startsWith("def ") }
+        )
+        val afterDefSpace = CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON)
+        assertTrue(
+            "`def ` trigger: ${afterDefSpace.map { it.label }}",
+            afterDefSpace.isNotEmpty()
         )
         val importTrigger = CodeCompletionEngine.completions("import ", 7, LanguageType.PYTHON)
         assertTrue(
@@ -91,7 +103,6 @@ class CodeCompletionTest {
             "shell if: ${shell.map { it.label }}",
             shell.any { it.kind == CompletionKind.SNIPPET && it.insertText.contains("then") }
         )
-        // C `for` is not a Python keyword moment either.
         val c = CodeCompletionEngine.completions("for", 3, LanguageType.C)
         assertTrue(c.any { it.kind == CompletionKind.SNIPPET })
     }

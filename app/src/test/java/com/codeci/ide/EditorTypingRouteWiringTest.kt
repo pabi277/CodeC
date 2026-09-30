@@ -137,22 +137,54 @@ class EditorTypingRouteWiringTest {
         )
     }
 
-    // ---- Phase 75.2 device round: keyword moment, Tab unit, indent marks ---
+    // ---- Phase 75.2 + 75.3 device rounds: suggestion word, Tab unit, indent marks, live strip commit ---
 
     @Test
-    fun `the keyword moment shares the block keyword table with the indent rule`() {
+    fun `clicking a suggestion on either surface writes only suggestionInsertText`() {
         assertEquals(
             "one table of Python block keywords",
             1,
             Regex("""val pythonBlockKeywords = setOf\(""").findAll(smartTyping).count()
         )
         assertTrue(smartTyping.contains("word.lowercase() in pythonBlockKeywords"))
+        assertTrue(completionEngine.contains("fun suggestionInsertText(item: CompletionItem): String"))
         assertTrue(
-            completionEngine.contains(
-                "language == LanguageType.PYTHON &&\n" +
-                    "            SmartTyping.typedBlockKeyword(prefix.ifEmpty { lastToken(text, cursor) })"
-            )
+            "the strip chip accept path must resolve through suggestionInsertText",
+            viewModel.contains("val insert = CodeCompletionEngine.suggestionInsertText(item)")
         )
+        assertTrue(
+            "the sora panel accept path must resolve through suggestionInsertText",
+            analyzer.contains("val commit = CodeCompletionEngine.suggestionInsertText(item)")
+        )
+    }
+
+    @Test
+    fun `the keys row commits against the live buffer and refreshes pointerInput lambdas`() {
+        val keysRow = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/components/EditorKeysRow.kt"
+        ).readText()
+        val screen = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt"
+        ).readText()
+        assertTrue(keysRow.contains("val currentOnKey by rememberUpdatedState(onKey)"))
+        assertTrue(keysRow.contains("commitKey: ((EditorKey) -> Unit)? = null"))
+        assertEquals(
+            "both BottomStrip call sites must pass the live-buffer commitEditorKey",
+            2,
+            Regex(
+                Regex.escape(
+                    "commitEditorKey = { key -> viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) }"
+                )
+            ).findAll(screen).count()
+        )
+    }
+
+    @Test
+    fun `selection events during text modification or pending VM edits cannot clobber the buffer`() {
+        assertTrue(host.contains("if (event.cause == SelectionChangeEvent.CAUSE_TEXT_MODIFICATION)"))
+        assertTrue(host.contains("if (base != viewModel.codeText.value.text)"))
+        assertTrue(host.contains("val cursorDrifted = runCatching"))
+        assertTrue(host.contains("if (caretPlaced && (target.selection != syncedSelection || cursorDrifted))"))
     }
 
     @Test

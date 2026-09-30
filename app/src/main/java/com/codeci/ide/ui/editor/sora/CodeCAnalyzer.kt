@@ -195,14 +195,15 @@ class CodeCLanguage private constructor(
             engineItems
         }
         for (item in merged) {
+            val commit = CodeCompletionEngine.suggestionInsertText(item)
             publisher.addItem(
                 SimpleCompletionItem(
                     item.label,
                     item.detail,
                     item.replaceLength
-                        ?: CodeCompletionEngine.replaceSpanLength(text, cursor, item.insertText)
+                        ?: CodeCompletionEngine.replaceSpanLength(text, cursor, commit)
                             .coerceAtLeast(0),
-                    item.insertText
+                    commit
                 )
                     .kind(
                         when (item.kind) {

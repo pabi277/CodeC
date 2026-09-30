@@ -2085,3 +2085,32 @@ including in `.java` files.
    inside leading indentation), so a line with 2 spaces + Tab lands on column 4 right under a
    4-space auto-indented line.
 
+## 51. "When I type `if` and click on the suggestions it writes the full `if` condition" / "`int main()` then `{}` sends brackets inside `({})`" / "`#include <stdio.h>` then `int main()` erases `#include <stdio.h>`" (owner device report round 2, 2026-09-30, Phase 75.3)
+
+**Clicking a suggestion inserting the full condition/body (`if (true) { … }`, `def fname(): pass`).**
+Resolved in `CodeCompletionEngine.suggestionInsertText(item)` (called by both
+`EditorViewModel.acceptCompletionItem` on the suggestion strip and
+`CodeCLanguage.requireAutoComplete` in the `⌄ more` panel): code snippets insert only their leading
+suggestion word (`if`, `def`, `for`, `while`, `switch`, `try`, `class`, `printf`, `print`, `return`,
+`import`, `main` / `int main`, `else if`, `typedef struct`), while single-line `#include` directives
+(`#include <stdio.h>\n`, `#include <>`), shebangs (`#!…`), HTML tags/DOCTYPE (`<…>`), Markdown/CSS,
+and Emmet expansions keep their full `insertText`.
+
+**`#include <stdio.h>` erased when followed by `int main()`, and `int main()` + `{}` producing `int main({})`.**
+Three fixes work together:
+1. `EditorKeyCap`, `RunKeyCap`, and `SuggestionStrip` wrap their `.pointerInput` callbacks in
+   `rememberUpdatedState`, and `BottomStrip` (`EditorScreen.kt`) passes `commitEditorKey`
+   (`viewModel.applyEditorKey(..., suppressAutoPair = true)`) to `EditorKeysRow`, so tapping quick
+   keys always applies against the ViewModel's live `_codeText.value` instead of a stale
+   `textFieldValue` captured when `EditorKeysRow` first mounted.
+2. `SoraEditorHost` ignores `SelectionChangeEvent.CAUSE_TEXT_MODIFICATION` (which Sora's
+   `CodeEditor.afterInsert` dispatches before our `ContentListener`, shifting `old.selection` ahead
+   by 1 whenever a character follows the caret and breaking `SmartTyping.handleTypeOver` on
+   `int main(|)` + `)`) and ignores `SelectionChangeEvent` whenever
+   `syncedText != viewModel.codeText.value.text`, and checks `cursorDrifted` after `ed.text.replace`
+   so `ed.setSelection` always restores Sora's cursor.
+3. Both `EditorKeySet.apply(EditorKey.Pair("{", "}"), ...)` and `SmartTyping.handleAutoPair` +
+   `handleBraceInEmptyParens` step `{` / `{}` past `)` when the caret sits inside empty `(|)`,
+   turning `int main(|)` + `{}` / `{` into `int main(){|}`.
+
+
