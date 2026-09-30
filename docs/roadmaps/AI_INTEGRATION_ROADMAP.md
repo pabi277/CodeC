@@ -1,7 +1,7 @@
 # CodeC AI integration — staged roadmap
 
 **Status: discussion and planning only. No app implementation is authorized by this document.**
-**Level 0 STARTED 2026-09-30:** owner decisions recorded in [`ai-integration/00_LEVEL0_DECISION_RECORD.md`](ai-integration/00_LEVEL0_DECISION_RECORD.md) — read-only first, Gemini BYOK, Keystore-encrypted key, preview every request, open project only, nothing saved. Three items (Gemini terms/age, HTTP client, default model) remain open before Level 1 can be briefed.
+**Level 0 ✅ COMPLETE 2026-09-30:** owner decisions recorded in [`ai-integration/00_LEVEL0_DECISION_RECORD.md`](ai-integration/00_LEVEL0_DECISION_RECORD.md) — read-only first, Gemini BYOK, Keystore-encrypted key, preview every request, open project only, nothing saved. Also decided: 18+ and Google-terms confirmation at key setup, `HttpURLConnection` + stateless `streamGenerateContent` with `store:false` (no new dependency), and a pre-filled Flash model with Test connection. Level 1 is next but still needs the owner's explicit start command.
 
 ## Product direction supplied by the owner
 

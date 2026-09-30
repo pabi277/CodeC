@@ -2,7 +2,7 @@
 
 **Status: proposed first implementation level; no code is authorized by this plan.**
 
-> **Level 0 decisions (2026-09-30) narrow this page:** provider = Google Gemini (stateless, `store=false`), key encrypted with Android Keystore, per-request preview including Gemini's free-tier data-use note, open project tabs only (not single-file mode), nothing saved. The binding constraint list is in [§3 of the decision record](00_LEVEL0_DECISION_RECORD.md#3-level-1-constraints-now-fixed-by-level-0); open items O1–O3 must be answered before a Level 1 brief.
+> **Level 0 decisions (2026-09-30) narrow this page:** provider = Google Gemini (stateless, `store=false`), key encrypted with Android Keystore, per-request preview including Gemini's free-tier data-use note, open project tabs only (not single-file mode), nothing saved. The binding constraint list is in [§3 of the decision record](00_LEVEL0_DECISION_RECORD.md#3-level-1-constraints-now-fixed-by-level-0); O1–O3 are decided too: the [18+ and terms gate at key setup](00_LEVEL0_DECISION_RECORD.md#41-key-setup-gate-o1) and the [technical design](00_LEVEL0_DECISION_RECORD.md#42-technical-design-for-level-1-o2-agent-decision) (`HttpURLConnection`, `streamGenerateContent` with `store:false`, no new dependency). A Level 1 brief still needs the owner's start command.
 
 ## User value
 
