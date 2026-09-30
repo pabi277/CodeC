@@ -262,4 +262,13 @@ prove: anything about a phone. The next line is the owner's.
 - `SmartTypingTest` + `EditorKeySetTest` — `typedBlockKeyword matches the exact python block keywords and nothing else`, `tab in leading indentation advances to the next tab stop in spaces` (column 0 → 4, column 2 → 4, column 4 → 8, mid-line → full step), and `TAB in leading indentation aligns to the next tab stop`.
 - `EditorTypingRouteWiringTest` — updated brace pin to `trimmed.endsWith('{') -> level` and added 3 new wiring pins: `the keyword moment shares the block keyword table with the indent rule`, `both keyboards speak one tab unit through indentRun`, and `leading indentation is painted at the source and survives theme switches`.
 
+### CI (Phase 75.2)
+
+**`Build APK` ✅ GREEN round 1 — run [`36692498787`](https://github.com/pabi277/CodeC/actions/runs/36692498787)**
+on tip `e5d66a8` (11m39s, step 8 host unit and screenshot tests, step 9 debug assemble, steps 10–13
+release set + weight check, zero error annotations; release artifact 6,291,637 B = +110 B over 75.1
+run `36679767045`, debug artifact 25,435,963 B). Pre-validated with `/tmp/verify75_2.py` (68/68
+checks pass). Awaiting the owner's device round 2; the §3 merge gate remains in force.
+
+
 

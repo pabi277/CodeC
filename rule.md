@@ -10,7 +10,8 @@
 > both `trimmed.endsWith('{')` and Python block headers; `SoraEditorHost` enables Sora's leading
 > whitespace dots (`FLAG_DRAW_WHITESPACE_LEADING or FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE`) with
 > `CodecPalette.INDENT_MARK` re-applied on every theme switch; and `SmartTyping.indentRun` makes
-> Tab on both keyboards advance to the next multiple of `tabSize` in spaces. The 65.1 navigation
+> Tab on both keyboards advance to the next multiple of `tabSize` in spaces. **Build APK ✅ GREEN
+> round 1 `36692498787` on `e5d66a8`** (75.1 was ✅ `36679767045` on `5acac43`). The 65.1 navigation
 > and 74.1 Settings decisions below remain preserved and untouched. **The next device round is his;
 > the §3 merge gate is unchanged — no PR, no merge, nothing to `main` until he commands it.**
 > Record: `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` §“Phase 75.2”.
