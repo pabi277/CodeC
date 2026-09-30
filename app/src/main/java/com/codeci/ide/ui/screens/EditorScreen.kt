@@ -2387,6 +2387,7 @@ fun EditorScreen(
                     keyStripJson = keyStripJson,
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
+                    commitEditorKey = { key -> viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
                     // Phase 69.1 — one row position across both call sites.
                     keysRowScroll = keysRowScroll,
@@ -2549,6 +2550,7 @@ fun EditorScreen(
                     keyStripJson = keyStripJson,
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
+                    commitEditorKey = { key -> viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
                     // Phase 69.1 — one row position across both call sites.
                     keysRowScroll = keysRowScroll,
@@ -2966,6 +2968,7 @@ private fun BottomStrip(
     keyStripJson: String,
     textFieldValue: TextFieldValue,
     onEditorValueChange: (TextFieldValue) -> Unit,
+    commitEditorKey: ((EditorKey) -> Unit)? = null,
     tabSize: Int,
     /** Phase 69.1 — the keys row's horizontal position, owned by the screen. */
     keysRowScroll: ScrollState,
@@ -3019,6 +3022,7 @@ private fun BottomStrip(
                         else -> false
                     }
                 },
+                commitKey = commitEditorKey,
                 modifier = modifier
             )
         }

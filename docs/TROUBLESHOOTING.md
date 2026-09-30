@@ -1,4 +1,4 @@
-> **2026-09-29 — Python indentation and Backspace report (deferred):** the owner reported that Python `def` indents but `for` does not, and Backspace over indentation jumps by a whole indent instead of one space. Initial source fixes were later undone at the owner's request so the writing path can be handled as a single focused editor phase. Current post-revert Build APK run `36625653233` is green on `902c9f6`; it validates the restored source, not the typing behavior. These issues remain unresolved; see [Phase 75.1](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
+> **2026-09-30 — Phase 75.1–75.3 editor typing reliability (✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98):** the Python `def`/`for` indentation, full-level brace indentation (`{`), one-space Backspace inside indentation, leading indentation dots + Tab alignment, suggestion word-only accept, live-buffer quick-key commits, Sora cursor/selection sync, and `{}` outside empty `(|)` are all resolved, CI-green (`36679767045` / `36692498787` / `36701799600`), device-passed by the owner (*"Ok device test passed … You can complete the docs part and merged"*), and merged via [PR #98](https://github.com/pabi277/CodeC/pull/98). See §§49–51 below and [Phase 75.1](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
 
 > **2026-09-27 update — Phase 64:** installation no longer locks tabs or the
 > editor drawer, and the guide/tour/typing tips are removed. “Help & guide” and
@@ -2027,4 +2027,93 @@ after SIGWINCH (each ime resize resizes the PTY) and reopen.
 kept the screen's empty tail so a shrinking zoom pushed the prompt into history. Fixed in `Reflow`
 (`keepAtLeast`) and `TerminalBuffer.resize` (blank tail dropped); record in the 71.1 brief. Not
 device-verified.
+
+## 49. "`def` auto-indents but `for` does not" / "backspace at the indentation jumps back by the whole indent" (owner report, 2026-09-30, Phase 75.1)
+
+**The `def`/`for` difference.** Pressing Enter is answered twice in CodeC, and until Phase 75.1
+the two answers never met. The system keyboard's Enter belongs to the editor widget: it copies the
+line's current indentation and asks the language for one more step. CodeC answered that question in
+its C default, so for Python the extra step was always zero. The in-app keyboard's Enter belongs to
+the editor's own typing rules — which do know Python — but those rules only run when the buffer grew
+by a single character, which stops being true as soon as a copied indentation rides along. A `def`
+at the left margin therefore indented; a `for` one level inside it did not. Now one rule decides it
+for both keyboards: a Python line opens a block when it ends with `:` (after any `#` comment) and
+starts with one of the block keywords — `def`, `class`, `for`, `while`, `if`, `elif`, `else`, `try`,
+`except`, `finally`, `with`, `async`, `match`, `case`. A comment, a dict key, a stray colon or a
+colon inside a string still invents nothing.
+
+**Backspace taking the whole indent.** The editor widget ships a fast-delete for this: one press on
+a line that holds nothing but indentation removes the indentation *and* joins the line above. Inside
+a Python body that is exactly "it jumps back by the whole indent". CodeC now turns that fast path off
+and, whatever the keyboard asks for, a Backspace inside leading indentation removes **one space** —
+four presses walk one level down, a fifth joins the line as before. Normal typing is untouched: a
+selection deletes the selection, backspace in code and prose deletes what it always did, `(|)` still
+deletes both brackets, and the ⌫ flick-up on the in-app keyboard is still a word delete.
+
+**If it still misbehaves on a phone, say which keyboard.** The device is the only place this can be
+proved, and what a particular keyboard sends cannot be seen from the source. Useful details: the
+keyboard's name, the exact line typed, what Enter produced, and what one Backspace press removed —
+plus the editor transcript if the wrong thing happened mid-word (the completion ghost rides the same
+two routes). Nothing in the Phase 75.1 record claims a device pass; the owner's round decides.
+
+## 50. "`def` autocompletes `def fname(): pass`" / "`int main(){` and `{}` not auto-indenting" / "can't line up the space/indenting between lines" (owner device report, 2026-09-30, Phase 75.2)
+
+**`def` inserting `def fname():\n    pass`.** The vendored Python snippet pack maps the prefix `def`
+to `def fname():\n    pass` (and `for`, `if`, `while`, `class`, `try` to their own `pass` skeletons).
+On a phone, once you have already typed `def` (or tapped the Python `def` quick key), accepting that
+chip inserts placeholder names and `pass` that you then have to select and cut. `CodeCompletionEngine`
+now treats the exact Python block keywords (`SmartTyping.typedBlockKeyword`, sharing the 14-keyword
+table with `opensPythonBlock`) as a quiet moment: no snippet is offered while the word at the caret
+is a completed Python block keyword, so you write your own header and let Enter indent the body.
+Typing a partial prefix (`de`, `fo`) or an explicit snippet prefix (`deft`, `defm`, `ifmain`, `pr`)
+still surfaces the snippets.
+
+**`int main(){` and `{}` in C, C++, Java, JS/TS not auto-indenting.** Phase 75.1 left
+`CodeCLanguage.indentAdvanceFor`'s `{` branch at its old `1`-space delta while fixing Python. At
+16 sp on a phone, 1 space looks like no indent at all, and it disagreed with the VM Enter route (4
+spaces). Both branches of `indentAdvanceFor` now return `indentStep.coerceIn(2, 8)` (4 spaces by
+default), so Enter after any line ending with `{` indents by a full level on both keyboards —
+including in `.java` files.
+
+**Lining up spaces/indentation across lines.** Two fixes work together:
+1. `SoraEditorHost` enables `CodeEditor.FLAG_DRAW_WHITESPACE_LEADING or CodeEditor.FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE`
+   and sets `EditorColorScheme.NON_PRINTABLE_CHAR` to `CodecPalette.INDENT_MARK` (`0x80B0B0B0`) on
+   every theme switch, so every leading space (including on empty auto-indented lines) paints a
+   subtle alignment dot while inner and trailing spaces stay clean.
+2. `SmartTyping.indentRun` makes Tab on both keyboards (system IME `\t` via `handleTabAsIndent` and
+   CodeC Keys `EditorKey.Tab`) advance to the next multiple of `tabSize` in spaces (`step - (width % step)`
+   inside leading indentation), so a line with 2 spaces + Tab lands on column 4 right under a
+   4-space auto-indented line.
+
+## 51. "When I type `if` and click on the suggestions it writes the full `if` condition" / "`int main()` then `{}` sends brackets inside `({})`" / "`#include <stdio.h>` then `int main()` erases `#include <stdio.h>`" (owner device report round 2, 2026-09-30, Phase 75.3)
+
+**Clicking a suggestion inserting the full condition/body (`if (true) { … }`, `def fname(): pass`).**
+Resolved in `CodeCompletionEngine.suggestionInsertText(item)` (called by both
+`EditorViewModel.acceptCompletionItem` on the suggestion strip and
+`CodeCLanguage.requireAutoComplete` in the `⌄ more` panel): code snippets insert only their leading
+suggestion word (`if`, `def`, `for`, `while`, `switch`, `try`, `class`, `printf`, `print`, `return`,
+`import`, `main` / `int main`, `else if`, `typedef struct`), while single-line `#include` directives
+(`#include <stdio.h>\n`, `#include <>`), shebangs (`#!…`), HTML tags/DOCTYPE (`<…>`), Markdown/CSS,
+and Emmet expansions keep their full `insertText`.
+
+**`#include <stdio.h>` erased when followed by `int main()`, and `int main()` + `{}` producing `int main({})`.**
+Three fixes work together:
+1. `EditorKeyCap`, `RunKeyCap`, and `SuggestionStrip` wrap their `.pointerInput` callbacks in
+   `rememberUpdatedState`, and `BottomStrip` (`EditorScreen.kt`) passes `commitEditorKey`
+   (`viewModel.applyEditorKey(..., suppressAutoPair = true)`) to `EditorKeysRow`, so tapping quick
+   keys always applies against the ViewModel's live `_codeText.value` instead of a stale
+   `textFieldValue` captured when `EditorKeysRow` first mounted.
+2. `SoraEditorHost` ignores `SelectionChangeEvent.CAUSE_TEXT_MODIFICATION` (which Sora's
+   `CodeEditor.afterInsert` dispatches before our `ContentListener`, shifting `old.selection` ahead
+   by 1 whenever a character follows the caret and breaking `SmartTyping.handleTypeOver` on
+   `int main(|)` + `)`) and ignores `SelectionChangeEvent` whenever
+   `syncedText != viewModel.codeText.value.text`, and checks `cursorDrifted` after `ed.text.replace`
+   so `ed.setSelection` always restores Sora's cursor.
+3. Both `EditorKeySet.apply(EditorKey.Pair("{", "}"), ...)` and `SmartTyping.handleAutoPair` +
+   `handleBraceInEmptyParens` step `{` / `{}` past `)` when the caret sits inside empty `(|)`,
+   turning `int main(|)` + `{}` / `{` into `int main(){|}`.
+
+**Status (2026-09-30):** `Build APK` ✅ GREEN on `26dbf9e` (`36701799600`, 7m 48s); owner device pass ✅ (*"Ok device test passed … You can complete the docs part and merged"*); merged to `main` via [PR #98](https://github.com/pabi277/CodeC/pull/98).
+
+
 

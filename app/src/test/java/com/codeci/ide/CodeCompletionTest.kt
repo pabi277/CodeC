@@ -34,12 +34,77 @@ class CodeCompletionTest {
         assertEquals("main", CodeCompletionEngine.currentPrefix("int main", 8))
     }
 
+    /**
+     * Phase 75.3 (owner, device round 2, 2026-09-30: *"I wanted like that when
+     * I type if and click on the suggestions it only write the suggestions and
+     * not the full if condition etc other parts"*): suggestions stay visible
+     * when typing `if`, `def`, `for`, `while`, `main`, etc., and accepting any
+     * of those suggestion items resolves to ONLY the suggestion word — never
+     * the `(condition) { … }` or `fname(): pass` body skeleton.
+     */
     @Test
-    fun `python snippets appear after trigger word with empty prefix`() {
-        val items = CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON)
-        assertTrue(items.isNotEmpty())
-        assertTrue(items.all { it.kind == CompletionKind.SNIPPET })
-        assertTrue(items.any { it.label.startsWith("def function") })
+    fun `clicking a code suggestion writes only the suggestion word and not the condition or body`() {
+        for ((lang, typed, expectedWord) in listOf(
+            Triple(LanguageType.C, "if", "if"),
+            Triple(LanguageType.C, "for", "for"),
+            Triple(LanguageType.C, "while", "while"),
+            Triple(LanguageType.C, "pr", "printf"),
+            Triple(LanguageType.PYTHON, "def", "def"),
+            Triple(LanguageType.PYTHON, "if", "if"),
+            Triple(LanguageType.PYTHON, "for", "for"),
+            Triple(LanguageType.PYTHON, "tr", "try"),
+            Triple(LanguageType.PYTHON, "pr", "print"),
+            Triple(LanguageType.SHELL, "if", "if"),
+            Triple(LanguageType.SHELL, "for", "for"),
+            Triple(LanguageType.SHELL, "while", "while")
+        )) {
+            val items = CodeCompletionEngine.completions(typed, typed.length, lang)
+            assertTrue("`$typed` in $lang must offer suggestions", items.isNotEmpty())
+            val first = items.first()
+            val committed = CodeCompletionEngine.suggestionInsertText(first)
+            assertEquals(
+                "accepting `${first.label}` for `$typed` in $lang must write only `$expectedWord`",
+                expectedWord,
+                committed
+            )
+            assertTrue(
+                "must not contain condition parens or newlines: <$committed>",
+                !committed.contains("(") && !committed.contains("\n") && !committed.contains("{")
+            )
+        }
+        // Single-line `#include` directives, shebangs, and HTML markup keep their insertText.
+        val includeItem = CodeCompletionEngine.completions("#in", 3, LanguageType.C)
+            .first { it.label.startsWith("#include") }
+        assertEquals("#include <stdio.h>\n", CodeCompletionEngine.suggestionInsertText(includeItem))
+        val doctypeItem = CodeCompletionEngine.completions("<!doc", 5, LanguageType.HTML)
+            .first { it.label.contains("DOCTYPE") }
+        assertTrue(CodeCompletionEngine.suggestionInsertText(doctypeItem).startsWith("<!DOCTYPE html>"))
+    }
+
+    @Test
+    fun `non-block triggers and partial prefixes still surface snippets`() {
+        val partial = CodeCompletionEngine.completions("de", 2, LanguageType.PYTHON)
+        assertTrue(
+            "partial `de`: ${partial.map { it.label }}",
+            partial.any { it.kind == CompletionKind.SNIPPET && it.insertText.startsWith("def ") }
+        )
+        val afterDefSpace = CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON)
+        assertTrue(
+            "`def ` trigger: ${afterDefSpace.map { it.label }}",
+            afterDefSpace.isNotEmpty()
+        )
+        val importTrigger = CodeCompletionEngine.completions("import ", 7, LanguageType.PYTHON)
+        assertTrue(
+            "import trigger: ${importTrigger.map { it.label }}",
+            importTrigger.isNotEmpty() && importTrigger.all { it.kind == CompletionKind.SNIPPET }
+        )
+        val shell = CodeCompletionEngine.completions("if ", 3, LanguageType.SHELL)
+        assertTrue(
+            "shell if: ${shell.map { it.label }}",
+            shell.any { it.kind == CompletionKind.SNIPPET && it.insertText.contains("then") }
+        )
+        val c = CodeCompletionEngine.completions("for", 3, LanguageType.C)
+        assertTrue(c.any { it.kind == CompletionKind.SNIPPET })
     }
 
     @Test

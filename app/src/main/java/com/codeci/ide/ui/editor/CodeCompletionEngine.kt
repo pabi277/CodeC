@@ -25,6 +25,13 @@ import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
  *  - **30.3** the engine returns a longer RANKED list ([MAX_ITEMS] 8 → 50):
  *    the strip still shows thumb-reachable chips (`SuggestionStripModel`), the
  *    ghost is still rank 0, and "⌄ more" browses the rest.
+ *
+ * **Phase 75.3 (2026-09-30, device round 2):** clicking a suggestion writes the
+ * suggestion word itself — never the condition, parameter list, or multi-line
+ * body skeleton (see [suggestionInsertText]). The candidate list stays uniform
+ * across every language so the strip always surfaces matching suggestions while
+ * typing (`if`, `def`, `for`, `main`, `#include`, …), and accepting a chip or
+ * panel row inserts only the suggestion token.
  */
 enum class CompletionKind { SNIPPET, KEYWORD, IDENTIFIER }
 
@@ -79,6 +86,89 @@ object CodeCompletionEngine {
 
     /** Compiled once; splits a snippet label into its searchable words. */
     private val WORD_SEPARATOR = Regex("[^A-Za-z0-9_]+")
+
+    /**
+     * Phase 75.3 — single-word suggestion token (`if`, `def`, `#ifdef`,
+     * `console.log`, `System.out.println`).
+     */
+    private val SINGLE_WORD_SUGGESTION = Regex("^#?[A-Za-z_][A-Za-z0-9_.]*$")
+
+    /**
+     * Phase 75.3 — leading keyword/identifier/directive token of a snippet body
+     * (`if` from `if (condition) {\n    \n}`, `def` from `def fname():\n    pass`).
+     */
+    private val SUGGESTION_HEAD_TOKEN = Regex("^(#?[A-Za-z_][A-Za-z0-9_.]*)")
+
+    /**
+     * Phase 75.3 — compound keyword/declaration heads where the suggestion
+     * itself is two words (`else if`, `int main`, `typedef struct`, …), never
+     * the condition or body that follows.
+     */
+    private val MULTI_WORD_HEADS = listOf(
+        "else if",
+        "int main",
+        "typedef struct",
+        "typedef union",
+        "typedef enum",
+        "async def",
+        "async function"
+    )
+
+    /**
+     * Phase 75.3 (owner, device round 2, 2026-09-30: *"I wanted like that when
+     * I type if and click on the suggestions it only write the suggestions and
+     * not the full if condition etc other parts"*) — the text that accepting a
+     * suggestion chip or panel row actually inserts into the buffer.
+     *
+     * Keywords, buffer identifiers, Emmet expansions, single-line `#include`
+     * directives (`#include <stdio.h>\n`, `#include <>`), shebangs (`#!…`),
+     * and markup/stylesheet snippets (`<!DOCTYPE html>`, `<tag>`, `# `,
+     * `display: flex;`) keep their [CompletionItem.insertText]. Code snippets
+     * whose body carries a condition, parameter list, or multi-line block
+     * (`if (true) {\n\t\n}`, `def fname():\n\tpass`, `for (size_t i = 0; …)`)
+     * resolve to their leading suggestion token (`if`, `def`, `for`, `while`,
+     * `switch`, `try`, `class`, `printf`, `print`, `return`, `main` /
+     * `int main`, `else if`, …) so tapping a suggestion completes the word and
+     * leaves the condition and body to the user.
+     */
+    fun suggestionInsertText(item: CompletionItem): String {
+        val raw = item.insertText
+        if (item.kind != CompletionKind.SNIPPET || item.detail == Emmet.DETAIL) return raw
+        val trimmed = raw.trimStart()
+        if (trimmed.isEmpty()) return raw
+        val firstLine = trimmed.lineSequence().first().trim()
+        if ((firstLine.startsWith("#include") && !trimmed.trim().contains('\n')) ||
+            trimmed.startsWith("#!") ||
+            trimmed.startsWith("<") ||
+            trimmed.startsWith("# ") ||
+            trimmed.startsWith("## ") ||
+            trimmed.startsWith("display:") ||
+            trimmed.startsWith("@media")
+        ) {
+            return raw
+        }
+        val labelTrimmed = item.label.trim()
+        val lowLabel = labelTrimmed.lowercase()
+        val lowBody = trimmed.lowercase()
+        for (mw in MULTI_WORD_HEADS) {
+            if (lowBody.startsWith(mw) &&
+                (lowLabel.startsWith(mw) || lowLabel == mw.replace(" ", ""))
+            ) {
+                return trimmed.substring(0, mw.length)
+            }
+        }
+        SUGGESTION_HEAD_TOKEN.find(trimmed)?.value?.let { head ->
+            if (SINGLE_WORD_SUGGESTION.matches(labelTrimmed) &&
+                lowLabel.startsWith("main") &&
+                lowBody.contains("main")
+            ) {
+                return "main"
+            }
+            return head
+        }
+        if (SINGLE_WORD_SUGGESTION.matches(labelTrimmed)) return labelTrimmed
+        return raw
+    }
 
     /** Offset where the word under [cursorOffset] begins. */
     fun prefixStart(text: String, cursorOffset: Int): Int {

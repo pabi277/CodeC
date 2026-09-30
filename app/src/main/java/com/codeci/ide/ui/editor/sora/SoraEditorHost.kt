@@ -127,6 +127,32 @@ fun SoraEditorHost(
         editor.apply {
             setSelectionHandleStyle(HandleStyleDrop(hostContext))
             setUndoEnabled(false) // VM EditorUndoManager is canonical
+            // Phase 75.1 — the owner's Backspace law: one space per press.
+            // `deleteEmptyLineFast` is ON in sora by default and answers a
+            // single Backspace on a line that holds nothing but indentation
+            // with "the whole indent, plus the line break" — the reported
+            // "backspace at the indentation of a for loop jumps back by the
+            // whole indent". `deleteMultiSpaces` is pinned to its one-space
+            // value so a future default can never turn one press into a
+            // tab-width erase. What an IME asks for by itself is corrected in
+            // the buffer instead (SmartTyping.handleIndentBackspace), so this
+            // stays a preference about sora's own behaviour, nothing more.
+            props.deleteEmptyLineFast = false
+            props.deleteMultiSpaces = 1
+            // Phase 75.2 — make the indentation itself visible. The owner's
+            // ask (*"user can't line up the space/indenting between lines so
+            // add some line type some thing that indicates each Indentation"*)
+            // is a SEEING problem before it is a typing problem: at 16 sp on a
+            // phone four spaces and eight spaces look like blank. sora paints a
+            // dot per whitespace character, LEADING-only so code lines are not
+            // speckled, plus the empty-line case so a blank line that carries an
+            // indent (exactly the line auto-indent leaves behind) shows where it
+            // sits. This is the editor's own drawing pass — no overlay, no
+            // second text layout, nothing for the typing routes to keep in step.
+            setNonPrintablePaintingFlags(
+                CodeEditor.FLAG_DRAW_WHITESPACE_LEADING or
+                    CodeEditor.FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE
+            )
             // Phase 35.3 — disable sora's animated cursor travel. The blink
             // period is switched to solid only during active typing below.
             setCursorAnimationEnabled(false)
@@ -260,6 +286,12 @@ fun SoraEditorHost(
             com.codeci.ide.ui.editor.snippets.SnippetLibrary.warmUp(appContext, listOf(language))
             TextMateSupport.createLanguage(language, fileName)
         }
+        // Phase 75.1 — sora asks the LANGUAGE for the indent delta, in spaces,
+        // and the editor's own tab width is the number the VM rule is given per
+        // call. A fresh language must therefore start on the current width, or
+        // the IME route and the CodeC Keys route would indent by different
+        // amounts on a file opened after a Settings change.
+        lang.indentStepSpaces = editor.tabWidth
         // Fresh Language per editor (sora: one language instance serves one editor).
         editor.setEditorLanguage(lang)
     }
@@ -281,8 +313,14 @@ fun SoraEditorHost(
         }
         editor.setColorScheme(TextMateThemes.applyTheme(theme))
         // A fresh scheme resets every custom colour, so the caret handle's one
-        // colour is re-applied with it (57.2).
+        // colour is re-applied with it (57.2), and so is the colour of the
+        // Phase 75.2 indentation dots. sora's own default for that slot is a
+        // light grey the four shipped themes happen to suit, and a theme that
+        // ever grows an `invisibles` entry would override it — stating it here
+        // keeps "the indentation is visible" a property of the editor, not of
+        // whichever theme file is current.
         editor.colorScheme.setColor(EditorColorScheme.SELECTION_HANDLE, CodecPalette.CARET_HANDLE)
+        editor.colorScheme.setColor(EditorColorScheme.NON_PRINTABLE_CHAR, CodecPalette.INDENT_MARK)
     }
     LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {
@@ -294,7 +332,13 @@ fun SoraEditorHost(
             }
         )
     }
-    LaunchedEffect(tabSize) { editor.setTabWidth(tabSize) }
+    LaunchedEffect(tabSize) {
+        editor.setTabWidth(tabSize)
+        // Phase 75.1 — the language answers sora in SPACES, so it has to know
+        // the width the editor just moved to. One step for every Enter route.
+        val attached = editor.editorLanguage
+        if (attached is CodeCLanguage) attached.indentStepSpaces = tabSize
+    }
     LaunchedEffect(wordWrap) { editor.setWordwrap(wordWrap) }
     LaunchedEffect(showLineNumbers) { editor.setLineNumberEnabled(showLineNumbers) }
 
@@ -356,6 +400,20 @@ fun SoraEditorHost(
                 // the VM back and ping-ponged replays — the 25.2 device
                 // crash. Same guard as pushToVm.
                 if (pushing[0]) return@EventReceiver
+                // Phase 75.3 — CodeEditor (`contentListeners[0]`) dispatches
+                // `SelectionChangeEvent(CAUSE_TEXT_MODIFICATION)` inside its own
+                // `afterInsert`/`afterDelete` BEFORE our `contentListener`
+                // (`contentListeners[1]`, `pushToVm`) runs. At that instant
+                // `syncedText` is still the pre-edit text while `event.left` is
+                // the post-edit cursor — pushing that pair into `updateCode`
+                // shifted `old.selection` ahead by 1 before `pushToVm` arrived
+                // and broke `SmartTyping` (`handleTypeOver`, `handleAutoPair`,
+                // `handleAutoIndent`) whenever any char followed the caret
+                // (e.g. `)` in `int main(|)`). `pushToVm` delivers the text and
+                // cursor together on the very next listener step.
+                if (event.cause == SelectionChangeEvent.CAUSE_TEXT_MODIFICATION) {
+                    return@EventReceiver
+                }
                 // A tap can dispatch selection before the platform focus
                 // callback. Mark it here so the exact sora-selected offset is
                 // retained rather than replaced with the typing origin.
@@ -366,22 +424,15 @@ fun SoraEditorHost(
                     // with the empty synced snapshot.
                     return@EventReceiver
                 }
-                // Selection-only move: reuse the synced snapshot — no O(n)
-                // copy. Clamp against the snapshot: an event racing the
-                // first replay (or arriving between replays) can carry
-                // indices for text the VM has never seen — a TextFieldValue
-                // whose selection exceeds its text is poison downstream.
-                // NOTE (device round 2026-09-05): deliberately NO
-                // `hasComposingText()` gate here or at apply time. On a soft
-                // keyboard (Gboard with suggestions) the IME holds a
-                // composing span around the current word for autocorrect, so
-                // composing is true during almost ALL normal phone typing and
-                // the gate kept the ghost permanently invisible while every
-                // other affordance (TAB ▸, pill, chips) still worked. The
-                // point-anchored inlay auto-shifts on replace, so real CJK
-                // composition cannot corrupt it either; G7's selection /
-                // find-dialog / run / scroll suppressions still hold.
                 val base = syncedText
+                // Phase 75.3 — if the VM already holds a newer buffer waiting
+                // for the next Compose frame's `AndroidView.update` replay (a
+                // strip key, suggestion chip, or SmartTyping correction), a
+                // selection event from Sora's pre-replay buffer must never push
+                // `syncedText` back over `_codeText.value` and erase the edit.
+                if (base != viewModel.codeText.value.text) {
+                    return@EventReceiver
+                }
                 val left = event.left
                 val right = event.right
                 val startIdx = left.index.coerceIn(0, base.length)
@@ -575,10 +626,18 @@ fun SoraEditorHost(
                     }
                     // Opening a file must not replay its default zero
                     // selection into a visible caret. A placed edit replays
-                    // only when sora does not already hold that selection.
-                    if (caretPlaced && target.selection != syncedSelection) {
-                        val start = target.selection.start.coerceIn(0, target.text.length)
-                        val end = target.selection.end.coerceIn(0, target.text.length)
+                    // when `target.selection` differs from `syncedSelection` OR
+                    // when `ed.text.replace` / `ed.setText` moved sora's real
+                    // cursor away from `target.selection` (Phase 75.3: e.g.
+                    // `SmartTyping.handleTypeOver` deletes the duplicate `)` in
+                    // `int main())`, shifting `ed.cursor.left` back to 9 while
+                    // `target.selection` and `syncedSelection` are both 10).
+                    val start = target.selection.start.coerceIn(0, target.text.length)
+                    val end = target.selection.end.coerceIn(0, target.text.length)
+                    val cursorDrifted = runCatching {
+                        ed.cursor.left != start || ed.cursor.right != end
+                    }.getOrDefault(false)
+                    if (caretPlaced && (target.selection != syncedSelection || cursorDrifted)) {
                         val indexer = ed.text.indexer
                         val startPos = indexer.getCharPosition(start)
                         val endPos = indexer.getCharPosition(end)
@@ -621,15 +680,20 @@ fun SoraEditorHost(
                 val indexer = ed.text.indexer
                 val startPos = indexer.getCharPosition(start)
                 val endPos = indexer.getCharPosition(end)
-                if (start == end) {
-                    ed.setSelection(startPos.line, startPos.column)
-                } else {
-                    ed.setSelectionRegion(
-                        startPos.line, startPos.column,
-                        endPos.line, endPos.column
-                    )
+                pushing[0] = true
+                try {
+                    if (start == end) {
+                        ed.setSelection(startPos.line, startPos.column)
+                    } else {
+                        ed.setSelectionRegion(
+                            startPos.line, startPos.column,
+                            endPos.line, endPos.column
+                        )
+                    }
+                    syncedSelection = target.selection
+                } finally {
+                    pushing[0] = false
                 }
-                syncedSelection = target.selection
                 // Phase 48 — same follow for the text-unchanged moves
                 // (find-next, quick fix, the CodeC Keys caret trackpad):
                 // the caret the VM just moved is the caret that must be on
