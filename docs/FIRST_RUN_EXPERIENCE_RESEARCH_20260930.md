@@ -1,10 +1,29 @@
 # CodeC first-run experience + game arena
 
-> **Current direction, 2026-09-30:** the Orbit Shift design and one-file implementation documented below are historical and superseded by the user's request for a lightweight game arena. The current starter is CodeC Arcade: Snake, a block-placement puzzle, and Tic-Tac-Toe behind a dedicated home screen, delivered as separate HTML, CSS, and JavaScript project files. The animated CodeC introduction, required privacy acknowledgement, and two-second in-app logo remain. Current implementation files live under `app/src/main/assets/game-arena/` and are seeded by `GameArenaSample`.
+> **Current shipped behavior (2026-09-30):** a fresh install sees CodeC's two-second in-app mark, the native introduction and privacy acknowledgement, then receives CodeC Arcade — Snake, Block Party, and Tic-Tac-Toe behind a home screen. Its HTML, CSS, and JavaScript are separate editable project files. The Orbit Shift design and one-file prototype documented later in this file are historical and were superseded before shipping.
 
 - **Research and implementation record:** 2026-09-30 (UTC)
 - **Scope:** cold-start handoff, first-run education and privacy acknowledgement, replacement starter game
-- **Implementation:** `FirstRunIntroScreen.kt`, `OrbitSample.kt`, `MainActivity.kt`
+- **Current implementation:** `FirstRunIntroScreen.kt`, `GameArenaSample.kt`, `MainActivity.kt`, `app/src/main/assets/game-arena/`
+- **Automated verification:** Build APK run [`36724487487`](https://github.com/pabi277/CodeC/actions/runs/36724487487) passed host unit/screenshot tests and debug/release APK builds; no device-specific test is claimed here.
+
+## Current shipped implementation
+
+After the required acknowledgement, `GameArenaSample` seeds the `codec-arcade` web project and opens `index.html` in the editor. The seed copies the bundled project files as ordinary user files; users can inspect, edit, save, and run them through CodeC's existing local preview. No Linux userland, network request, external font, downloaded image, account, or package is needed to play.
+
+The arena contains three independently navigable games:
+
+- **Snake:** touch/swipe and keyboard controls, fruit, collisions, and a locally stored best score.
+- **Block Party:** an original, untimed block-placement puzzle with row/column clears.
+- **Tic-Tac-Toe:** a pocket CPU, win/draw checks, and accessible status announcements.
+
+The source tree is intentionally modular: `index.html`, `styles/arena.css`, shared `js/main.js` and `js/storage.js`, and one JavaScript file per game under `js/games/`. A seed marker prevents later launches from overwriting edits or silently recreating a project the user deleted. Existing projects are left alone. The intro can be replayed from Settings → About; replaying it does not overwrite an existing arcade.
+
+The original three-step introduction and acknowledgement remain native Compose UI. The in-app CodeC mark is displayed for two seconds, after which the intro continues; this is separate from Android's system splash, which is released when launch readiness completes. Safe mode continues to prioritize recovery rather than trapping a user in onboarding.
+
+## Archived candidate: Orbit Shift (not shipped)
+
+The remaining product research, detailed decisions, proposed device checklist, and source-specific claims in this file preserve the earlier Orbit Shift prototype. They are useful historical context only; they do not describe the current starter or implementation.
 
 ## What the app did before
 
@@ -130,7 +149,7 @@ No external image asset was needed: the Android illustration is drawn with Compo
 playable sample draws its own art. This avoids network dependencies and keeps the first-run APK
 asset footprint small.
 
-## Verification and device checklist
+## Historical Orbit candidate verification notes and proposed device checklist
 
 Host/source tests cover the first-run gate and ordering, privacy checkbox, one-time seed/deletion
 rules, standalone/offline sample, touch/keyboard controls, responsive page height, shared
@@ -156,7 +175,7 @@ A real-device round is still valuable; do not infer a handset pass from host tes
 6. Settings → About replay; verify an existing Orbit file remains unchanged, a deleted Orbit project
    stays deleted, and an existing Snake project remains untouched.
 
-## Files changed
+## Files referenced by the archived Orbit proposal
 
 - `app/src/main/java/com/codeci/ide/ui/screens/FirstRunIntroScreen.kt` — native intro, privacy
   details/acknowledgement, motion/accessibility.

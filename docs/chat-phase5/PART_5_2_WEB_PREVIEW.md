@@ -153,3 +153,14 @@ DONE (device-verified 2026-08-26).**
 - Spck-style device-width toolbar, viewport toggling.
 - Console **error** click-to-source / a full output panel.
 - Live reload without polling (e.g. `FileObserver`).
+
+## 7. Follow-up — WebView Back traverses page history (2026-09-30)
+
+The preview toolbar arrow and Android system Back now use the WebView's native
+history one entry at a time. Only when `canGoBack()` is false does the preview
+pop to its caller. The system handler defers to the keyboard and transient
+menu/dialog surfaces; the toolbar Back uses the same history-first route.
+
+This extends the shared policy rather than adding an ad-hoc screen handler.
+See [`../chat-phase49/PART_49_3_WEBVIEW_HISTORY.md`](../chat-phase49/PART_49_3_WEBVIEW_HISTORY.md)
+for the BackRouter rows, wiring, tests, CI result, and manual acceptance check.
