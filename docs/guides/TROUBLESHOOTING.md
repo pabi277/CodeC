@@ -2130,3 +2130,12 @@ Three fixes work together:
 - **"Your saved key can't be read anymore"** — the Android Keystore entry was lost (OS update, restore to a new phone, OEM keystore reset). CodeC deleted the unreadable key on purpose (no plaintext fallback, decision D3). Enter the key again; the 18+ confirmation is asked again too.
 - **The answer ends with "cut short"** — Gemini hit the output limit (`MAX_TOKENS`) or you tapped Stop. Ask a narrower question or select less code.
 - **The answer vanished** — by design (D6): answers are never saved; New question, a project switch, or closing the app clears them. Copy what you need.
+
+## 53. AI chat: "where did the AI button go?" / "the chat covers my Output" / "Back closed the chat but not the keyboard" (Phase 77)
+
+- **No floating ✨ button** — it shows only when AI is ready (a project open in the editor, a key saved) **and** ✨ → "Show AI button" is on **and** the chat sheet is closed. Hiding it (long-press → Hide AI button) only flips that switch; turn it back on in ✨ home. Deleting the key hides the button but keeps its position and the switch.
+- **The button sits somewhere odd** — drag it anywhere; it snaps to the nearest side and remembers (`bubble_pos` in `no_backup/ai/ai_settings.properties`). Long-press → Move to other side mirrors it. It lifts above the keyboard and never covers the tab strip, coding row or bottom bar.
+- **Chat hides my Output panel** — variant A (owner's device choice pending, see `chat-phase77/DEVICE_ROUND.md`): the half sheet takes the Output panel's place; the Output state is untouched and returns when the chat closes. Variant B opens the chat full screen instead.
+- **Back closes the chat one step at a time** — FULL → half → closed, through `BackRouter` (AI-sheet row above the drawer/output rows). With the keyboard up, Back is the platform's and hides the keyboard first, like every other panel.
+- **"Explain with AI" is missing on Output** — by design it shows only when the last run failed **and** AI is ready.
+- **No "Ask AI" in the text-selection menu** — skipped on purpose: Sora 0.24.6's `EditorTextActionWindow` has no add-item API (only a fork or runtime view injection would work). Select code, then tap the bubble: the chat opens with "Explain selection" ready to preview.

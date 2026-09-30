@@ -92,6 +92,9 @@ class BackHandlerWiringTest {
         assertTrue(editor.contains("BackAction.ShowUnsavedDialog -> showUnsavedDialog = true"))
         assertTrue(editor.contains("BackAction.CloseFindBar -> viewModel.hideFind()"))
         assertTrue(editor.contains("BackAction.CollapseOutputPanel -> viewModel.toggleOutput()"))
+        // Phase 77.2 — the AI sheet is a router row, not a second handler.
+        assertTrue(editor.contains("aiSheetOpen = aiSheetOpen"))
+        assertTrue(editor.contains("BackAction.CollapseAiSheet -> aiViewModel.sheetEvent(AiSheetEvent.BACK)"))
         // H2 — the drawer row keys on targetValue, in the state AND in the
         // one close callback.
         assertTrue(editor.contains("editorDrawerOpen = drawerState.targetValue == DrawerValue.Open"))

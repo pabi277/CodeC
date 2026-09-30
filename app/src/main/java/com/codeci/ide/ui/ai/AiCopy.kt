@@ -61,6 +61,40 @@ object AiCopy {
 
     const val UNSAVED_NOTE = "The selection includes unsaved edits."
 
+    // ---- Phase 77: the floating button and the chat sheet ------------------
+
+    const val BUBBLE_DESCRIPTION = "AI chat"
+    const val BUBBLE_SELECTION_DESCRIPTION = "AI chat, code selected"
+    const val HIDE_BUBBLE = "Hide AI button"
+    const val MOVE_BUBBLE = "Move to other side"
+    const val BUBBLE_HIDDEN_NOTE = "AI button hidden. Turn it back on in the AI tab of the side panel."
+    const val SHOW_BUBBLE = "Show AI button"
+    const val SHOW_BUBBLE_NOTE = "A small button over the code. Drag it anywhere along either side; press and hold it to hide or move it."
+    const val OPEN_CHAT = "Open AI chat"
+    const val EXPLAIN_WITH_AI = "Explain with AI"
+    const val EXPAND = "Expand chat"
+    const val MINIMIZE = "Minimize chat"
+    const val DRAG_HANDLE = "Drag to resize chat"
+    const val QUESTION_PLACEHOLDER = "Ask about the code…"
+    const val SEND_QUESTION = "Preview question"
+    const val YOU = "You"
+    const val AI = "AI"
+    const val SELECTION_HINT = "Select code in the editor, then ask. You always see what will be sent before it leaves your phone."
+
+    fun sheetTitle(model: String): String = "AI · $model"
+
+    /** The user's side of the exchange, from the prompt the preview was built from. */
+    fun youLine(source: AiSource, fileLabel: String, question: String): String {
+        val head = (if (source == AiSource.SELECTION) EXPLAIN_SELECTION else EXPLAIN_ERROR) + " · " + fileLabel
+        return if (question.isBlank()) head else head + "\n" + question.trim()
+    }
+
+    // Test-build row for the owner's Q3 pick (Phase 77 device round). Deleted with the losing variant.
+    const val VARIANT_TITLE = "Test build: chat while the Output panel is open"
+    const val VARIANT_A = "A · chat replaces the Output panel (bottom half)"
+    const val VARIANT_B = "B · chat opens full screen"
+    const val VARIANT_NOTE = "Pick the one that feels right; this row disappears once you choose. Not saved: resets when the app restarts."
+
     // ---- settings ---------------------------------------------------------
 
     const val SETTINGS = "AI settings"

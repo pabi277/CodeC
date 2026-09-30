@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.codeci.ide.ui.ai.AiCopy
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -151,6 +152,14 @@ fun OutputPanelView(
     onToggleLanShare: (Boolean) -> Unit = {},
     /** Phase 37.2 — stop every server the shared host owns. */
     onStopAllServers: () -> Unit = {},
+    /**
+     * Phase 77.3 — "Explain with AI". Non-null ONLY when the latest run failed
+     * AND the AI helper is ready (the caller decides both: `AiGate.runFailed`
+     * + `AiAvailability.READY`); otherwise the panel shows nothing new. It
+     * opens the chat sheet with the run-output preview — Send is still the
+     * user's (D4).
+     */
+    onExplainWithAi: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -192,6 +201,7 @@ fun OutputPanelView(
                     onClear = onClear,
                     onOpenInTerminal = onOpenInTerminal,
                     onOpenPreviewUrl = onOpenPreviewUrl,
+                    onExplainWithAi = onExplainWithAi,
                     onCopy = {
                         val fullText = state.lines.joinToString("\n") { it.text }
                         if (fullText.isNotEmpty()) {
@@ -385,6 +395,7 @@ private fun OutputActionRow(
     onClear: () -> Unit,
     onOpenInTerminal: () -> Unit,
     onOpenPreviewUrl: (String) -> Unit,
+    onExplainWithAi: (() -> Unit)?,
     onCopy: () -> Unit,
 ) {
     Row(
@@ -404,6 +415,12 @@ private fun OutputActionRow(
                 text = stringResource(R.string.output_stop),
                 color = if (state.busy) Color(0xFFFF5555) else Color(CodecPalette.MUTED_TEXT)
             )
+        }
+        // Phase 77.3 — only after a failed run, only when AI is set up.
+        if (onExplainWithAi != null) {
+            TextButton(onClick = onExplainWithAi, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(text = AiCopy.EXPLAIN_WITH_AI, color = MaterialTheme.colorScheme.primary)
+            }
         }
         // Phase 14: server projects — jump straight back to Web Preview.
         if (state.serverUrl != null) {

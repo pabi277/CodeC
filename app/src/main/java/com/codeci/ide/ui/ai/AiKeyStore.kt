@@ -54,6 +54,30 @@ class AiKeyStore(context: Context) {
         return writeSettings(p)
     }
 
+    /**
+     * Phase 77.1 — the floating button's saved spot. The ONLY UI choice the AI
+     * surface persists (owner Q2 "Yes i think"), kept in this same
+     * `no_backup/ai/ai_settings.properties` — no DataStore key. A bad or
+     * missing value decodes to the default spot. [deleteKey] keeps it, like
+     * the model: it is about the phone's layout, not the key.
+     */
+    fun bubble(): AiBubblePosition = AiBubblePolicy.decode(settings().getProperty(PROP_BUBBLE_POS))
+
+    fun setBubble(p: AiBubblePosition): Boolean {
+        val props = settings()
+        props.setProperty(PROP_BUBBLE_POS, AiBubblePolicy.encode(p))
+        return writeSettings(props)
+    }
+
+    /** "Show AI button" — on unless the owner switched it off (only matters once a key exists). */
+    fun showBubble(): Boolean = settings().getProperty(PROP_BUBBLE_SHOW) != "false"
+
+    fun setShowBubble(show: Boolean): Boolean {
+        val props = settings()
+        props.setProperty(PROP_BUBBLE_SHOW, show.toString())
+        return writeSettings(props)
+    }
+
     fun acceptedTermsVersion(): Int? = settings().getProperty(PROP_TERMS)?.toIntOrNull()
 
     /** Encrypts and stores [rawKey] with the terms acceptance. False on any failure (nothing half-written). */
@@ -144,5 +168,7 @@ class AiKeyStore(context: Context) {
         private const val PROP_MODEL = "model"
         private const val PROP_TERMS = "terms_version"
         private const val PROP_ACCEPTED_AT = "terms_accepted_at"
+        private const val PROP_BUBBLE_POS = "bubble_pos"
+        private const val PROP_BUBBLE_SHOW = "bubble_show"
     }
 }

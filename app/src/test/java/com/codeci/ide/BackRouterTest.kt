@@ -26,6 +26,7 @@ class BackRouterTest {
                 "sheet" -> state.copy(sheetOrDialogOpen = value as Boolean)
                 "find" -> state.copy(findBarOpen = value as Boolean)
                 "output" -> state.copy(outputPanelExpanded = value as Boolean)
+                "aiSheet" -> state.copy(aiSheetOpen = value as Boolean)
                 "introPage" -> state.copy(firstRunIntroPage = value as Int)
                 "keyboard" -> state.copy(keyboardVisible = value as Boolean)
                 "promptVisible" -> state.copy(exitPromptVisible = value as Boolean)
@@ -192,5 +193,32 @@ class BackRouterTest {
         // navigation/root fields, which ordinary screens never fill.
         assertEquals(BackAction.None, decide("keyboard" to true))
         assertEquals(BackAction.None, decide("output" to true, "keyboard" to true, "sheet" to false))
+    }
+
+    // ---- Phase 77.2 — row 0: the AI chat sheet -----------------------------
+
+    @Test
+    fun `row 0 - an open AI sheet steps down before anything underneath it`() {
+        assertEquals(BackAction.CollapseAiSheet, decide("aiSheet" to true))
+        // over a dirty buffer, the find bar and an expanded output panel
+        assertEquals(BackAction.CollapseAiSheet, decide("aiSheet" to true, "unsaved" to true))
+        assertEquals(BackAction.CollapseAiSheet, decide("aiSheet" to true, "find" to true, "output" to true))
+    }
+
+    @Test
+    fun `row 0 guard - an open drawer is on top of the sheet and answers first`() {
+        assertEquals(BackAction.CloseEditorDrawer, decide("aiSheet" to true, "drawer" to true))
+    }
+
+    @Test
+    fun `row 0 guard - with the keyboard up back is the user closing it, not the sheet`() {
+        assertEquals(BackAction.None, decide("aiSheet" to true, "keyboard" to true))
+    }
+
+    @Test
+    fun `row 0 - a closed sheet changes nothing in rows 1 to 13`() {
+        assertEquals(BackAction.ShowUnsavedDialog, decide("aiSheet" to false, "unsaved" to true))
+        assertEquals(BackAction.CollapseOutputPanel, decide("aiSheet" to false, "output" to true))
+        assertEquals(BackAction.None, decide("aiSheet" to false))
     }
 }

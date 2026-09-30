@@ -131,7 +131,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codeci.ide.ui.ai.AiContextBuilder
 import com.codeci.ide.ui.ai.AiGate
-import com.codeci.ide.ui.ai.AiPanel
+import com.codeci.ide.ui.ai.AiAvailability
+import com.codeci.ide.ui.ai.AiBubblePolicy
+import com.codeci.ide.ui.ai.AiChatSheet
+import com.codeci.ide.ui.ai.AiCopy
+import com.codeci.ide.ui.ai.AiFloatingButton
+import com.codeci.ide.ui.ai.AiHome
+import com.codeci.ide.ui.ai.AiPhase
+import com.codeci.ide.ui.ai.AiSheetEvent
+import com.codeci.ide.ui.ai.AiSheetPolicy
+import com.codeci.ide.ui.ai.AiSheetState
 import com.codeci.ide.ui.ai.AiViewModel
 import com.codeci.ide.ui.viewmodels.OutputPhase
 import com.codeci.ide.ui.theme.CodecMotion
@@ -1054,18 +1063,121 @@ fun EditorScreen(
     // platform owns that press (the router's row-9 guard). This screen leaves
     // the route/root fields at their defaults, so it cannot pop navigation or
     // exit the app behind its own editor surface.
+    // Phase 77 — the AI surface on the editor: a floating button over the code
+    // area and a chat sheet (HALF in the bottom slot, FULL as an overlay), both
+    // reading the ONE AiViewModel. They show only when AiGate says READY (a
+    // project is open AND a key is saved), so nobody who never set AI up sees
+    // either. Prompts are built at TAP time from the live buffer / latest run
+    // and only ever previewed; a request leaves the phone on Send alone (D4).
+    val aiAvailability = AiGate.availability(openMode, currentProject, aiState.keySaved)
+    val aiReady = aiAvailability == AiAvailability.READY
+    val aiSheetOpen = aiReady && aiState.sheet != AiSheetState.HIDDEN
+    val aiHasSelection = !codeText.selection.collapsed
+    var aiQuestion by rememberSaveable { mutableStateOf("") }
+    // A key deleted, or a mode change, while the sheet is up: put it away.
+    LaunchedEffect(aiReady) { if (!aiReady) aiViewModel.closeSheet() }
+
+    val aiExplainSelection: (String) -> Unit = { question ->
+        val buffer = viewModel.codeText.value
+        val fileLabel = viewModel.activeTabPath.value ?: viewModel.fileName.value
+        aiViewModel.preview(
+            AiContextBuilder.fromSelection(
+                text = buffer.text,
+                selectionStart = buffer.selection.start,
+                selectionEnd = buffer.selection.end,
+                fileLabel = fileLabel,
+                languageLabel = LanguageType.fromFileName(fileLabel).label,
+                unsaved = viewModel.isDirty.value,
+                question = question
+            )
+        )
+    }
+    val aiExplainError: (String) -> Unit = { question ->
+        val out = viewModel.outputState.value
+        val fileLabel = viewModel.activeTabPath.value ?: viewModel.fileName.value
+        val root = currentProject?.let { name ->
+            runCatching { ProjectManager(context).project(name)?.root?.absolutePath }.getOrNull()
+        }
+        aiViewModel.preview(
+            AiContextBuilder.fromRunOutput(
+                lines = out.lines.map { it.text },
+                failed = AiGate.runFailed(
+                    phaseFailed = out.phase == OutputPhase.FAILED,
+                    buildExitCode = out.buildExitCode,
+                    runExitCode = out.runExitCode,
+                    hasDiagnostics = viewModel.diagnostics.value.isNotEmpty()
+                ),
+                fileLabel = fileLabel,
+                languageLabel = LanguageType.fromFileName(fileLabel).label,
+                // The device's directory layout is not sent.
+                pathLabels = listOfNotNull(
+                    root?.let { it to "" },
+                    context.filesDir.absolutePath to "~app"
+                ),
+                question = question
+            )
+        )
+    }
+    // One tap on the bubble opens the sheet; with code selected it lands
+    // already on the Explain-selection PREVIEW (still one more tap to Send).
+    val aiOnBubbleTap: () -> Unit = {
+        aiViewModel.openSheet(outputOpen = outputExpanded)
+        if (!codeText.selection.collapsed && aiState.phase == AiPhase.IDLE) aiExplainSelection(aiQuestion)
+    }
+    // Phase 77.3 — "Explain with AI" on the Output panel: only after a FAILED
+    // run, and only when READY; otherwise null and the panel shows nothing.
+    val aiRunFailed = AiGate.runFailed(
+        phaseFailed = outputState.phase == OutputPhase.FAILED,
+        buildExitCode = outputState.buildExitCode,
+        runExitCode = outputState.runExitCode,
+        hasDiagnostics = diagnostics.isNotEmpty()
+    )
+    val aiExplainWithAi: (() -> Unit)? = if (aiReady && aiRunFailed) {
+        {
+            aiViewModel.openSheet(outputOpen = outputExpanded)
+            aiExplainError("")
+        }
+    } else {
+        null
+    }
+    val aiSheet: @Composable (Boolean, Modifier) -> Unit = { full, sheetModifier ->
+        AiChatSheet(
+            full = full,
+            state = aiState,
+            imeVisible = imeVisible,
+            hasSelection = aiHasSelection,
+            question = aiQuestion,
+            onQuestionChange = { aiQuestion = it },
+            onExplainSelection = aiExplainSelection,
+            onExplainError = aiExplainError,
+            onSend = aiViewModel::send,
+            onCancelPreview = aiViewModel::cancelPreview,
+            onStop = aiViewModel::stop,
+            onRetry = aiViewModel::retry,
+            onClear = aiViewModel::clear,
+            onDismissNotice = aiViewModel::dismissNotice,
+            onExpand = { aiViewModel.sheetEvent(AiSheetEvent.EXPAND) },
+            onMinimize = { aiViewModel.sheetEvent(AiSheetEvent.MINIMIZE) },
+            onDragEnd = { fraction -> aiViewModel.sheetEvent(AiSheetEvent.DRAG_END, fraction) },
+            modifier = sheetModifier
+        )
+    }
+
     val editorBackAction = BackRouter.decide(
         BackState(
             unsavedChanges = isDirty,
             editorDrawerOpen = drawerState.targetValue == DrawerValue.Open,
             sheetOrDialogOpen = editorModalOpen || pendingCloseTab != null,
             findBarOpen = findState.visible,
-            outputPanelExpanded = outputExpanded,
+            // Hidden behind the AI sheet → not something Back can collapse.
+            outputPanelExpanded = AiSheetPolicy.outputVisible(outputExpanded, aiState.sheet),
+            aiSheetOpen = aiSheetOpen,
             keyboardVisible = imeVisible
         )
     )
     BackHandler(enabled = editorBackAction != BackAction.None) {
         when (editorBackAction) {
+            BackAction.CollapseAiSheet -> aiViewModel.sheetEvent(AiSheetEvent.BACK)
             BackAction.ShowUnsavedDialog -> showUnsavedDialog = true
             BackAction.CloseEditorDrawer -> closeDrawer(DrawerCloseReason.BACK)
             BackAction.CloseFindBar -> viewModel.hideFind()
@@ -1502,61 +1614,23 @@ fun EditorScreen(
                     // background), and the panel only ever previews them; a
                     // request leaves the phone only on its Send button (D4).
                     aiContent = {
-                        AiPanel(
+                        // Phase 77.3 — the ✨ slot is AI HOME only: setup,
+                        // model, Test, Delete key, Show AI button, Open AI
+                        // chat. The chat itself is the sheet over the code.
+                        AiHome(
                             state = aiState,
-                            availability = AiGate.availability(openMode, currentProject, aiState.keySaved),
-                            onExplainSelection = { question ->
-                                val buffer = viewModel.codeText.value
-                                val fileLabel = viewModel.activeTabPath.value ?: viewModel.fileName.value
-                                aiViewModel.preview(
-                                    AiContextBuilder.fromSelection(
-                                        text = buffer.text,
-                                        selectionStart = buffer.selection.start,
-                                        selectionEnd = buffer.selection.end,
-                                        fileLabel = fileLabel,
-                                        languageLabel = LanguageType.fromFileName(fileLabel).label,
-                                        unsaved = viewModel.isDirty.value,
-                                        question = question
-                                    )
-                                )
-                            },
-                            onExplainError = { question ->
-                                val out = viewModel.outputState.value
-                                val fileLabel = viewModel.activeTabPath.value ?: viewModel.fileName.value
-                                val root = currentProject?.let { name ->
-                                    runCatching { ProjectManager(context).project(name)?.root?.absolutePath }.getOrNull()
-                                }
-                                aiViewModel.preview(
-                                    AiContextBuilder.fromRunOutput(
-                                        lines = out.lines.map { it.text },
-                                        failed = AiGate.runFailed(
-                                            phaseFailed = out.phase == OutputPhase.FAILED,
-                                            buildExitCode = out.buildExitCode,
-                                            runExitCode = out.runExitCode,
-                                            hasDiagnostics = viewModel.diagnostics.value.isNotEmpty()
-                                        ),
-                                        fileLabel = fileLabel,
-                                        languageLabel = LanguageType.fromFileName(fileLabel).label,
-                                        // The device's directory layout is not sent.
-                                        pathLabels = listOfNotNull(
-                                            root?.let { it to "" },
-                                            context.filesDir.absolutePath to "~app"
-                                        ),
-                                        question = question
-                                    )
-                                )
-                            },
-                            onSend = aiViewModel::send,
-                            onCancelPreview = aiViewModel::cancelPreview,
-                            onStop = aiViewModel::stop,
-                            onRetry = aiViewModel::retry,
-                            onClear = aiViewModel::clear,
-                            onDismissNotice = aiViewModel::dismissNotice,
-                            onToggleSettings = aiViewModel::toggleSettings,
+                            availability = aiAvailability,
                             onSaveKey = aiViewModel::saveKey,
                             onSaveModel = aiViewModel::saveModel,
                             onTest = aiViewModel::testConnection,
-                            onDeleteKey = aiViewModel::deleteKey
+                            onDeleteKey = aiViewModel::deleteKey,
+                            onShowBubbleChange = aiViewModel::setShowBubble,
+                            onOpenChat = {
+                                // The drawer leaves with what it opened (like a file row).
+                                closeDrawer(DrawerCloseReason.FILE_OPENED)
+                                aiViewModel.openSheet(outputOpen = outputExpanded)
+                            },
+                            onOutputConflictChange = aiViewModel::setOutputConflict
                         )
                     },
                     files = {
@@ -2445,6 +2519,25 @@ fun EditorScreen(
                         }
                     }
                 }
+
+                // Phase 77.1 — the floating AI button, inside the CODE AREA
+                // only: the tab strip, the coding row, the keyboard and the
+                // bottom bar are outside this box, so it can never cover
+                // them. AiBubblePolicy.visible is the only show/hide rule
+                // (READY + "Show AI button" + sheet closed): no key, no
+                // bubble — no tooltip, no pulse.
+                if (AiBubblePolicy.visible(aiAvailability, aiState.showBubble, aiSheetOpen)) {
+                    AiFloatingButton(
+                        position = aiState.bubble,
+                        hasSelection = aiHasSelection,
+                        onTap = aiOnBubbleTap,
+                        onHide = {
+                            aiViewModel.setShowBubble(false)
+                            uiScope.launch { snackbarHostState.showSnackbar(AiCopy.BUBBLE_HIDDEN_NOTE) }
+                        },
+                        onMoved = aiViewModel::saveBubblePosition
+                    )
+                }
             }
 
             // Phase 16 — Spck bottom order: the snippet/keys row docks ABOVE
@@ -2454,7 +2547,7 @@ fun EditorScreen(
             // very bottom of the column instead, so with `imePadding()` above
             // it lands DIRECTLY on top of the keyboard (Termux's extra-keys
             // behavior) rather than being stranded mid-screen.
-            if (stripVisible && !imeVisible) {
+            if (stripVisible && !imeVisible && !aiSheetOpen) {
                 BottomStrip(
                     suppressKeysVariant = codecKeysUp,
                     context = stripContext,
@@ -2482,7 +2575,7 @@ fun EditorScreen(
             // whole extra line of code kept visible above the keyboard. It
             // returns the moment the keyboard closes. (Phase 28.2: CodeC Keys
             // yields the row the same way — it is the keyboard now.)
-            if (caretPlaced && !imeVisible && !codecKeysUp) {
+            if (caretPlaced && !imeVisible && !codecKeysUp && !aiSheetOpen) {
                 // Phase 51.2 slot: status_bar
                 EditorStatusBar(
                     line = cursorPos.line,
@@ -2538,7 +2631,10 @@ fun EditorScreen(
             // upward on the shared panel spec; the collapsed strip below
             // still swaps instantly, exactly as before.
             AnimatedVisibility(
-                visible = outputExpanded,
+                // Phase 77.2 — off screen while the AI sheet is up (either
+                // Q3 variant); its expanded flag is untouched, so it is back
+                // exactly as it was the moment the sheet is put away.
+                visible = AiSheetPolicy.outputVisible(outputExpanded, aiState.sheet),
                 enter = motion.orNone(CodecMotion.panelEnter),
                 exit = motion.orNone(CodecMotion.panelExit)
             ) {
@@ -2577,13 +2673,14 @@ fun EditorScreen(
                         // so it lives in the panel next to the URLs it changes.
                         onToggleLanShare = { enabled -> viewModel.setLanShare(context, enabled) },
                         onStopAllServers = { viewModel.stopAllServers(context) },
+                        onExplainWithAi = aiExplainWithAi,
                         modifier = Modifier.height(
                             OutputPanelHeight.resolve(outputPanelHeight, panelScreen, imeVisible).dp
                         )
                     )
                 }
             }
-            if (!outputExpanded && outputState.hasContent() && !imeVisible && !codecKeysUp) {
+            if (!outputExpanded && outputState.hasContent() && !imeVisible && !codecKeysUp && !aiSheetOpen) {
                 // Phase 22.4 — the collapsed strip only exists once there IS
                 // output, and never while you are typing. Before the first
                 // RUN it was 64dp of permanently reserved height showing
@@ -2612,12 +2709,20 @@ fun EditorScreen(
                 )
             }
 
+            // Phase 77.2 — the AI chat, HALF: one slot at the bottom of the
+            // column (where the Output panel lives), sized by the Output
+            // panel's own height rule, so the code stays visible above it
+            // and the keyboard cap is the same 38 %.
+            if (aiSheetOpen && aiState.sheet == AiSheetState.HALF) {
+                aiSheet(false, Modifier)
+            }
+
             // Phase 22.2 — the IME-anchored position. This is the last child
             // of the imePadding()'d column, so it sits flush on top of the
             // soft keyboard. Same composable, same key set, same actions as
             // the docked row above — only the position changes, so nothing
             // about find/replace, autocomplete or the status bar is affected.
-            if (stripVisible && imeVisible) {
+            if (stripVisible && imeVisible && !aiSheetOpen) {
                 BottomStrip(
                     suppressKeysVariant = codecKeysUp,
                     context = stripContext,
@@ -2650,7 +2755,7 @@ fun EditorScreen(
             // programmatic VM edits, which sora's SymbolPairMatch never sees,
             // and the strip's reason for suppressing (its own `()` cap) does
             // not exist on a one-key-per-char grid.
-            if (codecKeysUp) {
+            if (codecKeysUp && !aiSheetOpen) {
                 CodecKeyboard(
                     layout = if (codecKeysLayer == KeyboardLayers.SYMBOLS) codecKeysSymbols else codecKeysLetters,
                     shift = codecKeysShift,
@@ -2685,6 +2790,13 @@ fun EditorScreen(
                 )
             }
         }
+        }
+
+        // Phase 77.2 — the AI chat, FULL: an overlay over the whole editor
+        // (a sheet, not a route — no navigation state changes). It carries
+        // its own IME inset, so the question field rides above the keyboard.
+        if (aiSheetOpen && aiState.sheet == AiSheetState.FULL) {
+            aiSheet(true, Modifier.imePadding())
         }
 
         // Phase 69.3 — the strip beside the panel closes it. Owner (2026-09-28,

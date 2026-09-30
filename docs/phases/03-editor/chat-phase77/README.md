@@ -1,7 +1,8 @@
 # Phase 77 — AI UI for phones: floating AI button + bottom chat sheet
 
-> **Status: 📋 PLANNED / BRIEFED (2026-10-01), docs only — no app code yet.**
-> Implement in the **next chat** when the owner says to start. Builds on
+> **Status: 🚧 BUILT, CI + device round pending (2026-10-01).** All three parts are
+> implemented; both Output-conflict variants (A/B) are in the build for the owner to
+> pick on the phone — see `DEVICE_ROUND.md`. Not merged. Builds on
 > [Phase 76](../chat-phase76/README.md) (AI Level 1, ✅ device-passed, merged).
 
 ## Owner rows (verbatim, 2026-10-01)
