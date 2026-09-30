@@ -35,6 +35,14 @@ Exact device, Android/IME version, code sample and input surface have not yet be
 - `ui/editor/sora/SoraEditorHost.kt:315–342` receives Sora content changes, and the host replays VM edits as a delta. A correction must preserve the single-edit/undo and composition/restart-input invariants; do not modify the replay path speculatively.
 - Existing host tests: `SmartTypingTest`, `CodeCLanguageLogicTest`, `IncrementalEditTest`, plus editor/sora wiring and replay-path tests. CI `Build APK` is the only execution-of-record; no local Android compile or device test is claimed.
 
+> **Update from the implementation pass (2026-09-30).** Every suspect above was resolved
+> against the real Sora 0.24.6 source, and the `def`-vs-`for` contrast *is* explained by
+> inspection — see §“Implementation record” below for the mechanism (a zero delta from the
+> language-less adapter, plus the VM rule's “buffer grew by exactly one character” gate) and
+> for what changed. The Backspace symptom has a source owner too (`deleteEmptyLineFast`), so
+> neither finding is left as a hypothesis; both still await the owner's handset for the UX
+> claim.
+
 ## Proposed bounded scope
 
 A single typing-correctness pass, no editor redesign:
@@ -194,9 +202,19 @@ and the join” — the owner's “jumps back by the whole indent”.
 
 ### CI
 
-`Build APK` on the pushed branch: recorded in `docs/NEXT_STEPS.md` and `prompt.md` (the run
-id lands here when green). No local Gradle/Robolectric/lint is claimed — the sandbox has no
-JVM (`rule.md` §5).
+**`Build APK` ✅ GREEN round 1 — run [`36679767045`](https://github.com/pabi277/CodeC/actions/runs/36679767045)**
+on the pushed branch tip `5acac43` (base: `main` @ `dba1361`, the PR #97 merge). Step 8 *host
+unit and screenshot tests* success, step 9 *assemble debug APK* success, steps 10–13 the
+release set + weight check success, zero error annotations — one round, no stale pin to move,
+no for-cause fix needed. Artifacts: debug 25,434,005 B, release 6,291,527 B
+(+1,077 B / +0.02 % over the post-PR-#96 run `36675799563`). No local Gradle/Robolectric/lint
+is claimed — the sandbox has no JVM (`rule.md` §5); the pre-run check was a Python mirror of
+every new and changed assertion (72 checks: the block matrix, the Backspace shapes, the pin
+strings), which passed and which is NOT a substitute for this run.
+
+What CI proves: the four production files compile, the moved `indentAdvanceFor` pin and the
+new `SmartTypingTest`/`EditorTypingRouteWiringTest` cases pass, lint is clean. What CI cannot
+prove: anything about a phone. The next line is the owner's.
 
 ### Device round owed (the owner's, on the build this branch produces)
 

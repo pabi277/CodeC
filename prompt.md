@@ -85,7 +85,9 @@ sections collapsed, exit/welcome as they were). Production change is four files
 `SmartTypingTest` (+14 cases), `CodeCLanguageLogicTest` (one pin moved, with its reason) and
 the new `EditorTypingRouteWiringTest` (6 source pins on the seam). Sora 0.24.6 was read from
 the tag through the GitHub API — the sandbox builds nothing, so `Build APK` is the executor of
-record and its run id is recorded in `docs/NEXT_STEPS.md` and the phase doc. **No device pass
+record, and it is **✅ GREEN round 1 `36679767045` on tip `5acac43`** (unit + screenshot tests,
+debug + release assemble, lint, the weight check, zero error annotations; release APK 6,291,527 B
+= +1,077 B / +0.02 % over the post-#96 run). **No device pass
 is claimed**: the owner tests Enter/Backspace on his phone with the system keyboard and CodeC
 Keys and reports back; no PR, no merge, until he commands it (`rule.md` §3). Read
 `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` before touching typing behaviour again.
