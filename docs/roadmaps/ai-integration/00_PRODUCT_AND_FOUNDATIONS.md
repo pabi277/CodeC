@@ -2,6 +2,10 @@
 
 **Status: discussion / planning only.** This page defines decisions that should be settled before AI code is started.
 
+## Start with the evidence, not assumptions
+
+Read the [AI research dossier](../../research/AI_INTEGRATION_RESEARCH_20260930.md) before making an architecture decision. It maps the current CodeC source for the reserved rail slot, project roots, active editor buffers, per-tab undo, Run/output, terminal and privacy/backup behavior; it also records which open-source projects are references and what still needs primary-source/device verification. The master [AI roadmap](../AI_INTEGRATION_ROADMAP.md) defines the staged sequence. Repository documentation is categorized in [`docs/README.md`](../../README.md).
+
 ## User's product direction
 
 - The agent works on a user-selected whole project.

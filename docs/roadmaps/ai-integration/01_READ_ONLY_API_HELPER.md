@@ -26,7 +26,7 @@ It validates the Compose UI, API compatibility, streaming/cancellation, key entr
 - A BYOK arrangement means the user may be billed by that provider and is subject to that provider's terms; CodeC must not imply it is free or that CodeC controls provider retention.
 - Test that a cold launch, browsing, editing, and running do not contact AI endpoints.
 
-CodeC's current privacy documentation claims no unprompted outbound traffic and notes that its settings backup excludes DataStore (which currently holds the GitHub token). An AI-key design must be reviewed against those facts; do not silently expand backup or logging scope.
+CodeC's source of truth is [`docs/guides/DATA_AND_PRIVACY.md`](../../guides/DATA_AND_PRIVACY.md). It documents user-triggered outbound traffic, the current GitHub token in DataStore, and backup exclusions. An AI-key design must be reviewed against those facts; do not silently expand backup or logging scope. The research dossier's [CodeC data map](../../research/AI_INTEGRATION_RESEARCH_20260930.md#current-data-and-boundaries-to-inspect) lists the source files/tests to recheck before implementation.
 
 ## Acceptance questions
 

@@ -1,55 +1,58 @@
-# CodeC AI integration — staged product and implementation plan
+# CodeC AI integration — staged roadmap
 
-**Status: discussion / planning only. No AI implementation is approved by this document.**
+**Status: discussion and planning only. No app implementation is authorized by this document.**
 
-This plan records the owner's requested direction: a project-wide, agentic coding assistant; user-supplied API credentials and multiple provider/model choices; an optional offline model recommended only after checking the device; and a way to undo agent edits. It deliberately starts with a small, useful slice and adds autonomy only after the previous level is dependable.
+## Product direction supplied by the owner
 
-## The intended destination
+Build toward an agent that works across the user's selected whole CodeC project; users provide credentials and choose among API providers/models; CodeC checks device capability before recommending an optional offline model; and users can undo agent file changes. Grow from easy, useful behavior to higher autonomy rather than attempting the whole vision in one release.
 
-A user selects a CodeC project and asks an agent to inspect, explain, change, and verify code across that project. The agent can use CodeC's editor, project files, run/output and terminal through narrowly defined CodeC tools. It can use a selected cloud provider/model or, optionally, a supported on-device model. Users can review and undo file changes. Commands and other side effects remain separately controlled.
+## Current-main baseline
 
-"Whole project" means the agent is allowed to reason about the selected project, not that every file must be uploaded on every request. CodeC should discover relevant context, respect exclusions, and disclose what leaves the device before a cloud request.
+Reviewed against **`main` @ `120460f7bcccb11d739aa6b887607954b7dad428` (PR #100)** after the September 30 documentation reorganization. CodeC is a native Kotlin/Compose Android IDE with projects/files, a multi-tab editor, terminal, run/output/diagnostics and Git/source control. The editor's fifth side-rail position is deliberately reserved and not wired. There is no working LLM provider client, inference runtime, agent loop, tool-approval flow, or AI session/key management. Gemini packaging metadata and `.env.example` comments are not a live integration.
 
-## Repository baseline checked for this plan
+The current editor already has per-tab text undo/redo (`ui/editor/EditorUndoManager.kt`). That is valuable for ordinary edits, but it is not a durable, multi-file, task-level agent rollback. CodeC's `ExecutionRunner` and terminal are real execution surfaces; neither is an isolation boundary against actions run with CodeC's permissions.
 
-This plan was written after rechecking the current checkout (HEAD `69c4b53`, merge PR #94; working tree clean at review). CodeC is a native Kotlin/Jetpack Compose Android IDE with project/file-tree management, an editor, terminal, run/output and diagnostics, plus Git features. `EditorSidePanel.kt` has a reserved, currently unwired rail slot and `strings.xml` calls it a future AI feature. There is no provider client, LLM runtime, agent tool loop, agent approval flow, or AI-key management in the app today. Gemini references in packaging metadata and `.env.example` are not a working integration.
+## Read the research first
 
-Relevant existing contracts and constraints:
+The companion [research dossier](../research/AI_INTEGRATION_RESEARCH_20260930.md) is the evidence and repository map: it states what files to inspect for UI, project roots, editor buffers, undo, run output, terminal, privacy/credentials and local model runtime; gives a procedure for researching OSS candidates and provider docs; and separates checked repository facts from proposals. Keep it current before turning any level into an implementation brief.
 
-- [`DATA_AND_PRIVACY.md`](../DATA_AND_PRIVACY.md): no telemetry; outbound traffic is user-triggered; project data is private by default; it documents the existing file-access permissions and backup scope.
-- [`README.md`](../../README.md): describes the current project, terminal, run and install behavior.
-- [`rule.md`](../../rule.md): implementation/CI and owner approval rules. These AI pages do not authorize implementation, a phase, a PR, or a merge.
-- The editor has both on-disk files and live editor state. Before agent reads/writes, unsaved buffers and external file changes need an explicit conflict policy.
-- CodeC's Android app sandbox is not an agent sandbox. A process running with CodeC's access can still affect CodeC-accessible projects and app data.
+## Staged pages: start small, then expand
 
-## Staged pages
+| Level | Spec | User outcome | Depends on | Complexity / risk |
+|---|---|---|---|---|
+| 0 | [Product boundaries and shared foundations](ai-integration/00_PRODUCT_AND_FOUNDATIONS.md) | Decide project scope, consent, session record, key boundary and permissions before code | Owner decisions and source audit | Planning prerequisite |
+| 1 | [One-provider read-only helper](ai-integration/01_READ_ONLY_API_HELPER.md) | Explain selected code or a run diagnostic via one user-triggered BYOK request | Level 0; no project crawling or write/run tools | Lowest useful slice; API/privacy validation |
+| 2 | [Whole-project context](ai-integration/02_WHOLE_PROJECT_CONTEXT.md) | Answer questions across the selected project using relevant files, with visible context | Level 1; root/exclusion/dirty-buffer contract | Medium; data disclosure/context limits |
+| 3 | [Reviewable edits and task undo](ai-integration/03_EDIT_REVIEW_AND_UNDO.md) | Propose multi-file diffs, apply after approval, undo the agent file change set | Level 2; conflict-safe project/editor APIs | Medium-high; preserve user work |
+| 4 | [Bounded tools and verified run loop](ai-integration/04_AGENT_TOOLS_AND_RUN_LOOP.md) | Inspect → plan → approved edit → approved run → inspect output | Levels 1–3; tool policy and runner integration | High; commands and side effects |
+| 5 | [Providers and model collaboration](ai-integration/05_PROVIDERS_AND_MODEL_COLLABORATION.md) | Choose among BYOK providers/models; optionally get a second, read-only review | Stable Level 1–4 contracts | High; provider compatibility, spend, extra data recipients |
+| 6 | [Optional on-device inference](ai-integration/06_OPTIONAL_ON_DEVICE_MODEL.md) | User-opted offline model, recommended only after compatibility and device checks | Local runtime spike, model/device evaluation, same tool policy | High; NDK/native runtime, storage, memory, heat, reliability |
+| 7 | [Higher autonomy and evaluation](ai-integration/07_AUTONOMY_AND_EVALUATION.md) | Consider bounded autonomous tasks and specialist roles only if evaluation justifies them | Guarded agent, rollback, isolation, task benchmark | Highest; explicitly defer |
 
-| Level | Page | Goal | Relative complexity |
-|---|---|---|---|
-| 0 | [Product boundaries and shared foundations](00_PRODUCT_AND_FOUNDATIONS.md) | Agree on permissions, session model, and the stable provider/tool boundaries before implementation | Planning prerequisite |
-| 1 | [One-provider, read-only helper](01_READ_ONLY_API_HELPER.md) | BYOK API request for selected code or a run diagnostic; no file edits or shell tools | Lowest useful AI slice |
-| 2 | [Whole-project context](02_WHOLE_PROJECT_CONTEXT.md) | Give the agent useful project-wide understanding without sending the entire tree by default | Medium |
-| 3 | [Proposed edits and task undo](03_EDIT_REVIEW_AND_UNDO.md) | Stage file changes, review diffs, apply/reject, and roll back agent edits | Medium-high |
-| 4 | [Agent tools and verified run loop](04_AGENT_TOOLS_AND_RUN_LOOP.md) | Add bounded file/search/run tools and explicit command approvals | High; security-sensitive |
-| 5 | [Multiple API providers and model collaboration](05_PROVIDERS_AND_MODEL_COLLABORATION.md) | Add provider/model choice, then optional second-model review | High; cost and privacy-sensitive |
-| 6 | [Optional on-device model](06_OPTIONAL_ON_DEVICE_MODEL.md) | Check device suitability, acquire a model only on request, and support offline inference | High; native/runtime and device matrix work |
-| 7 | [Higher autonomy and evaluation](07_AUTONOMY_AND_EVALUATION.md) | Only after the guarded loop works: bounded task autonomy, specialist roles, measurable quality | Highest; defer until evidence supports it |
+The sequence expresses dependencies and risk—not a promise each item is easy or already scheduled. Level 1 can be evaluated without committing CodeC to later levels. Stop or narrow scope when evidence fails an acceptance check.
 
-The levels are an order of risk and dependency, not a promise that implementation is easy. Each page says what the user gets, what it depends on, what can go wrong, and what should remain out of scope at that level.
+## Core architecture recommendation
 
-## Research references
+Use one agent/session policy owned by CodeC and swap model backends behind it. Conceptually, one turn should travel through these boundaries:
 
-These are implementation references, not endorsements to copy code or a decision to adopt their dependencies. Check the actual repository license, maintenance, Android compatibility, model/provider terms, and dependency footprint before reuse.
+**User task → CodeC session state → selected-project context builder → chosen provider/local runtime → proposed answer or typed tool request → CodeC scope/policy/approval gate → existing project/editor/run service → recorded result → next model turn or final user-facing summary.**
 
-- [AndCode](https://github.com/yuga-hashimoto/and-code) — a close Android UX/runtime comparison: project/workspace UI, agent sessions, approvals, diffs, terminal and local/remote agent runtime options. Its approach wraps existing CLI agents in a Linux environment or connects remotely; that is not the same as a native Kotlin agent integrated with CodeC's editor and runners.
-- [Cline](https://github.com/cline/cline) — plan/act workflow, tool approval, provider configuration, checkpoints/undo, and agent-core boundaries. Useful for interaction and state-machine study; its main ecosystem is not Android/Kotlin.
-- [Aider](https://github.com/Aider-AI/aider) — repository map/context selection and reviewable edits; useful for whole-project context without naively attaching every file. GitHub currently shows its latest listed commit as May 22, 2026, so inspect maintenance before adopting.
-- [OpenHands](https://github.com/OpenHands/OpenHands) — broad software-agent runtime and workspace/sandbox concepts. Its operational footprint is much larger than a mobile IDE feature; study boundaries and event flows rather than attempting to embed the platform wholesale.
-- [Pi agent toolkit](https://github.com/earendil-works/pi) — separates multi-provider model API, agent loop/tool state, and coding-agent product. Useful architecture reference, but it is TypeScript and not a drop-in Kotlin library.
-- [llama.cpp](https://github.com/ggml-org/llama.cpp) — native inference runtime and GGUF model ecosystem for flexible local-model experimentation.
-- [Google LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) — Android/Kotlin-oriented edge inference option with stated tool-use and accelerator support; verify model/runtime/device support for the exact intended release before selecting it.
-- [DroidAgentKit](https://github.com/iVamsi/droid-agent-kit) — example of exposing structured, permissioned Android-development operations instead of handing an agent an unrestricted shell. It targets host-side Android development tools, not CodeC's in-app project sandbox.
+Keep the network/model layer separate from project operations. Expose typed, narrowly scoped tools; CodeC validates every request, project path, state and required approval. Provider/local model capability never grants permission. Start with one lead model; later allow one user-triggered, read-only reviewer. Do not start with agents editing files in parallel.
 
-## Recommendation
+At Level 1, the context builder is just selected text/diagnostic and the only operation is a model request. At Level 2 it can retrieve project files. At Level 3 it emits a proposed patch but still cannot apply it without the user. Level 4 connects approved tools to the existing CodeC services. That expansion lets the provider and UI seams be tested before granting progressively riskier project capabilities.
 
-Approve the product boundaries first, then evaluate Level 1 as the smallest real user value. Do not begin by adding an autonomous shell agent or bundling a local model. Keep the UI entry point and architecture extensible so the later levels do not require replacing the first one.
+For whole-project support, let the model reason over the selected project but retrieve relevant files/ranges rather than upload every file on every turn. Show provider and context before a cloud call. Treat code comments, README instructions, terminal output and downloaded files as untrusted data, not authority to change the agent's rules.
+
+For changes, show local diffs and create a task-scoped file checkpoint. Detect dirty buffers and external edits. File rollback does not undo terminal/package/Git/network side effects; keep those actions separate and explicit. Use the existing Run pipeline for approved runs. A shell started with CodeC's app identity is not a hardened sandbox.
+
+## Research and implementation artifacts by repository category
+
+- Evidence and external implementation comparisons: [`docs/research/AI_INTEGRATION_RESEARCH_20260930.md`](../research/AI_INTEGRATION_RESEARCH_20260930.md).
+- Approved design/sequence: this file plus the level specs in `docs/roadmaps/ai-integration/`.
+- Current owner-approved work order: [`docs/getting-started/NEXT_STEPS.md`](../getting-started/NEXT_STEPS.md). Keep the AI work labeled discussion-only until the owner chooses and starts a level.
+- Actual implementation records, after authorization: the appropriate topic under `docs/phases/<category>/chat-phaseNN/`, following [`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`](../getting-started/HOW_TO_CREATE_A_PHASE.md).
+- Master navigation: [`docs/README.md`](../README.md).
+
+## Stop conditions
+
+No AI endpoint is called before a user starts it. No cloud context is sent without clear provider/context disclosure. No API key enters prompts, logs, exports, crash reports, project files or unreviewed backup scope. No file change is applied without review at initial edit levels. No terminal command, package install or Git/network side effect is hidden under “undo.” No local-to-cloud fallback or model download occurs silently. Do not update privacy/product claims until implemented behavior and tests support them.
