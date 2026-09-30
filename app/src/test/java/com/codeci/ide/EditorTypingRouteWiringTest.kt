@@ -34,6 +34,16 @@ class EditorTypingRouteWiringTest {
             "app/src/main/java/com/codeci/ide/ui/editor/SmartTyping.kt"
         ).readText()
 
+    private val completionEngine: String
+        get() = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/editor/CodeCompletionEngine.kt"
+        ).readText()
+
+    private val keySet: String
+        get() = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/editor/EditorKeySet.kt"
+        ).readText()
+
     // ---- the two Enter routes ------------------------------------------------
 
     @Test
@@ -48,18 +58,26 @@ class EditorTypingRouteWiringTest {
     }
 
     @Test
-    fun `the python block rule has exactly one owner`() {
+    fun `the python block rule has exactly one owner and both openers answer a level`() {
         // Comments are blanked first (Phase 50 hygiene): a sentence that says
         // "the colon rule lives in one place" must not satisfy the pin. The
-        // adapter may keep its brace test and nothing else.
+        // adapter may keep its brace test and nothing else, and both branches
+        // answer the same clamped `level` (Phase 75.2 device round: "Int
+        // main(){ not auto indenting", "{} are not indenting i also tryed java
+        // same").
         val analyzerCode = RepoFiles.codeOnly(analyzer)
         assertEquals(
             "the sora adapter owns exactly one textual rule, and it is the brace",
             1,
             Regex("""endsWith\(""").findAll(analyzerCode).count()
         )
-        assertTrue(analyzer.contains("trimmed.endsWith('{') -> 1"))
-        assertTrue(analyzer.contains("SmartTyping.opensPythonBlock(trimmed)"))
+        assertTrue(analyzer.contains("val level = indentStep.coerceIn(2, 8)"))
+        assertTrue(analyzer.contains("trimmed.endsWith('{') -> level"))
+        assertTrue(
+            analyzer.contains(
+                "language == LanguageType.PYTHON && SmartTyping.opensPythonBlock(trimmed) -> level"
+            )
+        )
         assertTrue(
             "and the VM route asks the very same function",
             smartTyping.contains("language == LanguageType.PYTHON && opensPythonBlock(trimmedPrev)")
@@ -115,6 +133,46 @@ class EditorTypingRouteWiringTest {
         assertTrue(
             viewModel.contains(
                 "indentBackspaceGuard = key !is com.codeci.ide.ui.editor.EditorKey.DeleteWord"
+            )
+        )
+    }
+
+    // ---- Phase 75.2 device round: keyword moment, Tab unit, indent marks ---
+
+    @Test
+    fun `the keyword moment shares the block keyword table with the indent rule`() {
+        assertEquals(
+            "one table of Python block keywords",
+            1,
+            Regex("""val pythonBlockKeywords = setOf\(""").findAll(smartTyping).count()
+        )
+        assertTrue(smartTyping.contains("word.lowercase() in pythonBlockKeywords"))
+        assertTrue(
+            completionEngine.contains(
+                "language == LanguageType.PYTHON &&\n" +
+                    "            SmartTyping.typedBlockKeyword(prefix.ifEmpty { lastToken(text, cursor) })"
+            )
+        )
+    }
+
+    @Test
+    fun `both keyboards speak one tab unit through indentRun`() {
+        assertTrue(smartTyping.contains("handleTabAsIndent(old, newValue, tabSize)?.let { return it }"))
+        assertTrue(smartTyping.contains("val run = indentRun(old.text, caret, step)"))
+        assertTrue(keySet.contains("SmartTyping.indentRun(text, start, tabSize.coerceIn(2, 8))"))
+    }
+
+    @Test
+    fun `leading indentation is painted at the source and survives theme switches`() {
+        val oneTime = host.substringAfter("val completionBits = remember(editor) {")
+            .substringBefore("val completionComponent = completionBits.first")
+        assertTrue(oneTime.contains("CodeEditor.FLAG_DRAW_WHITESPACE_LEADING"))
+        assertTrue(oneTime.contains("CodeEditor.FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE"))
+        val themeEffect = host.substringAfter("LaunchedEffect(theme) {")
+            .substringBefore("LaunchedEffect(fontSizeSp)")
+        assertTrue(
+            themeEffect.contains(
+                "editor.colorScheme.setColor(EditorColorScheme.NON_PRINTABLE_CHAR, CodecPalette.INDENT_MARK)"
             )
         )
     }

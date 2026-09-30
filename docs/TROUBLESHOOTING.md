@@ -2055,3 +2055,33 @@ proved, and what a particular keyboard sends cannot be seen from the source. Use
 keyboard's name, the exact line typed, what Enter produced, and what one Backspace press removed —
 plus the editor transcript if the wrong thing happened mid-word (the completion ghost rides the same
 two routes). Nothing in the Phase 75.1 record claims a device pass; the owner's round decides.
+
+## 50. "`def` autocompletes `def fname(): pass`" / "`int main(){` and `{}` not auto-indenting" / "can't line up the space/indenting between lines" (owner device report, 2026-09-30, Phase 75.2)
+
+**`def` inserting `def fname():\n    pass`.** The vendored Python snippet pack maps the prefix `def`
+to `def fname():\n    pass` (and `for`, `if`, `while`, `class`, `try` to their own `pass` skeletons).
+On a phone, once you have already typed `def` (or tapped the Python `def` quick key), accepting that
+chip inserts placeholder names and `pass` that you then have to select and cut. `CodeCompletionEngine`
+now treats the exact Python block keywords (`SmartTyping.typedBlockKeyword`, sharing the 14-keyword
+table with `opensPythonBlock`) as a quiet moment: no snippet is offered while the word at the caret
+is a completed Python block keyword, so you write your own header and let Enter indent the body.
+Typing a partial prefix (`de`, `fo`) or an explicit snippet prefix (`deft`, `defm`, `ifmain`, `pr`)
+still surfaces the snippets.
+
+**`int main(){` and `{}` in C, C++, Java, JS/TS not auto-indenting.** Phase 75.1 left
+`CodeCLanguage.indentAdvanceFor`'s `{` branch at its old `1`-space delta while fixing Python. At
+16 sp on a phone, 1 space looks like no indent at all, and it disagreed with the VM Enter route (4
+spaces). Both branches of `indentAdvanceFor` now return `indentStep.coerceIn(2, 8)` (4 spaces by
+default), so Enter after any line ending with `{` indents by a full level on both keyboards —
+including in `.java` files.
+
+**Lining up spaces/indentation across lines.** Two fixes work together:
+1. `SoraEditorHost` enables `CodeEditor.FLAG_DRAW_WHITESPACE_LEADING or CodeEditor.FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE`
+   and sets `EditorColorScheme.NON_PRINTABLE_CHAR` to `CodecPalette.INDENT_MARK` (`0x80B0B0B0`) on
+   every theme switch, so every leading space (including on empty auto-indented lines) paints a
+   subtle alignment dot while inner and trailing spaces stay clean.
+2. `SmartTyping.indentRun` makes Tab on both keyboards (system IME `\t` via `handleTabAsIndent` and
+   CodeC Keys `EditorKey.Tab`) advance to the next multiple of `tabSize` in spaces (`step - (width % step)`
+   inside leading indentation), so a line with 2 spaces + Tab lands on column 4 right under a
+   4-space auto-indented line.
+

@@ -232,8 +232,9 @@ object EditorKeySet {
 
     /**
      * Apply [key] to the buffer at [value]'s selection. Insert replaces the
-     * selection and lands the caret after the text; TAB inserts exactly
-     * [tabSize] spaces (2..8 clamped, the editor's indentation law); caret
+     * selection and lands the caret after the text; TAB inserts one level of
+     * spaces — [SmartTyping.indentRun], the same run the system keyboard's Tab
+     * gets, 2..8 clamped, the editor's indentation law; caret
      * moves collapse a selection first, and UP/DOWN travel by visual line via
      * the text itself (same column, clamped at both ends).
      */
@@ -260,7 +261,17 @@ object EditorKeySet {
                 }
             }
             EditorKey.Tab -> {
-                val spaces = " ".repeat(tabSize.coerceIn(2, 8))
+                // Phase 75.2 — the cap and the system keyboard's Tab now insert
+                // the SAME run: `SmartTyping.indentRun`, which walks up to the
+                // next tab stop inside the indentation and gives one full level
+                // anywhere else. Before this the cap always emitted a whole
+                // `tabSize`, so a line already at 2 spaces lined up on the IME
+                // and did not line up here.
+                val spaces = if (start == end) {
+                    SmartTyping.indentRun(text, start, tabSize.coerceIn(2, 8))
+                } else {
+                    " ".repeat(tabSize.coerceIn(2, 8))
+                }
                 replaced(text, start, end, spaces, spaces.length)
             }
             EditorKey.DeleteWord -> SmartTyping.deletePrevWord(value)

@@ -1,20 +1,7 @@
-> **Latest owner instruction — 2026-09-30 (Phase 75.1, editor typing):** *"1st you read this
+> **Latest owner instruction — 2026-09-30 (Phase 75.1 + 75.2 device round 1 follow-up, editor typing):** *"1st you read this
 > file than find the problems with relevant with this and fix after that i will test on device
-> give you latter instructions"*. That message is the start command for the dedicated typing
-> phase, so the work below the earlier 09-30 note is now done again — from a source trace, not as
-> the old patch. Root causes, both in the seam between Sora 0.24.6 and the VM: Sora
-> `getIndentAdvance` adapter answered in the C default (Python delta always 0) while the VM rule
-> only ran on a one-character newline (so a top-level `def` indented and an indented `for` did
-> not), and Sora's `deleteEmptyLineFast` (on by default) answered one Backspace on an
-> auto-indented line with the whole indent plus the line above. Now: ONE owner for the Python
-> block rule (`SmartTyping.opensPythonBlock`), asked by both Enter routes; the adapter carries the
-> language, the caret column and the editor's tab width; `deleteEmptyLineFast = false` +
-> `deleteMultiSpaces = 1` at the host; and a pure `SmartTyping.handleIndentBackspace` keeping one
-> space per press whatever the IME asks for (CodeC Keys' ⌫ flick-up word delete opts out). No new
-> Settings key, no new dependency, the sora replay path untouched, non-Python brace indentation
-> deliberately unchanged (recorded as the owner's call). **The device round is his, and so is the
-> merge command: nothing was merged and no PR opened** (`rule.md` §3). Record:
-> `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` §“Implementation record”. The 74.1
+> give you latter instructions"*, followed by his 5-item device round 1 report: (1) *"If i write def it's auto completes it def fname(): pass it's not phone friendly because i have to cut that and again write another thing"*, (2) *"Int main(){ not auto indenting"*, (3) *"None of is working Indentation"*, (4) *"I don't run other that much but {} are not indenting i also tryed java same"*, and (5) *"One more problem is user can't line up the space/indenting between lines so add some line type some thing that indicates each Indentation"*. All five are now fixed in 75.2 on top of 75.1: ONE owner for the Python block keyword table (`SmartTyping.pythonBlockKeywords`), asked by both Enter routes (`opensPythonBlock`) AND by `CodeCompletionEngine` (`typedBlockKeyword`, so a completed Python block keyword offers no snippet skeleton on the strip/ghost/panel while `de`/`fo`/`deft`/`defm`/`ifmain`/`pr` still do); `CodeCLanguage.indentAdvanceFor` returns `indentStep.coerceIn(2, 8)` for `trimmed.endsWith('{')` as well as Python block headers so C, C++, Java (`.java`), JS/TS, Go, Rust, and Shell indent by a full level on both Enter routes; `SoraEditorHost` enables `FLAG_DRAW_WHITESPACE_LEADING or FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE` and sets `EditorColorScheme.NON_PRINTABLE_CHAR` to `CodecPalette.INDENT_MARK` (`0x80B0B0B0`) on every theme switch so leading indentation spaces show subtle alignment dots; and `SmartTyping.indentRun` (shared by `handleTabAsIndent` and `EditorKeySet.apply(EditorKey.Tab, ...)`) advances Tab to the next multiple of `tabSize` in spaces. Plus 75.1's `deleteEmptyLineFast = false` + `deleteMultiSpaces = 1` + `SmartTyping.handleIndentBackspace` (one space per press inside leading indentation; `DeleteWord` opts out). **The next device round is his, and so is the merge command: nothing was merged and no PR opened** (`rule.md` §3). Record:
+> `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` §"Phase 75.2". The 74.1
 > Settings-search follow-up stays merged at `cdc6c93` (PR #96) and 65.1 navigation is unchanged —
 > see `docs/chat-phase74/README.md`.
 

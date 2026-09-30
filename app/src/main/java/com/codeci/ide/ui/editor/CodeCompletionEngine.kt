@@ -25,6 +25,11 @@ import com.codeci.ide.ui.utils.MultiLanguageSyntaxHighlighter
  *  - **30.3** the engine returns a longer RANKED list ([MAX_ITEMS] 8 → 50):
  *    the strip still shows thumb-reachable chips (`SuggestionStripModel`), the
  *    ghost is still rank 0, and "⌄ more" browses the rest.
+ *
+ * **Phase 75.2 (2026-09-30, device round):** the keyword moment is quiet. While
+ * the word at the caret is exactly a Python block keyword, this engine offers NO
+ * snippet — see [SmartTyping.typedBlockKeyword] for the owner's reason. Nothing
+ * else about the accept law changed.
  */
 enum class CompletionKind { SNIPPET, KEYWORD, IDENTIFIER }
 
@@ -181,9 +186,30 @@ object CodeCompletionEngine {
 
         val keywords = MultiLanguageSyntaxHighlighter.keywords(language)
 
+        // Phase 75.2 (owner, device round: *"If i write def it's auto completes
+        // it def fname(): pass … it's not phone friendly because i have to cut
+        // that and again write another thing"*) — the KEYWORD MOMENT. While the
+        // word at the caret is exactly a Python block keyword, no snippet is
+        // offered at all: not to the ghost, not to a chip, not to the ⌄ panel.
+        // The keyword is a complete statement opener in Python — the rest of
+        // the line is the user's own name and parameters, and the body is what
+        // the editor's Enter rule now indents (Phase 75.1). A skeleton inserted
+        // here is text that has to be cut, which is the one thing a phone
+        // keyboard cannot do cheaply.
+        //
+        // Python only, and only the bare word: `defm`, `deft`, `ifmain`, `pr`
+        // keep the whole snippet set, because there the abbreviation IS the
+        // request for a skeleton. `MultiLanguageSyntaxHighlighter` supplies the
+        // keywords for colour and `SmartTyping.pythonBlockKeywords` owns this
+        // list, so the indent rule and the quiet rule cannot drift.
+        val keywordMoment = language == LanguageType.PYTHON &&
+            SmartTyping.typedBlockKeyword(prefix.ifEmpty { lastToken(text, cursor) })
+
         if (prefix.isNotEmpty()) {
-            val matches = rankSnippets(snippetItems(language, fileName), prefix)
-            matches.take(MAX_SNIPPET_ITEMS).forEach { items += it }
+            if (!keywordMoment) {
+                val matches = rankSnippets(snippetItems(language, fileName), prefix)
+                matches.take(MAX_SNIPPET_ITEMS).forEach { items += it }
+            }
             identifiers(text, prefix, keywords, cursor, limit = MAX_IDENTIFIER_ITEMS)
                 .forEach { items += CompletionItem(it, it, CompletionKind.IDENTIFIER, "buffer") }
             keywords
@@ -193,7 +219,7 @@ object CodeCompletionEngine {
                 .forEach { items += CompletionItem(it, it, CompletionKind.KEYWORD, "keyword") }
         } else {
             val trigger = lastToken(text, cursor)
-            if (trigger.isNotEmpty() && trigger in snippetTriggers(language)) {
+            if (!keywordMoment && trigger.isNotEmpty() && trigger in snippetTriggers(language)) {
                 val pack = snippetItems(language, fileName)
                 // Phase 30.1 — a 1 400-entry pack must not dump 50 unrelated
                 // snippets after a trigger word: offer the ones the trigger

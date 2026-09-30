@@ -284,12 +284,20 @@ class CodeCLanguage private constructor(
          * delta count of indent spaces"); Sora preserves the current line's own
          * indentation itself. Host-tested.
          *
-         * A brace opener keeps CodeC's long-standing delta — Phase 75.1 is a
-         * Python typing fix, and the owner's brief says the non-Python brace
-         * indentation stays as it is (its 1-vs-a-level unit is recorded there
-         * as a found-not-changed note for the owner to call). The Python rule
-         * is NOT restated here: [SmartTyping.opensPythonBlock] is the single
-         * owner for both Enter routes, which is what stops them drifting again.
+         * Both branches answer ONE unit: a level, `indentStep` spaces, clamped
+         * to what the editor will actually insert. Phase 75.1 shipped the
+         * Python branch at that unit and left the brace branch at its
+         * long-standing 1; the owner's device round came back with
+         * *"Int main(){ not auto indenting"*, *"{} are not indenting i also
+         * tryed java same"* — a 1-space delta on a phone is not an indent, it
+         * is noise, and the VM rule (`SmartTyping.handleAutoIndent`) was
+         * already giving a full level for the same line. So 75.2 spends the
+         * difference the way 75.1 spent the Python one: the two Enter routes
+         * agree, and a line that opens a block indents by a level.
+         *
+         * The Python rule is NOT restated here: [SmartTyping.opensPythonBlock]
+         * is the single owner for both Enter routes, which is what stops them
+         * drifting again.
          */
         fun indentAdvanceFor(
             lineText: String,
@@ -298,10 +306,10 @@ class CodeCLanguage private constructor(
         ): Int {
             val trimmed = lineText.trimEnd()
             if (trimmed.isEmpty()) return 0
+            val level = indentStep.coerceIn(2, 8)
             return when {
-                trimmed.endsWith('{') -> 1
-                language == LanguageType.PYTHON && SmartTyping.opensPythonBlock(trimmed) ->
-                    indentStep.coerceIn(2, 8)
+                trimmed.endsWith('{') -> level
+                language == LanguageType.PYTHON && SmartTyping.opensPythonBlock(trimmed) -> level
                 else -> 0
             }
         }

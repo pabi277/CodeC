@@ -139,6 +139,20 @@ fun SoraEditorHost(
             // stays a preference about sora's own behaviour, nothing more.
             props.deleteEmptyLineFast = false
             props.deleteMultiSpaces = 1
+            // Phase 75.2 — make the indentation itself visible. The owner's
+            // ask (*"user can't line up the space/indenting between lines so
+            // add some line type some thing that indicates each Indentation"*)
+            // is a SEEING problem before it is a typing problem: at 16 sp on a
+            // phone four spaces and eight spaces look like blank. sora paints a
+            // dot per whitespace character, LEADING-only so code lines are not
+            // speckled, plus the empty-line case so a blank line that carries an
+            // indent (exactly the line auto-indent leaves behind) shows where it
+            // sits. This is the editor's own drawing pass — no overlay, no
+            // second text layout, nothing for the typing routes to keep in step.
+            setNonPrintablePaintingFlags(
+                CodeEditor.FLAG_DRAW_WHITESPACE_LEADING or
+                    CodeEditor.FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE
+            )
             // Phase 35.3 — disable sora's animated cursor travel. The blink
             // period is switched to solid only during active typing below.
             setCursorAnimationEnabled(false)
@@ -299,8 +313,14 @@ fun SoraEditorHost(
         }
         editor.setColorScheme(TextMateThemes.applyTheme(theme))
         // A fresh scheme resets every custom colour, so the caret handle's one
-        // colour is re-applied with it (57.2).
+        // colour is re-applied with it (57.2), and so is the colour of the
+        // Phase 75.2 indentation dots. sora's own default for that slot is a
+        // light grey the four shipped themes happen to suit, and a theme that
+        // ever grows an `invisibles` entry would override it — stating it here
+        // keeps "the indentation is visible" a property of the editor, not of
+        // whichever theme file is current.
         editor.colorScheme.setColor(EditorColorScheme.SELECTION_HANDLE, CodecPalette.CARET_HANDLE)
+        editor.colorScheme.setColor(EditorColorScheme.NON_PRINTABLE_CHAR, CodecPalette.INDENT_MARK)
     }
     LaunchedEffect(fontSizeSp) { editor.setTextSize(fontSizeSp) }
     LaunchedEffect(fontFamily) {

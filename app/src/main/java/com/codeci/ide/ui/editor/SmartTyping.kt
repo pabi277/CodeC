@@ -19,13 +19,16 @@ import com.codeci.ide.ui.utils.TokenKind
  *     keyboard and CodeC Keys cannot disagree about which line opens a block.
  * 4c. Phase 75.1 — Backspace inside leading indentation deletes one space
  *     per press ([handleIndentBackspace]), whatever the surface requested.
+ * 4d. Phase 75.2 — Tab inserts one level of SPACES ([handleTabAsIndent]), so a
+ *     file cannot end up with a tab unit and a space unit at once.
  * 5. String-aware negatives: inside string literal, rules 1–3 don't fire for the quote that opens string; inside comments none fire.
  * 6. Delete-word: previous word (identifier + whitespace) with stop chars whitespace, ., /, quotes.
  * 7. Undo integrity: each smart edit is a single undo unit (handled by ViewModel).
  *
  * All pair/indent rules are individually toggleable via Settings — [Config].
- * The Phase 75.1 one-space Backspace law is deliberately NOT a toggle: it is
- * the correction of a wrong deletion, not a preference.
+ * The Phase 75.1 one-space Backspace law and the Phase 75.2 one-level Tab law
+ * are deliberately NOT toggles: they are the corrections of a wrong deletion and
+ * of a wrong unit, not preferences.
  */
 object SmartTyping {
 
@@ -245,11 +248,33 @@ object SmartTyping {
      * more level only when it ends with `:` (ignoring a trailing comment) and
      * its first word is one of these; every other trailing colon — a dict key
      * split over lines, an annotation, a label, prose — is left alone.
+     *
+     * Public because Phase 75.2 gave this set a second reader: the completion
+     * engine ([com.codeci.ide.ui.editor.CodeCompletionEngine]) stays quiet
+     * about snippets while the caret sits on one of these words ([typedBlockKeyword]).
+     * One list, two rules — the same reason [opensPythonBlock] is shared.
      */
-    private val pythonBlockKeywords = setOf(
+    val pythonBlockKeywords = setOf(
         "def", "class", "for", "while", "if", "elif", "else",
         "try", "except", "finally", "with", "async", "match", "case"
     )
+
+    /**
+     * Phase 75.2 — true when [word] is EXACTLY one Python block keyword, in any
+     * case. This is the moment the owner's report describes: he has written the
+     * keyword and is about to write the rest of the line himself, so the editor
+     * that now indents after `def name():` must not push a whole skeleton —
+     * *"If i write def it's auto completes it def fname(): pass … i have to cut
+     * that and again write another thing"*.
+     *
+     * Deliberately narrow, and it is a Python-only law: a block keyword is
+     * exactly the word the editor's OWN Enter rule already handles (one level,
+     * [opensPythonBlock]), while every other prefix — `defm`, `deft`, `ifmain`,
+     * `pr` — keeps the whole snippet set, which is how a skeleton is meant to
+     * be fetched on a phone.
+     */
+    fun typedBlockKeyword(word: String): Boolean =
+        word.isNotEmpty() && word.lowercase() in pythonBlockKeywords
 
     /**
      * True when [lineText] is a Python block header: it ends with `:` once a
@@ -354,6 +379,77 @@ object SmartTyping {
         val dedentedIndent = " ".repeat((indentLen - step).coerceAtLeast(0))
         val next = old.text.substring(0, lineStart) + dedentedIndent + incoming + old.text.substring(caret)
         return TextFieldValue(next, TextRange(lineStart + dedentedIndent.length + incoming.length))
+    }
+
+    // -------------------------------------------------------------------------
+    // Tab means one level, in spaces (Phase 75.2)
+    // -------------------------------------------------------------------------
+
+    /**
+     * A lone TAB commit inserts one indentation level of SPACES, aligned to the
+     * next tab stop while the caret sits in the line's leading whitespace.
+     *
+     * Why this exists: the CodeC Keys TAB cap already inserts `tabSize` spaces
+     * ([com.codeci.ide.ui.editor.EditorKeySet.apply]) and every auto-indent rule
+     * here emits spaces, but the system keyboard's Tab commits a raw `\t`
+     * straight into the buffer. One file then holds two units of indentation at
+     * once, and the owner's *"user can't line up the space/indenting between
+     * lines"* follows — two lines that look the same on screen are 4 and 1
+     * characters wide, so the Backspace law, the caret and the align-all-lines
+     * intuition all disagree. This makes the buffer speak one unit on every
+     * surface; it is the sibling of Phase 75.1's one-space Backspace law and,
+     * like it, deliberately NOT a Settings toggle (it is the correction of a
+     * mismatch, not a preference).
+     *
+     * Only a NAIVE lone-tab insertion is rewritten ([newValue] must be exactly
+     * [old] with `"\t"` at the collapsed caret): a Tab that arrives inside
+     * composed text, over a selection, or together with any other change is the
+     * user's own edit and is left alone.
+     */
+    fun handleTabAsIndent(
+        old: TextFieldValue,
+        newValue: TextFieldValue,
+        tabSize: Int = 4
+    ): TextFieldValue? {
+        if (!old.selection.collapsed) return null
+        if (newValue.text.length != old.text.length + 1) return null
+        val caret = old.selection.start.coerceIn(0, old.text.length)
+        if (newValue.selection.start != caret + 1) return null
+        val naive = old.text.substring(0, caret) + "\t" + old.text.substring(caret)
+        if (newValue.text != naive) return null
+
+        val step = tabSize.coerceIn(2, 8)
+        val run = indentRun(old.text, caret, step)
+        return TextFieldValue(
+            old.text.substring(0, caret) + run + old.text.substring(caret),
+            TextRange(caret + run.length)
+        )
+    }
+
+    /**
+     * The spaces one TAB press stands for, at [caret] in [text], given an
+     * indentation level of [step] spaces: while the caret sits inside the line's
+     * leading whitespace the run runs up to the NEXT tab stop (so `  ` + Tab at
+     * step 4 gives 2, and the line ends up at column 4 — the whole point being
+     * that pressing Tab twice from any messy state lands the two lines on the
+     * same column); anywhere else in the line it is a full level.
+     *
+     * [step] arrives already clamped (2..8). One owner for both surfaces:
+     * [handleTabAsIndent] (the system keyboard / hardware Tab) and
+     * [com.codeci.ide.ui.editor.EditorKeySet.apply] (the CodeC Keys TAB cap).
+     */
+    fun indentRun(text: String, caret: Int, step: Int = 4): String {
+        val at = caret.coerceIn(0, text.length)
+        val lineStart = text.lastIndexOf('\n', (at - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        var i = lineStart
+        var width = 0
+        while (i < at && (text[i] == ' ' || text[i] == '\t')) {
+            width += if (text[i] == '\t') step else 1
+            i++
+        }
+        val level = step.coerceIn(2, 8)
+        if (i != at) return " ".repeat(level) // not in the indentation: one level
+        return " ".repeat(level - (width % level))
     }
 
     // -------------------------------------------------------------------------
@@ -567,6 +663,13 @@ object SmartTyping {
             val caretNew = newValue.selection.start.coerceIn(0, newValue.text.length)
             // Incoming char is at caretNew-1
             val incoming = newValue.text.getOrNull(caretNew - 1)?.toString() ?: ""
+            // Phase 75.2 — a lone Tab is one level of spaces, on every surface.
+            // No rule below claims '\t' (it is neither a closer nor an opener),
+            // so this is checked first and simply falls through when the edit is
+            // not the naive single-character insert.
+            if (incoming == "\t") {
+                handleTabAsIndent(old, newValue, tabSize)?.let { return it }
+            }
             // Try type-over first (for closers).
             handleTypeOver(old, incoming, config, language)?.let { return it }
             // Try dedent on closer (typing } on indented line)

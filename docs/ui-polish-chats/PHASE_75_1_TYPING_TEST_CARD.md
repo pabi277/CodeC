@@ -162,9 +162,10 @@ struct P {
 namespace n {
 ```
 
-- **KNOWN (this phase left it alone):** after a line ending `{`, CodeC adds **one space**, not
-  four. Same for `switch`/`struct`/`namespace`. Say "fix braces too" and it becomes a real
-  level (with the `}` split onto its own line at any depth).
+- **MUST (Phase 75.2):** after any line ending `{`, pressing ⏎ adds **one full level** (4 spaces
+  by default, matching Settings → Tab Size) on **both** keyboards — in C, C++, Java (`.java`),
+  JS/TS, Go, Rust, and Shell. Each leading space shows a subtle indentation dot so you can line
+  columns up visually across lines.
 - **MUST:** `case 3:` and `default:` must add **nothing** — the colon rule is Python-only.
 - **MUST:** typing `}` alone on an indented line pulls it back one step (the 26.2 dedent).
 - **MUST:** `(` `)` type-over: with `(|)` typing `)` moves over it; `"` inside a `//` comment
@@ -189,7 +190,7 @@ const s = "x:"
 
 - **MUST:** the two label lines (`outer:`, `label:`) add **nothing**.
 - **MUST:** the backtick and quote lines add nothing; `` ` `` still pairs and closes.
-- **KNOWN:** `{` lines indent by one space (see C).
+- **MUST (Phase 75.2):** `{` lines indent by one full level (4 spaces by default).
 
 ---
 
@@ -243,8 +244,10 @@ case "$x" in
 foo() {
 while read l; do
 ```
-- **KNOWN:** shell uses `then`/`do`/`in`, not `:` — today nothing auto-indents here, and `{`
-  gets the one-space brace delta. Report only if you want shell block keywords taught too.
+- **KNOWN:** shell uses `then`/`do`/`in`, not `:` — today `then`/`do`/`in` do not auto-indent on
+  Enter (the `if ` / `for ` / `while ` snippet chips insert the `then … fi` / `do … done` block
+  instead), while `foo() {` **does** auto-indent by one full level (Phase 75.2). Report only if
+  you want shell `then`/`do` taught to Enter too.
 - **MUST:** `"$HOME"` keeps its quotes paired; typing `"` inside `[ ... ]` must not strand a
   second quote; `# comment:` adds nothing.
 
@@ -287,13 +290,16 @@ while read l; do
 
 ---
 
-## I. The two things I already know are weak (check them, they are not surprises)
+## I. The one thing I already know is weak (check it, it is not a surprise)
 
 1. **A prose line inside a docstring that begins with a block word and ends with a colon** —
    e.g. inside `"""…"""`, the line `    for each item:` **will** indent. The rule reads one line
    only, so it cannot see that you are inside a string. Say the word and I can pass the
    tokenizer's string state into the rule.
-2. **Brace languages** indent by one space instead of a level (see C).
+2. *(Resolved in Phase 75.2)* Brace languages (`{`) now indent by one full level (4 spaces by
+   default) on both Enter routes, Python block keywords stay quiet on the strip so `def` no longer
+   pushes `def fname():\n    pass`, leading indentation dots are painted at every leading space,
+   and Tab aligns to the next tab stop in spaces on both keyboards.
 
 ---
 

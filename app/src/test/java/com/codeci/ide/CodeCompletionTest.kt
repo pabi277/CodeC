@@ -34,12 +34,66 @@ class CodeCompletionTest {
         assertEquals("main", CodeCompletionEngine.currentPrefix("int main", 8))
     }
 
+    /**
+     * Phase 75.2 — this pin used to demand the skeleton, and the owner's device
+     * round asked for it back: *"If i write def it's auto completes it def
+     * fname(): pass … i have to cut that and again write another thing"*. At the
+     * keyword moment (the word at the caret IS `def`, `if`, `for`, …) the engine
+     * offers no snippet at all, on any surface, because the block is what Enter
+     * now does (Phase 75.1). One keystroke that inserts text to be cut is the
+     * one thing a phone keyboard cannot afford.
+     */
     @Test
-    fun `python snippets appear after trigger word with empty prefix`() {
-        val items = CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON)
-        assertTrue(items.isNotEmpty())
-        assertTrue(items.all { it.kind == CompletionKind.SNIPPET })
-        assertTrue(items.any { it.label.startsWith("def function") })
+    fun `the python keyword moment offers no skeleton`() {
+        for (word in listOf(
+            "def", "class", "if", "elif", "else", "for", "while", "try",
+            "except", "finally", "with", "async", "match", "case"
+        )) {
+            val afterSpace = CodeCompletionEngine.completions("$word ", word.length + 1, LanguageType.PYTHON)
+            assertTrue(
+                "`$word ` still offered a snippet: ${afterSpace.map { it.label }}",
+                afterSpace.none { it.kind == CompletionKind.SNIPPET }
+            )
+            val bare = CodeCompletionEngine.completions(word, word.length, LanguageType.PYTHON)
+            assertTrue(
+                "`$word` still offered a snippet: ${bare.map { it.label }}",
+                bare.none { it.kind == CompletionKind.SNIPPET }
+            )
+            // The keyword itself stays offered as a keyword — the list is quiet,
+            // not empty, and the language's words are still there to complete.
+            if (word in setOf("def", "class", "if", "else", "for", "while", "try", "with")) {
+                assertTrue("`$word` lost its keyword", bare.any { it.kind == CompletionKind.KEYWORD })
+            }
+        }
+    }
+
+    /**
+     * …and nothing else about the trigger or prefix world changed: a partial
+     * prefix (`de`, `func`) or a non-block trigger (`import `) still surfaces
+     * Python snippets, shell `if ` (where Enter CANNOT build the block — the
+     * keyword needs `then`/`fi`) keeps its block snippet, and C `for` is
+     * untouched.
+     */
+    @Test
+    fun `non-block triggers and partial prefixes still surface snippets`() {
+        val partial = CodeCompletionEngine.completions("de", 2, LanguageType.PYTHON)
+        assertTrue(
+            "partial `de`: ${partial.map { it.label }}",
+            partial.any { it.kind == CompletionKind.SNIPPET && it.insertText.startsWith("def ") }
+        )
+        val importTrigger = CodeCompletionEngine.completions("import ", 7, LanguageType.PYTHON)
+        assertTrue(
+            "import trigger: ${importTrigger.map { it.label }}",
+            importTrigger.isNotEmpty() && importTrigger.all { it.kind == CompletionKind.SNIPPET }
+        )
+        val shell = CodeCompletionEngine.completions("if ", 3, LanguageType.SHELL)
+        assertTrue(
+            "shell if: ${shell.map { it.label }}",
+            shell.any { it.kind == CompletionKind.SNIPPET && it.insertText.contains("then") }
+        )
+        // C `for` is not a Python keyword moment either.
+        val c = CodeCompletionEngine.completions("for", 3, LanguageType.C)
+        assertTrue(c.any { it.kind == CompletionKind.SNIPPET })
     }
 
     @Test

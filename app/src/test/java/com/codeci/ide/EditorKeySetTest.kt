@@ -57,6 +57,24 @@ class EditorKeySetTest {
     }
 
     @Test
+    fun `TAB in leading indentation aligns to the next tab stop`() {
+        val fromTwo = EditorKeySet.apply(
+            EditorKey.Tab,
+            TextFieldValue("  cd", TextRange(2)),
+            tabSize = 4
+        )
+        assertEquals("    cd", fromTwo.text)
+        assertEquals(4, fromTwo.selection.start)
+        val secondLine = EditorKeySet.apply(
+            EditorKey.Tab,
+            TextFieldValue("a = 1\n   b = 2", TextRange(9)),
+            tabSize = 4
+        )
+        assertEquals("a = 1\n    b = 2", secondLine.text)
+        assertEquals(10, secondLine.selection.start)
+    }
+
+    @Test
     fun `caret left collapses a selection to its start and clamps at zero`() {
         val collapsed = EditorKeySet.apply(
             EditorKey.Caret(EditorKey.Caret.Move.LEFT),

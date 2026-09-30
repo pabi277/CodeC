@@ -380,4 +380,59 @@ class SmartTypingTest {
         assertEquals("", out.text)
         assertEquals(0, out.selection.start)
     }
+
+    // ---- Phase 75.2 device round: keyword moment + Tab unit -----------------
+
+    @Test
+    fun `typedBlockKeyword matches the exact python block keywords and nothing else`() {
+        for (kw in listOf(
+            "def", "class", "for", "while", "if", "elif", "else",
+            "try", "except", "finally", "with", "async", "match", "case", "DEF"
+        )) {
+            assertEquals("expected true for $kw", true, SmartTyping.typedBlockKeyword(kw))
+        }
+        for (other in listOf("", "de", "defm", "deft", "ifmain", "fori", "print", "import", "return")) {
+            assertEquals("expected false for $other", false, SmartTyping.typedBlockKeyword(other))
+        }
+    }
+
+    @Test
+    fun `tab in leading indentation advances to the next tab stop in spaces`() {
+        // Column 0 -> 4 spaces.
+        val col0 = SmartTyping.transform(
+            TextFieldValue("x = 1", TextRange(0)),
+            TextFieldValue("\tx = 1", TextRange(1)),
+            LanguageType.PYTHON, 4, SmartTyping.Config()
+        )
+        assertEquals("    x = 1", col0.text)
+        assertEquals(4, col0.selection.start)
+
+        // Column 2 (messy 2-space indent) -> 2 spaces so the line lands on
+        // column 4 and lines up with a normal level.
+        val col2 = SmartTyping.transform(
+            TextFieldValue("  x = 1", TextRange(2)),
+            TextFieldValue("  \tx = 1", TextRange(3)),
+            LanguageType.PYTHON, 4, SmartTyping.Config()
+        )
+        assertEquals("    x = 1", col2.text)
+        assertEquals(4, col2.selection.start)
+
+        // Column 4 -> another full level (lands on column 8).
+        val col4 = SmartTyping.transform(
+            TextFieldValue("    x = 1", TextRange(4)),
+            TextFieldValue("    \tx = 1", TextRange(5)),
+            LanguageType.PYTHON, 4, SmartTyping.Config()
+        )
+        assertEquals("        x = 1", col4.text)
+        assertEquals(8, col4.selection.start)
+
+        // Mid-line after code -> one full level of spaces.
+        val mid = SmartTyping.transform(
+            TextFieldValue("x =", TextRange(3)),
+            TextFieldValue("x =\t", TextRange(4)),
+            LanguageType.PYTHON, 2, SmartTyping.Config()
+        )
+        assertEquals("x =  ", mid.text)
+        assertEquals(5, mid.selection.start)
+    }
 }
