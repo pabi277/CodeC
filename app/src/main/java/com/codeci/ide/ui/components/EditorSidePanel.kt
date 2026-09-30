@@ -87,9 +87,9 @@ import com.codeci.ide.ui.theme.CodecTokens.Space
  * *“I don't think removing the full down ber is a good choice i think only
  * removing the project option is ok.”*), it is not a second home for the
  * Projects tab, and it carries no shop, no Upgrade, no Discover/My Labs/Change
- * Log. The fifth rail slot is the owner's reserved AI slot
- * (*“Reseserve it i have plan for ai i can use that”*) — drawn, dimmed, and not
- * tappable, so it implies no screen.
+ * Log. The fifth rail slot is the owner's AI slot
+ * (*“Reseserve it i have plan for ai i can use that”*) — since Phase 76 it hosts
+ * the read-only Gemini helper, supplied by the editor screen as [aiContent].
  *
  * **Placement.** [Placement] is the one visual decision this panel makes for
  * itself: it sits at the **start edge, over the editor**, leaving
@@ -144,7 +144,13 @@ fun EditorSidePanel(
      * (Spck screenshot 8: the little number on the branch icon). Zero
      * draws no badge.
      */
-    repositoryBadgeCount: Int = 0
+    repositoryBadgeCount: Int = 0,
+    /**
+     * Phase 76 — the AI slot's content: the read-only Gemini helper
+     * (`ui/ai/AiPanel.kt`), owned by the editor screen and slotted in like
+     * [files] and [repositoryContent].
+     */
+    aiContent: @Composable () -> Unit = {}
 ) {
     Surface(
         modifier = modifier
@@ -201,8 +207,7 @@ fun EditorSidePanel(
 
                 RailPanel.REPOSITORY -> repositoryContent()
 
-                // The reserved slot has no panel: [Rail] never lets a tap reach it.
-                RailPanel.RESERVED -> Unit
+                RailPanel.AI -> aiContent()
                 }
             }
         }
@@ -241,7 +246,7 @@ private fun Rail(
                 // only (screenshot 8); zero draws no badge.
                 val glyphTint = when {
                     selected -> active
-                    // The reserved slot is visibly not a room yet.
+                    // A slot that opens nothing is visibly not a room (none today).
                     !wired -> idle.copy(alpha = 0.35f)
                     else -> idle
                 }
@@ -249,7 +254,7 @@ private fun Rail(
                 fun Glyph() {
                     Icon(
                         imageVector = railIcon(slot),
-                        contentDescription = if (wired) slot.label else stringResource(R.string.panel_reserved),
+                        contentDescription = slot.label,
                         tint = glyphTint,
                         modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                     )
@@ -283,7 +288,7 @@ private fun railIcon(panel: RailPanel): ImageVector = when (panel) {
     RailPanel.FILES -> SpckIcons.FolderLine
     RailPanel.SEARCH -> Icons.Filled.Search
     RailPanel.REPOSITORY -> SpckIcons.GitBranch
-    RailPanel.RESERVED -> Icons.Filled.AutoFixHigh
+    RailPanel.AI -> Icons.Filled.AutoFixHigh
 }
 
 // ---- navigation ------------------------------------------------------------

@@ -204,6 +204,27 @@ class FeedbackDraftTest {
     }
 
     @Test
+    fun `Phase 76 - a Google API key shape is redacted anywhere in a line`() {
+        val key = "AIzaSyA1b2C3d4E5f6G7h8I9j0K_L-mnopqrstu"
+        val redacted = FeedbackDraft.redact(
+            listOf("curl -H x-goog-api-key:$key https://x", "pasted $key here", "AIza alone stays")
+        )
+        redacted.forEach { assertFalse("leaked: $it", it.contains(key)) }
+        assertEquals("pasted <redacted> here", redacted[1])
+        assertEquals("AIza alone stays", redacted[2])
+    }
+
+    @Test
+    fun `Phase 76 - the stored AI key literal is scrubbed whatever its format`() {
+        // A future key format no shape knows is still caught by its literal.
+        val key = "future-format.key_0123456789"
+        val redacted = FeedbackDraft.redact(listOf("got $key back"), extraSecrets = listOf(key))
+        assertFalse(redacted[0].contains(key))
+        // Too-short "secrets" are ignored so they cannot shred the report.
+        assertEquals(listOf("abc def"), FeedbackDraft.redact(listOf("abc def"), extraSecrets = listOf("abc")))
+    }
+
+    @Test
     fun `a custom files dir shortens through the factory`() {
         val paths = FeedbackDraft.RedactionPaths.forApp("/data/data/com.codeci.ide/files")
         val redacted = FeedbackDraft.redact(

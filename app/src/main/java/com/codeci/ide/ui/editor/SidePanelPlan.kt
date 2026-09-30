@@ -57,20 +57,20 @@ object SidePanelPlan {
     /**
      * The rail, **in the shot's order**: outline triangle, folder,
      * search-with-`<>`, branch, person. Order is law; the fifth slot is the
-     * owner's (*“Reseserve it i have plan for ai i can use that”*, 2026-09-22) —
-     * it is drawn as a reserved slot and opens nothing, so no screen is
-     * implied and no shop is faked.
+     * owner's (*“Reseserve it i have plan for ai i can use that”*, 2026-09-22).
+     * It stayed reserved until Phase 76 (AI Level 1, owner: *“Start lavel 1”*,
+     * 2026-09-30) put the read-only Gemini helper in that same position.
      */
     val RAIL: List<RailPanel> = listOf(
         RailPanel.NAVIGATION,
         RailPanel.FILES,
         RailPanel.SEARCH,
         RailPanel.REPOSITORY,
-        RailPanel.RESERVED
+        RailPanel.AI
     )
 
-    /** The slots that open a panel today. [RailPanel.RESERVED] is not one. */
-    val WIRED: List<RailPanel> = RAIL.filter { it != RailPanel.RESERVED }
+    /** The slots that open a panel today — all five since Phase 76. */
+    val WIRED: List<RailPanel> = RAIL.toList()
 
     val DEFAULT_PANEL: RailPanel = RailPanel.FILES
 
@@ -97,7 +97,7 @@ object SidePanelPlan {
 
     fun panelFor(id: String): RailPanel? = RAIL.firstOrNull { it.id == id }
 
-    /** True when a rail tap does something today (the reserved slot does not). */
+    /** True when a rail tap does something today. */
     fun isWired(panel: RailPanel): Boolean = WIRED.contains(panel)
 
     /** A left-edge drag of at least [OPEN_GESTURE_DP] opens the panel. */
@@ -121,11 +121,12 @@ enum class RailPanel(val id: String, val label: String) {
     REPOSITORY("repository", "Repository"),
 
     /**
-     * The fifth slot: reserved for the owner's planned AI surface
-     * (*“Reseserve it i have plan for ai i can use that”*). It is drawn — the
-     * rail keeps the shot's five positions — and it is **not** tappable.
+     * The fifth slot — the owner's AI slot (*“Reseserve it i have plan for ai
+     * i can use that”*), reserved from Phase 55 until Phase 76 wired the
+     * read-only Gemini helper (`ui/ai/AiPanel.kt`) into it. Same position,
+     * same glyph; only now it opens something.
      */
-    RESERVED("reserved", "Reserved")
+    AI("ai", "AI helper")
 }
 
 /**

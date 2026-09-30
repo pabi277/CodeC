@@ -123,3 +123,37 @@ The capability check should give conservative outcomes (ready, possibly slow, in
 - [DroidAgentKit repository](https://github.com/iVamsi/droid-agent-kit)
 
 See the roadmap for the level-by-level implementation sequence and stop conditions. All external project claims should be rechecked at the start of any later implementation work.
+
+## Addendum A — current-main recheck (2026-09-30, `1785b92`)
+
+Rechecked against `main` @ `1785b92` (PR #101) when Level 0 started. **App source is unchanged since `120460f`**; the diff between them is only the AI planning docs. Every path in §1–§2 exists. The facts below were checked in code and were missing from, or understated in, the original dossier.
+
+| # | Fact | Evidence | Consequence |
+|---|---|---|---|
+| A1 | Editor undo is in-memory only: 100 steps, 600 ms typing coalescing, `reset()` on open/reload, all stacks cleared on project switch and mode switch, dropped when a tab closes. Sora's own undo is disabled. | `ui/editor/EditorUndoManager.kt`; `ui/viewmodels/EditorViewModel.kt:470,1579,1667,1751,1937`; `ui/editor/sora/SoraEditorHost.kt:129` | Lost on process death or project switch; cannot back agent-task rollback (Level 3). |
+| A2 | Autosave runs a short delay after every buffer change and flushes before Run. No file watcher or timestamp-based external-change detection was found. | `EditorViewModel.kt:378-392` | Agent writes would race autosave; conflict detection must be built (Level 3). |
+| A3 | `ProjectSearch` is a pure, host-tested engine: stays inside the root, skips symlinks, 512 KB file cap, 200-hit cap, binary check. | `ui/editor/ProjectSearch.kt` | Reusable for Level 2 retrieval. |
+| A4 | …but `isSearchable` deliberately includes `.env`, `.env.*` and `.npmrc` (`ProjectFilesPolicy.usefulConfig`). | `ui/editor/ProjectSearch.kt:159-172`; `ui/editor/ProjectFilesPolicy.kt` | Level 2 needs a separate, stricter AI deny list. |
+| A5 | The GitHub token is stored in the plain settings DataStore; no Keystore or security-crypto code exists in the repo. | `ui/projects/GitCredentialsStore.kt` | No encrypted-storage pattern to reuse; see Level 0 decision D3. |
+| A6 | Backup and device transfer include only `CodeC/projects` (pinned by `BackupRulesTest`). | `res/xml/backup_rules.xml`, `res/xml/data_extraction_rules.xml` | Anything AI-related inside a project (e.g. `.codec/`) would be backed up; anything outside is not. |
+| A7 | Uncaught exceptions are written to `filesDir/crash-log.txt`. Feedback redaction covers GitHub token shapes, `Authorization` headers, `key=value` pairs and the stored Git token only. | `MainActivity.kt:151-159`; `ui/support/FeedbackDraft.kt:236-260` | A bare provider key in an error message would not be redacted. |
+| A8 | OkHttp was removed in Phase 42.2; network code uses `HttpURLConnection` (the version catalog still lists `okhttp`). | `app/build.gradle.kts:269`; `gradle/libs.versions.toml` | An HTTP-client dependency is an owner decision. |
+| A9 | Plain-HTTP traffic is allowed only to `127.0.0.1` and `localhost`. | `res/xml/network_security_config.xml` | Plain-HTTP LAN or custom endpoints would be blocked (Level 5). |
+| A10 | `ExecutionRunner` defaults to a 30 s build and 10 s run timeout, with one live process. | `ui/services/ExecutionRunner.kt:44-45,89-110` | Constrains the Level 4 run loop. |
+| A11 | minSdk 24, targetSdk 28, ABIs `arm64-v8a`/`armeabi-v7a`/`x86_64`/`x86`, NDK 27.2. | `app/build.gradle.kts:18-59` | Constrains the Level 6 runtime choice. |
+| A12 | `GitDiscardEditors.reloadDiscardedFile` already reloads open editors after a file changes on disk. | `ui/projects/GitDiscardEditors.kt`; `EditorViewModel.kt:2737` | Existing pattern for refreshing tabs after agent apply/undo. |
+
+Not verified: how folders opened through Android's picker flow into the editor (`MANAGE_EXTERNAL_STORAGE` appears only in `SettingsScreen.kt` and `ShellEnvironment.kt`). Moot for now, because Level 0 decision D5 limits scope to CodeC projects.
+
+## Addendum B — Gemini provider research (2026-09-30)
+
+Primary sources only; recheck before the Level 1 brief.
+
+- **API surface.** The Interactions API (`POST /v1beta/interactions`, header `x-goog-api-key`) is GA as of June 2026 and recommended for new projects. `generateContent` / `streamGenerateContent` are "legacy" but "remain fully supported". Source: [Interactions API overview](https://ai.google.dev/gemini-api/docs/interactions-overview); [generateContent reference](https://ai.google.dev/api/generate-content).
+- **Server-side storage.** The Interactions API defaults to `store=true`: retained 55 days on the paid tier and 1 day on the free tier. `store=false` opts out but disables `previous_interaction_id` and background execution. Source: Interactions overview, "Data storage and retention".
+- **Data use** ([Gemini API Additional Terms](https://ai.google.dev/gemini-api/terms), effective March 23, 2026). On unpaid quota, content and responses are used to improve Google products, and human reviewers may read them; the terms say not to submit sensitive or confidential information. On paid services, prompts are not used for product improvement, but they are logged for a limited period for abuse detection.
+- **Use restrictions** (same terms). Users must be 18+; API clients must not be likely to be accessed by under-18s; the API is for developers "for professional or business purposes, not for consumer use". EEA/Switzerland/UK: only paid services for API clients made available to users there. **Owner decision (O1, 2026-09-30):** show Google's terms and require an 18+ confirmation at key setup.
+- **Other.** Custom safety settings are not supported in the Interactions API. Model IDs listed on 2026-09-30 include `gemini-3.8-flash`, `gemini-3.5-flash-lite` and `gemini-2.5-flash`; the list changes often.
+- **Key storage.** `androidx.security:security-crypto` (`EncryptedSharedPreferences`) is deprecated upstream (1.1.0). A Keystore AES-GCM key with ciphertext in app-private storage needs no new dependency.
+
+Decisions derived from this research: [`docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md`](../roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md).

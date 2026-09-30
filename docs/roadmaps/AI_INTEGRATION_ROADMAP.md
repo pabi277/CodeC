@@ -1,6 +1,8 @@
 # CodeC AI integration — staged roadmap
 
 **Status: discussion and planning only. No app implementation is authorized by this document.**
+**Level 0 ✅ COMPLETE 2026-09-30:** owner decisions recorded in [`ai-integration/00_LEVEL0_DECISION_RECORD.md`](ai-integration/00_LEVEL0_DECISION_RECORD.md) — read-only first, Gemini BYOK, Keystore-encrypted key, preview every request, open project only, nothing saved. Also decided: 18+ and Google-terms confirmation at key setup, `HttpURLConnection` + stateless `streamGenerateContent` with `store:false` (no new dependency), and a pre-filled Flash model with Test connection. Level 1 is next but still needs the owner's explicit start command.
+**Level 1 🚧 IMPLEMENTED 2026-09-30 (owner: *"Start lavel 1"*) as [Phase 76](../phases/03-editor/chat-phase76/README.md)** — read-only Gemini helper in the fifth side-panel rail slot; device round ✅ passed 2026-10-01 (default model `gemini-3-flash-preview`), merged to `main` 2026-10-01. **Next: [Phase 77](../phases/03-editor/chat-phase77/README.md)** — phone AI UI (floating button + bottom chat sheet; still one question at a time), briefed. Levels 2+ remain unauthorized.
 
 ## Product direction supplied by the owner
 
@@ -20,7 +22,7 @@ The companion [research dossier](../research/AI_INTEGRATION_RESEARCH_20260930.md
 
 | Level | Spec | User outcome | Depends on | Complexity / risk |
 |---|---|---|---|---|
-| 0 | [Product boundaries and shared foundations](ai-integration/00_PRODUCT_AND_FOUNDATIONS.md) | Decide project scope, consent, session record, key boundary and permissions before code | Owner decisions and source audit | Planning prerequisite |
+| 0 | [Product boundaries and shared foundations](ai-integration/00_PRODUCT_AND_FOUNDATIONS.md) · [decision record](ai-integration/00_LEVEL0_DECISION_RECORD.md) | Decide project scope, consent, session record, key boundary and permissions before code | Owner decisions and source audit | Planning prerequisite |
 | 1 | [One-provider read-only helper](ai-integration/01_READ_ONLY_API_HELPER.md) | Explain selected code or a run diagnostic via one user-triggered BYOK request | Level 0; no project crawling or write/run tools | Lowest useful slice; API/privacy validation |
 | 2 | [Whole-project context](ai-integration/02_WHOLE_PROJECT_CONTEXT.md) | Answer questions across the selected project using relevant files, with visible context | Level 1; root/exclusion/dirty-buffer contract | Medium; data disclosure/context limits |
 | 3 | [Reviewable edits and task undo](ai-integration/03_EDIT_REVIEW_AND_UNDO.md) | Propose multi-file diffs, apply after approval, undo the agent file change set | Level 2; conflict-safe project/editor APIs | Medium-high; preserve user work |

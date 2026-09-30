@@ -1,3 +1,6 @@
+> **Latest owner instruction — 2026-10-01 (AI Level 1 = Phase 76 ✅ DEVICE-PASSED & MERGED via [PR #102](https://github.com/pabi277/CodeC/pull/102); Phase 77 📋 BRIEFED):**
+> *"Start lavel 1"* → Phase 76, the read-only Gemini helper (BYOK, Keystore-encrypted key, preview every request, projects only, nothing saved, `store:false`). Device round: ***"Every test passed just i have to use gemini-3-flash-preview this model"*** → default model `gemini-3-flash-preview`. Then a UI rethink: ***"For phone use space management is 1st priority … the 3 ber ai place only for full setup ai but chat will be a floating botton … one click to open full chat"***, answers *"No i just making the ui future pruff"* (no follow-ups yet), *"Yes i think"* (remember button position), *"When Build i will test whatever looking good i will select"* (build both Output-panel variants), and ***"update all docs file and create ui file for next chat than you can merge everything into main"***. Records: `docs/phases/03-editor/chat-phase76/`, `docs/phases/03-editor/chat-phase77/`, `docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md`.
+
 > **Latest owner instruction — 2026-09-30 (Phase 75.1 + 75.2 + 75.3 editor typing reliability — ✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98):** *"1st you read this
 > file than find the problems with relevant with this and fix after that i will test on device
 > give you latter instructions"*, followed by device round 1 (5 items, shipped in 75.2, CI ✅ `36692498787`), device round 2 (3 items, shipped in 75.3, CI ✅ `36701799600` on `26dbf9e`), and his device acceptance and merge command:
@@ -61,7 +64,25 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-30 (Phase 75.1–75.3 complete, device-passed & merged via PR #98).**
+**CURRENT HANDOFF — 2026-10-01 (AI Level 1 / Phase 76 device-passed & merged via PR #102; next: Phase 77, the phone AI UI).**
+Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
+`docs/phases/03-editor/chat-phase77/README.md` + its three part docs (THE BRIEF FOR THIS CHAT),
+`docs/phases/03-editor/chat-phase76/README.md` (what exists: `app/src/main/java/com/codeci/ide/ui/ai/`),
+and `docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md` (binding AI laws D1–D6, O1–O3).
+
+*Status:* Phase 76 is ✅ COMPLETE, DEVICE-PASSED and MERGED (CI ✅ `36775542997`). Phase 77 is
+📋 BRIEFED, docs only: ✨ rail slot → AI home (setup only); a draggable, edge-snapping floating AI
+button (only after key setup; position persisted in `no_backup/ai/ai_settings.properties`, no
+DataStore key); a bottom chat sheet HIDDEN/HALF/FULL reusing `OutputPanelHeight`; Output-panel
+conflict variants A (replace) and B (open full) BOTH built so the owner picks on device; still ONE
+question at a time (UI shaped for chat later). Start implementing only when the owner says so; then
+brief → code → green CI → DEVICE_ROUND.md → stop at the merge gate. Levels 2+ of the AI roadmap
+remain unauthorized. Next free phase number after 77: **78**.
+
+*Lessons to keep:* `TypeAdoptionTest` forbids `FontFamily.Monospace` (use `CodecType.codeFamily`);
+`InputStream.readNBytes` is API 33 (minSdk 24); model ids are device facts — keep the model editable.
+
+**PREVIOUS HANDOFF — 2026-09-30 (Phase 75.1–75.3 complete, device-passed & merged via PR #98).**
 Read `rule.md`,
 `docs/getting-started/NEXT_STEPS.md` (head entry), `docs/phases/12-ui-polish-program/PHASE_75_1_EDITOR_TYPING.md`,
 `docs/phases/12-ui-polish-program/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,

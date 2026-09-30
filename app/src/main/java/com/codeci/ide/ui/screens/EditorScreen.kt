@@ -129,6 +129,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.codeci.ide.ui.ai.AiContextBuilder
+import com.codeci.ide.ui.ai.AiGate
+import com.codeci.ide.ui.ai.AiPanel
+import com.codeci.ide.ui.ai.AiViewModel
+import com.codeci.ide.ui.viewmodels.OutputPhase
 import com.codeci.ide.ui.theme.CodecMotion
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.rememberMotionSpecs
@@ -402,6 +407,14 @@ fun EditorScreen(
     // SINGLE_FILE is the save/run root, NOT chrome (see EditorViewModel note).
     val openMode by viewModel.openMode.collectAsState()
     val projectChrome = EditorOpenModePolicy.showsProjectChrome(openMode)
+    // Phase 76 (AI Level 1) — the fifth rail slot's read-only Gemini helper.
+    // Its state is in memory only (D6) and is cleared whenever the project
+    // (or the mode) changes, so one project's exchange never follows you.
+    val aiViewModel: AiViewModel = viewModel()
+    val aiState by aiViewModel.state.collectAsState()
+    LaunchedEffect(currentProject, openMode) {
+        aiViewModel.onProjectChanged(if (openMode == EditorOpenMode.PROJECT) currentProject else null)
+    }
     // The peek's real path for the status bar — null outside SINGLE_FILE, so
     // PROJECT/SCRATCH rendering is byte-identical to today. Project lookup is
     // remembered (it touches disk), keyed on the triple that can change it.
@@ -1484,6 +1497,68 @@ fun EditorScreen(
                         }
                     },
                     repositoryBadgeCount = gitChangeCount,
+                    // Phase 76 — the AI slot. Prompts are built at TAP time
+                    // from the live buffer / latest run (never in the
+                    // background), and the panel only ever previews them; a
+                    // request leaves the phone only on its Send button (D4).
+                    aiContent = {
+                        AiPanel(
+                            state = aiState,
+                            availability = AiGate.availability(openMode, currentProject, aiState.keySaved),
+                            onExplainSelection = { question ->
+                                val buffer = viewModel.codeText.value
+                                val fileLabel = viewModel.activeTabPath.value ?: viewModel.fileName.value
+                                aiViewModel.preview(
+                                    AiContextBuilder.fromSelection(
+                                        text = buffer.text,
+                                        selectionStart = buffer.selection.start,
+                                        selectionEnd = buffer.selection.end,
+                                        fileLabel = fileLabel,
+                                        languageLabel = LanguageType.fromFileName(fileLabel).label,
+                                        unsaved = viewModel.isDirty.value,
+                                        question = question
+                                    )
+                                )
+                            },
+                            onExplainError = { question ->
+                                val out = viewModel.outputState.value
+                                val fileLabel = viewModel.activeTabPath.value ?: viewModel.fileName.value
+                                val root = currentProject?.let { name ->
+                                    runCatching { ProjectManager(context).project(name)?.root?.absolutePath }.getOrNull()
+                                }
+                                aiViewModel.preview(
+                                    AiContextBuilder.fromRunOutput(
+                                        lines = out.lines.map { it.text },
+                                        failed = AiGate.runFailed(
+                                            phaseFailed = out.phase == OutputPhase.FAILED,
+                                            buildExitCode = out.buildExitCode,
+                                            runExitCode = out.runExitCode,
+                                            hasDiagnostics = viewModel.diagnostics.value.isNotEmpty()
+                                        ),
+                                        fileLabel = fileLabel,
+                                        languageLabel = LanguageType.fromFileName(fileLabel).label,
+                                        // The device's directory layout is not sent.
+                                        pathLabels = listOfNotNull(
+                                            root?.let { it to "" },
+                                            context.filesDir.absolutePath to "~app"
+                                        ),
+                                        question = question
+                                    )
+                                )
+                            },
+                            onSend = aiViewModel::send,
+                            onCancelPreview = aiViewModel::cancelPreview,
+                            onStop = aiViewModel::stop,
+                            onRetry = aiViewModel::retry,
+                            onClear = aiViewModel::clear,
+                            onDismissNotice = aiViewModel::dismissNotice,
+                            onToggleSettings = aiViewModel::toggleSettings,
+                            onSaveKey = aiViewModel::saveKey,
+                            onSaveModel = aiViewModel::saveModel,
+                            onTest = aiViewModel::testConnection,
+                            onDeleteKey = aiViewModel::deleteKey
+                        )
+                    },
                     files = {
                 EditorProjectDrawer(
                     projectName = currentProject,

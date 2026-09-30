@@ -45,7 +45,7 @@ class SidePanelPlanTest {
     @Test
     fun `the rail is the shot's five slots in the shot's order`() {
         assertEquals(
-            listOf("navigation", "files", "search", "repository", "reserved"),
+            listOf("navigation", "files", "search", "repository", "ai"),
             SidePanelPlan.RAIL.map { it.id }
         )
         // The order is the reading order of Screenshot_20260922_124049/122203/124052/124055/124058:
@@ -55,12 +55,13 @@ class SidePanelPlanTest {
     }
 
     @Test
-    fun `four rail slots are wired and the fifth is the owner's reserved AI slot`() {
-        assertEquals(4, SidePanelPlan.WIRED.size)
-        assertFalse(SidePanelPlan.isWired(RailPanel.RESERVED))
+    fun `all five rail slots are wired and the fifth is the owner's AI slot`() {
         // “Reseserve it i have plan for ai i can use that” (owner, 2026-09-22) —
-        // a reserved slot that opened a shop or a fake account would be a lie.
-        assertTrue(SidePanelPlan.WIRED.all { it != RailPanel.RESERVED })
+        // reserved until Phase 76 (AI Level 1) put the read-only helper there,
+        // in the same fifth position.
+        assertEquals(5, SidePanelPlan.WIRED.size)
+        assertTrue(SidePanelPlan.isWired(RailPanel.AI))
+        assertEquals(RailPanel.AI, SidePanelPlan.RAIL.last())
         // Owner follow-up: the editor hamburger opens Files, not Navigation.
         assertEquals(RailPanel.FILES, SidePanelPlan.DEFAULT_PANEL)
     }

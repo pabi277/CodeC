@@ -4,7 +4,7 @@ Research records evidence and options. It does not authorize implementation. New
 
 ## AI integration
 
-- [AI coding-agent research, repository map and OSS/runtime comparison](AI_INTEGRATION_RESEARCH_20260930.md)
+- [AI coding-agent research, repository map and OSS/runtime comparison](AI_INTEGRATION_RESEARCH_20260930.md) — with Addendum A (current-main recheck at `1785b92`) and Addendum B (Gemini API/terms research)
 - [Staged AI integration roadmap](../roadmaps/AI_INTEGRATION_ROADMAP.md)
 
 ## Existing research

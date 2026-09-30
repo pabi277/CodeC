@@ -45,8 +45,9 @@ class SidePanelWiringTest {
     }
 
     @Test
-    fun `the reserved slot draws no panel`() {
-        assertTrue("the reserved slot must fall through", panel.contains("RailPanel.RESERVED -> Unit"))
+    fun `the AI slot draws the editor-supplied AI panel`() {
+        assertTrue("the AI slot must draw its content", panel.contains("RailPanel.AI -> aiContent()"))
+        assertTrue("the editor must supply the AI panel", editor.contains("aiContent = {") && editor.contains("AiPanel("))
     }
 
     @Test
