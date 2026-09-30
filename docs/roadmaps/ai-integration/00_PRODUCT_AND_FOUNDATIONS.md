@@ -1,6 +1,6 @@
 # Level 0 — Product boundaries and shared foundations
 
-**Status: discussion / planning only.** This page defines decisions that should be settled before AI code is started.
+**Status: Level 0 STARTED 2026-09-30 — owner answers recorded in the [Level 0 decision record](00_LEVEL0_DECISION_RECORD.md); three items still open there.** This page defines decisions that should be settled before AI code is started.
 
 ## Start with the evidence, not assumptions
 
@@ -37,6 +37,8 @@ Android's app sandbox prevents ordinary apps from freely reading CodeC's private
 Treat source files, README instructions, terminal output, and downloaded dependencies as untrusted content. They can contain prompt-injection text. Such content must never grant itself extra permissions or redefine the user's approvals.
 
 ## Decisions needed before implementation
+
+> **2026-09-30 answers:** Q1 read-only; Q2 Gemini, user's own key in Android Keystore (custom endpoints deferred to Level 5); Q3 the open CodeC project only; Q4 preview and confirm every request; Q5 and Q6 deferred to Levels 3 and 6. Details, consequences and open items: [decision record](00_LEVEL0_DECISION_RECORD.md).
 
 1. Is the first release read-only (recommended), or should it include edits from day one?
 2. Does "user provides API" mean direct provider keys stored on-device, and are OpenAI-compatible custom endpoints also desired?

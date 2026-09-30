@@ -2,6 +2,8 @@
 
 **Status: proposed first implementation level; no code is authorized by this plan.**
 
+> **Level 0 decisions (2026-09-30) narrow this page:** provider = Google Gemini (stateless, `store=false`), key encrypted with Android Keystore, per-request preview including Gemini's free-tier data-use note, open project tabs only (not single-file mode), nothing saved. The binding constraint list is in [§3 of the decision record](00_LEVEL0_DECISION_RECORD.md#3-level-1-constraints-now-fixed-by-level-0); open items O1–O3 must be answered before a Level 1 brief.
+
 ## User value
 
 Answer a focused coding question using text the user explicitly selects: explain selected code, explain the current run/compiler diagnostic, or suggest what to investigate next. The AI rail slot can open this lightweight helper when an implementation is later approved.

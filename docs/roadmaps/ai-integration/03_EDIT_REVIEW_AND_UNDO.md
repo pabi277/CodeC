@@ -8,7 +8,7 @@ The agent can offer a fix or implement a small change across multiple project fi
 
 ## Distinguish editor undo from agent-task rollback
 
-Current main already has `ui/editor/EditorUndoManager.kt`: per-file/tab text history for ordinary editing. Do not present that as whole-agent-task undo. A project task may touch files that are not open in tabs, create/delete files, or survive process death. The future AI promise needs a task-level baseline/journal or isolated staging plus recovery semantics, and it must cooperate with (not silently reset) the existing tab history. See the [current-main source/data map](../../research/AI_INTEGRATION_RESEARCH_20260930.md#repository-recheck-facts-to-build-on).
+Current main already has `ui/editor/EditorUndoManager.kt`: per-file/tab text history for ordinary editing. Do not present that as whole-agent-task undo. A project task may touch files that are not open in tabs, create/delete files, or survive process death. The future AI promise needs a task-level baseline/journal or isolated staging plus recovery semantics, and it must cooperate with (not silently reset) the existing tab history. See the [current-main source/data map](../../research/AI_INTEGRATION_RESEARCH_20260930.md#1-repository-recheck-facts-to-build-on).
 
 ## Change-set workflow
 

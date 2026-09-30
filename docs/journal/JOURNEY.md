@@ -1362,6 +1362,6 @@ Each of the three came down to an exact seam in the source:
 
 `Build APK` came back green on the first round — `36701799600` on `26dbf9e` (7m 48s, host unit and screenshot tests, both APKs, weight check, zero error annotations; release artifact `6,292,527 B`, debug artifact `25,440,267 B`). He tested the build on his phone and closed the phase: *"Ok device test passed … You can complete the docs part and merged"* — merged to `main` via PR #98.
 
+## 2026-09-30 — AI Level 0: six answers, three open
 
-
-
+The owner started AI Level 0 (*"Start level 0"*): a decision record, not code. First the plan was rechecked against `main` @ `1785b92`. App source was unchanged since the dossier's `120460f`, but the recheck turned up facts the dossier had missed. The project search engine deliberately includes `.env` files. The GitHub token is stored unencrypted in DataStore. Backup carries only `CodeC/projects`. Editor undo is in-memory and cleared on project switch. Two roadmap anchors were broken and are now fixed. The owner then answered six questions: read-only first; Gemini, with the user's own key; Keystore encryption; preview every request; open project only; nothing saved. Google's current terms added two things nobody had planned for. On the free tier, prompts may be used to improve Google products and read by human reviewers. The terms also require users to be 18+ and say the API is "not for consumer use". The Interactions API stores requests by default, so "nothing saved" means sending `store=false`. Those findings became open items O1–O3, and Level 0 closes when the owner answers them. Record: `docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md`.

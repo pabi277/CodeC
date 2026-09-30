@@ -16,10 +16,11 @@ The agent can answer project-level questions and reason across files in the sele
 4. Let users inspect included paths and exclude files/folders.
 5. Keep context within the selected provider model's known limits; report when the project is too large rather than silently dropping important information.
 
-A compact project map (as seen in Aider's repo-map approach) is a useful research reference. Start with deterministic file listing/search and language-aware structure where available; semantic embeddings and a vector database are not prerequisites for the first version. CodeC's source-by-source investigation checklist is in the [research dossier](../../research/AI_INTEGRATION_RESEARCH_20260930.md#code-specific-integration-map-where-each-concern-belongs).
+A compact project map (as seen in Aider's repo-map approach) is a useful research reference. Start with deterministic file listing/search and language-aware structure where available; semantic embeddings and a vector database are not prerequisites for the first version. CodeC's source-by-source investigation checklist is in the [research dossier](../../research/AI_INTEGRATION_RESEARCH_20260930.md#2-codec-specific-integration-map-where-each-concern-belongs).
 
 ## Exclusion and secret hygiene
 
+- Do not reuse `ProjectSearch.isSearchable` as the AI filter unchanged: it deliberately includes `.env`, `.env.*` and `.npmrc` (see [research addendum A4](../../research/AI_INTEGRATION_RESEARCH_20260930.md#addendum-a--current-main-recheck-2026-09-30-1785b92)).
 - Respect `.gitignore` and CodeC-generated/build-output exclusions where appropriate, but let the user inspect the effective list.
 - Exclude obvious secret/config files by default (for example, private keys, local environment files, credentials, and token stores). Do not claim secret detection is perfect.
 - Do not crawl outside the selected project root, follow symlinks outside it, or include other CodeC projects without an explicit user action.
