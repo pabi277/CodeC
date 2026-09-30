@@ -11,7 +11,7 @@ import org.junit.Test
 
 /**
  * Phase 44.2 — the install ledger (spec:
- * docs/chat-phase44/PART_44_2_ATOMIC_SETUP.md §1).
+ * docs/phases/09-onboarding-setup/chat-phase44/PART_44_2_ATOMIC_SETUP.md §1).
  *
  * The kill matrix is pinned here as a table instead of arriving as a field bug
  * report: [SetupLedger.resumePlan] is pure, so "what does a leftover record

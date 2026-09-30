@@ -15,7 +15,7 @@ import java.io.InputStreamReader
  * unit-testable on the host JVM; the caller resolves the binary, base
  * environment, and stored credentials (see [GitContext]).
  *
- * Security model (docs/chat-phase13/PART_13_GITHUB.md §5):
+ * Security model (docs/phases/06-git-github/chat-phase13/PART_13_GITHUB.md §5):
  *  - Commands are passed as an argv LIST to ProcessBuilder — no shell — so
  *    no URL/branch/message can ever inject extra shell words.
  *  - The GitHub token travels only in the child process environment

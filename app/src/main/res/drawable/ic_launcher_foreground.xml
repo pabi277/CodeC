@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Phase 38.1 — the CodeC mark's adaptive foreground layer: the ">_"
-     glyph (docs/icon/codec-mark.svg is the source of truth). All
+     glyph (docs/brand/icon/codec-mark.svg is the source of truth). All
      coordinates live inside the 66 dp safe zone (21..87); flat colour,
      no gradients, no shadows. Not a general-purpose logo — the in-app
      mark is @drawable/app_mark. -->

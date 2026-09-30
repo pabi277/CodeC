@@ -24,7 +24,7 @@
 > plus earlier Phase 21 Auto engine only (picker deleted), Phase 22–33 (smoothness, IME keys, insets, inline input, run keys, desktop-class editor quality, sora 0.24.6, ghost text, suggestion strip, TextMate Dark+, 29 snippet packs MIT + Emmet, 50 items, LSP as Packages, phone canvas, RUN chooser, first-hour tiles).
 > **Install facts updated:** universal APK `CodeC-IDE-<version>-universal.apk` only, signed non-debuggable, SHA256 lines in release notes, updater looks only at app-v* releases, compares numerically, verifies SHA256, refuses downgrades, opens Releases page when no checksum; debug artifacts `CodeC-IDE-debug`/`release` for branch builds; debug→release = fresh install, export first; device support arm64 best, x86_64 emulator via built-in TCC, 32-bit built-in TCC null → Clang module or Termux fallback.
 > **Engines facts updated:** Auto only, no picker, Termux card deleted, fallback automatic, four setup steps appear in Output Panel only when build fails with Permission denied (CompilerRemediation).
-> **Repo facts updated:** original >_ mark docs/icon/codec-512.png, Settings trim, official file icons, typing feel, LAN server, outputs temporary, GitHub truth, feedback hardcoded, export-all, backup include-list, crash-loop guard, safe folder walk planned.
+> **Repo facts updated:** original >_ mark docs/brand/icon/codec-512.png, Settings trim, official file icons, typing feel, LAN server, outputs temporary, GitHub truth, feedback hardcoded, export-all, backup include-list, crash-loop guard, safe folder walk planned.
 > Nothing is built, nothing is deployed, there is no `website/` folder.
 > **App head:** Phase 42 COMPLETE & MERGED to `main` via PR #71 (app-v1.3.17 published), Phase 43 PLANNED. Website awaits owner's implementation command.
 
@@ -51,7 +51,7 @@
 
 1. `git status` — on an `arena/*` session branch.
 2. `web_docs/` and `web_prompt.md` exist and match this head state (v2.2 as of 2026-09-12; if newer session doc says otherwise, trust newest dated entry in `WEB_JOURNEY.md`).
-3. `README.md` + `docs/BETA.md` + `docs/RELEASE_NOTES.md` + `docs/TROUBLESHOOTING.md` re-read before writing any page — content rules §4 bind (v2.2 facts).
+3. `README.md` + `docs/guides/BETA.md` + `docs/guides/RELEASE_NOTES.md` + `docs/guides/TROUBLESHOOTING.md` re-read before writing any page — content rules §4 bind (v2.2 facts).
 
 ## History pointer
 

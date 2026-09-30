@@ -9,7 +9,7 @@ import androidx.compose.ui.text.input.TextFieldValue
  * Pure logic so the accept/shrink/reject math is host-tested; the sora-side
  * renderer lives in `ui/editor/sora/GhostHintRenderer.kt`.
  *
- * Design law (docs/chat-phase27/PART_27_1_GHOST_TEXT.md):
+ * Design law (docs/phases/03-editor/chat-phase27/PART_27_1_GHOST_TEXT.md):
  *  - G1: the ghost shows only when the top item's insert text starts with the
  *    word prefix at the caret, and only the SUFFIX is painted.
  *  - G2: typing never commits anything; the ghost is recomputed/shrunk, never

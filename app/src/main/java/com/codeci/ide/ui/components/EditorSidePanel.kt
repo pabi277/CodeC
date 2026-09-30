@@ -63,8 +63,8 @@ import com.codeci.ide.ui.theme.CodecTokens.Space
 
 /**
  * Phase 55 — **the side panel**, built to the reference card
- * (`docs/chat-phase54/PART_54_1_SHOTS.md`, from the seven
- * `docs/spck-ui/Screenshot_20260922_*.jpg` read 2026-09-22).
+ * (`docs/phases/11-phone-ui-parity/chat-phase54/PART_54_1_SHOTS.md`, from the seven
+ * `docs/reference/spck-ui/Screenshot_20260922_*.jpg` read 2026-09-22).
  *
  * The shell, exactly as the shots show it:
  *

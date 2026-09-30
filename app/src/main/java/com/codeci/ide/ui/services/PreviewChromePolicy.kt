@@ -5,7 +5,7 @@ package com.codeci.ide.ui.services
  *
  * The owner's row for this part: *“The HTML page view's upper links want a
  * hamburger treatment.”* The roadmap named two possible readings and asked the
- * research pass to choose one, or to ask. The shots (`docs/spck-ui`, `124105`)
+ * research pass to choose one, or to ask. The shots (`docs/reference/spck-ui`, `124105`)
  * show Content / Home / More as buttons **inside the page's own `index.html`**
  * and never show CodeC's preview screen, so on 2026-09-22 the owner was asked —
  * with the two candidates named — and chose **CodeC's preview chrome**.

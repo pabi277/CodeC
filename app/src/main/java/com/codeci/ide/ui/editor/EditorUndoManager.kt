@@ -11,7 +11,7 @@ import kotlin.math.abs
  * per editor tab/file by the [com.codeci.ide.ui.viewmodels.EditorViewModel].
  *
  * Snapshot granularity: each undo step restores a full [TextFieldValue]
- * (text + selection), matching the plan in `docs/chat-phase9/PART_9_EDITOR.md`.
+ * (text + selection), matching the plan in `docs/phases/03-editor/chat-phase9/PART_9_EDITOR.md`.
  * Typing runs coalesce: consecutive single-character edits (insert or delete)
  * within [coalesceWindowMs] collapse into ONE undo step so a word typed
  * leaves a single boundary, while a pause or a multi-character edit (paste,

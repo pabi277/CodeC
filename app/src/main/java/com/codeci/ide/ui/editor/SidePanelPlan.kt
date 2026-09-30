@@ -3,9 +3,9 @@ package com.codeci.ide.ui.editor
 /**
  * Phase 55 — the side panel's pure spec, and the laws the shots pinned.
  *
- * Spec: `docs/chat-phase55/PART_55_1_PANEL.md` + the reference card
- * `docs/chat-phase54/PART_54_1_SHOTS.md` (written from the seven
- * `docs/spck-ui/Screenshot_20260922_*.jpg`, read 2026-09-22).
+ * Spec: `docs/phases/11-phone-ui-parity/chat-phase55/PART_55_1_PANEL.md` + the reference card
+ * `docs/phases/11-phone-ui-parity/chat-phase54/PART_54_1_SHOTS.md` (written from the seven
+ * `docs/reference/spck-ui/Screenshot_20260922_*.jpg`, read 2026-09-22).
  *
  * **Why this file is pure.** Every decision below is a *decision about the
  * reference*, not about pixels: which five rail slots exist and in what order,

@@ -397,7 +397,7 @@ object SpckIcons {
     /**
      * Phase 57.1 — the tab row's trailing cell: the editor's action list.
      *
-     * The reference (`docs/spck-ui` 122157 / 124105) puts a mark at the right
+     * The reference (`docs/reference/spck-ui` 122157 / 124105) puts a mark at the right
      * edge of the tab row: a stack of lines shrinking toward a downward
      * chevron. That mark's own meaning in the source app is not documented in
      * the shots, so this is a clean-room drawing of the SHAPE, and the cell it

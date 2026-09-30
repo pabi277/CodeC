@@ -47,7 +47,7 @@ class FolderImportRemovedTest {
             assertFalse(
                 "Phase 46.1 regression: '$id' is back in app/src/main — the folder " +
                     "import was removed completely and must not return silently " +
-                    "(see docs/chat-phase46/PART_46_1_REMOVE_OPEN_FOLDER.md)",
+                    "(see docs/phases/04-projects-files/chat-phase46/PART_46_1_REMOVE_OPEN_FOLDER.md)",
                 text.contains(id)
             )
         }

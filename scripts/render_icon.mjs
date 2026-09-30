@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Phase 38.1 — render the CodeC launcher rasters + store art from the
- * MASTER MARK (../docs/icon/codec-mark.svg). Build-time tooling only:
+ * MASTER MARK (../docs/brand/icon/codec-mark.svg). Build-time tooling only:
  * the outputs are COMMITTED, CI never runs this, and the SVG is the only
  * hand-edited file.
  *
@@ -12,7 +12,7 @@
  *   ../app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/
  *        ic_launcher.png        48/72/96/144/192 px, rounded-square tile
  *        ic_launcher_round.png  same sizes, circular tile baked
- *   ../docs/icon/codec-512.png  512×512 GitHub Release / README art
+ *   ../docs/brand/icon/codec-512.png  512×512 GitHub Release / README art
  *
  * NOT generated here: ic_stat_codec (a 24 dp VECTOR drawable — density
  * independent, tinted by the system; a raster would be strictly worse),

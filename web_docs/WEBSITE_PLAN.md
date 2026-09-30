@@ -58,7 +58,7 @@ package repository. The site has **two wings under one roof**:
 **Goals**
 
 1. **Accurate at all times** — every claim traceable to a repo file
-   (`README.md` first, then `docs/TROUBLESHOOTING.md`, `docs/JOURNEY.md`, `docs/BETA.md`, `docs/RELEASE_NOTES.md`). Every new fact from Phases 21–43 must be reflected: Auto engine, Settings trim, >_ icon, file icons, LAN server, outputs temporary, GitHub truth, feedback, backup rules, crash-loop guard, export-all.
+   (`README.md` first, then `docs/guides/TROUBLESHOOTING.md`, `docs/journal/JOURNEY.md`, `docs/guides/BETA.md`, `docs/guides/RELEASE_NOTES.md`). Every new fact from Phases 21–43 must be reflected: Auto engine, Settings trim, >_ icon, file icons, LAN server, outputs temporary, GitHub truth, feedback, backup rules, crash-loop guard, export-all.
 2. **Fully self-dependent (owner requirement):** the site must stand alone —
    see §5. No external resources of any kind; the learning course must be
    completable without ever leaving the site.
@@ -86,7 +86,7 @@ Single-page-per-topic, one shared header/footer. Final URLs
 
 ### 3.0 Shared chrome
 
-- **Header:** wordmark "CodeC" with the **> _ mark** (the original launcher icon from `docs/icon/codec-512.png` — Phase 38.1, flat adaptive + real monochrome layer + legacy PNGs, notification silhouette `ic_stat_codec`), nav: Home · Install · Start · Engines · Packages · **Learn** · FAQ · About · GitHub icon. "Learn" is a top-level nav item (the learning wing is a first-class citizen). Sticky header, collapses to a single toggle on narrow screens.
+- **Header:** wordmark "CodeC" with the **> _ mark** (the original launcher icon from `docs/brand/icon/codec-512.png` — Phase 38.1, flat adaptive + real monochrome layer + legacy PNGs, notification silhouette `ic_stat_codec`), nav: Home · Install · Start · Engines · Packages · **Learn** · FAQ · About · GitHub icon. "Learn" is a top-level nav item (the learning wing is a first-class citizen). Sticky header, collapses to a single toggle on narrow screens.
 - **Footer:** "CodeC — free & open source C IDE for Android" + repo/README/Releases/Issues + "Site source: this repo, `website/`".
 - **Learn pages add:** a chapter breadcrumb ("Chapter N of 17") and prev-chapter / next-chapter footer links on every chapter page.
 - Every page: consistent meta title/description; one canonical link to the Releases page (never hardcoded artifact URLs — they rot).
@@ -110,11 +110,11 @@ One paragraph: built-in offline compiler (TCC), real terminal, package hub, web 
 
 **`/packages` — Package hub & repository.** What `pkg`/Packages tab is (guarded CodeC-only frontend). The real package list (25+; from README + codec-packages config: `git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, …) as a table with N from config (sha recorded in chat-web3, feeds W4.2). How the repo works: `https://pabi277.github.io/CodeC/dev`, signed metadata (`signed-by=`, never `trusted=yes`), SHA-256-verified bootstrap `userland-v2-dev`, atomic installs, gpgv verification. 1-tap UI: INSTALL/RUN buttons, live status badges (`INSTALLED ✓` / `AVAILABLE`), quick system actions (`pkg update`, `upgrade -y`, `codec-setup-storage`, `status`, `heal`, `repair`), interactive command runner. Extra-keys row (ESC/TAB/CTRL/ALT/arrows) + custom macros. Honest scope note.
 
-**`/faq` — FAQ & troubleshooting.** Distilled from README §Troubleshooting + `docs/TROUBLESHOOTING.md` + `docs/BETA.md` (B-1…B-8) — website-length answers, each linking to repo doc for depth:
+**`/faq` — FAQ & troubleshooting.** Distilled from README §Troubleshooting + `docs/guides/TROUBLESHOOTING.md` + `docs/guides/BETA.md` (B-1…B-8) — website-length answers, each linking to repo doc for depth:
 
 - compiler could not start · Permission denied (W^X/noexec, targetSdk 28 compatibility mode, reinstall once, Termux fallback) · Exec format error (CPU mismatch, TCC null on armeabi-v7a) · Runtime libraries missing · hangs (30s/10s caps, scanf in Term) · Do I need Termux? (No) · hardware keyboards/extra-keys + CodeC Keys · projects & export + **export-all ZIP** + backup rules (include-list-only, token not backed up, userland not backed up) · crash-loop guard (3rd launch safe mode with export + report hand-off) · huge folder slow (open subfolder) · 32-bit ARM built-in not available · debug vs release APK (debuggable flag, run-as risk) · signature change = fresh install · "Parse error / package appears invalid" (SHA256 verification since 42.1) · cursor wrong on very long lines (Phase 39 guard) · where to report bugs (include Logs "Device:" line, versionName with CI run number, feedback & support via WhatsApp hardcoded +91 62967 46606 / email chakraborttypabi2772006@gmail.com, GitHub issue).
 
-**`/about` — About CodeC.** What it is / who it's for. Feature tour in short form (editor with official file icons, ghost text, suggestion strip, snippets+Emmet, TextMate Dark+, typing feel, projects with safe folder walk + ProjectLink persisted SAF grant + noexec mirror, honest git with readiness + push truth + publish, web preview + LAN server with QR + open in browser, device APIs via CodeCApi: battery/sensor/TTS/camera/intent, outputs temporary never in repo, backup rules, crash-loop guard, export-all, feedback & support). **The story:** phases 0–43 built in public (0–19 core, 20–24 multi-lang, 25–33 first-hour UX + IntelliSense, 34–37 UX/UI, 38–43 share-readiness) → link `docs/JOURNEY.md`. **Engineering facts:** original >_ mark (`docs/icon/codec-mark.svg`, safe-zone-verified, adaptive layers + real monochrome layer + 10 PNG rasters + codec-512.png generated by `scripts/render_icon.mjs` sharp 0.35.4 deterministic md5, template webps deleted, `ic_stat_codec` notification silhouette replacing `ic_launcher_foreground` + system `ic_dialog_info`, `app_mark` in About header), static musl TCC in APK arm64+x86_64, signed package repo, CI-built APK (Build APK runs assemble + testDebugUnitTest + lintDebug), clean-room approach, targetSdk 28 deliberate (keeps downloaded compilers executable, why GitHub not Play), R8 + shrinkResources (proguard-rules.pro law file, okhttp pair removed, 25.5 MB → 6.6 MB -74%), backup XMLs include-list-only (FullBackupContent lint law), crash-log.txt header-first with COPY ALL, FeedbackDraft wa.me with hardcoded DeveloperContact, no telemetry, 11 privacy rows, telemetry scan. Links: repo, README, JOURNEY, Releases, Issues, BETA.md, DATA_AND_PRIVACY.md, RELEASE_NOTES.md template.
+**`/about` — About CodeC.** What it is / who it's for. Feature tour in short form (editor with official file icons, ghost text, suggestion strip, snippets+Emmet, TextMate Dark+, typing feel, projects with safe folder walk + ProjectLink persisted SAF grant + noexec mirror, honest git with readiness + push truth + publish, web preview + LAN server with QR + open in browser, device APIs via CodeCApi: battery/sensor/TTS/camera/intent, outputs temporary never in repo, backup rules, crash-loop guard, export-all, feedback & support). **The story:** phases 0–43 built in public (0–19 core, 20–24 multi-lang, 25–33 first-hour UX + IntelliSense, 34–37 UX/UI, 38–43 share-readiness) → link `docs/journal/JOURNEY.md`. **Engineering facts:** original >_ mark (`docs/brand/icon/codec-mark.svg`, safe-zone-verified, adaptive layers + real monochrome layer + 10 PNG rasters + codec-512.png generated by `scripts/render_icon.mjs` sharp 0.35.4 deterministic md5, template webps deleted, `ic_stat_codec` notification silhouette replacing `ic_launcher_foreground` + system `ic_dialog_info`, `app_mark` in About header), static musl TCC in APK arm64+x86_64, signed package repo, CI-built APK (Build APK runs assemble + testDebugUnitTest + lintDebug), clean-room approach, targetSdk 28 deliberate (keeps downloaded compilers executable, why GitHub not Play), R8 + shrinkResources (proguard-rules.pro law file, okhttp pair removed, 25.5 MB → 6.6 MB -74%), backup XMLs include-list-only (FullBackupContent lint law), crash-log.txt header-first with COPY ALL, FeedbackDraft wa.me with hardcoded DeveloperContact, no telemetry, 11 privacy rows, telemetry scan. Links: repo, README, JOURNEY, Releases, Issues, BETA.md, DATA_AND_PRIVACY.md, RELEASE_NOTES.md template.
 
 ### 3.2 Learning wing — "Master CodeC from Zero to Advanced"
 
@@ -162,7 +162,7 @@ Chapter content rules:
 
 ## 4. Content rules (both wings)
 
-1. **Source of truth order:** `README.md` → `docs/TROUBLESHOOTING.md` → `docs/BETA.md` → `docs/RELEASE_NOTES.md` → `docs/JOURNEY.md` → `docs/chat-phaseN/` (detail). If product fact isn't in repo, not on site.
+1. **Source of truth order:** `README.md` → `docs/guides/TROUBLESHOOTING.md` → `docs/guides/BETA.md` → `docs/guides/RELEASE_NOTES.md` → `docs/journal/JOURNEY.md` → `docs/chat-phaseN/` (detail). If product fact isn't in repo, not on site.
 2. **Distill, don't dump** — website-length answers; link out for depth.
 3. **No rotting links:** stable places only (Releases page, repo root, README anchors, docs files) — never artifact URLs or run IDs.
 4. **Version-awareness:** "as of" notes where README could change (package count, engine list — now Auto only, universal APK size, versionCode); W6 sweep re-reads README first.
@@ -205,7 +205,7 @@ website/                 ← the ENTIRE website (new top-level folder, created i
   ch-01.html … ch-17.html
   style.css
   (favicon assets; optional approved screenshots)
-  (docs/icon/codec-512.png used as source for favicon if needed — original >_ mark)
+  (docs/brand/icon/codec-512.png used as source for favicon if needed — original >_ mark)
 ```
 
 - Nothing in `website/` is served by the app; nothing in `app/`, `codec-packages/`, `docs/`, `gradle*` changes as part of website work.
@@ -240,7 +240,7 @@ Each phase: one `web_docs/chat-webN/` record + living docs update + commit + pus
 3. **Self-dependent (W6, §5):** zero fetched external resources; offline render verified; course completable without repo.
 4. Renders acceptably at 360 px and 1440 px (visual check, W6).
 5. **Course quality:** every chapter has goals / steps / try-it / common mistakes; every command works on fresh CodeC install (universal APK 6.6 MB, offline TCC).
-6. Deploys on GitHub Pages; site URL recorded in `web_docs/NEXT_STEPS.md`.
+6. Deploys on GitHub Pages; site URL recorded in `web_docs/getting-started/NEXT_STEPS.md`.
 7. No app code, tests, or APK CI workflow changed (except Pages workflow in W6).
 8. `web_prompt.md` + `web_docs/` living docs updated in final commit.
 9. **New facts from Phases 21–43 reflected:** Auto engine only (no picker), Settings trim (13→11, Termux card deleted), >_ icon, file icons, typing feel, LAN server with QR + open-in-browser, outputs temporary (RunArtifacts + RepoHygiene), GitHub truth (readiness + push outcome + publish), feedback hardcoded +91 62967 46606 / email + exit survey + crash-log, universal APK 6.6 MB -74% + SHA256 + updater version guard, backup include-list-only + crash-loop guard + export-all, safe folder walk planned + ProjectLink.

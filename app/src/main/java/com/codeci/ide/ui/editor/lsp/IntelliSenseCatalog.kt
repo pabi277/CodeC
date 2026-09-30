@@ -71,7 +71,7 @@ object IntelliSenseCatalog {
         // already in the CodeC repository (Phase 12); `python-pip` is
         // a SEPARATE Phase 12 package (the python pip-separation
         // postinst was neutralized in the CodeC repo so pip is its
-        // own deb — see `docs/chat-phase12/PART_12_PYTHON.md`). The
+        // own deb — see `docs/phases/03-editor/chat-phase12/PART_12_PYTHON.md`). The
         // card surfaces the chained install: `pkg install -y
         // python-pip` lands `pip` on PATH (idempotent if already
         // present), then `pip install python-lsp-server` (NO

@@ -1137,7 +1137,7 @@ fun SettingsScreen(
             // Phase 42.3 §5 — the permission table, surfaced: one short row
             // per declared permission with its one-line reason. The "not a
             // dialog storm" part: they are plain info rows, and the whole
-            // table's source-of-truth is docs/DATA_AND_PRIVACY.md, pinned
+            // table's source-of-truth is docs/guides/DATA_AND_PRIVACY.md, pinned
             // to the manifest by ManifestPermissionsTest. The honest order
             // puts the all-files approval first — it is the one permission
             // where "CodeC cannot read your files" would be false.
@@ -1183,7 +1183,7 @@ fun SettingsScreen(
             )
             SettingsItem(
                 title = "The full table",
-                subtitle = "docs/DATA_AND_PRIVACY.md in the repository — every permission, its reason, and the code that uses it; no SMS/contacts/location/phone permissions exist in this app"
+                subtitle = "docs/guides/DATA_AND_PRIVACY.md in the repository — every permission, its reason, and the code that uses it; no SMS/contacts/location/phone permissions exist in this app"
             )
             // Phase 42.1 — the honest updater: app releases only (a
             // userland-* bootstrap can never be offered), version compared

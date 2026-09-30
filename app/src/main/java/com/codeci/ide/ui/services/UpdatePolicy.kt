@@ -6,7 +6,7 @@ package com.codeci.ide.ui.services
  * is the code whose mistake is a *wrong binary on the user's phone*, so it
  * lives where a JUnit can starve it, lie to it, and feed it garbage).
  *
- * The problem these rules close (evidence in docs/chat-phase42): the old
+ * The problem these rules close (evidence in docs/phases/08-release-support/chat-phase42): the old
  * updater asked GitHub for `releases/latest` — which resolved to
  * `userland-v1`, a BOOTSTRAP release with no app APK — and then installed
  * the FIRST asset whose name ended in `.apk`, with no version comparison,

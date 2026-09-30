@@ -9,7 +9,7 @@ package com.codeci.ide.ui.settings
  *
  * **The catalog below is generated from the screen, not invented.** Every entry is one
  * `Settings*` call's own `title`, in screen order, with the section it sits under - the same
- * 66 rows `docs/chat-phase38/SETTINGS_AUDIT.md` already pins as the audit table, and
+ * 66 rows `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md` already pins as the audit table, and
  * `SettingsSearchWiringTest` re-checks both directions (the catalog must hold exactly the rows
  * the screen renders, and every label must exist in the screen or in `strings.xml`). That is
  * why the labels read like the screen's own words - including row 11, a completion switch

@@ -1,0 +1,344 @@
+# CodeC — Phases 44–50 · test-phase roadmap
+
+> **Owner (2026-09-12, verbatim):** *"I am now in the test phase and i have some
+> bugs and improvements. You have to do deep research about every plan and
+> solution and create new phases. Number the phases like i go in a row."*
+>
+> Five rows came in; they became **seven phases (44–50)**, numbered in a row so
+> one command per phase — **"Start Phase 44"**, then 45, … 50 — is all the
+> planning you have to remember. Research dossier with licences and sources:
+> [`PHASE44_50_UX_RESEARCH.md`](../research/PHASE44_50_UX_RESEARCH.md). Each phase has a
+> `docs/chat-phaseNN/` directory with a README (evidence + risks + exit
+> condition) and one part doc per part, in the house format
+> (symptom → root cause → design → exit condition → tests → deferred →
+> sources).
+>
+> **Status (2026-09-12):** Phase **44 is 🚧 IMPLEMENTED** on
+> `arena/01a0955a-codec`; CI is ✅ GREEN (`34693462725`) and the owner **ran
+> device round 1** on that artifact — it 🔴 **failed four rows** (a marker-only
+> prefix read as READY, a setup bar with no working action, and
+> `restoreState = true` sending "go to the terminal" to the editor). All three
+> root causes are fixed and pinned by tests, and CI round 4 (`34695797493`, tip
+> `4bf3c4c`) is ✅ GREEN; **round 2
+> ([`phases/09-onboarding-setup/chat-phase44/DEVICE_ROUND.md`](../phases/09-onboarding-setup/chat-phase44/DEVICE_ROUND.md) R1-R8, then
+> D1-D12) is the gate.** Phase **45 is 🚧 IMPLEMENTED** as well (both layers the
+> owner chose: the five-slide first-run guide with three doors back to it, and
+> coach marks that may only point at an anchor the layout says is really on screen;
+> **CI round 1 ✅ GREEN** — `34698914219` on tip `3c597b2`: assemble +
+> `testDebugUnitTest` + `lintDebug`, release APK +12,792 B / +0.19%). **The owner
+> then ran round 1 on his phone and 45.2 was rebuilt as ONE TEN-BEAT TOUR** (his
+> flow: ☰ → change project to `demo_flask` → `app.py` → RUN ▶ → Install → the Flask
+> preview → close → the tab bar / reveal handle → a small tour of Packages and
+> Terminal; no next button — the highlighted control is the only way on, outside taps
+> are inert, `demo_flask` is always present). **He then ran round 2 and the tour lost
+> its skip** (*"You add the skip option and it's not a trough guide mean it got cut …
+> I want a full process 1st to last without skip anything in this … At the end option
+> to close and view again"*): every beat now waits in order, a tour card has **no
+> button at all**, Back pauses without spending a beat, and the finish card offers
+> **VIEW AGAIN** + **CLOSE**. **He then ran round 3 and asked for two things**
+> (*"1st click disappear the massage and i have to click 2nd time to really work but if
+> someone don't click 2nd time it just cut off the flow of tutorial"* and *"when the
+> userland is installing and unpacking the user can not access any other other option
+> and it will show a sweet massage of why"*): every anchor now publishes its
+> control's **own click** and the overlay performs it before advancing — one tap, both
+> halves, a drag spends nothing — and a new pure **`SetupLockPolicy`** (shipped beside
+> the 44 gate, specified in
+> [`phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md`](../phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md))
+> pauses the options an install cannot serve, dimmed with a 🔒, each answering a tap
+> with one sentence that says what is happening, why, and where to watch it — the
+> surface that shows the install is never paused. **He then ran round 4 and accepted
+> it with one correction** (*"The lock option is good but still it late user can switch
+> before the start of userland download because is takes a little time to connect … Make
+> it instantly after 1st open and others are ok"*): round 4's lock waited for a stage
+> that meant *work is moving*, so the seconds before the first byte — the disk probe,
+> the reach for the network — were still switchable. Round 5 keys the pause on **whether
+> the Linux tools work** instead of on the stage, so it is on from the first frame
+> (`USERLAND_STARTING` also covers a boot-time repair of an interrupted swap), while a
+> usable prefix, a stopped setup (`FAILED`/`UNSUPPORTED`) and Phase 42.3's **safe mode**
+> still pause nothing. **He then ran round 5 and reported the pause outliving the work it
+> protected** (*"even after unpacking the userland it still stay lock if i refresh it it's
+> the open the editor"*): round 5 had keyed the pause on a disk **reading** beside the
+> installer's **verdict**, and a reading can be stale — so round 6 made a **settled stage
+> always reopen the app** and added a fourth reading, taken the moment a shell comes alive
+> (a running bash *is* the proof the tools work). Round 5's "on from the first frame" is
+> untouched, because `CHECKING` is still in flight. Round 6 is implemented with **199 host
+> cases green locally** (76 guide/demo + 123 Phase 44); CI is ✅ **GREEN** on rounds 1-4
+> (`34698914219`;
+> `34704379023`; `34707337429`; `34711827176` on tip `e7759f1`, release APK
+> 6,675,258 B = +0.08% over round 3) and **all six rounds** now (round 5 =
+> `34714305062` on tip `6c3cfea`, release APK 6,675,254 B; round 6 = `34719753700` on tip
+> `8c3c10d`, job `build` 25 steps 10m48s, zero annotations, release APK 6,675,154 B =
+> −100 B, whole phase +23,472 B / +0.35% over Phase 44 round 4), and device round
+> [`phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md`](../phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md) **G1-G41** is NOT
+> run (start it from Settings → About → Reset tips; G29-G33 the one-tap rule, G34-G38
+> the lock, G39-G40 its first-frame timing, **G41 its release** — and G41 needs the
+> round-6 build, which is the only one that has the fix).
+> 48 AND 49 are 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner:
+"Start phase 48 and 49", tip `a592295`; CI round 1 (`34739938499`) red
+for-cause — one stale Phase-41 wiring pin in `ExitSurveyTest`, moved with
+its reason — round 2 ✅ GREEN `34740245825` (25 steps 10m6s, zero error
+annotations, release APK 6,681,018 B = +4,072 B / +0.06% over the merged
+46/47 tip `34737610972`, both phases combined); device rounds pending —
+48's eight checks and 49's ten + 49.2's eight on two nav modes). **50 is still plan-only.** Phase 43 is
+> **❌ CANCELLED** by the same instruction (row 3): its feature is deleted, its
+> reason is kept as a tombstone in
+> [`phases/13-archive/chat-phase43/README.md`](../phases/13-archive/chat-phase43/README.md).
+
+---
+
+## The owner's five rows → phases
+
+| # | Owner's words (verbatim) | Phase | Title | Effort |
+|---|---|---|---|---|
+| 1 | *"Userland is installing but the test user don't know it's installing so they close app before it complete than letter when they try to install any other pkg got errors"* → *"If it opens the terminal 1st and show a warning don't close the terminal while userland is installi[ng]"* | **44** | Setup you can see, and cannot half-finish | M |
+| 2 | *"It has 0 guide features to give the user a real knowledge how to use the app…"* → *"Set a step by step user guide after opening the app 1st time with a open view again"* | **45** | The guide (slides + coach marks) | M |
+| 3 | *"The project have a feature open a folder (phase 43, incomplete) i want to remove it completely and make the project section more optimization features like file single click to open in a editor screen with real path and same file edit but not full project to editor. To open a full project in editor the 3 dot will have the option to open in editor"* | **46** | Projects, not folders | M |
+| 4.i / 4.ii / 4.iii | *"the file ber can't close without opening any file"* · *"I can switch project but can't directly open folder"* · *"System keyboard make default user can change to app keyboard if they want"* | **47** | Editor chrome that behaves | M |
+| 5.A | *"If the code is very big it's last line go under the keyboard, when i use a suggestion it go down and hide behind the keyboard"* | **48** | Nothing hides behind the keyboard | S/M |
+| 4.iv / 5.B / 5.C | *"After clicking 3 ber if user use back botton it will [close] the file view and show the editor not full app close"* · *"My phone showing the option when try to close not now option but in most phone no option like not now or exit"* · *"The back botton all screen behavior please recheck and refine"* | **49** | Back does the obvious thing, everywhere | M |
+| — | *"I am now in the test phase"* (the round that proves 44–49) | **50** | Cross-device test round | S (docs + gates) |
+
+Owner's clarifications, 2026-09-12 (they decide the ambiguous readings):
+
+| Point | Owner chose |
+|---|---|
+| 4.iv *"3 bar + back"* | **Both** — the editor ☰ drawer **and** the Projects-hub file tree, plus an audit of every screen (that is 49's job anyway) |
+| 5.B the exit prompt | **Keep it ON, make it consistent** — find out why some devices never show it and fix that |
+| 4.ii *"can't directly open folder"* | **In-drawer project picker** — the project list opens right inside the drawer, no navigation |
+| 2 the guide | **Both layers** — slides on first run **and** coach marks on first arrival at Editor / Terminal / Packages |
+
+---
+
+## Execution order: **44 → 45 → 46 → 47 → 48 → 49 → 50**
+
+The numbers **are** the order. Why this order:
+
+1. **44 — setup you can see, and cannot half-finish.** 🚧 **IMPLEMENTED
+   2026-09-12** (`arena/01a0955a-codec`; both parts, **121 host cases** after
+   Phase 45's rounds 4-5 added the chrome lock here, CI ✅ GREEN
+   round 4 `34695797493`; device round 1 🔴 FAILED four rows → three root causes
+   fixed; **round 2 not run**, and its lock rows live in
+   [`phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md`](../phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md) **G34-G41**). It goes first because it
+   breaks every other test round: a tester whose userland is half-installed
+   reports *everything* as broken (`pkg` missing, Python "not installed", git
+   missing). It is also the only phase in the series with a data-loss-shaped
+   bug (a kill between the two renames in `swapPrefix` leaves **no `usr` at
+   all**, `UserlandInstaller.kt:377-395`).
+2. **45 — the guide.** 🚧 **IMPLEMENTED 2026-09-13, THROUGH ROUND 6**
+   (`arena/01a0955a-codec`; both parts, **199 host cases green locally**, CI ✅
+   GREEN on all six rounds
+   `34698914219`/`34704379023`/`34707337429`/`34711827176`/`34714305062`/`34719753700`,
+   device round
+   [`phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md`](../phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md) **G1-G41** not
+   run). Round 4 came from the owner's own two requests after he ran round 3:
+   *one tap on a highlighted control must really work it* (it now performs the
+   control's own published click and then advances, in one gesture), and *"when
+   the userland is installing and unpacking the user can not access any other
+   option"* — which is a **44 surface** shipped beside the gate as pure
+   `SetupLockPolicy` (`phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md` §"Phase 45 round
+   4 — the chrome lock"). First impression for every tester you have not met yet,
+   and its slide 3 is where the *"one-time download, don't close the app"*
+   mental model is planted that 44 enforces — which is why the guide gate runs
+   *before* 44.1's terminal-first divert and never shares a screen with the setup
+   bar.
+3. **46 — projects, not folders.** Deletes the incomplete Phase 43 feature and
+   re-shapes the hub around the new file/project split. It goes before 47
+   because the drawer's in-drawer project picker and the hub's *Open in editor*
+   are two faces of one model.
+4. **47 — editor chrome that behaves.** The drawer you can always close, the
+   project list inside it, and the system keyboard as the default.
+5. **48 — nothing hides behind the keyboard.** Small, surgical, and it needs
+   47.2 settled first (the default keyboard changes the repro).
+6. **49 — back does the obvious thing, everywhere.** The systematic answer to
+   4.iv + 5.B + 5.C: one pure `BackRouter`, one precedence table, every screen
+   wired to it. It goes last of the feature phases because 46/47 change which
+   surfaces exist.
+7. **50 — cross-device test round.** One runbook over 44–49, on at least three
+   devices including one gesture-nav and one 3-button-nav phone, because 5.B is
+   literally a *"why is it different on other phones"* bug.
+
+**Ordering rules inside the series** (the only two):
+
+- **44.2 before any Packages-tab testing.** Until the prefix can survive a kill,
+  package tests on a shared device are uninterpretable.
+- **46.1 before 46.2.** The "Open Folder" row and the single-file editor both
+  touch the hub's tap routing; deleting first keeps the diff honest.
+
+---
+
+## What each phase is, in one paragraph
+
+### Phase 44 — Setup you can see, and cannot half-finish
+
+**44.1 The install is visible.** The bootstrap already runs at app launch
+(`TerminalViewModel.kt:205` builds it from `MainActivity.kt:629`), and its only
+output is text painted into the terminal emulator's grid
+(`TerminalSession.notice`, `TerminalSession.kt:260`) — invisible from the
+Projects/Editor/Packages tabs. Ship: a first-run **setup gate** ("Setting up
+CodeC… 62 % — you can write C right now"), the terminal opened on first launch
+with a **"don't close the app"** banner (the owner's own idea, kept), an
+`onProgress` StateFlow that any tab can render, the existing
+`TerminalForegroundService` started **before** the download instead of after,
+and a gate on the Packages tab so `pkg install` is refused with a real sentence
+while the userland is not valid.
+**44.2 The install cannot half-finish.** An install ledger, a swap with no
+"no-prefix" window (or a rename-back on boot), orphan `usr.old-*` /
+`.userland-staging-*` cleanup (neither is referenced anywhere else in
+`app/src/main` — verified), and a `SetupState` that every consumer reads.
+Specs: [`phases/09-onboarding-setup/chat-phase44/`](../phases/09-onboarding-setup/chat-phase44/README.md).
+
+### Phase 45 — The guide
+
+**45.1 Slides on first run** (after the three language tiles, skippable,
+persisted, five slides in the order the user meets the features) with **three**
+"see it again" entry points: a Settings row, the Projects-hub ⋮ menu, and the
+editor ☰ drawer footer. **45.2 Coach marks** on first arrival at the editor
+(☰ + RUN ▶), the terminal (status chip + extra keys) and Packages (one install
+card) — three or four, one per surface, never a tour. Both layers are pure plans
+(`GuidePlan`, `CoachMarkPlan`) so CI pins the sequence, the once-only rule and
+the re-open paths. The no-nag law holds: one tap skips, nothing returns unless
+asked. Specs: [`phases/09-onboarding-setup/chat-phase45/`](../phases/09-onboarding-setup/chat-phase45/README.md).
+
+### Phase 46 — Projects, not folders ✅ COMPLETE & MERGED (PR #78; device-approved "All working" 2026-09-13)
+
+**46.1 Remove "Open Folder" completely** — the `+`-sheet row, the SAF tree
+launcher, `importFolder`, `copyDocumentTree`/`copyDocumentChildren`, the two
+strings — all deleted (grep = 0), pinned by `FolderImportRemovedTest`.
+**46.2 The new split:** a single tap on a file in the hub opens **that one
+file** (`single=1` editor route, real `~proj/…` path in the status bar, edit +
+save + autosave, no project chrome, no launch-state write), and the project
+card's **⋮ → Open in editor** loads the whole project (launch default → newest
+source → first source, `ProjectEntryFile`). Pure parts: `EditorOpenMode`,
+`EditorOpenModePolicy`, `ProjectEntryFile`; host tests `EditorOpenModeTest` ×15,
+`ProjectEntryFileTest` ×9, `SingleFileSaveTest` ×5 (Robolectric: the
+save-writes-the-real-path money test), `EditorRouteCompatTest` ×4.
+Specs + implementation record: [`phases/04-projects-files/chat-phase46/`](../phases/04-projects-files/chat-phase46/README.md).
+
+### Phase 47 — Editor chrome that behaves ✅ COMPLETE & MERGED (PR #78; device-approved "All working" 2026-09-13)
+
+**47.1 The drawer:** a visible ✕ (38 dp, header end) whose only job is close,
+the interim `BackHandler(enabled = drawerState.isOpen)` (49's router folds it
+in later), and the **in-drawer PROJECTS section** — Single files + every
+project, current marked, the retired Open-folder dialog deleted with its false
+title, `＋ New project…` handing off to the hub with its `+` sheet up. Pure
+parts: `DrawerPolicy`, `DrawerProjectList`; tests `DrawerPolicyTest`,
+`DrawerProjectListTest`, `DrawerWiringTest` (+ two `GuideWiringTest` pins
+updated to pin the picker GONE).
+**47.2 The keyboard:** `codec_keys_enabled` defaults to **false** (system
+keyboard), CodeC Keys is the opt-in with honest Settings copy ("Off by
+default — …"), the guide's slide 2 carries the owner's sentence, and existing
+users keep whatever they chose (the absent key IS the default; never written
+at startup). Tests `KeyboardDefaultTest` ×5, `ImeLeverTest`, `KeysStayPolicyTest`
++2. Specs + implementation records: [`phases/11-phone-ui-parity/chat-phase47/`](../phases/11-phone-ui-parity/chat-phase47/README.md).
+
+### Phase 48 — Nothing hides behind the keyboard 🚧 IMPLEMENTED (2026-09-13; device round pending)
+
+The editor column is correctly `imePadding()`'d (`EditorScreen.kt:1016`), so
+sora is resized — but nothing ever asks sora to bring the caret back into the
+new, smaller viewport, and sora only auto-scrolls on *selection* change
+(`ScrollEvent` cause `CAUSE_MAKE_POSITION_VISIBLE`). Fix: a pure
+`CaretVisibilityPolicy` for *when* a re-scroll is owed, and the Android edge
+calling the public `CodeEditor.ensurePositionVisible(line, column,
+noAnimation = true)` after the layout settles. Also covers the "accept a
+suggestion and the caret disappears" half of 5.A.
+Spec: [`phases/11-phone-ui-parity/chat-phase48/`](../phases/11-phone-ui-parity/chat-phase48/README.md). **Implemented
+2026-09-13:** pure `CaretVisibilityPolicy`/`EditorViewport` (keys on the
+box's HEIGHT; `previous == null` never owes) + ONE rescroll owner in
+`SoraEditorHost` — the app's single `ensurePositionVisible(` site, pinned by
+`CaretCallSiteTest`, API verified against the pinned sora 0.24.6 tag — with
+`postDelayed` after layout, `noAnimation = true`, cancel-and-replace
+coalescing, `runCatching`. Recorded deviation: both VM→sora replay paths
+follow the caret they move (a ghost/chip accept swaps row for row at
+constant height, so height alone would miss the owner's second sentence);
+typing echoes skip on reference equality; quiet-on-open stays scroll-free.
+
+### Phase 49 — Back does the obvious thing, everywhere 🚧 IMPLEMENTED (2026-09-13; device round pending)
+
+Two `BackHandler` call sites exist in the whole app today
+(`MainActivity.kt:801`, `EditorScreen.kt:646`). Replace the ad-hoc set with one
+pure **`BackRouter.decide(state): BackAction`** and a precedence table pinned by
+CI: unsaved-changes → open drawer → open hub project tree → open sheet/dialog →
+pop route → exit prompt → exit. Then **5.B's real answer**: the exit prompt is
+decided from *state* ("am I at a root with nothing open"), not from
+`popBackStack()`'s return value, so it behaves the same on every device; the
+silent "first back hops to the start tab" behaviour gets a decision of its own.
+Specs: [`phases/11-phone-ui-parity/chat-phase49/`](../phases/11-phone-ui-parity/chat-phase49/README.md). **Implemented 2026-09-13:**
+`BackRouter.decide` over defaulted `BackState` (rows pinned by
+`BackRouterTest`; rows 7-9 root-only; `isRoot` = base-segment equality — the
+startsWith trap dead), one router-driven handler per surface
+(`BackHandlerWiringTest` pins every `BackHandler(` in the app is the root or
+router-driven): the root decides from STATE (`isRoot`, not `popBackStack()` —
+49.2 causes A/B die; the prompt-up state keeps the handler OFF, the dialog's
+own back is the second press; every press logs the diagnostic), the editor's
+two ad-hoc handlers folded into one (drawer on `targetValue`, H2), the hub
+GAINED its handler (back at an open tree = `closeProject()`, never exit —
+owner 4.iv), the guide routes PopRoute (= back = SKIP). Recorded deviation:
+the spec's `CloseCoachMark` row is NOT built — the 45.2 round-2 owner law
+(back must not end the tour) wins; audit row 9 corrected. 49.2: the exit
+prompt from state + the second door (Settings → Feedback & Support → "Tell
+us before you go", audit row 48 in the same commit).
+
+### Phase 50 — Cross-device test round → **renumbered to 53, then ❌ CANCELLED**
+
+> **Owner decision (2026-09-14):** *"Remove the full device cross check phase."*
+> The owner's numbering law (*"number the phases like i go in a row"*) makes the
+> numbers the execution order, so this phase first moved from **50 to 53** — and
+> was then **cancelled outright**. It is not planned, not owed, not scheduled;
+> its files are history by the owner's choice
+> ([`docs/phases/11-phone-ui-parity/chat-phase53/`](../phases/11-phone-ui-parity/chat-phase53/README.md), which now holds this phase's
+> `DEVICE_MATRIX.md`).
+>
+> **What replaced it:** one short per-phase handset round when each UI phase
+> ships (L1-L12 for 50, F1-F16 for 51, R1-R12 for 52), CI as the executor of
+> record, and the Roborazzi screenshot goldens in 52.4. The device rows still
+> owed for 44/45/46/47/48/49 belong to their own phases and are unaffected.
+>
+> ⚠️ `arena/01a099d8-codec` ships `DeviceMatrixTest.kt`, which machine-pins the
+> cancelled matrix from `docs/phases/11-phone-ui-parity/chat-phase50/…` — **delete or re-scope that test
+> before that branch lands on `main`.**
+
+No new features. One runbook (`phases/11-phone-ui-parity/chat-phase53/DEVICE_MATRIX.md`) that walks
+44–49's exit conditions on a matrix: a gesture-nav phone, a 3-button-nav phone,
+a small screen (≤ 5.5"), a tablet/foldable if available, Android 11 / 13 / 15 if
+available, plus the two destructive cases that matter (kill during install,
+revoke storage). The deliverable is a **filled matrix**, not a promise — the
+same standard `docs/guides/BETA.md` and Phase 41's device rounds set.
+Specs: [`phases/11-phone-ui-parity/chat-phase53/`](../phases/11-phone-ui-parity/chat-phase53/README.md) (moved from `phases/11-phone-ui-parity/chat-phase50/`).
+
+---
+
+## Standing rules this series must not break
+
+Carried from `rule.md` §6 and the 38–43 decisions, re-stated because they are
+easy to break by accident in a UX series:
+
+1. **No new dependencies.** Everything in 44–50 is Compose, DataStore, the
+   existing foreground services and sora's public API (dossier §3.1, §7).
+2. **No new DataStore key without a reader** — `SettingsKeysHaveReadersTest`
+   walks key → flow → out-of-store reader for all three stores.
+3. **No new Settings control without an audit row** — `SettingsAuditTest` counts
+   `Settings*` call sites and section headers against
+   `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md`; update the doc in the same commit.
+4. **`MANAGE_EXTERNAL_STORAGE` never becomes load-bearing** — 46 removes the
+   only SAF-tree feature and adds no storage ask.
+5. **TCC stays the default C compiler; `cc` stays CodeC's own frontend;** the
+   `-o`-last link order stands. 44 touches the *userland* install, never the
+   bundled compiler.
+6. **No telemetry, ever.** The guide records only "seen" booleans locally; the
+   exit prompt still uploads nothing by itself.
+7. **Pure policy + thin Android edge**, host-tested, for every decision in the
+   series (the codebase's pattern since Phase 30).
+8. **Evidence before fix** (`rule.md` §4.2): 44's crash/kill repro and 49's
+   drawer-back observation come from a device or a host test **before** code.
+
+---
+
+## What is explicitly *not* in this series
+
+| Idea | Why not |
+|---|---|
+| Predictive back (`enableOnBackInvokedCallback`) | Whole-app migration; `targetSdk 28` is load-bearing for exec-of-app-data. Deferred, recorded in dossier §6.4. |
+| Opening a SAF folder as a project (old 43.2) | Cancelled by the owner's row 3. If it ever returns it needs the persisted-grant design in the cancelled docs — which the tombstone points at. |
+| A new file manager, external-storage editing, `FileObserver` sync | Same cancellation; nothing in 44–50 depends on them. |
+| New languages, LSP servers, themes, git features | Out of scope for a test-phase series; `docs/journal/IDEA_BACKLOG.md` still owns them. |
+| Redesigning the 5-tab bar | Phase 32.1's hide-while-typing already handles the canvas problem; 48 handles the keyboard problem. |

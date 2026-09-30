@@ -596,7 +596,7 @@
     <string name="branch_switch_empty">This repository has no branches yet.</string>
     <string name="close_action">Close</string>
 
-    <!-- Phase 55: the side panel (docs/chat-phase55/PART_55_1_PANEL.md).
+    <!-- Phase 55: the side panel (docs/phases/11-phone-ui-parity/chat-phase55/PART_55_1_PANEL.md).
          The section titles and the card's cell names come from
          SidePanelPlan (pinned by SidePanelPlanTest); these are the sentences. -->
     <string name="panel_reserved">Reserved for a future AI feature</string>

@@ -112,12 +112,12 @@ class IconAssetSetTest {
 
     @Test
     fun `store art and generator exist`() {
-        val art = RepoFiles.mainSource("docs/icon/codec-512.png")
-        assertTrue("docs/icon/codec-512.png missing", art.isFile)
+        val art = RepoFiles.mainSource("docs/brand/icon/codec-512.png")
+        assertTrue("docs/brand/icon/codec-512.png missing", art.isFile)
         val (w, h) = pngSize(art)
         assertEquals(512, w)
         assertEquals(512, h)
-        val master = RepoFiles.mainSource("docs/icon/codec-mark.svg")
+        val master = RepoFiles.mainSource("docs/brand/icon/codec-mark.svg")
         assertTrue("master svg missing", master.isFile)
         val script = RepoFiles.mainSource("scripts/render_icon.mjs")
         assertTrue("render script missing", script.isFile)

@@ -36,7 +36,7 @@ fi
 
 BOOTSTRAP_NAME="${CODEC_BOOTSTRAP_NAME:-bootstrap}"
 
-# Part B (docs/NEXT_STEPS.md): for the Phase 3 package-manager bootstrap,
+# Part B (docs/getting-started/NEXT_STEPS.md): for the Phase 3 package-manager bootstrap,
 # extract and seed ONLY the transitive Depends closure of the explicit seed
 # set. The first Phase 3 bootstrap extracted every built .deb — including
 # build-only tools (doxygen, swig, tcl, tor, …) — bloating the archive

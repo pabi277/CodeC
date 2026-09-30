@@ -12,7 +12,7 @@ import org.junit.Test
  * `StripContext`/`KeysStayPolicy` (pinned by `StripContextTest`) and the layout
  * decisions live in `EditorScreen.kt`, so this file's job is the thing a
  * screenshot would otherwise be the only witness of — that the screen really
- * docks the touch row with the keyboard down (`docs/spck-ui` 122157), really
+ * docks the touch row with the keyboard down (`docs/reference/spck-ui` 122157), really
  * lifts it above the IME again when the keyboard is up (124105), really yields
  * the status line to the IME, and that the caret's drop is **sora's own handle,
  * styled**, never a second caret stacked on the editor.

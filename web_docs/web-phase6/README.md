@@ -19,7 +19,7 @@ The last five chapters finish the course (device APIs, web projects,
 customization & power tools, real projects, troubleshooting), then the
 whole 25-page site gets its final polish, its GitHub Pages home, and its
 self-dependent proof (grep sweep + offline render + full link sweep). This
-phase closes the W0→W6 arc: after it, `web_docs/NEXT_STEPS.md` records the
+phase closes the W0→W6 arc: after it, `web_docs/getting-started/NEXT_STEPS.md` records the
 live URL.
 
 ---

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/icon/codec-512.png" width="112" alt="CodeC — the >_ mark">
+  <img src="docs/brand/icon/codec-512.png" width="112" alt="CodeC — the >_ mark">
 </p>
 
 # CodeC IDE
@@ -25,9 +25,9 @@ files and tap **RUN**.
 
 ## Current UI work and next-chat plan
 
-[Phase 64 delivery](docs/chat-phase64/HANDOFF.md) removes the installation UI
+[Phase 64 delivery](docs/phases/09-onboarding-setup/chat-phase64/HANDOFF.md) removes the installation UI
 locks and guide while keeping installation safety, progress and retry. The
-[full UI review and ten chat briefs](docs/UI_POLISH_REVIEW_20260927.md) record the
+[full UI review and ten chat briefs](docs/journal/UI_POLISH_REVIEW_20260927.md) record the
 owner's direction: keep the current look, discuss Projects/files next, and keep
 progress in Terminal/Output. Later polish parts require an agreed scope before
 implementation; they are not a batch of automatically approved changes.
@@ -78,7 +78,7 @@ W^X policy, noexec storage, CPU mismatch, broken toolchain), CodeC
 compiles and runs through a compatible terminal app's **Termux Clang**
 automatically. The four setup steps for that last fallback appear in the
 Output Panel exactly when they are needed — see
-[TROUBLESHOOTING.md §27](docs/TROUBLESHOOTING.md).
+[TROUBLESHOOTING.md §27](docs/guides/TROUBLESHOOTING.md).
 
 The bundled Clang module (optional) must be **arm64**; an x86 emulator can't run it — but
 the built-in TCC covers x86_64 emulators automatically.
@@ -145,7 +145,7 @@ it stays deleted. Existing projects and all other user data remain untouched.
 Returning launches still resume the file the user last had open. The
 introduction can be replayed from **Settings → About**. Design research and
 verification notes:
-[`FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md`](docs/FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md).
+[`FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md`](docs/research/FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md).
 
 ### Package & Command Hub (Packages tab)
 
@@ -272,18 +272,11 @@ and grant CodeC the **"Run commands in Termux environment"** permission
 There is no Settings card for this any more (Phase 38.2 removed the Termux
 bridge UI — the engine is fully automatic): when a build actually needs the
 fallback, the Output Panel prints these same four steps
-([TROUBLESHOOTING.md §27](docs/TROUBLESHOOTING.md)).
+([TROUBLESHOOTING.md §27](docs/guides/TROUBLESHOOTING.md)).
 
 ## Troubleshooting
 
-> **Roadmap (historical):** Mini-Termux plan — [docs/TERMINAL_PLAN.md](docs/TERMINAL_PLAN.md).  
-> **Full journey (phases 0–19, authoritative timeline):** [docs/JOURNEY.md](docs/JOURNEY.md).  
-> **What's next:** [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md).  
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
-> **Editor/Projects/preview record (Phase 9 rounds):** [docs/chat-phase9/](docs/chat-phase9/).  
-> **Projects record (Phase 8):** [docs/chat-phase8/](docs/chat-phase8/).  
-> **Phase 3 status:** [docs/chat-phase3/PHASE3_STATUS.md](docs/chat-phase3/PHASE3_STATUS.md) · **Phase 4 roadmap:** [docs/chat-phase4/PHASE4_ROADMAP.md](docs/chat-phase4/PHASE4_ROADMAP.md) · **Phase 5 roadmap (complete):** [docs/PHASE5_ROADMAP.md](docs/PHASE5_ROADMAP.md).  
-> **Phase 1 device log (problems + solutions):** [docs/chat-phase1/README.md](docs/chat-phase1/README.md).
 
 ### "The built-in compiler could not start"
 
@@ -318,7 +311,7 @@ This error has two real causes:
 2. **Switch the engine to Termux** (Settings → Compiler Engine → Termux, setup above).
    Termux's own storage is exempt, so this works even when the bundled compiler is
    blocked.
-3. **Use Termux directly** — see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for a
+3. **Use Termux directly** — see [docs/guides/TROUBLESHOOTING.md](docs/guides/TROUBLESHOOTING.md) for a
    complete step-by-step C workflow in Termux.
 4. On a truly `noexec` device (cloud phones, some enterprise ROMs) no local compiler can
    run; use a real phone or an online compiler.

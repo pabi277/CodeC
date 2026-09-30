@@ -2,7 +2,7 @@ package com.codeci.ide.ui.terminal
 
 /**
  * Phase 44.2 — the install ledger (spec:
- * docs/chat-phase44/PART_44_2_ATOMIC_SETUP.md §1).
+ * docs/phases/09-onboarding-setup/chat-phase44/PART_44_2_ATOMIC_SETUP.md §1).
  *
  * Symptom being closed: `UserlandInstaller.swapPrefix` performs two renames
  * (`usr` → `usr.old-<ts>`, then `.userland-staging-<ts>` → `usr`). A process

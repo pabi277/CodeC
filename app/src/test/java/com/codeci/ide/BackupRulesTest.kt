@@ -14,7 +14,7 @@ import org.w3c.dom.Element
  * token and toolchain included). Reads the REAL repo files, same habit as
  * [IconAssetSetTest] — these are file-shape contracts, no Robolectric.
  *
- * The policy being pinned (spec: docs/chat-phase42/PART_42_3):
+ * The policy being pinned (spec: docs/phases/08-release-support/chat-phase42/PART_42_3):
  *  1. only `CodeC/projects` is ever included — a backup carries "my code";
  *  2. BOTH files carry NO exclude elements at all: under an include-list
  *     every exclude is superfluous (nothing else is included in the first

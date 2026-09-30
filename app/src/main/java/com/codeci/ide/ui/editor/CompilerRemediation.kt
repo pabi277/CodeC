@@ -16,7 +16,7 @@ package com.codeci.ide.ui.editor
  * compatible terminal app's compiler automatically"), and this object
  * owns the full steps.
  *
- * `docs/TROUBLESHOOTING.md` §27 quotes this wording; the doc is the
+ * `docs/guides/TROUBLESHOOTING.md` §27 quotes this wording; the doc is the
  * source of the text and [CompilerRemediationTest] pins the four steps
  * so neither can rot.
  */

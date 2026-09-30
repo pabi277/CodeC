@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Phase 9 — bracket pair matching (`docs/chat-phase9/PART_9_EDITOR.md` §2.4). */
+/** Phase 9 — bracket pair matching (`docs/phases/03-editor/chat-phase9/PART_9_EDITOR.md` §2.4). */
 class BracketMatcherTest {
 
     @Test

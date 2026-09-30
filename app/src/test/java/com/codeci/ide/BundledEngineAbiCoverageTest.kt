@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 42.2 — [docs/chat-phase42/PART_42_2_APK_WEIGHT.md §assets/tcc]: the
+ * Phase 42.2 — [docs/phases/08-release-support/chat-phase42/PART_42_2_APK_WEIGHT.md §assets/tcc]: the
  * bundled-engine set is NEVER allowed to drift from the shipped ABI set
  * (universal-only since the 2026-09-11 splits revert). For every ABI in
  * the natural filter list, either:

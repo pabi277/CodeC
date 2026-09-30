@@ -17,7 +17,7 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * Phase 44.2 — the money test (spec:
- * docs/chat-phase44/PART_44_2_ATOMIC_SETUP.md, "Tests").
+ * docs/phases/09-onboarding-setup/chat-phase44/PART_44_2_ATOMIC_SETUP.md, "Tests").
  *
  * Real temp directories, one per kill point of
  * `UserlandInstaller.swapPrefix`'s two renames. The owner's bug is the middle
