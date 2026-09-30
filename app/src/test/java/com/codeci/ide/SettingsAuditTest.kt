@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 38.2 — pins `docs/chat-phase38/SETTINGS_AUDIT.md` to the code:
+ * Phase 38.2 — pins `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md` to the code:
  * the audit table cannot silently go stale. A control added to
  * SettingsScreen without an audit row fails here; a row deleted from
  * the doc without deleting the control fails here.
@@ -24,7 +24,7 @@ class SettingsAuditTest {
         ).readText()
 
     private val auditDoc: String
-        get() = RepoFiles.mainSource("docs/chat-phase38/SETTINGS_AUDIT.md").readText()
+        get() = RepoFiles.mainSource("docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md").readText()
 
     private val controlComposables = listOf(
         "SettingsSwitch", "SettingsDropdown", "SettingsSlider", "SettingsItem", "SettingsAction"
@@ -90,7 +90,7 @@ class SettingsAuditTest {
         val docTotal = docControlRows().size
         assertEquals(
             "audit table has $docTotal rows but SettingsScreen.kt has $codeTotal controls — " +
-                "update docs/chat-phase38/SETTINGS_AUDIT.md in the same commit",
+                "update docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md in the same commit",
             codeTotal,
             docTotal
         )

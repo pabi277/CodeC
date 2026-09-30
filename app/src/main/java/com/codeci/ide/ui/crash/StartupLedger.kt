@@ -2,7 +2,7 @@ package com.codeci.ide.ui.crash
 
 /**
  * Phase 42.3 — the crash-loop guard's ledger (spec:
- * docs/chat-phase42/PART_42_3_LAUNCH_SAFETY.md §2).
+ * docs/phases/08-release-support/chat-phase42/PART_42_3_LAUNCH_SAFETY.md §2).
  *
  * Symptom being closed: NOTHING used to guard a crash *during startup*
  * (a corrupt settings value, a half-written project file, a module the new

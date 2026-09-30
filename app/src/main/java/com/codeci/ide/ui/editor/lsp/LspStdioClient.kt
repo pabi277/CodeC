@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference
  * Why not sora's `editor-lsp` AAR? The AAR requires minSdk 26 and failed
  * `:app:processDebugMainManifest` against CodeC's AGP 9.1.1 (gate-flip
  * experiment, run `34182333111`). We own the wire instead. See
- * `docs/chat-phase31/PART_31_5_STDIO_WIRE.md`.
+ * `docs/phases/03-editor/chat-phase31/PART_31_5_STDIO_WIRE.md`.
  *
  * **Concurrency.** Writes are serialized under [lock]. Reads live on a
  * dedicated daemon thread that frames messages with [LspWire] (byte

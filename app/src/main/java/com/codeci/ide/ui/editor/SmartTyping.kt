@@ -13,12 +13,22 @@ import com.codeci.ide.ui.utils.TokenKind
  * 1. Type-over: typing ) ] } " ' when next char is same closer → move over, no insert.
  * 2. Wrap-selection: pair key with selection → surround, keep selected.
  * 3. Empty-pair backspace: backspace inside () with nothing between → delete both.
- * 4. Auto-indent: Enter copies indent; after { adds level and splits } onto own line; after : in Python adds level; dedent on sole closer.
+ * 4. Auto-indent: Enter copies indent; after { adds level and splits } onto own line; after a Python block header (SmartTyping.opensPythonBlock) adds level; dedent on sole closer.
+ * 4b. Phase 75.1 — the Python block test lives here and ONLY here: Sora's
+ *     `getIndentAdvance` adapter asks [opensPythonBlock] too, so the system
+ *     keyboard and CodeC Keys cannot disagree about which line opens a block.
+ * 4c. Phase 75.1 — Backspace inside leading indentation deletes one space
+ *     per press ([handleIndentBackspace]), whatever the surface requested.
+ * 4d. Phase 75.2 — Tab inserts one level of SPACES ([handleTabAsIndent]), so a
+ *     file cannot end up with a tab unit and a space unit at once.
  * 5. String-aware negatives: inside string literal, rules 1–3 don't fire for the quote that opens string; inside comments none fire.
  * 6. Delete-word: previous word (identifier + whitespace) with stop chars whitespace, ., /, quotes.
  * 7. Undo integrity: each smart edit is a single undo unit (handled by ViewModel).
  *
- * All rules individually toggleable via Settings — [Config].
+ * All pair/indent rules are individually toggleable via Settings — [Config].
+ * The Phase 75.1 one-space Backspace law and the Phase 75.2 one-level Tab law
+ * are deliberately NOT toggles: they are the corrections of a wrong deletion and
+ * of a wrong unit, not preferences.
  */
 object SmartTyping {
 
@@ -184,11 +194,10 @@ object SmartTyping {
             if (afterTrim.startsWith("}")) {
                 splitBrace = true
             }
-        } else if (
-            language == LanguageType.PYTHON &&
-            trimmedPrev.endsWith(":") &&
-            !trimmedPrev.trimStart().startsWith("#")
-        ) {
+        } else if (language == LanguageType.PYTHON && opensPythonBlock(trimmedPrev)) {
+            // Phase 75.1 — the block test is [opensPythonBlock], the SAME one
+            // the Sora route asks (see CodeCLanguage.getIndentAdvance). Before
+            // this the rule was "the line ends with a colon", restated twice.
             extra = " ".repeat(tabSize.coerceIn(2, 8))
         }
 
@@ -230,6 +239,118 @@ object SmartTyping {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Python block headers — ONE rule for BOTH Enter routes (Phase 75.1)
+    // -------------------------------------------------------------------------
+
+    /**
+     * The words that may open an indented Python block. A line asks for one
+     * more level only when it ends with `:` (ignoring a trailing comment) and
+     * its first word is one of these; every other trailing colon — a dict key
+     * split over lines, an annotation, a label, prose — is left alone.
+     *
+     * Public because Phase 75.2 gave this set a second reader: the completion
+     * engine ([com.codeci.ide.ui.editor.CodeCompletionEngine]) stays quiet
+     * about snippets while the caret sits on one of these words ([typedBlockKeyword]).
+     * One list, two rules — the same reason [opensPythonBlock] is shared.
+     */
+    val pythonBlockKeywords = setOf(
+        "def", "class", "for", "while", "if", "elif", "else",
+        "try", "except", "finally", "with", "async", "match", "case"
+    )
+
+    /**
+     * Phase 75.2 — true when [word] is EXACTLY one Python block keyword, in any
+     * case. This is the moment the owner's report describes: he has written the
+     * keyword and is about to write the rest of the line himself, so the editor
+     * that now indents after `def name():` must not push a whole skeleton —
+     * *"If i write def it's auto completes it def fname(): pass … i have to cut
+     * that and again write another thing"*.
+     *
+     * Deliberately narrow, and it is a Python-only law: a block keyword is
+     * exactly the word the editor's OWN Enter rule already handles (one level,
+     * [opensPythonBlock]), while every other prefix — `defm`, `deft`, `ifmain`,
+     * `pr` — keeps the whole snippet set, which is how a skeleton is meant to
+     * be fetched on a phone.
+     */
+    fun typedBlockKeyword(word: String): Boolean =
+        word.isNotEmpty() && word.lowercase() in pythonBlockKeywords
+
+    /**
+     * True when [lineText] is a Python block header: it ends with `:` once a
+     * trailing `#` comment is removed, that colon is not sitting inside a
+     * string literal, and the line's first word is a block keyword
+     * ([pythonBlockKeywords]).
+     *
+     * This is the SINGLE owner of the rule on purpose. Two routes insert a
+     * newline — the VM one ([handleAutoIndent], used by CodeC Keys and any
+     * surface that hands the VM a bare `\n`) and Sora's own
+     * `Language.getIndentAdvance` (used by the system IME's Enter). Both ask
+     * here, because they could not see each other before Phase 75.1 and
+     * disagreed — the owner's "def indents, for does not".
+     */
+    fun opensPythonBlock(lineText: String): Boolean {
+        var line = lineText.trimEnd()
+        if (line.isEmpty()) return false
+        var scan = pythonLineScan(line)
+        if (scan.first == 0) return false // the whole line is a comment
+        if (scan.first > 0) {
+            // `for i in items:  # walk the list` — the comment must not hide
+            // the block colon, and `# note:` must not invent one.
+            line = line.substring(0, scan.first).trimEnd()
+            scan = pythonLineScan(line)
+        }
+        if (!line.endsWith(":") || scan.second) return false
+        val body = line.trimStart()
+        if (body.isEmpty()) return false
+        val word = body.takeWhile { it.isLetterOrDigit() || it == '_' }
+        return word in pythonBlockKeywords
+    }
+
+    /**
+     * One walk over a Python line: the index of the `#` that starts a trailing
+     * comment outside string literals (`-1` when there is none), and whether
+     * the line ENDS inside an unterminated quote — a string that carries on to
+     * the next line, e.g. a triple-quoted block.
+     */
+    private fun pythonLineScan(line: String): Pair<Int, Boolean> {
+        var i = 0
+        var quote = ' '
+        var triple = false
+        while (i < line.length) {
+            val c = line[i]
+            if (quote != ' ') {
+                when {
+                    c == '\\' -> i += 2
+                    triple && c == quote && i + 2 < line.length &&
+                        line[i + 1] == quote && line[i + 2] == quote -> {
+                        quote = ' '
+                        triple = false
+                        i += 3
+                    }
+                    !triple && c == quote -> {
+                        quote = ' '
+                        i++
+                    }
+                    else -> i++
+                }
+                continue
+            }
+            if (c == '#') return i to false
+            if (c == '"' || c == '\'') {
+                if (i + 2 < line.length && line[i + 1] == c && line[i + 2] == c) {
+                    quote = c
+                    triple = true
+                    i += 3
+                    continue
+                }
+                quote = c
+            }
+            i++
+        }
+        return -1 to (quote != ' ')
+    }
+
     /**
      * Dedent handler for typing a closer char when line's sole content is that char.
      * E.g., autoIndent "    }" should be dedented to "}" when indent is 4.
@@ -258,6 +379,131 @@ object SmartTyping {
         val dedentedIndent = " ".repeat((indentLen - step).coerceAtLeast(0))
         val next = old.text.substring(0, lineStart) + dedentedIndent + incoming + old.text.substring(caret)
         return TextFieldValue(next, TextRange(lineStart + dedentedIndent.length + incoming.length))
+    }
+
+    // -------------------------------------------------------------------------
+    // Tab means one level, in spaces (Phase 75.2)
+    // -------------------------------------------------------------------------
+
+    /**
+     * A lone TAB commit inserts one indentation level of SPACES, aligned to the
+     * next tab stop while the caret sits in the line's leading whitespace.
+     *
+     * Why this exists: the CodeC Keys TAB cap already inserts `tabSize` spaces
+     * ([com.codeci.ide.ui.editor.EditorKeySet.apply]) and every auto-indent rule
+     * here emits spaces, but the system keyboard's Tab commits a raw `\t`
+     * straight into the buffer. One file then holds two units of indentation at
+     * once, and the owner's *"user can't line up the space/indenting between
+     * lines"* follows — two lines that look the same on screen are 4 and 1
+     * characters wide, so the Backspace law, the caret and the align-all-lines
+     * intuition all disagree. This makes the buffer speak one unit on every
+     * surface; it is the sibling of Phase 75.1's one-space Backspace law and,
+     * like it, deliberately NOT a Settings toggle (it is the correction of a
+     * mismatch, not a preference).
+     *
+     * Only a NAIVE lone-tab insertion is rewritten ([newValue] must be exactly
+     * [old] with `"\t"` at the collapsed caret): a Tab that arrives inside
+     * composed text, over a selection, or together with any other change is the
+     * user's own edit and is left alone.
+     */
+    fun handleTabAsIndent(
+        old: TextFieldValue,
+        newValue: TextFieldValue,
+        tabSize: Int = 4
+    ): TextFieldValue? {
+        if (!old.selection.collapsed) return null
+        if (newValue.text.length != old.text.length + 1) return null
+        val caret = old.selection.start.coerceIn(0, old.text.length)
+        if (newValue.selection.start != caret + 1) return null
+        val naive = old.text.substring(0, caret) + "\t" + old.text.substring(caret)
+        if (newValue.text != naive) return null
+
+        val step = tabSize.coerceIn(2, 8)
+        val run = indentRun(old.text, caret, step)
+        return TextFieldValue(
+            old.text.substring(0, caret) + run + old.text.substring(caret),
+            TextRange(caret + run.length)
+        )
+    }
+
+    /**
+     * The spaces one TAB press stands for, at [caret] in [text], given an
+     * indentation level of [step] spaces: while the caret sits inside the line's
+     * leading whitespace the run runs up to the NEXT tab stop (so `  ` + Tab at
+     * step 4 gives 2, and the line ends up at column 4 — the whole point being
+     * that pressing Tab twice from any messy state lands the two lines on the
+     * same column); anywhere else in the line it is a full level.
+     *
+     * [step] arrives already clamped (2..8). One owner for both surfaces:
+     * [handleTabAsIndent] (the system keyboard / hardware Tab) and
+     * [com.codeci.ide.ui.editor.EditorKeySet.apply] (the CodeC Keys TAB cap).
+     */
+    fun indentRun(text: String, caret: Int, step: Int = 4): String {
+        val at = caret.coerceIn(0, text.length)
+        val lineStart = text.lastIndexOf('\n', (at - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        var i = lineStart
+        var width = 0
+        while (i < at && (text[i] == ' ' || text[i] == '\t')) {
+            width += if (text[i] == '\t') step else 1
+            i++
+        }
+        val level = step.coerceIn(2, 8)
+        if (i != at) return " ".repeat(level) // not in the indentation: one level
+        return " ".repeat(level - (width % level))
+    }
+
+    // -------------------------------------------------------------------------
+    // Backspace inside indentation (Phase 75.1)
+    // -------------------------------------------------------------------------
+
+    /**
+     * The owner's Backspace law: on an indented line, ONE press removes ONE
+     * space.
+     *
+     * Returns a corrected value when the raw edit [old] -> [newValue] is a
+     * deletion of MORE THAN one whitespace character sitting immediately
+     * before a collapsed caret, and that whole run is the line's leading
+     * indentation — i.e. whatever the surface asked for (Gboard and friends
+     * sometimes hand the editor the whole run; Sora's own `deleteEmptyLineFast`
+     * used to answer a single press with "the indent, plus the line above"),
+     * the editor performs exactly one character of it.
+     *
+     * `null` means "leave the edit exactly as it arrived": ordinary deletions
+     * in code and prose, a selection, a line join at column 0, a single space.
+     * The result is still one edit for undo, dirty state and autosave, because
+     * the ViewModel records whatever this returns.
+     */
+    fun handleIndentBackspace(
+        old: TextFieldValue,
+        newValue: TextFieldValue
+    ): TextFieldValue? {
+        if (!old.selection.collapsed || !newValue.selection.collapsed) return null
+        val text = old.text
+        val next = newValue.text
+        val removed = text.length - next.length
+        if (removed < 2) return null // one character is already the contract
+        val caret = old.selection.start.coerceIn(0, text.length)
+        val from = caret - removed
+        if (from < 0) return null
+        // A Backspace lands at the start of what it removed.
+        if (newValue.selection.start != from) return null
+        // Nothing else moved: the edit is exactly "the run before the caret is
+        // gone" — no insert, no paste, no second change elsewhere in the file.
+        if (!text.regionMatches(0, next, 0, from)) return null
+        val suffixLength = text.length - caret
+        if (!text.regionMatches(caret, next, from, suffixLength)) return null
+        // Indentation only: every character from the line start to the caret is
+        // a space or a tab. Trailing spaces after code, and any deletion that
+        // swallows the newline itself, keep their ordinary meaning.
+        val lineStart = if (from == 0) 0 else text.lastIndexOf('\n', from - 1) + 1
+        var i = lineStart
+        while (i < caret) {
+            val c = text[i]
+            if (c != ' ' && c != '\t') return null
+            i++
+        }
+        if (caret == lineStart) return null
+        return TextFieldValue(text.substring(0, caret - 1) + text.substring(caret), TextRange(caret - 1))
     }
 
     // -------------------------------------------------------------------------
@@ -376,8 +622,66 @@ object SmartTyping {
             if (kind == TokenKind.STRING && incoming[0] !in setOf('"', '\'', '`')) return null
         }
         val caret = old.selection.start.coerceIn(0, old.text.length)
-        val next = old.text.substring(0, caret) + incoming + closer + old.text.substring(caret)
-        return TextFieldValue(next, TextRange(caret + 1))
+        // Phase 75.3 (owner, device round 2: *"in c coding I tried to write
+        // int main() then curly brackets it sent the brackets inside the first
+        // brackets like ({})"*): when `()` is empty and the caret sits at
+        // `(|)`, typing `{` is the block opener after `()`, so step past `)`
+        // to produce `(){|}`.
+        val at = if (
+            incoming == "{" &&
+            caret > 0 &&
+            caret < old.text.length &&
+            old.text[caret - 1] == '(' &&
+            old.text[caret] == ')'
+        ) {
+            caret + 1
+        } else {
+            caret
+        }
+        val next = old.text.substring(0, at) + incoming + closer + old.text.substring(at)
+        return TextFieldValue(next, TextRange(at + 1))
+    }
+
+    /**
+     * Phase 75.3 — companion to [handleAutoPair]'s `(|)` + `{` -> `(){|}` step
+     * for two multi-char arrival shapes:
+     *  1. A caller or batch edit inserts `"{}"` directly inside empty `(|)`.
+     *  2. Sora's `SymbolPairMatch` commits `"{"` in two synchronous steps
+     *     (`replace("{")` then `insert("}")`): step 1 already transformed `old`
+     *     to `"...(){}"` (caret at `pos`, inside `{|}`), and step 2 arrives
+     *     with Sora's un-stepped `"...({})"` of the same length — keep `old`.
+     */
+    fun handleBraceInEmptyParens(
+        old: TextFieldValue,
+        newValue: TextFieldValue,
+        config: Config = Config()
+    ): TextFieldValue? {
+        if (!config.emptyPairBackspace || !old.selection.collapsed) return null
+        val caret = old.selection.start.coerceIn(0, old.text.length)
+        // Shape 1: old had `(|)` at `caret` and newValue inserted `"{}"` inside `()`.
+        if (newValue.text.length == old.text.length + 2 &&
+            caret > 0 && caret < old.text.length &&
+            old.text[caret - 1] == '(' && old.text[caret] == ')'
+        ) {
+            val inside = old.text.substring(0, caret) + "{}" + old.text.substring(caret)
+            if (newValue.text == inside) {
+                val outside = old.text.substring(0, caret + 1) + "{}" + old.text.substring(caret + 1)
+                return TextFieldValue(outside, TextRange(caret + 2))
+            }
+        }
+        // Shape 2: step 1 already stepped `old` to `(){|}` (caret at `(` + 3),
+        // and Sora's step 2 arrives with `({})` at the same span.
+        if (newValue.text.length == old.text.length &&
+            caret >= 3 && caret < old.text.length &&
+            old.text.substring(caret - 3, caret + 1) == "(){}"
+        ) {
+            val soraSecondHalf =
+                old.text.substring(0, caret - 3) + "({})" + old.text.substring(caret + 1)
+            if (newValue.text == soraSecondHalf) {
+                return old
+            }
+        }
+        return null
     }
 
     // -------------------------------------------------------------------------
@@ -395,10 +699,26 @@ object SmartTyping {
         language: LanguageType?,
         tabSize: Int = 4,
         config: Config = Config(),
-        suppressAutoPair: Boolean = false
+        suppressAutoPair: Boolean = false,
+        indentBackspaceGuard: Boolean = true
     ): TextFieldValue {
         // Quick path: selection-only change (no text change) — nothing to smart-handle.
         if (old.text == newValue.text) return newValue
+
+        // Phase 75.1 — Backspace inside leading indentation removes exactly one
+        // space, whatever multi-space deletion the surface asked for. Checked
+        // first: this is the editor's answer to a Backspace press, and no rule
+        // below has a claim on a deletion. The only caller that opts out is the
+        // explicit word-delete cap (that key means "a word", not "one press of
+        // ⌫").
+        if (indentBackspaceGuard) {
+            handleIndentBackspace(old, newValue)?.let { return it }
+        }
+
+        // Phase 75.3 — `{` or `{}` inside empty `(|)` steps past `)` to `(){|}`.
+        if (!suppressAutoPair) {
+            handleBraceInEmptyParens(old, newValue, config)?.let { return it }
+        }
 
         // Detect single char insertion.
         if (newValue.text.length == old.text.length + 1 && old.selection.collapsed) {
@@ -406,6 +726,13 @@ object SmartTyping {
             val caretNew = newValue.selection.start.coerceIn(0, newValue.text.length)
             // Incoming char is at caretNew-1
             val incoming = newValue.text.getOrNull(caretNew - 1)?.toString() ?: ""
+            // Phase 75.2 — a lone Tab is one level of spaces, on every surface.
+            // No rule below claims '\t' (it is neither a closer nor an opener),
+            // so this is checked first and simply falls through when the edit is
+            // not the naive single-character insert.
+            if (incoming == "\t") {
+                handleTabAsIndent(old, newValue, tabSize)?.let { return it }
+            }
             // Try type-over first (for closers).
             handleTypeOver(old, incoming, config, language)?.let { return it }
             // Try dedent on closer (typing } on indented line)

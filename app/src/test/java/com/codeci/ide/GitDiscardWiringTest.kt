@@ -40,10 +40,33 @@ class GitDiscardWiringTest {
         assertFalse(reload.contains("saveAllTabs("))
     }
     @Test fun `existing git affordances still delegate to the one engine`() {
-        for (call in listOf("viewModel.toggleStage(", "viewModel.openDiff(", "viewModel.commitAndPush(",
+        for (call in listOf("viewModel.openDiff(", "viewModel.commitOnly(",
             "viewModel.pull(", "viewModel.push(", "viewModel.markResolved(")) assertTrue(call, sheet.contains(call))
         for (call in listOf("git.stageAll(", "git.commit(", "git.pull(", "git.pushCapturing(")) assertTrue(call, vm.contains(call))
-        assertTrue(vm.contains("val staged = change.isStaged"))
-        assertTrue(sheet.contains("val staged = change.isStaged"))
+    }
+
+    // Phase 73.1 — the per-file +/− stage toggle changed the git index but
+    // never changed what COMMIT & PUSH committed (it always `stageAll`s
+    // first), so it was removed from the ordinary change row. Mark Resolved
+    // (a conflict row) is the one remaining use of that trailing control.
+    @Test fun `the ordinary change row has no stage toggle, only Mark Resolved does`() {
+        assertFalse(sheet.contains("viewModel.toggleStage("))
+        assertFalse(vm.contains("fun toggleStage("))
+        val row = sheet.substringAfter("private fun GitChangeRow(").substringBefore("@Composable\nprivate fun GitDiffDialog(")
+        // The trailing control renders only for a conflict row.
+        assertTrue(row.contains("if (markResolvedMode && onToggleStage != null)"))
+        assertFalse(row.contains("SpckIcons.PlusMinus"))
+        // The "others" (non-conflict) call site passes no onToggleStage.
+        // Phase 73.5 — the list is search-filtered (`visibleOthers`), but it
+        // is still the same call site with the same row contract.
+        val othersCall = sheet.substringAfter("itemsIndexed(visibleOthers, key = { _, change -> change.path }) { index, change ->")
+            .substringBefore("// Mockup: a hairline between every change row.")
+        assertFalse(othersCall.contains("onToggleStage"))
+        // The conflicts call site still wires Mark Resolved.
+        val conflictsCall = sheet.substringAfter("conflicts.forEachIndexed { index, change ->")
+            .substringBefore("if (index < conflicts.lastIndex)")
+        assertTrue(conflictsCall.contains("onToggleStage = {"))
+        assertTrue(conflictsCall.contains("viewModel.markResolved(context, projectRoot, change)"))
+        assertTrue(conflictsCall.contains("markResolvedMode = true"))
     }
 }

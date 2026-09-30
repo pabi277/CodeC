@@ -6,13 +6,13 @@ import org.junit.Test
 /**
  * Phase 50.1 — the core surfaces adopted the scale (source scan).
  *
- * "Six" until Phase 58.1 retired the first-run welcome (owner: *"first open is
- * the editor, on a snake sample"*); the five that remain are the ones a user
- * actually lives in, and they are the ones this scan holds to the ladder.
+ * The first-run introduction is back as a distinct sixth surface; its chrome
+ * and controls use the same token scale as the five daily screens. Draw-space
+ * geometry is also expressed through those tokens where practical.
  *
  * The rules, exactly as implemented:
- * - every one of the five files imports [com.codeci.ide.ui.theme.CodecTokens];
- * - no raw `RoundedCornerShape(N.dp)` anywhere in the five (every radius is a
+ * - every one of the six files imports [com.codeci.ide.ui.theme.CodecTokens];
+ * - no raw `RoundedCornerShape(N.dp)` anywhere in the six (every radius is a
  *   token — the plan's "corners match" row);
  * - no raw `N.dp` at or under 48 in a padding/gap/size call (padding,
  *   PaddingValues, spacedBy, defaultMinSize, size, width, height,
@@ -30,6 +30,7 @@ class TokenAdoptionTest {
         "app/src/main/java/com/codeci/ide/ui/screens/ModulesScreen.kt",
         "app/src/main/java/com/codeci/ide/ui/screens/TerminalScreen.kt",
         "app/src/main/java/com/codeci/ide/ui/screens/SettingsScreen.kt",
+        "app/src/main/java/com/codeci/ide/ui/screens/FirstRunIntroScreen.kt",
     )
 
     private fun codeOf(path: String): String =

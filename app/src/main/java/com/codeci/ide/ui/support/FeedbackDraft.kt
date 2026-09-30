@@ -72,7 +72,7 @@ data class FeedbackInput(
  * international digits, no `+`/spaces/dashes/trunk-0, `?text=` encoded,
  * message lands in the composer UNSENT) and ITU-T E.164's own bounds
  * (8–15 digits, country code 1–3 digits, no leading 0 in the international
- * number). Full list in docs/chat-phase41/PART_41_1_REPORT_AND_LINKS.md.
+ * number). Full list in docs/phases/08-release-support/chat-phase41/PART_41_1_REPORT_AND_LINKS.md.
  */
 object FeedbackDraft {
 

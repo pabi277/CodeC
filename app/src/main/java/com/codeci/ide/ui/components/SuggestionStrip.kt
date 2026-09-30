@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +71,7 @@ fun SuggestionStrip(
 ) {
     val density = LocalDensity.current
     val dismissThresholdPx = with(density) { 28.dp.toPx() }
+    val currentOnDismiss by rememberUpdatedState(onDismissIdentifier)
     var dragDy = 0f
     Box(
         modifier = modifier
@@ -85,7 +87,7 @@ fun SuggestionStrip(
                         dragDy += dragAmount
                         if (dragDy > dismissThresholdPx) {
                             change.consume()
-                            onDismissIdentifier()
+                            currentOnDismiss()
                         }
                     }
                 )
@@ -135,6 +137,7 @@ private fun StripPinCap(
     wide: Boolean = false,
     onTap: () -> Unit
 ) {
+    val currentOnTap by rememberUpdatedState(onTap)
     Box(
         modifier = Modifier
             .defaultMinSize(minWidth = if (wide) 56.dp else 44.dp, minHeight = 40.dp)
@@ -142,7 +145,7 @@ private fun StripPinCap(
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
             .semantics { this.contentDescription = contentDescription }
             .pointerInput(Unit) {
-                detectTapLike(onTap)
+                detectTapLike { currentOnTap() }
             },
         contentAlignment = Alignment.Center
     ) {
@@ -167,6 +170,8 @@ private fun SuggestionChipCap(
     // Phase 69.3 — the row's own scroll slop, in pixels (see
     // KeyGestureDetector.isScrollDx).
     val scrollSlopPx = LocalViewConfiguration.current.touchSlop
+    val currentOnAccept by rememberUpdatedState(onAccept)
+    val currentChip by rememberUpdatedState(chip)
     Box(
         modifier = Modifier
             .defaultMinSize(minWidth = 44.dp, minHeight = 40.dp)
@@ -178,6 +183,7 @@ private fun SuggestionChipCap(
             )
             .semantics { contentDescription = "accept ${chip.label}" }
             .pointerInput(chip) {
+                val onAccept: (SuggestionChip) -> Unit = { currentOnAccept(currentChip) }
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     var isScroll = false

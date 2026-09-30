@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Phase 9 — built-in indentation formatter (`docs/chat-phase9/PART_9_EDITOR.md` §2.3 fallback). */
+/** Phase 9 — built-in indentation formatter (`docs/phases/03-editor/chat-phase9/PART_9_EDITOR.md` §2.3 fallback). */
 class CodeFormatterTest {
 
     @Test

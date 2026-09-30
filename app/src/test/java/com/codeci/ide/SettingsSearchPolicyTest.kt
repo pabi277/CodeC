@@ -19,7 +19,7 @@ import org.junit.Test
  * can never offer a label the screen does not render.
  *
  * The audit-table check is the second half of the same idea: the 64 rows
- * `docs/chat-phase38/SETTINGS_AUDIT.md` pins as *one row, one effect* are
+ * `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md` pins as *one row, one effect* are
  * exactly the rows the user can now search, counted per section.
  */
 class SettingsSearchPolicyTest {
@@ -33,7 +33,7 @@ class SettingsSearchPolicyTest {
         get() = RepoFiles.mainSource("app/src/main/res/values/strings.xml").readText()
 
     private val auditDoc: String
-        get() = RepoFiles.mainSource("docs/chat-phase38/SETTINGS_AUDIT.md").readText()
+        get() = RepoFiles.mainSource("docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md").readText()
 
     private val controlComposables =
         listOf("SettingsSwitch", "SettingsDropdown", "SettingsSlider", "SettingsItem", "SettingsAction")
@@ -86,6 +86,15 @@ class SettingsSearchPolicyTest {
             .toList()
 
     // ---- the catalog is the screen ------------------------------------------
+
+    @Test
+    fun `settings starts with all sections collapsed`() {
+        val collapsed = SettingsDisclosure.parse(SettingsDisclosure.initialCollapsedCsv())
+        assertEquals(SettingsCatalog.allSectionTitles.toSet(), collapsed)
+        SettingsCatalog.allSectionTitles.forEach { section ->
+            assertFalse("$section starts folded", SettingsDisclosure.expanded(section, collapsed))
+        }
+    }
 
     @Test
     fun `the catalog holds every control row the screen renders`() {
@@ -203,13 +212,10 @@ class SettingsSearchPolicyTest {
     @Test
     fun `a query that names a section is never "nothing matched"`() {
         assertEquals(
-            "the catalog has no rows for Package Repository & Trust, so its count is zero...",
-            0, SettingsSearch.matchCount("repository")
+            "repository terms match the bespoke trust-status form entry",
+            2, SettingsSearch.matchCount("repository")
         )
-        assertFalse(
-            "...but the section itself is on screen, so the empty state must not claim otherwise",
-            SettingsSearch.isEmptyResult("repository")
-        )
+        assertFalse(SettingsSearch.isEmptyResult("repository"))
         assertTrue(SettingsSearch.sectionVisible("repository", "Package Repository & Trust"))
         assertTrue(
             "every section the screen draws is known to the catalog",
@@ -232,23 +238,31 @@ class SettingsSearchPolicyTest {
     }
 
     @Test
-    fun `while the box has something in it, the query decides what is on screen`() {
-        listOf("GitHub Account", "Package Repository & Trust", "Terminal Extra-Keys & Shortcuts")
-            .forEach { section ->
-                assertFalse("$section has no indexed rows", SettingsCatalog.isControlSection(section))
-                assertTrue(
-                    "a form-only section still answers to its own name",
-                    SettingsSearch.sectionVisible("github", "GitHub Account")
-                )
-                assertFalse(
-                    "and is gone while the user searches for something else",
-                    SettingsSearch.sectionVisible("font", section)
-                )
-            }
-        assertTrue(
-            "clearing the box brings every section back",
-            SettingsSearch.sectionVisible("", "Terminal Extra-Keys & Shortcuts")
+    fun `form-only sections answer to field labels and aliases without searching values`() {
+        val queries = listOf(
+            "token" to "GitHub Account",
+            "commit email" to "GitHub Account",
+            "keyring" to "Package Repository & Trust",
+            "OpenPGP" to "Package Repository & Trust",
+            "custom shortcut" to "Terminal Extra-Keys & Shortcuts",
+            "save shortcuts" to "Terminal Extra-Keys & Shortcuts",
         )
+        queries.forEach { (query, section) ->
+            assertFalse("$section remains form-only, not a fake Settings row", SettingsCatalog.isControlSection(section))
+            assertTrue("'$query' reveals $section", SettingsSearch.sectionVisible(query, section))
+            assertEquals(1, SettingsSearch.sectionMatchCount(query, section))
+            assertEquals(1, SettingsSearch.matchCount(query))
+            assertFalse(SettingsSearch.isEmptyResult(query))
+        }
+        assertFalse(
+            "runtime credential values are never indexed",
+            SettingsSearch.sectionVisible("sensitive-user-value", "GitHub Account")
+        )
+        assertFalse(
+            "unrelated sections disappear during filtering",
+            SettingsSearch.sectionVisible("token", "Terminal Extra-Keys & Shortcuts")
+        )
+        assertTrue(SettingsSearch.sectionVisible("", "Terminal Extra-Keys & Shortcuts"))
     }
 
     // ---- law 2: filtering and folding agree with the catalog ----------------
@@ -331,18 +345,12 @@ class SettingsSearchPolicyTest {
     }
 
     @Test
-    fun `only sections that hold rows can fold`() {
-        listOf("GitHub Account", "Package Repository & Trust", "Terminal Extra-Keys & Shortcuts")
-            .forEach { section ->
-                assertTrue(
-                    "$section has no rows of its own, so folding it would hide nothing but a form",
-                    SettingsDisclosure.expanded(section, setOf(section))
-                )
-            }
-        assertFalse(
-            "a row-bearing section really folds",
-            SettingsDisclosure.expanded("Appearance", setOf("Appearance"))
-        )
+    fun `every Settings group can fold, including the bespoke forms`() {
+        SettingsCatalog.allSectionTitles.forEach { section ->
+            assertTrue("$section is a foldable group", SettingsCatalog.isFoldableSection(section))
+            assertFalse("$section folds when requested", SettingsDisclosure.expanded(section, setOf(section)))
+        }
+        assertTrue("unknown sections remain expanded", SettingsDisclosure.expanded("Unknown", setOf("Unknown")))
     }
 
     @Test

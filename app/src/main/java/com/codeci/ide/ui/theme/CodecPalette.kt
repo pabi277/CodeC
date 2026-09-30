@@ -102,14 +102,28 @@ object CodecPalette {
 
     /**
      * Phase 57.2 — the drop under the caret, as the reference has it
-     * (`docs/spck-ui` 124105). It is a filled shape that sora paints itself
+     * (`docs/reference/spck-ui` 124105). It is a filled shape that sora paints itself
      * (`HandleStyleDrop`), so it carries NO AA row in the table above: nothing
      * is ever written on it. The value is the reference's own blue, kept here
      * because the palette is the one place a hex is allowed to be written.
      */
     const val CARET_HANDLE = 0xFF3B82F6.toInt()
 
-    // ---- the identity colour (docs/icon/codec-mark.svg) --------------------
+    /**
+     * Phase 75.2 — the dot sora paints for a leading space, so indentation is
+     * visible (the owner: *"user can't line up the space/indenting between lines
+     * so add some line type some thing that indicates each Indentation"*).
+     *
+     * It is a mark, never text, so it carries no AA row in the table above — but
+     * it is deliberately a *neutral semi-transparent* grey rather than a solid
+     * one: `0x80B0B0B0` reads on every editor theme this app ships (all four are
+     * dark) and still reads on a light background, while never competing with
+     * the code. The value travels with the theme for the same reason the caret
+     * handle's does — a fresh scheme resets every custom colour.
+     */
+    const val INDENT_MARK = 0x80B0B0B0.toInt()
+
+    // ---- the identity colour (docs/brand/icon/codec-mark.svg) --------------------
 
     /** CodeC's own green — the launcher mark. **The app's default accent.** */
     const val IDENTITY_GREEN = 0xFF3DDC84.toInt()

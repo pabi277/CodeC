@@ -154,7 +154,7 @@ fun SettingsScreen(
     val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.VS_CODE_DARK_PLUS)
     val currentTerminalTheme by themeManager.terminalThemeFlow.collectAsState(initial = TerminalThemeType.DRACULA)
 
-    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 14f)
+    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 16f)
     val fontFamily by settingsManager.fontFamilyFlow.collectAsState(initial = "Monospace")
     val tabSize by settingsManager.tabSizeFlow.collectAsState(initial = 4)
     val lineNumbers by settingsManager.lineNumbersFlow.collectAsState(initial = true)
@@ -163,7 +163,7 @@ fun SettingsScreen(
 
     // Phase 27.3 — completion surfaces (master off = the whole feature is gone).
     val completionMaster by settingsManager.completionMasterFlow.collectAsState(initial = true)
-    val completionGhost by settingsManager.completionGhostFlow.collectAsState(initial = true)
+    val completionGhost by settingsManager.completionGhostFlow.collectAsState(initial = false)
     val completionStrip by settingsManager.completionStripFlow.collectAsState(initial = true)
     val completionPanel by settingsManager.completionPanelFlow.collectAsState(initial = true)
     val completionDebounceMs by settingsManager.completionDebounceMsFlow.collectAsState(initial = 120)
@@ -192,11 +192,13 @@ fun SettingsScreen(
     val devModeUnlocked by settingsManager.devModeUnlockedFlow.collectAsState(initial = false)
     val showFilePaths by settingsManager.showFilePathsFlow.collectAsState(initial = false)
 
-    // Phase 62 — Settings, findable. The query and the folded sections are view state, not
-    // preferences: `rememberSaveable` keeps them across a rotation, and the screen forgets them on
-    // the way out, which is what a search box should do.
+    // Phase 62 + 74.1 — search and folds are view state, not preferences. Keep the
+    // query over rotation; folds intentionally use `remember` so a fresh Settings
+    // visit always starts with every section collapsed.
     var settingsQuery by rememberSaveable { mutableStateOf("") }
-    var foldedSectionsCsv by rememberSaveable { mutableStateOf("") }
+    var foldedSectionsCsv by remember {
+        mutableStateOf(SettingsDisclosure.initialCollapsedCsv())
+    }
     val foldedSections = remember(foldedSectionsCsv) { SettingsDisclosure.parse(foldedSectionsCsv) }
     val settingsView = remember(settingsQuery, foldedSections) {
         SettingsViewState(
@@ -1052,14 +1054,14 @@ fun SettingsScreen(
                     )
                 }
             }
-            // Phase 33.1 — a "show welcome once" reset for testers (and for
-            // anyone who wants to re-run the first-launch flow).
+            // Replay the first-run introduction on the next launch without
+            // interrupting the current Settings session.
             SettingsAction(
-                title = "Show the welcome screen again",
-                actionText = "SHOW",
+                title = "Replay the CodeC introduction",
+                actionText = "REPLAY",
                 onClick = {
                     scope.launch { settingsManager.setFirstLaunchComplete(false) }
-                    Toast.makeText(context, "The welcome screen will show on the next launch", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "CodeC's introduction will show on the next launch", Toast.LENGTH_SHORT).show()
                 }
             )
             var versionTaps by remember { mutableStateOf(0) }
@@ -1135,7 +1137,7 @@ fun SettingsScreen(
             // Phase 42.3 §5 — the permission table, surfaced: one short row
             // per declared permission with its one-line reason. The "not a
             // dialog storm" part: they are plain info rows, and the whole
-            // table's source-of-truth is docs/DATA_AND_PRIVACY.md, pinned
+            // table's source-of-truth is docs/guides/DATA_AND_PRIVACY.md, pinned
             // to the manifest by ManifestPermissionsTest. The honest order
             // puts the all-files approval first — it is the one permission
             // where "CodeC cannot read your files" would be false.
@@ -1181,7 +1183,7 @@ fun SettingsScreen(
             )
             SettingsItem(
                 title = "The full table",
-                subtitle = "docs/DATA_AND_PRIVACY.md in the repository — every permission, its reason, and the code that uses it; no SMS/contacts/location/phone permissions exist in this app"
+                subtitle = "docs/guides/DATA_AND_PRIVACY.md in the repository — every permission, its reason, and the code that uses it; no SMS/contacts/location/phone permissions exist in this app"
             )
             // Phase 42.1 — the honest updater: app releases only (a
             // userland-* bootstrap can never be offered), version compared
@@ -1510,15 +1512,15 @@ private fun settingsRowVisible(title: String): Boolean {
 }
 
 /**
- * Phase 62.2 — a section header that folds its section, says how much it is holding, and answers
- * to the search. A section the catalog has no rows for (GitHub Account, Package Repository &
- * Trust, Terminal Extra-Keys & Shortcuts) is not tappable: folding it would hide nothing, and a
- * control that does nothing is the one thing this app does not draw.
+ * Phase 62.2/74.1 — every visible Settings group can fold, including bespoke form groups. A
+ * row-count badge appears only where the catalog has indexed rows; the fold affordance itself
+ * remains available for the GitHub Account, Package Repository & Trust, and Terminal Extra-Keys
+ * & Shortcuts groups too.
  */
 @Composable
 fun SettingsSectionHeader(title: String) {
     val view = LocalSettingsView.current
-    val foldable = SettingsCatalog.isControlSection(title)
+    val foldable = SettingsCatalog.isFoldableSection(title)
     val folded = foldable && !SettingsDisclosure.expanded(title, view.folded)
     Row(
         modifier = Modifier
@@ -1536,7 +1538,9 @@ fun SettingsSectionHeader(title: String) {
         )
         // The count is what a folded header must not keep to itself; while the user is filtering
         // it says how many rows answered — the same number the policy counted.
-        if (folded || SettingsSearch.isActive(view.query)) {
+        if ((folded || SettingsSearch.isActive(view.query)) &&
+            SettingsSearch.sectionMatchCount(view.query, title) > 0
+        ) {
             Text(
                 text = SettingsSearch.sectionMatchCount(view.query, title).toString(),
                 style = MaterialTheme.typography.bodyMedium,

@@ -4,7 +4,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Phase 42.2 — [docs/chat-phase42/PART_42_2_APK_WEIGHT.md §R8 file law]: a
+ * Phase 42.2 — [docs/phases/08-release-support/chat-phase42/PART_42_2_APK_WEIGHT.md §R8 file law]: a
  * ProGuard rule file with unexplained keeps turns into a cargo cult where
  * nobody knows what a line protects, changes rot into it, and there is no
  * WHY to read. This test is the mechanism that keeps the file honest:

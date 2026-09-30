@@ -6,7 +6,7 @@
 
 > Source: `README.md` — "Package & Command Hub (Packages tab)" + "In-app
 > terminal & Package Manager (Mini-Termux)" repo paragraphs;
-> `docs/chat-phase3/` for signing depth; **the repo's own build config in
+> `docs/phases/02-packages-toolchains/chat-phase3/` for signing depth; **the repo's own build config in
 > `codec-packages/` for the authoritative package list.**
 
 ---
@@ -27,7 +27,7 @@
    - **Signed repository** — `https://pabi277.github.io/CodeC/dev`;
      metadata stays signed (`signed-by=`, never `trusted=yes`); the
      bootstrap `userland-v2-dev` is SHA-256 verified, staged, atomic
-     (depth link → `docs/chat-phase3/REPOSITORY_SIGNING.md`).
+     (depth link → `docs/phases/02-packages-toolchains/chat-phase3/REPOSITORY_SIGNING.md`).
    - **1-tap from the Packages tab** — INSTALL / RUN buttons, live status
      badges (`INSTALLED ✓` / `AVAILABLE`), quick system actions (`pkg
      update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`,
@@ -52,7 +52,7 @@
 ```text
 1. Table = config list, one-for-one (recorded in chat-web3/ with sha);
    count stated matches.
-2. Signing/bootstrap facts match README + docs/chat-phase3 (source lines
+2. Signing/bootstrap facts match README + docs/phases/02-packages-toolchains/chat-phase3 (source lines
    recorded); signed-by wording exact.
 3. Repo URL + all internal links resolve (internal targets per phase
    plan); sweep PASS.

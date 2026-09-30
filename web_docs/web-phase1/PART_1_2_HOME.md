@@ -34,7 +34,7 @@
    is a first-class citizen): "New to the command line — or to C? **Master
    CodeC from Zero to Advanced.** 17 hands-on chapters, free, on this site. 6.6 MB universal, offline C, feedback reaches developer."
    → `learn.html`.
-5. **Footnote strip** — "Free & open source · Built-in compiler · No Termux required · 6.6 MB universal · >_ mark" + GitHub link + icon source docs/icon/codec-512.png.
+5. **Footnote strip** — "Free & open source · Built-in compiler · No Termux required · 6.6 MB universal · >_ mark" + GitHub link + icon source docs/brand/icon/codec-512.png.
 
 > **v2.2 update:** cards now reflect Phases 34–43: file icons, typing feel, ghost+strip+snippets+Emmet+TextMate, LAN server QR+open-in-browser+keep-alive, safe features backup include-list + crash-loop guard + export-all + feedback hardcoded, universal APK 6.6 MB -74% per-ABI reverted assets/tcc not filtered, Auto engine only.
 

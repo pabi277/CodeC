@@ -31,14 +31,31 @@ class BackHandlerWiringTest {
             "ad-hoc back handlers outside the router: ${offenders.map { it.name }}",
             offenders.isEmpty()
         )
-        // The full list is the three remaining surfaces.
+        // The full list is the five surfaces that now use the shared policy.
         assertEquals(
             listOf(
                 "FileManagerScreen.kt",
-                "MainActivity.kt", "EditorScreen.kt"
+                "MainActivity.kt", "EditorScreen.kt", "FirstRunIntroScreen.kt",
+                "WebPreviewScreen.kt"
             ).sorted(),
             handlers.map { it.name }.sorted()
         )
+    }
+
+    @Test
+    fun `WebPreviewScreen routes system and toolbar Back through WebView history first`() {
+        val preview = source("app/src/main/java/com/codeci/ide/ui/screens/WebPreviewScreen.kt")
+        assertEquals(
+            1,
+            Regex("\\bBackHandler\\s*\\(").findAll(preview).count()
+        )
+        assertTrue(preview.contains("BackRouter.decide("))
+        assertTrue(preview.contains("webViewCanGoBack = webView?.canGoBack() == true"))
+        assertTrue(preview.contains("BackAction.GoBackInWebView -> webView?.goBack()"))
+        assertTrue(preview.contains("BackAction.PopRoute -> onNavigateBack()"))
+        assertTrue(preview.contains("performPreviewBack(fromToolbar = true)"))
+        assertTrue(preview.contains("performPreviewBack(fromToolbar = false)"))
+        assertTrue(preview.contains("BackHandler(enabled = !previewTransientSurfaceOpen && imeDp <= 0f)"))
     }
 
     @Test
@@ -118,8 +135,8 @@ class BackHandlerWiringTest {
      * editor still navigated tab-style (`popUpTo(start) { saveState }`), which
      * POPS the editor whenever the hub is the start destination (the resume
      * card: any launch after more than five minutes away). With nothing under
-     * the hub, Back reached row 9 — the exit prompt. The doors now push the
-     * hub over the editor like the side panel's Settings cell, so row 8
+     * the hub, Back reached the root exit prompt. The doors now push the
+     * hub over the editor like the side panel's Settings cell, so row 11
      * (`canPopRoute -> PopRoute`) returns to the editor and the prompt is the
      * NEXT Back. The router itself did not change.
      */

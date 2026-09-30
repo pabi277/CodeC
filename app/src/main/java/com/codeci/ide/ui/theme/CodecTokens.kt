@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
  * `TokenAdoptionTest` + `TouchTargetTest`):
  *
  * 1. Nothing new joins the scale without a test case naming it.
- * 2. In the six core surfaces (Welcome, Editor, Hub, Packages, Terminal,
- *    Settings) a gap/padding/size at or under 48 dp is written through
+ * 2. In the six core surfaces (first-run intro, Editor, Hub, Packages,
+ *    Terminal, Settings) a gap/padding/size at or under 48 dp is written through
  *    [space]/[radius]/[elevation]/[icon], never as a raw `N.dp`.
  * 3. [MIN_TOUCH] is a floor, not a suggestion (M3 + WCAG 2.2 §2.5.8).
  *

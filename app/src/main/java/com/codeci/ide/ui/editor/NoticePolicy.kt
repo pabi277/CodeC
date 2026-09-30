@@ -3,7 +3,7 @@ package com.codeci.ide.ui.editor
 /**
  * Phase 57.3 — the short messages the shots show as a pill.
  *
- * The reference (`docs/spck-ui` 122157) floats one pill above the bottom of the
+ * The reference (`docs/reference/spck-ui` 122157) floats one pill above the bottom of the
  * editor: a rounded dark surface, one icon, one bold line — “Refreshed Files”.
  * The roadmap's job for this part is the *surface*, and the two messages the
  * shots (and the app's own dead ends) name:

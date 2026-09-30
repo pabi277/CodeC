@@ -76,7 +76,7 @@ class HapticWiringTest {
 
     @Test
     fun `the audit doc records the new control`() {
-        val audit = RepoFiles.mainSource("docs/chat-phase38/SETTINGS_AUDIT.md").readText()
+        val audit = RepoFiles.mainSource("docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md").readText()
         assertTrue(audit.contains("| Haptics | switch | `haptics` |"))
     }
 

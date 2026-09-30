@@ -53,15 +53,19 @@ object GitErrors {
     /** One-liner used wherever git is missing (mirrors `git_not_installed_message`). */
     fun notInstalled(): GitFriendlyError = GitFriendlyError(
         kind = GitErrorKind.NOT_INSTALLED,
-        message = "Git isn't installed. Install it from Modules → Git (or run " +
-            "`pkg install git` in the terminal), then retry."
+        // Phase 73.8 — the panel installs git itself now (73.2's card),
+        // so this points at its own INSTALL GIT button, not Modules.
+        message = "Git isn't installed. Tap INSTALL GIT at the top of the " +
+            "Source Control panel, then retry."
     )
 
     /** A token is required but none is stored. */
     fun tokenMissing(): GitFriendlyError = GitFriendlyError(
         kind = GitErrorKind.NO_TOKEN,
+        // Phase 73.8 — credentials live on the git page now (73.5's Git
+        // Credentials dialog), so this points at the ⋮ menu, not Settings.
         message = "No GitHub token is connected, so the push was not authorized. " +
-            "Add one in Settings → GitHub Account (a fine-grained token with " +
+            "Add one in Git Credentials (⋮ menu; a fine-grained token with " +
             "Contents → Read and write).",
         helpUrl = TOKEN_HELP_URL
     )
@@ -69,8 +73,8 @@ object GitErrors {
     /** A token is stored but GitHub rejected it. */
     fun tokenInvalid(): GitFriendlyError = GitFriendlyError(
         kind = GitErrorKind.AUTH_FAILED,
-        message = "GitHub didn't accept your token. Re-check it in Settings → " +
-            "GitHub Account, or create a new one.",
+        message = "GitHub didn't accept your token. Re-check it in Git Credentials " +
+            "(⋮ menu), or create a new one.",
         helpUrl = TOKEN_HELP_URL
     )
 
@@ -210,7 +214,7 @@ object GitErrors {
                 GitFriendlyError(
                     GitErrorKind.TOKEN_PERMISSION,
                     "Repository not found — it may be private (add a token in " +
-                        "Settings → GitHub Account) or the URL is wrong.",
+                        "Git Credentials, ⋮ menu) or the URL is wrong.",
                     helpUrl = TOKEN_HELP_URL
                 ).let(::withDetail)
 

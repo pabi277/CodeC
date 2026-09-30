@@ -4,7 +4,7 @@ import java.io.File
 
 /**
  * Phase 44.2 — boot-time repair + orphan sweep for the userland install
- * (spec: docs/chat-phase44/PART_44_2_ATOMIC_SETUP.md §2).
+ * (spec: docs/phases/09-onboarding-setup/chat-phase44/PART_44_2_ATOMIC_SETUP.md §2).
  *
  * Two mechanisms, because a two-directory rename cannot be made truly atomic on
  * every filesystem:

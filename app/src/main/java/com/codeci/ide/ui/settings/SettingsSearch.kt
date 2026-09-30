@@ -9,7 +9,7 @@ package com.codeci.ide.ui.settings
  *
  * **The catalog below is generated from the screen, not invented.** Every entry is one
  * `Settings*` call's own `title`, in screen order, with the section it sits under - the same
- * 66 rows `docs/chat-phase38/SETTINGS_AUDIT.md` already pins as the audit table, and
+ * 66 rows `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md` already pins as the audit table, and
  * `SettingsSearchWiringTest` re-checks both directions (the catalog must hold exactly the rows
  * the screen renders, and every label must exist in the screen or in `strings.xml`). That is
  * why the labels read like the screen's own words - including row 11, a completion switch
@@ -29,6 +29,15 @@ data class SettingsEntry(
     val keywords: List<String> = emptyList(),
 ) {
     /** Everything a query may match for this row. */
+    val searchable: List<String> get() = listOf(label) + keywords
+}
+
+/** A searchable control description inside a bespoke form section; not a rendered fake row. */
+data class SettingsFormSearchEntry(
+    val section: String,
+    val label: String,
+    val keywords: List<String> = emptyList(),
+) {
     val searchable: List<String> get() = listOf(label) + keywords
 }
 
@@ -71,7 +80,7 @@ object SettingsCatalog {
         SettingsEntry(section = "Storage", label = "Temporary files"),
         SettingsEntry(section = "Storage", label = "Clear temporary files"),
         SettingsEntry(section = "Storage", label = "Clear Cache"),
-        SettingsEntry(section = "About", label = "Show the welcome screen again"),
+        SettingsEntry(section = "About", label = "Replay the CodeC introduction"),
         SettingsEntry(section = "About", label = "Your CodeC progress"),
         SettingsEntry(section = "About", label = "App Version"),
         SettingsEntry(section = "About", label = "GitHub"),
@@ -102,11 +111,29 @@ object SettingsCatalog {
         SettingsEntry(section = "Developer Options", label = "Force Crash"),
     )
 
+    /** Fixed labels and aliases for controls inside bespoke form-only groups. */
+    val formEntries: List<SettingsFormSearchEntry> = listOf(
+        SettingsFormSearchEntry(
+            section = "Terminal Extra-Keys & Shortcuts",
+            label = "Custom Extra-Key Shortcuts",
+            keywords = listOf("Extra Keys", "terminal key bar", "shortcut buttons", "macros", "comma separated", "add example", "save shortcuts"),
+        ),
+        SettingsFormSearchEntry(
+            section = "Package Repository & Trust",
+            label = "Repository Trust Status",
+            keywords = listOf("signed channel", "keyring", "OpenPGP", "gpgv", "fail closed", "signing subkey", "repository signature", "check repository", "InRelease", "online", "offline", "userland"),
+        ),
+        SettingsFormSearchEntry(
+            section = "GitHub Account",
+            label = "GitHub Personal Access Token",
+            keywords = listOf("token", "credentials", "source control", "push", "repository contents", "username", "commit name", "commit email", "author name", "author email", "disconnect", "save", "create token"),
+        ),
+    )
+
     /**
-     * Every section SettingsScreen draws, in the screen's own order - the nine that hold control
-     * rows plus the three whose content the catalog cannot index (GitHub Account, Package
-     * Repository & Trust, Terminal Extra-Keys & Shortcuts). `SettingsSearchWiringTest` pins this
-     * list against the screen's own headers, so a new section cannot appear without it.
+     * Every section SettingsScreen draws, in the screen's own order - the nine with standard
+     * control rows plus the three bespoke form groups, which have fixed search descriptors in
+     * [formEntries]. `SettingsSearchWiringTest` pins this list against the screen's headers.
      */
     val allSectionTitles: List<String> = listOf(
         "Editor Settings",
@@ -129,8 +156,11 @@ object SettingsCatalog {
     /** The row whose label is exactly [title], or null for a row the catalog has not met. */
     fun entryFor(title: String): SettingsEntry? = entries.firstOrNull { it.label == title }
 
-    /** True when [section] is a section of control rows (the form-only sections are not). */
+    /** True when [section] contains indexed control rows (form-only groups have none). */
     fun isControlSection(section: String): Boolean = sections.contains(section)
+
+    /** Every visible Settings group can fold, including bespoke form-only groups. */
+    fun isFoldableSection(section: String): Boolean = allSectionTitles.contains(section)
 }
 
 /**
@@ -145,15 +175,12 @@ object SettingsCatalog {
  *     their section), and "more" finds the completion-panel row even though its label opens
  *     with a quote mark.
  *  2. **While the box has something in it, the query decides.** A section shows iff the query
- *     names it or one of its rows, and a row shows iff the query matches it. That includes the
- *     three sections the catalog has no rows for (GitHub Account, Package Repository & Trust,
- *     Terminal Extra-Keys & Shortcuts): their content cannot be indexed, so "github" shows the
- *     GitHub section and clearing the box brings all three back - which is also what makes the
- *     empty state ("nothing matches") true when it appears.
- *  3. **Folding is remembered, never applied over a search.** With an empty box the fold rule
- *     runs and folded sections show only their header, count and chevron. The moment the user
- *     types, every row that matches renders - a folded section must not swallow the result the
- *     search just found - and the fold comes back when the box is cleared.
+ *     names it or one of its rows. The three bespoke form groups answer to fixed field labels and
+ *     aliases; runtime form values, credentials, and repository data are never indexed.
+ *  3. **Folding is view state, never applied over a search.** With an empty box the fold rule
+ *     runs and folded sections show only their header and chevron (plus a count where rows are
+ *     indexed). The moment the user types, every matching row renders - a folded section must
+ *     not swallow the result the search just found - and the fold comes back when the box clears.
  *
  * [rowVisible] is the single question the screen asks per row; [sectionVisible] the one it asks
  * per header.
@@ -193,10 +220,19 @@ object SettingsSearch {
         return wanted.all { token -> haystacks.any { matchesText(token, it) } }
     }
 
-    /** How many rows the catalog says a query matches (the empty state's only input). */
+    /** Matching standard rows plus matching form groups; form results are not fake row entries. */
     fun matchCount(query: String): Int =
         if (!isActive(query)) SettingsCatalog.entries.size
-        else SettingsCatalog.entries.count { matchesRow(query, it.label) }
+        else SettingsCatalog.entries.count { matchesRow(query, it.label) } +
+            SettingsCatalog.formEntries.count { matchesForm(query, it) }
+
+    private fun matchesForm(query: String, entry: SettingsFormSearchEntry): Boolean {
+        val wanted = normalize(query)
+        if (wanted.isEmpty()) return true
+        return wanted.all { token ->
+            (entry.searchable + entry.section).any { matchesText(token, it) }
+        }
+    }
 
     /**
      * Nothing matched: the one case the screen must say something about.
@@ -206,8 +242,7 @@ object SettingsSearch {
      * and showing "No settings match" next to it would be the screen contradicting itself.
      */
     fun isEmptyResult(query: String): Boolean =
-        isActive(query) &&
-            matchCount(query) == 0 &&
+        isActive(query) && matchCount(query) == 0 &&
             SettingsCatalog.allSectionTitles.none { matchesText(query, it) }
 
     /**
@@ -233,7 +268,8 @@ object SettingsSearch {
     fun sectionVisible(query: String, section: String): Boolean {
         if (!isActive(query)) return true
         if (matchesText(query, section)) return true
-        return SettingsCatalog.entries.any { it.section == section && matchesRow(query, it.label) }
+        return SettingsCatalog.entries.any { it.section == section && matchesRow(query, it.label) } ||
+            SettingsCatalog.formEntries.any { it.section == section && matchesForm(query, it) }
     }
 
     /**
@@ -241,7 +277,8 @@ object SettingsSearch {
      * header, so folding never hides how much is inside.
      */
     fun sectionMatchCount(query: String, section: String): Int =
-        SettingsCatalog.entries.count { it.section == section && matchesRow(query, it.label) }
+        SettingsCatalog.entries.count { it.section == section && matchesRow(query, it.label) } +
+            SettingsCatalog.formEntries.count { it.section == section && matchesForm(query, it) }
 }
 
 /**
@@ -269,6 +306,9 @@ object SettingsDisclosure {
     /** Unit separator: a character no section title contains. */
     const val SEPARATOR = "\u001F"
 
+    /** Every Settings group begins collapsed on a fresh screen visit. */
+    fun initialCollapsedCsv(): String = serialize(SettingsCatalog.allSectionTitles.toSet())
+
     fun parse(csv: String): Set<String> =
         if (csv.isBlank()) emptySet()
         else csv.split(SEPARATOR).filter { it.isNotBlank() }.toSet()
@@ -286,5 +326,5 @@ object SettingsDisclosure {
      * result is never folded away".
      */
     fun expanded(section: String, collapsed: Set<String>): Boolean =
-        !SettingsCatalog.isControlSection(section) || !collapsed.contains(section)
+        !SettingsCatalog.isFoldableSection(section) || !collapsed.contains(section)
 }

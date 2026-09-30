@@ -14,7 +14,7 @@ import org.junit.Test
  * Phase 55 — the side panel's decisions, pinned on the host JVM.
  *
  * These are not style checks: every case below is a sentence out of the
- * reference card (`docs/chat-phase54/PART_54_1_SHOTS.md`) or an owner row of
+ * reference card (`docs/phases/11-phone-ui-parity/chat-phase54/PART_54_1_SHOTS.md`) or an owner row of
  * 2026-09-22, turned into something that fails loudly if a later phase drifts.
  */
 class SidePanelPlanTest {

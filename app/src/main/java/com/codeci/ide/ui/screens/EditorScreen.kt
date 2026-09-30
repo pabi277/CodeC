@@ -144,7 +144,6 @@ import com.codeci.ide.ui.components.FindReplaceBar
 import com.codeci.ide.ui.components.EditorKeysRow
 import com.codeci.ide.ui.components.EditorProjectDrawer
 import com.codeci.ide.ui.components.EditorSidePanel
-import com.codeci.ide.ui.components.RepositoryPanelState
 import com.codeci.ide.ui.components.SearchPanelState
 import com.codeci.ide.ui.editor.NavCell
 import com.codeci.ide.ui.editor.ProjectSearch
@@ -152,6 +151,7 @@ import com.codeci.ide.ui.editor.RailPanel
 import com.codeci.ide.ui.editor.RecentProjects
 import com.codeci.ide.ui.editor.SidePanelPlan
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.codeci.ide.ui.components.HapticMoment
 import com.codeci.ide.ui.components.RunHapticRule
@@ -242,6 +242,13 @@ fun EditorScreen(
      * bar, no project chrome, no launch-state write). Absent → PROJECT.
      */
     singleFile: Boolean = false,
+    /**
+     * Phase 73.7 — the route's `panel` hand-off: `"repository"` (the hub
+     * ⋮'s "Source Control") selects the side panel's Repository slot and
+     * opens the drawer on entry. Absent → the default slot. Any other
+     * value is ignored — the route never promises more than one slot.
+     */
+    panel: String? = null,
     onNavigateBack: () -> Unit = {},
     onFileRenamed: (String) -> Unit = {},
     onProjectSelected: (ProjectInfo) -> Unit = {},
@@ -293,7 +300,7 @@ fun EditorScreen(
     val currentEditorTheme by themeManager.editorThemeFlow.collectAsState(initial = EditorThemeType.VS_CODE_DARK_PLUS)
     val editorColors = getEditorTheme(currentEditorTheme)
 
-    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 14f)
+    val fontSize by settingsManager.fontSizeFlow.collectAsState(initial = 16f)
     val fontFamilyName by settingsManager.fontFamilyFlow.collectAsState(initial = "Monospace")
     val tabSize by settingsManager.tabSizeFlow.collectAsState(initial = 4)
     val showLineNumbers by settingsManager.lineNumbersFlow.collectAsState(initial = true)
@@ -317,12 +324,28 @@ fun EditorScreen(
     // reset the caret, and re-point "open where I left off" at it). The
     // decision is pure (EditorRouteOpen) and the session marker lives in the
     // ViewModel, so it survives a rotation and dies with the tabs.
+    // Phase 55 — the side panel's selected slot. Owner follow-up: Files is
+    // the editor menu's default; the user's own tap always wins afterwards.
+    // Declared ahead of the route-open effect (Phase 73.7): the
+    // `panel=repository` hand-off selects the Repository slot there, and a
+    // local is only visible after its declaration.
+    var sidePanel by remember { mutableStateOf(SidePanelPlan.DEFAULT_PANEL) }
+    // Declared here with it (Phase 73.7): the same hand-off opens the
+    // drawer on the Repository slot.
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val editorRouteKey = EditorRouteOpen.key(projectName, fileName, singleFile)
     LaunchedEffect(editorRouteKey) {
         if (!EditorRouteOpen.shouldOpen(editorRouteKey, viewModel.openedRoute())) {
             return@LaunchedEffect
         }
         viewModel.markRouteOpened(editorRouteKey)
+        // Phase 73.7 — the hub "Source Control" hand-off: entering with
+        // `panel=repository` selects the Repository slot and opens the
+        // drawer on it. PROJECT opens only — a peek has no panel chrome.
+        if (panel == RailPanel.REPOSITORY.id && !singleFile && projectName != null) {
+            sidePanel = RailPanel.REPOSITORY
+            drawerState.open()
+        }
         if (projectName != null && fileName != null) {
             if (singleFile) {
                 // Phase 46.2 — the peek: no onProjectSelected (the hub tap
@@ -415,7 +438,7 @@ fun EditorScreen(
     val codecKeysLayoutJson by settingsManager.codecKeysLayoutJsonFlow.collectAsState(initial = "")
     // Phase 27.3 — completion law settings + the ONE completion model.
     val completionMaster by settingsManager.completionMasterFlow.collectAsState(initial = true)
-    val completionGhostOn by settingsManager.completionGhostFlow.collectAsState(initial = true)
+    val completionGhostOn by settingsManager.completionGhostFlow.collectAsState(initial = false)
     val completionStripOn by settingsManager.completionStripFlow.collectAsState(initial = true)
     val completionPanelOn by settingsManager.completionPanelFlow.collectAsState(initial = true)
     val completionDebounceMs by settingsManager.completionDebounceMsFlow.collectAsState(initial = 120)
@@ -463,8 +486,6 @@ fun EditorScreen(
     // exactly the window during which the keys row must ride the keyboard.
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
-
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val uiScope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
 
@@ -505,7 +526,9 @@ fun EditorScreen(
         }
     }
     // Phase 16 — drawer dialogs: create entry (parent, isFolder), per-row rename,
-    // delete confirm, go-to-line and the git sheet for the footer row.
+    // delete confirm and go-to-line. (The footer row's Source Control used
+    // to open a git sheet here; Phase 73.7 moved git into the panel, so the
+    // row just selects the Repository slot — see openSourceControl.)
     var pendingCreate by remember { mutableStateOf<Pair<String?, Boolean>?>(null) }
     var entryName by remember { mutableStateOf("") }
     var pendingRenameEntry by remember { mutableStateOf<EditorFileEntry?>(null) }
@@ -514,9 +537,8 @@ fun EditorScreen(
     var goToLineText by remember { mutableStateOf("") }
     // Phase 24.9 — per-project .codec.json run-config editor.
     var showCodecConfig by remember { mutableStateOf(false) }
-    var gitSheetRoot by remember { mutableStateOf<File?>(null) }
     // Phase 17 — Switch Branch, opened from the drawer footer.
-    var gitBranchSheetRoot by remember { mutableStateOf<File?>(null) }
+    var gitBranchDialogRoot by remember { mutableStateOf<File?>(null) }
     var keysRowVisible by remember { mutableStateOf(true) }
     // Phase 69.1 — the coding row's horizontal position is owned HERE, not
     // inside the row. The caps a phone thumb reaches for most (`;`, `/`, `=`,
@@ -539,11 +561,7 @@ fun EditorScreen(
     // the sorted order AND the checkmark, so the ✓ never lies about the row.
     val lastTabSort by viewModel.lastTabSort.collectAsState()
     var showSortMenu by remember { mutableStateOf(false) }
-    // ---- Phase 55 — the side panel's own state --------------------------
-    // Owner follow-up: Files is the editor menu's default;
-    // the user's
-    // own tap always wins afterwards.
-    var sidePanel by remember { mutableStateOf(SidePanelPlan.DEFAULT_PANEL) }
+    // ---- Phase 55 — the side panel's search state ------------------------
     var searchQuery by remember { mutableStateOf("") }
     var searchOptions by remember { mutableStateOf(ProjectSearch.Options()) }
     var searchHits by remember { mutableStateOf<List<ProjectSearch.Hit>>(emptyList()) }
@@ -1020,9 +1038,9 @@ fun EditorScreen(
     // panel — is pinned by BackRouterTest instead of living in registration
     // order. editorDrawerOpen keys on targetValue (H2, same as closeDrawer
     // above). With the soft keyboard up, back is the user closing it — the
-    // platform owns that press (the router's row-6 guard, and rows 8+ are
-    // root-only fields this screen never fills, so the editor's handler can
-    // never pop navigation or exit the app).
+    // platform owns that press (the router's row-9 guard). This screen leaves
+    // the route/root fields at their defaults, so it cannot pop navigation or
+    // exit the app behind its own editor surface.
     val editorBackAction = BackRouter.decide(
         BackState(
             unsavedChanges = isDirty,
@@ -1302,14 +1320,14 @@ fun EditorScreen(
             }
         }
 
-        // One action, two doors: the drawer footer's Source Control row and the
-        // panel's Repository slot open the same sheet, from the same root.
+        // Phase 73.7 — one action, two doors: the drawer footer's Source
+        // Control row and the hub ⋮ both land on the panel's Repository
+        // slot (the full git panel lives there now — the sheet is gone).
+        // Scratch mode still toasts: there is no project to show.
         val openSourceControl: () -> Unit = {
-            val root = currentProject?.let {
-                runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
-            }
-            if (root != null) {
-                gitSheetRoot = root
+            if (currentProject != null) {
+                sidePanel = RailPanel.REPOSITORY
+                uiScope.launch { drawerState.open() }
             } else {
                 Toast.makeText(context, context.getString(R.string.editor_scratch_mode), Toast.LENGTH_SHORT).show()
             }
@@ -1434,21 +1452,38 @@ fun EditorScreen(
                         searchQuery = ""
                         searchHits = emptyList()
                     },
-                    repository = RepositoryPanelState(
-                        hasRepository = gitBranch != null,
-                        branch = gitBranch,
-                        changeCount = gitChangeCount
-                    ),
-                    onInitializeRepository = {
-                        // The shot's one button, wired to CodeC's real git: the
-                        // repository is created by the same `git init` the
-                        // app's own readiness sentence points at, run in the
-                        // Terminal where the engine lives. No invented screen
-                        // (the shots do not show one).
-                        uiScope.launch { drawerState.close() }
-                        onOpenInTerminal("git init")
+                    // Phase 73.7 — the Repository slot hosts the full Source
+                    // Control panel (install / init / changes / dialogs):
+                    // the owner's screenshots show git living inside the
+                    // side panel, not in a bottom sheet. Scratch mode has
+                    // no project, so it keeps a one-line empty state.
+                    repositoryContent = {
+                        val gitRoot = currentProject?.let {
+                            runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
+                        }
+                        if (gitRoot != null) {
+                            GitControlPanel(
+                                projectRoot = gitRoot,
+                                // Phase 39 device follow-up — keep editor
+                                // buffers in lockstep with the checked-out
+                                // branch (flush before, reload after).
+                                onBeforeBranchSwitch = { viewModel.prepareForBranchSwitch(context) },
+                                onAfterBranchSwitch = { viewModel.reloadAfterBranchSwitch(context) },
+                                // Phase 73.3 — the panel's "Git Credentials"
+                                // item reuses the same jump the drawer footer
+                                // already has.
+                                onOpenSettings = onOpenSettings
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(R.string.panel_repository_no_project),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(CodecTokens.space(Space.L))
+                            )
+                        }
                     },
-                    onOpenSourceControl = openSourceControl,
+                    repositoryBadgeCount = gitChangeCount,
                     files = {
                 EditorProjectDrawer(
                     projectName = currentProject,
@@ -1500,7 +1535,7 @@ fun EditorScreen(
                         val root = currentProject?.let {
                             runCatching { ProjectManager(context).project(it)?.root }.getOrNull()
                         }
-                        if (root != null) gitBranchSheetRoot = root else Toast.makeText(
+                        if (root != null) gitBranchDialogRoot = root else Toast.makeText(
                             context,
                             context.getString(R.string.editor_scratch_mode),
                             Toast.LENGTH_SHORT
@@ -2352,6 +2387,7 @@ fun EditorScreen(
                     keyStripJson = keyStripJson,
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
+                    commitEditorKey = { key -> viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
                     // Phase 69.1 — one row position across both call sites.
                     keysRowScroll = keysRowScroll,
@@ -2514,6 +2550,7 @@ fun EditorScreen(
                     keyStripJson = keyStripJson,
                     textFieldValue = codeText,
                     onEditorValueChange = { viewModel.updateCode(it, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
+                    commitEditorKey = { key -> viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) },
                     tabSize = tabSize,
                     // Phase 69.1 — one row position across both call sites.
                     keysRowScroll = keysRowScroll,
@@ -2778,28 +2815,18 @@ fun EditorScreen(
             )
         }
 
-        gitSheetRoot?.let { root ->
-            GitControlSheet(
-                projectRoot = root,
-                onDismiss = {
-                    gitSheetRoot = null
-                    // Branch may have changed from the SC chip sheet.
-                    viewModel.refreshGitMeta(context)
-                },
-                // Phase 39 device follow-up — keep editor buffers in lockstep
-                // with the checked-out branch (flush before, reload after).
-                onBeforeBranchSwitch = { viewModel.prepareForBranchSwitch(context) },
-                onAfterBranchSwitch = { viewModel.reloadAfterBranchSwitch(context) }
-            )
-        }
+        // Phase 73.7 — no git sheet door, no drawer install prompt: the
+        // Repository slot hosts the panel (install / init / changes /
+        // dialogs all live there now), and the drawer's Source Control
+        // row just selects that slot (openSourceControl above).
 
         // Phase 17 — Switch Branch from the drawer footer: closing refreshes
         // the drawer's branch chip and status letters.
-        gitBranchSheetRoot?.let { root ->
-            BranchSwitchSheet(
+        gitBranchDialogRoot?.let { root ->
+            BranchSwitchDialog(
                 projectRoot = root,
                 onDismiss = {
-                    gitBranchSheetRoot = null
+                    gitBranchDialogRoot = null
                     viewModel.refreshGitMeta(context)
                 },
                 onBeforeSwitch = { viewModel.prepareForBranchSwitch(context) },
@@ -2941,6 +2968,7 @@ private fun BottomStrip(
     keyStripJson: String,
     textFieldValue: TextFieldValue,
     onEditorValueChange: (TextFieldValue) -> Unit,
+    commitEditorKey: ((EditorKey) -> Unit)? = null,
     tabSize: Int,
     /** Phase 69.1 — the keys row's horizontal position, owned by the screen. */
     keysRowScroll: ScrollState,
@@ -2994,6 +3022,7 @@ private fun BottomStrip(
                         else -> false
                     }
                 },
+                commitKey = commitEditorKey,
                 modifier = modifier
             )
         }

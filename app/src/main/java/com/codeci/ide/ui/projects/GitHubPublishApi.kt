@@ -42,8 +42,8 @@ object GitHubPublishApi {
         if (secret.isEmpty()) {
             return PublishResult.ApiError(
                 PublishErrorKind.TOKEN_MISSING,
-                "No GitHub token is connected. Add one in Settings → GitHub Account, " +
-                    "then publish again.",
+                "No GitHub token is connected. Add one in Git Credentials " +
+                    "(⋮ menu), then publish again.",
                 helpUrl = GitErrors.TOKEN_HELP_URL
             )
         }

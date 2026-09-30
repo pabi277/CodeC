@@ -232,8 +232,9 @@ object EditorKeySet {
 
     /**
      * Apply [key] to the buffer at [value]'s selection. Insert replaces the
-     * selection and lands the caret after the text; TAB inserts exactly
-     * [tabSize] spaces (2..8 clamped, the editor's indentation law); caret
+     * selection and lands the caret after the text; TAB inserts one level of
+     * spaces — [SmartTyping.indentRun], the same run the system keyboard's Tab
+     * gets, 2..8 clamped, the editor's indentation law; caret
      * moves collapse a selection first, and UP/DOWN travel by visual line via
      * the text itself (same column, clamped at both ends).
      */
@@ -247,11 +248,27 @@ object EditorKeySet {
             is EditorKey.Pair -> {
                 val selected = text.substring(start, end)
                 val body = key.open + selected + key.close
-                val next = text.substring(0, start) + body + text.substring(end)
                 if (selected.isEmpty()) {
+                    // Phase 75.3 (owner, device round 2: *"in c coding I tried
+                    // to write int main() then curly brackets it sent the
+                    // brackets inside the first brackets like ({})"*): when
+                    // `()` was just inserted or auto-paired, the caret is
+                    // parked at `(|)`. Tapping `{}` there is the block body
+                    // after `()`, so step past `)` to produce `(){|}`.
+                    val at = if (
+                        key.open == "{" && key.close == "}" &&
+                        start > 0 && start < text.length &&
+                        text[start - 1] == '(' && text[start] == ')'
+                    ) {
+                        start + 1
+                    } else {
+                        start
+                    }
+                    val next = text.substring(0, at) + body + text.substring(at)
                     // Empty caret: land it between the two characters.
-                    TextFieldValue(next, TextRange(start + key.open.length))
+                    TextFieldValue(next, TextRange(at + key.open.length))
                 } else {
+                    val next = text.substring(0, start) + body + text.substring(end)
                     // Surround: keep the original text selected inside the pair.
                     TextFieldValue(
                         next,
@@ -260,7 +277,17 @@ object EditorKeySet {
                 }
             }
             EditorKey.Tab -> {
-                val spaces = " ".repeat(tabSize.coerceIn(2, 8))
+                // Phase 75.2 — the cap and the system keyboard's Tab now insert
+                // the SAME run: `SmartTyping.indentRun`, which walks up to the
+                // next tab stop inside the indentation and gives one full level
+                // anywhere else. Before this the cap always emitted a whole
+                // `tabSize`, so a line already at 2 spaces lined up on the IME
+                // and did not line up here.
+                val spaces = if (start == end) {
+                    SmartTyping.indentRun(text, start, tabSize.coerceIn(2, 8))
+                } else {
+                    " ".repeat(tabSize.coerceIn(2, 8))
+                }
                 replaced(text, start, end, spaces, spaces.length)
             }
             EditorKey.DeleteWord -> SmartTyping.deletePrevWord(value)

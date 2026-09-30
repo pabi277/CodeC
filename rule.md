@@ -1,3 +1,30 @@
+> **Owner's latest phase instruction — 2026-09-30 (later the same day): Phase 75.1 + 75.2 + 75.3
+> (editor typing reliability) are ✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98.** His initial
+> words: *“1st you read this file than find the problems with relevant with this and fix after that
+> i will test on device give you latter instructions”*, followed by device round 1 (5 items,
+> shipped in 75.2, CI ✅ `36692498787`), device round 2 (3 items, shipped in 75.3, CI ✅
+> `36701799600` on `26dbf9e`), and his device acceptance and merge authorization:
+> ***“Ok device test passed … You can complete the docs part and merged”***.
+> Shipped across 75.1–75.3: `CodeCLanguage.indentAdvanceFor` returns `indentStep.coerceIn(2, 8)`
+> for both `trimmed.endsWith('{')` and `SmartTyping.opensPythonBlock(trimmed)` so Python and brace
+> languages indent by a full level on both Enter routes; `deleteEmptyLineFast = false` +
+> `deleteMultiSpaces = 1` + `SmartTyping.handleIndentBackspace` keep Backspace inside leading
+> indentation at one space per press (`DeleteWord` opts out); `SoraEditorHost` enables leading
+> whitespace dots (`FLAG_DRAW_WHITESPACE_LEADING or FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE`) with
+> `CodecPalette.INDENT_MARK` re-applied on every theme switch and `SmartTyping.indentRun` advances
+> Tab to the next multiple of `tabSize` in spaces; `CodeCompletionEngine.suggestionInsertText(item)`
+> makes suggestion chips and panel rows insert only the suggestion word (`if`, `def`, `for`,
+> `while`, `main`, …) while preserving `#include`, shebangs, HTML `<tag>`/`<!DOCTYPE html>`,
+> CSS/Markdown, and Emmet; `EditorKeysRow`, `EditorKeyCap`, `RunKeyCap`, and `SuggestionStrip` wrap
+> `.pointerInput` callbacks in `rememberUpdatedState` with live-buffer `commitEditorKey` on
+> `BottomStrip`; `SoraEditorHost` guards `SelectionChangeEvent` against `CAUSE_TEXT_MODIFICATION`
+> and stale `syncedText` and checks `cursorDrifted` after `ed.text.replace`; and `{` / `{}` inside
+> empty `(|)` steps past `)` to form `int main(){|}`. The 65.1 navigation and 74.1 Settings
+> decisions below remain preserved and untouched; future changes still require the owner's command
+> under the §3 merge gate. Record: `docs/phases/12-ui-polish-program/PHASE_75_1_EDITOR_TYPING.md`.
+>
+> **Owner's earlier instruction — 2026-09-30, superseded by the block above:** preserve the independent 65.1 navigation and 74.1 Settings decisions, undo the code-writing/typing patches from that chat, and prepare a dedicated typing-only editor phase (proposed 75.1). The fixes are undone and not approved for reimplementation yet. Await the owner's answers to the phase MCQs and explicit “Start Phase 75.1” before coding. The §3 merge gate remains unchanged.
+>
 > **Owner's polish-plan answers, 2026-09-27:** preserve the current look;
 > next chat focuses on Projects/files (proposed 66.1 then 67.1); installation
 > progress stays in Terminal/Output, no new app-wide indicator. These select
@@ -7,9 +34,9 @@
 > UI locks and the guide system. This supersedes earlier mandatory-tour,
 > no-skip and chrome-lock instructions below. Keep internal package/install
 > safety, progress/retry and runner guards. Source implementation and local
-> 177/0 prevalidation recorded in `docs/chat-phase64/README.md`; Android CI
+> 177/0 prevalidation recorded in `docs/phases/09-onboarding-setup/chat-phase64/README.md`; Android CI
 > **green on `4de912a`, run 36305311370** (unit/screenshot tests, debug/release APKs). Full UI review and one-part-per-chat proposals:
-> `docs/UI_POLISH_REVIEW_20260927.md`. Ask the owner’s thoughts before broader
+> `docs/journal/UI_POLISH_REVIEW_20260927.md`. Ask the owner’s thoughts before broader
 > UI changes. The owner now authorised **“Complete docs and merge”** for this
 > delivery via [PR #87](https://github.com/pabi277/CodeC/pull/87), after final-head checks pass.
 > The PR records the actual merge state/commit. No device acceptance invented;
@@ -49,8 +76,8 @@ the change they want.
 > *"From now on i will work on the user experience improvement and the ui so
 > research throughly and create the phases properly after all that i will go
 > for various devices use test."* The four row ideas the owner handed over
-> are researched and specced as **phases 34–37** (`docs/PHASE34_37_ROADMAP.md`
-> + `docs/chat-phase34/…37/`): 34 official file icons, 35 editor typing feel,
+> are researched and specced as **phases 34–37** (`docs/roadmaps/PHASE34_37_ROADMAP.md`
+> + `docs/phases/03-editor/chat-phase34/…37/`): 34 official file icons, 35 editor typing feel,
 > 36 terminal speed & UX, 37 device-as-server LAN. The "Start Phase N" command
 > is therefore **reinstated for 34–37**; the owner ends the series with a
 > cross-device round. The §3 merge gate is unchanged (no PR/merge without the
@@ -189,18 +216,18 @@ does not begin a lifecycle on its own (§1).
 - **Do not redo/re-debug anything marked COMPLETE/✅** unless the identical
   symptom reappears with regression evidence.
 
-Full background: `prompt.md` (self-distrust protocol), `docs/TERMINAL_PLAN.md`
-§B/§J, `docs/chat-phase1/SOLUTIONS.md`, `docs/chat-phase3/REPOSITORY_SIGNING.md`.
+Full background: `prompt.md` (self-distrust protocol), `docs/roadmaps/TERMINAL_PLAN.md`
+§B/§J, `docs/phases/01-terminal-userland/chat-phase1/SOLUTIONS.md`, `docs/phases/02-packages-toolchains/chat-phase3/REPOSITORY_SIGNING.md`.
 
 ## 7. Docs policy
 
 Every update updates the docs **in the same commit**:
 
-- Per-fix record: the owning part doc (e.g. `docs/chat-phase9/…` for editor
+- Per-fix record: the owning part doc (e.g. `docs/phases/03-editor/chat-phase9/…` for editor
   fixes) — a short follow-up section with symptom → root cause → fix → CI run.
-- **Living docs** stay current: `prompt.md` (handoff), `docs/JOURNEY.md`
-  (narrative + numbered items), `docs/NEXT_STEPS.md` (head state line),
-  `docs/TROUBLESHOOTING.md` (owner-facing symptoms).
+- **Living docs** stay current: `prompt.md` (handoff), `docs/journal/JOURNEY.md`
+  (narrative + numbered items), `docs/getting-started/NEXT_STEPS.md` (head state line),
+  `docs/guides/TROUBLESHOOTING.md` (owner-facing symptoms).
 - Never rewrite history destructively; append follow-ups and update only the
   state summaries.
 - Reference `rule.md` from `prompt.md` so the next chat follows this manual.
@@ -217,11 +244,11 @@ Every update updates the docs **in the same commit**:
 
 ## 9. State snapshot (2026-09-13, **Phases 48 AND 49 are 🚧 IMPLEMENTED on `arena/01a09925-codec` (owner: "Start phase 48 and 49", tip `b094b28`; CI round 1 (`34739938499`) red for-cause — one stale Phase-41 pin in `ExitSurveyTest`, moved with its reason — round 2 ✅ GREEN `34740245825` tip `a592295` (25 steps 10m6s, zero error annotations, release APK 6,681,018 B = +4,072 B / +0.06% over the merged 46/47 tip `34737610972`, both phases combined), device rounds pending): 48.1 = pure `CaretVisibilityPolicy` (keys on the sora box's HEIGHT; first observation never owes — quiet-on-open survives) + ONE rescroll owner in `SoraEditorHost` (the app's single `ensurePositionVisible(` site, pinned by `CaretCallSiteTest`, verified against the sora 0.24.6 tag: `ensurePositionVisible(int,int,boolean)`/`getCursor().left()`), postDelayed after layout, noAnimation, cancel-and-replace coalescing, runCatching — plus the recorded deviation that both VM→sora replay paths follow the caret they move (the "accept a suggestion and it goes down" half; a row-for-row accept changes no height); 49.1 = pure `BackRouter.decide(BackState): BackAction` (precedence pinned by `BackRouterTest`; rows 7-9 root-only; `isRoot` = base-segment equality) wired into one router-driven handler per surface (root: pop/prompt/exit from STATE not `popBackStack()`; Editor: the two ad-hoc handlers folded in, drawer on `targetValue` per H2; FileManagerScreen: NEW — back at an open project tree closes it, never the app, owner 4.iv; Guide: PopRoute = back = SKIP) with `BackHandlerWiringTest` pinning every `BackHandler(` is root-or-router — the spec's coach-mark row deliberately NOT built (45.2 round-2 law: back must not end the tour); 49.2 = the exit prompt from state + the diagnostic log on every root press (`AppLogger.i("Back", …)`) + the second door: Settings → Feedback & Support → "Tell us before you go" (audit row 48 in the same commit). 7 new host-test files ≈35 cases; DrawerWiringTest/GuideWiringTest pins moved to the router shapes. Device rounds owed: 48's eight checks, 49's ten + 49.2's eight on two nav modes — and the older 44/45/46/47 rounds; Phase 50 (the cross-device matrix) is the last of the series. Phases 46 AND 47 are ✅ COMPLETE & MERGED via PR #78 (owner device rounds 1-2 passed: "All working merge it"); the session branch also carried DEVICE ROUND 1 (2026-09-13), which reported two bugs — the drawer's ＋ New project… restored a stale tab instead of landing the hub+sheet (`restoreState = false` now), and two projects' tabs could share one editor (all open-a-file navigations are `restoreState = false` instructions + `openProjectFile` resets the context on a different project, the owner's law "2 projects are different so don't open together") — fixed with 5 new test cases, CI ✅ GREEN `34736668771` tip `ce4044d`; then DEVICE ROUND 2 — the guide's beat-2 pick of demo_flask closed the drawer (the close-unless-tour-waits guard mispredicted) — now a pick NEVER closes (switch behind the drawer, list stays dropped-down; `nextBeatIsInDrawer`/`closesAndSwitches`/the guard deleted, `shouldClose` = `drawerOpen && reason != PROJECT_SWITCHED`, tests rewritten), CI ✅ GREEN `34737610972` (the re-round build); device rounds for 44/45 still owed, plus the 46/47 re-round rows — 46: "Open Folder" deleted completely (`FolderImportRemovedTest` pin; the `+` sheet has three rows) and the hub's file tap opens THAT file only (editor route's `single=1` flag; real `~proj/…` status-bar path; no chrome; no launch-state write) while the card ⋮ gained "Open in editor" (whole project via `ProjectEntryFile.pick`: launch default → newest source → first source); 47: the drawer has a ✕ that only closes + Back-closes + the in-drawer PROJECTS section (the "Open folder" dialog is retired, grep = 0) and `codec_keys_enabled` defaults FALSE (system keyboard; stored choices win; `KeysStayPolicy` untouched; guide slide 2 teaches it). Pure code: `EditorOpenMode`/`EditorOpenModePolicy`, `ProjectEntryFile`, `DrawerPolicy`, `DrawerProjectList`. ≈50 new host cases across 13 files incl. Robolectric `SingleFileSaveTest` (save-from-peek writes the real project path; mode flips reload from disk). 44 AND 45 remain 🚧 IMPLEMENTED on `arena/01a0955a-codec` (44: CI ✅ GREEN round 4 `34695797493`, device round 2 NOT run; 45: CI ✅ GREEN through round 6 `34719753700` tip `8c3c10d`, device round G1-G41 NOT run); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED. Next: the owner's device rounds, then "Start Phase 48".**
 
-- **Phases 50-52 📋 PLANNED (2026-09-13, docs-only, no app code) — the "100× more attractive" / polished-UI series** (owner: *"it's not attractive to user to use multiple time so i want to boost it's ui 100× time"*; clarified: **polished** UI, goal = **both** the first ten seconds **and** the daily return, **three** phases, docs first). Records: [`docs/PHASE50_52_UX_RESEARCH.md`](docs/PHASE50_52_UX_RESEARCH.md) (dossier, 16 sources, every app claim a `file:line`/grep on `main` @ `62cfe7b`), [`docs/PHASE50_52_ROADMAP.md`](docs/PHASE50_52_ROADMAP.md), `docs/chat-phase50/` … `docs/chat-phase52/` (README + four part docs + `DEVICE_ROUND.md` each), JOURNEY §71, NEXT_STEPS, and this section. **50 = the look** (50.1 `CodecTokens` spacing/radius/elevation/icon scale; 50.2 `IdentityPolicy` + a brand ramp that ends dynamic-colour-by-default, with the template violet deleted; 50.3 `CodecType` + one icon size per role; 50.4 `CodecMotion` + six named transitions) · **51 = the feel** (51.1 a splash that is CodeC + a first screen with a face; 51.2 the editor with **RUN ▶ as the hero**, chrome-only; 51.3 hub/packages/terminal surfaces + the install moment; 51.4 haptics on **eight** named moments and nowhere else) · **52 = the return** (52.1 `ResumePolicy` — the resume card, decline-able; 52.2 measured first paint + a jank budget on the existing bench APK; 52.3 `StreakLine` — the streak `StatsManager` already counts, shown once in About; 52.4 twelve Roborazzi goldens in **verify** mode + the final walkthrough). Evidence: 801 `dp` literals · 10 corner radii · no type scale · **one** `AnimatedVisibility` and **zero** animation specs · no splash · `StatsManager`'s streak read by nobody · `EditorLaunchState` resuming silently at `MainActivity.kt:807`. Decisions: **D1** no alpha Material 3 Expressive (replicate its measured findings with stable APIs) · **D2** tokens before screens · **D3** no telemetry, no notifications, no new DataStore key. Cost: **one** new dependency (`androidx.core:core-splashscreen`), Roborazzi and `bench/` reused (both already in the repo, both unused). Two 🚩 owner decision points (brand-vs-wallpaper default; OFL code font vs platform monospace). **No code until the owner says "Start Phase 50"; no PR until the owner commands it.** Also new: [`docs/HOW_TO_CREATE_A_PHASE.md`](docs/HOW_TO_CREATE_A_PHASE.md) — the phase recipe, extracted from this repo.
-- **Phase 53 — the cross-device matrix — is ❌ CANCELLED (owner, 2026-09-14: *"Remove the full device cross check phase"*).** It was **Phase 50**; because the owner's numbering law makes the numbers the execution order it first moved to **53** (freeing 50/51/52 for the UI series), and he then removed it from the plan outright. **It is not planned, not owed, not scheduled**; `docs/chat-phase53/` is kept as **history by the owner's choice**. **What replaces it:** (1) one short per-phase handset round when each UI phase ships — L1-L12 (50), F1-F16 (51), R1-R12 (52) — pasted into the owning part doc's `## Test log (Phase NN — …)` in the five-column format; (2) `Build APK` (assemble + unit tests + lint) as the executor of record; (3) 52.4's Roborazzi goldens in **verify** mode for layout/colour regressions. **Unaffected:** the still-owed device rows of 44/45/46/47/48/49, which belong to their own phases and were never part of 53. ⚠️ **Merge-order note (live):** `arena/01a099d8-codec` ships `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` (627 lines, CI ✅ GREEN `34753000709` tip `69a70ec`), which machine-pins the cancelled matrix — `MATRIX_PATH = "docs/chat-phase50/DEVICE_MATRIX.md"`, a required link in `docs/chat-phase50/README.md`, and a `PART_FILES` map demanding a `## Test log (Phase 50 — the cross-device matrix)` section in eleven part docs. **Delete or fully re-scope that test before that branch lands on `main`, or CI goes red on paths this branch moved.** Records: `docs/chat-phase53/README.md` + `DEVICE_MATRIX.md`, `PHASE50_52_ROADMAP.md` §"Device rounds (the gate)", `PHASE44_50_ROADMAP.md` §Phase 50, JOURNEY §72-73. **[PR #80](https://github.com/pabi277/CodeC/pull/80), docs-only (28 files, +3587/−129); merge commanded by the owner 2026-09-14 (*"Merge it"*); tip `e78d36b`, CI ✅ `35491592459`.**
+- **Phases 50-52 📋 PLANNED (2026-09-13, docs-only, no app code) — the "100× more attractive" / polished-UI series** (owner: *"it's not attractive to user to use multiple time so i want to boost it's ui 100× time"*; clarified: **polished** UI, goal = **both** the first ten seconds **and** the daily return, **three** phases, docs first). Records: [`docs/research/PHASE50_52_UX_RESEARCH.md`](docs/research/PHASE50_52_UX_RESEARCH.md) (dossier, 16 sources, every app claim a `file:line`/grep on `main` @ `62cfe7b`), [`docs/roadmaps/PHASE50_52_ROADMAP.md`](docs/roadmaps/PHASE50_52_ROADMAP.md), `docs/phases/11-phone-ui-parity/chat-phase50/` … `docs/phases/11-phone-ui-parity/chat-phase52/` (README + four part docs + `DEVICE_ROUND.md` each), JOURNEY §71, NEXT_STEPS, and this section. **50 = the look** (50.1 `CodecTokens` spacing/radius/elevation/icon scale; 50.2 `IdentityPolicy` + a brand ramp that ends dynamic-colour-by-default, with the template violet deleted; 50.3 `CodecType` + one icon size per role; 50.4 `CodecMotion` + six named transitions) · **51 = the feel** (51.1 a splash that is CodeC + a first screen with a face; 51.2 the editor with **RUN ▶ as the hero**, chrome-only; 51.3 hub/packages/terminal surfaces + the install moment; 51.4 haptics on **eight** named moments and nowhere else) · **52 = the return** (52.1 `ResumePolicy` — the resume card, decline-able; 52.2 measured first paint + a jank budget on the existing bench APK; 52.3 `StreakLine` — the streak `StatsManager` already counts, shown once in About; 52.4 twelve Roborazzi goldens in **verify** mode + the final walkthrough). Evidence: 801 `dp` literals · 10 corner radii · no type scale · **one** `AnimatedVisibility` and **zero** animation specs · no splash · `StatsManager`'s streak read by nobody · `EditorLaunchState` resuming silently at `MainActivity.kt:807`. Decisions: **D1** no alpha Material 3 Expressive (replicate its measured findings with stable APIs) · **D2** tokens before screens · **D3** no telemetry, no notifications, no new DataStore key. Cost: **one** new dependency (`androidx.core:core-splashscreen`), Roborazzi and `bench/` reused (both already in the repo, both unused). Two 🚩 owner decision points (brand-vs-wallpaper default; OFL code font vs platform monospace). **No code until the owner says "Start Phase 50"; no PR until the owner commands it.** Also new: [`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`](docs/getting-started/HOW_TO_CREATE_A_PHASE.md) — the phase recipe, extracted from this repo.
+- **Phase 53 — the cross-device matrix — is ❌ CANCELLED (owner, 2026-09-14: *"Remove the full device cross check phase"*).** It was **Phase 50**; because the owner's numbering law makes the numbers the execution order it first moved to **53** (freeing 50/51/52 for the UI series), and he then removed it from the plan outright. **It is not planned, not owed, not scheduled**; `docs/phases/11-phone-ui-parity/chat-phase53/` is kept as **history by the owner's choice**. **What replaces it:** (1) one short per-phase handset round when each UI phase ships — L1-L12 (50), F1-F16 (51), R1-R12 (52) — pasted into the owning part doc's `## Test log (Phase NN — …)` in the five-column format; (2) `Build APK` (assemble + unit tests + lint) as the executor of record; (3) 52.4's Roborazzi goldens in **verify** mode for layout/colour regressions. **Unaffected:** the still-owed device rows of 44/45/46/47/48/49, which belong to their own phases and were never part of 53. ⚠️ **Merge-order note (live):** `arena/01a099d8-codec` ships `app/src/test/java/com/codeci/ide/DeviceMatrixTest.kt` (627 lines, CI ✅ GREEN `34753000709` tip `69a70ec`), which machine-pins the cancelled matrix — `MATRIX_PATH = "docs/phases/11-phone-ui-parity/chat-phase50/DEVICE_MATRIX.md"`, a required link in `docs/phases/11-phone-ui-parity/chat-phase50/README.md`, and a `PART_FILES` map demanding a `## Test log (Phase 50 — the cross-device matrix)` section in eleven part docs. **Delete or fully re-scope that test before that branch lands on `main`, or CI goes red on paths this branch moved.** Records: `docs/phases/11-phone-ui-parity/chat-phase53/README.md` + `DEVICE_MATRIX.md`, `PHASE50_52_ROADMAP.md` §"Device rounds (the gate)", `PHASE44_50_ROADMAP.md` §Phase 50, JOURNEY §72-73. **[PR #80](https://github.com/pabi277/CodeC/pull/80), docs-only (28 files, +3587/−129); merge commanded by the owner 2026-09-14 (*"Merge it"*); tip `e78d36b`, CI ✅ `35491592459`.**
 - **Phase 48 + 49 🚧 IMPLEMENTED (2026-09-13, `arena/01a09925-codec`, owner: "Start phase 48 and 49")** — 48.1 *nothing hides behind the keyboard*: pure `CaretVisibilityPolicy` + `EditorViewport` (the policy keys on the box's height — the five chrome booleans are causes, the height is the effect; `previous == null` never owes, so the 35.4 quiet-on-open law holds) + ONE rescroll owner in `SoraEditorHost` (single `ensurePositionVisible(` site pinned by `CaretCallSiteTest`; the sora 0.24.6 API verified from the tag itself: `ensurePositionVisible(int, int, boolean)` at :2238/:2249, `getCursor()` at :3053, `Cursor.left()` → public `.line`/`.column`): `onSizeChanged` → policy → `postDelayed` (never inline), `noAnimation = true`, cancel-and-replace coalescing (0 ms shrinking / 90 ms growing), `runCatching`; deviation recorded — both VM→sora replay paths schedule a follow for the caret they move (a ghost/chip accept swaps row for row at constant height, so height alone would miss the owner's second sentence; typing echoes skip on reference equality; find-next/quick-fix/trackpad gain caret-visible). 49.1 *one back table*: `BackRouter.decide(BackState): BackAction` + `isRoot` (base-segment equality; parameterised patterns are roots; the startsWith trap dead) wired one-handler-per-surface, every handler router-driven (`BackHandlerWiringTest`): root = pop/prompt/exit from STATE (`previousBackStackEntry` + `isRoot(route, screens.map{it.route})`, not `popBackStack()` — 49.2 causes A/B die; prompt-up keeps the handler OFF — the dialog's own back is the second press; every press logs `AppLogger.i("Back", …)`, the evidence gate), Editor = one handler (unsaved → drawer on `targetValue` per H2 → sheet/dialog → find → output guarded by the keyboard), FileManagerScreen = NEW (back at an open tree = `closeProject()`, never exit — owner 4.iv), Guide = PopRoute (= back = SKIP); deviation recorded: the spec's `CloseCoachMark` row NOT built (45.2 round-2 owner law: back must not end the tour; audit row 9 corrected). 49.2 *the prompt from state + the second door*: Settings → Feedback & Support → "Tell us before you go" (same dialog, on demand; cause C — a home swipe sends no back event — is honestly unfixable in code), `SETTINGS_AUDIT.md` row 48 in the same commit. **7 new host-test files ≈35 cases**; DrawerWiringTest + GuideWiringTest pins moved to the router shapes. Device round (2026-09-13): the owner confirmed the system-keyboard default and reported *"when i use app dedicate keyboard and typing it's blinking the full code"* — root cause: every programmatic edit replayed through sora's `setText` (new Content + analyzer reset + async full relayout + input restart, per keystroke; the caret-follow ruled out first — `ensurePositionVisible` no-ops within 1 px). Fix: pure `IncrementalEdit` (prefix/suffix delta, 2048-char budget) — small edits now apply as ONE `Content.replace` through sora's own listeners; atomic `setText` stays the fallback (first replay / big rewrites / failure); `IncrementalEditTest` ×13 + `ReplayPathWiringTest` ×5 (TROUBLESHOOTING §44). Round 1 continued (same day): the owner re-stated the single-click law (*"one click close the guides box and again have click the option to work make it single click"*) and asked for a demo_flask box — evidence convicted the PLAN, not the overlay (the pick had no box since 47.1; beat 5 could detour through the run chooser; the header's guided tap was a toggle in disguise) — the tour is now **11 beats** (new step 3 DEMO_PICK on the demo's own in-drawer PROJECTS row via pure `drawerDemoPickAnchor`, the row's own tap published; beat 2 teaches only the tap; the header's guided tap is goal-directed — drop, never fold; the tour's RUN tap is `onGuideRunTap` = run the open file, chooser kept for real use), owner law recorded: ONE tap on a guided control performs the WHOLE thing the box teaches; CI ✅ GREEN `34742868395` tip `c5e73ac` (first push `34742573726` red for-cause: two pins travelled stale) (TROUBLESHOOTING §45, PART_45_2 §Round 7, JOURNEY §70). ROUND RESULT (2026-09-13, later): the owner ran the round — **"All device passed. Now merge it."** — every owed check green in one pass; merge commanded via [PR #79](https://github.com/pabi277/CodeC/pull/79). Next: Phase 50's cross-device matrix (the last of the series).
 
-- **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED (the plan doc itself ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit `8eff438`); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
+- **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start — 44: CI ✅ GREEN round 4 `34695797493`, device round 1 🔴 FAILED and fixed, round 2 NOT run ([`chat-phase44/DEVICE_ROUND.md`](docs/phases/09-onboarding-setup/chat-phase44/DEVICE_ROUND.md) R1-R8 then D1-D12); 45: CI ✅ GREEN rounds 1-3 (`34698914219` tip `3c597b2`, `34704379023` tip `acadaee`, `34707337429` tip `0fcb3b6`), then the owner ran round 3 and came back with *"1st click disappear the massage and i have to click 2nd time"* + *"when the userland is installing … the user can not access any other option"* — round 4 implemented (ONE tap per beat; the chrome lock), CI ✅ GREEN `34711827176` on tip `e7759f1`, then the owner accepted the lock but corrected its timing (*"still it late user can switch before the start of userland download … Make it instantly after 1st open"*) — round 5 made it PREFIX-keyed instead of stage-keyed (paused from the first frame, safe mode exempt), CI ✅ GREEN `34714305062` on tip `6c3cfea`, then the owner ran round 5 and reported the pause outliving the unpack (*"even after unpacking the userland it still stay lock if i refresh it it's the open the editor"*) — round 6 bounded the pause by the setup itself (a SETTLED stage always reopens the app, and a shell coming alive re-reads the disk), CI ✅ GREEN `34719753700` on tip `8c3c10d` (release APK 6,675,154 B), device round G1-G41 NOT run ([`chat-phase45/DEVICE_ROUND.md`](docs/phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md) G1-G41) — next: "Start Phase 46"; 46-50 are 📋 PLANNED (the plan doc itself ✅ MERGED to `main` via [PR #75](https://github.com/pabi277/CodeC/pull/75), merge commit `8eff438`); Phase 43 is ❌ CANCELLED and superseded by 46; 38-42 are ✅ COMPLETE & MERGED (42 = the shareable release, [PR #71](https://github.com/pabi277/CodeC/pull/71))**)
 
 - **Phase 45 🚧 IMPLEMENTED (2026-09-12, `arena/01a0955a-codec`, owner: "Start
   Phase 45")** — *the guide: five slides on first run, five spotlights on first
@@ -260,7 +287,7 @@ Every update updates the docs **in the same commit**:
   those two in one atomic edit. **50 new host cases** (`GuidePlanTest` 15 ·
   `CoachMarkPlanTest` 12 · `TooltipPlacementTest` 10 · `GuideWiringTest` 13 source
   pins) = **159 green locally**; `SettingsAuditTest` kept green by adding rows 53-54
-  to `docs/chat-phase38/SETTINGS_AUDIT.md` in the same commit (About 20, total 62).
+  to `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md` in the same commit (About 20, total 62).
   No new dependency (pinned: every `ui/guide` import + no
   `showcase/intro/onboarding/tooltip` in `libs.versions.toml`), no permission, no
   route, no telemetry. **The pin caught the plan's own copy:** slide 5 was specced
@@ -386,11 +413,11 @@ Every update updates the docs **in the same commit**:
   tapped). The tour pauses with the chrome (`blockedByForeground … || chromeLock.
   locked`): a box on a paused control could only be spent by a tap that merely shows the
   sentence. Deviations **17-20**; the lock is specified in
-  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
   §"Phase 45 round 4 — the chrome lock", the tap fix in
-  [`chat-phase45/PART_45_2_COACH_MARKS.md`](docs/chat-phase45/PART_45_2_COACH_MARKS.md)
+  [`chat-phase45/PART_45_2_COACH_MARKS.md`](docs/phases/09-onboarding-setup/chat-phase45/PART_45_2_COACH_MARKS.md)
   §Round 4, and the owner-facing text in
-  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §38. **193 host cases green locally**
+  [`TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) §38. **193 host cases green locally**
   (`CoachMarkPlanTest` 25, `GuideWiringTest` 19, `SetupGatePolicyTest` 30,
   `SetupGateWiringTest` 23, `GuidePlanTest` 15, `TooltipPlacementTest` 10,
   `DemoProjectSeedTest` 7 = 76 guide/demo + 117 Phase 44). **CI on the round-4 commit
@@ -432,9 +459,9 @@ Every update updates the docs **in the same commit**:
   while the *userland* is built, `SetupGatePolicy.can` remains the only answer about
   capability, and 45.2's 76 guide/demo cases are byte-identical (the tour just pauses a
   few seconds earlier, which is deviation 20 doing its job). Specified in
-  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
   §"Round 5 — *Make it instantly after 1st open*", owner-facing in
-  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §39. **197 host cases green locally**
+  [`TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) §39. **197 host cases green locally**
   (`SetupGatePolicyTest` 33 — the first frame is paused incl. the probe window, a repair
   and a disk-denied READY; a usable prefix pauses nothing at ANY stage incl. an upgrade
   moving through all three; a reduced start pauses nothing while a package install still
@@ -485,9 +512,9 @@ Every update updates the docs **in the same commit**:
   never paused, `reducedStart` still exempts safe mode, `editorChromeLocked` is still a
   package-install-only answer, and the lock still never weakens the gate beside it.
   Specified in
-  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
+  [`chat-phase44/PART_44_1_VISIBLE_SETUP.md`](docs/phases/09-onboarding-setup/chat-phase44/PART_44_1_VISIBLE_SETUP.md)
   §"Round 6 — *even after unpacking the userland it still stay lock*", owner-facing in
-  [`TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) §40. **199 host cases green locally**
+  [`TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) §40. **199 host cases green locally**
   (`SetupGatePolicyTest` 34 — round 5's `READY`-is-paused assertion reversed and
   *round 6 - the lock dies with the setup even when the facts are stale* added: all three
   settled stages open every option with unusable facts beside them, all four in-flight
@@ -509,7 +536,7 @@ Every update updates the docs **in the same commit**:
   50 new cases ran on real Gradle/JUnit/Robolectric and lint is clean; release APK
   6,664,474 B (**+12,792 B / +0.19%** over Phase 44 round 4 — the measured cost of
   the whole guide), debug 25,661,856 B, v1.3.17. **The exit condition is a
-  DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/chat-phase45/DEVICE_ROUND.md)
+  DEVICE condition** — [`chat-phase45/DEVICE_ROUND.md`](docs/phases/09-onboarding-setup/chat-phase45/DEVICE_ROUND.md)
   **G1-G41** written through round 6 and **NOT run** (G28 the optional 20-second
   stall-guard row, G29-G33 the one-tap rule, G34-G38 the chrome lock, G39-G40 its
   first-frame timing, G41 its release); CI is ✅ GREEN on all six rounds (round 6 =
@@ -543,7 +570,7 @@ Every update updates the docs **in the same commit**:
   seven classes were green locally through this section's kotlinc harness; the
   Compose/JNI edges cannot compile in-sandbox at all (no `android.jar`), so
   **CI's `Build APK` is the executor of record** and the nine-row exit condition
-  is a **device** condition — `docs/chat-phase44/DEVICE_ROUND.md` (12 rows, incl.
+  is a **device** condition — `docs/phases/09-onboarding-setup/chat-phase44/DEVICE_ROUND.md` (12 rows, incl.
   the three kill points) is written and **NOT run**. Deviations are recorded in
   the part docs (`OPEN_TERMINAL` never refused; the planned Robolectric
   `SetupStateVmTest` replaced by pure tracker tests + `SetupGateWiringTest`
@@ -585,7 +612,7 @@ Every update updates the docs **in the same commit**:
   **disk**, applied by `navigate()` after the first composition, never by an
   argument-carrying `startDestination`. **109 host cases** green locally;
   owner-facing record TROUBLESHOOTING §35, re-test rows R1-R8 in
-  `docs/chat-phase44/DEVICE_ROUND.md`. **CI round 4 (`34695797493`, tip
+  `docs/phases/09-onboarding-setup/chat-phase44/DEVICE_ROUND.md`. **CI round 4 (`34695797493`, tip
   `4bf3c4c`) is ✅ GREEN** — `conclusion: success`, job `build` 10m53s, zero
   error annotations, artifacts `CodeC-IDE-release` (6,651,682 B) and
   `CodeC-IDE-debug` (25,608,360 B), v1.3.17. Per §5 the green run means
@@ -625,10 +652,10 @@ Every update updates the docs **in the same commit**:
   (49.1 `BackRouter` precedence table; 49.2 the exit prompt decided from state,
   kept ON per the owner, plus a Settings door for gesture-nav devices) →
   **50** the cross-device round (`DEVICE_MATRIX.md`, 4 device classes, 49
-  rows). Records: [`docs/PHASE44_50_UX_RESEARCH.md`](docs/PHASE44_50_UX_RESEARCH.md)
-  (the dossier — every claim carries a `file:line`), `docs/PHASE44_50_ROADMAP.md`,
-  and `docs/chat-phase44/` … `docs/chat-phase50/` *(the cross-device round —
-  renumbered to `docs/chat-phase53/` and then ❌ cancelled on 2026-09-14; see
+  rows). Records: [`docs/research/PHASE44_50_UX_RESEARCH.md`](docs/research/PHASE44_50_UX_RESEARCH.md)
+  (the dossier — every claim carries a `file:line`), `docs/roadmaps/PHASE44_50_ROADMAP.md`,
+  and `docs/phases/09-onboarding-setup/chat-phase44/` … `docs/phases/11-phone-ui-parity/chat-phase50/` *(the cross-device round —
+  renumbered to `docs/phases/11-phone-ui-parity/chat-phase53/` and then ❌ cancelled on 2026-09-14; see
   §9).* **Owner clarifications of record:** 4.iv = *both* the editor drawer and the hub file tree (plus an audit
   of every screen); 5.B = *keep the exit prompt ON, make it consistent*;
   4.ii = *in-drawer project picker, not a SAF folder picker*; the guide =
@@ -636,7 +663,7 @@ Every update updates the docs **in the same commit**:
   dependencies (the guide and coach marks are built in-house per §6), the
   keyboard default flip is a **reversal** of the Phase 28 "DEFAULT ON per owner
   round 2" decision on the owner's explicit instruction (recorded in
-  `chat-phase47/PART_47_2`), and **no phase in this series may show a modal
+  `phases/11-phone-ui-parity/chat-phase47/PART_47_2`), and **no phase in this series may show a modal
   nag more than once**. Phase 50 exists because four of these fixes are only
   meaningful on hardware and this sandbox has no device, no emulator and no
   Gradle cache.
@@ -644,7 +671,7 @@ Every update updates the docs **in the same commit**:
 - **Phase 43 CANCELLED (2026-09-12)** — the owner's test-phase report row 3 was
   *"remove the open a folder option… completely"*, so "open a folder as a
   project" is removed from the queue and from the app's surface. Its two part
-  docs are deleted and `docs/chat-phase43/README.md` is the tombstone
+  docs are deleted and `docs/phases/13-archive/chat-phase43/README.md` is the tombstone
   (❌ CANCELLED, with the reason and what replaces it). What Phase 43 was
   solving is re-solved better by **Phase 46**: instead of importing an external
   folder (an unbounded recursive copy with no resumability —
@@ -689,7 +716,7 @@ Every update updates the docs **in the same commit**:
   — the "no nag" law amended by owner request, Phase 42 owns its fate).
   `ExitSurveyTest` (8) + amended persistence test (attachment-shaped
   booleans banned; the switch is allowed) — 71/71 host-pre-validated.
-  Round-2 runbook `docs/chat-phase41/DEVICE_TEST_PLAN.md` (D1–D8; D8 =
+  Round-2 runbook `docs/phases/08-release-support/chat-phase41/DEVICE_TEST_PLAN.md` (D1–D8; D8 =
   the chat opens to the owner's own number). **Follow-up CI ✅ GREEN —
   `Build APK` `34529280630` on tip `4cfa1ce`** (pushed after a §2.4
   realign: the between-turn sandbox reset had moved HEAD to the base
@@ -720,12 +747,12 @@ Every update updates the docs **in the same commit**:
   Robolectric DataStore round-trip was replaced by pure
   `FeedbackContacts` tests + a store source-scan, for the 40.4
   never-push-unverifiable reason). Device runbook
-  `docs/chat-phase41/DEVICE_TEST_PLAN.md` (8 checks). **CI ✅ GREEN on the first push — `Build APK` `34525080153` on tip
+  `docs/phases/08-release-support/chat-phase41/DEVICE_TEST_PLAN.md` (8 checks). **CI ✅ GREEN on the first push — `Build APK` `34525080153` on tip
   `8fdbe6a`** (assemble + `:app:testDebugUnitTest` + `:app:lintDebug`
   through the bridge; artifact `CodeC-IDE` 24 992 107 B = +60 216 B /
   +0.24 % vs the Phase 40 merge build). **Device round pending (the
   owner's gate); merge HELD for the owner's command.** Records:
-  `docs/chat-phase41/`, JOURNEY §57, TROUBLESHOOTING §30.
+  `docs/phases/08-release-support/chat-phase41/`, JOURNEY §57, TROUBLESHOOTING §30.
 
 - **Phase 38 (Identity: app icon + Settings trim) is ✅ COMPLETE,
   DEVICE-PASSED & MERGED to `main` via PR #64 → `main` at `dcd65b4bc3e65d268bcc354da9d413d74eb25038` (merge commit, history preserved)** (owner: "Start Phase
@@ -733,7 +760,7 @@ Every update updates the docs **in the same commit**:
   one build; CI GREEN (`34442522565` on `ce1a38c`; docs follow-up
   `34443027257` on `d37bba9`) and the device round passed by owner
   report (no device details supplied, none invented). **38.1:** the original `>_` mark
-  (`docs/icon/codec-mark.svg`) as flat adaptive layers + a REAL
+  (`docs/brand/icon/codec-mark.svg`) as flat adaptive layers + a REAL
   `monochrome` layer (the template had pointed it at the full-colour
   foreground), 10 committed density rasters + `codec-512.png` generated
   by `scripts/render_icon.mjs` (sharp 0.35.4 pinned; two runs =
@@ -761,7 +788,7 @@ Every update updates the docs **in the same commit**:
   enforced inside `stageAll`; Settings → Storage temporary-files row;
   user `.gitignore` always wins. Next: device round, then `Start Phase
   40` → 41 → 42 → 43 (the numbers are the order; 39.1 before 43.2 is now
-  satisfied).** Records: `docs/chat-phase38/`, `docs/chat-phase39/`,
+  satisfied).** Records: `docs/phases/10-app-polish-settings/chat-phase38/`, `docs/phases/05-run-output-preview/chat-phase39/`,
   JOURNEY §54 / §55.
 
 - **Phases 38-43 are 📋 PLANNED — docs only, no app code; the plan itself is now on `main`** (written 2026-09-10,
@@ -776,8 +803,8 @@ Every update updates the docs **in the same commit**:
   sequence: **39.1 before 43.2** (a linked user folder must never receive CodeC's
   build outputs). Old→new map: 42→38, 40→39, 38→40, 41→41, 43→42, 39→43.
   Records:
-  `docs/PHASE38_43_ROADMAP.md` + `docs/PHASE38_43_OSS_RESEARCH.md` +
-  `docs/chat-phase38/`…`chat-phase43/`. CI on the planning commit is ✅ GREEN
+  `docs/roadmaps/PHASE38_43_ROADMAP.md` + `docs/research/PHASE38_43_OSS_RESEARCH.md` +
+  `docs/phases/10-app-polish-settings/chat-phase38/`…`chat-phase43/`. CI on the planning commit is ✅ GREEN
   (`Build APK` `34433912076`, tip `8d365c4`, 6 m 18 s — a docs-only push, run
   anyway). Each phase starts on the owner's "Start Phase N" and keeps every law of this manual (device gates are the
   owner's, CI is the executor of record, no PR without an explicit command).
@@ -827,7 +854,7 @@ Every update updates the docs **in the same commit**:
   `34367008019` and current-tip `34367770583` are GREEN. The owner supplied no
   device/model/measurement details, so the record makes no unsupported claims.
 - **Phase 36** is ✅ DEVICE-PASSED by owner report on
-  `arena/01a086a0-codec` from `docs/chat-phase36/`: startup measurement and
+  `arena/01a086a0-codec` from `docs/phases/01-terminal-userland/chat-phase36/`: startup measurement and
   readiness UX, progressive PTY output, foreground-service background
   survival, and session-switch redraw fixes all passed device validation.
   Fixes are `da126cf`/`11fe8d7`; Build APK CI `34374983032` and `34375710614`
@@ -859,9 +886,9 @@ Every update updates the docs **in the same commit**:
   keystroke, 100 % jank — the owner's complaint, now measured); C-compose2
   hit the whole-window recomposition trap. **Verdict in writing: 25.2 (Sora
   integration) CHOSEN — starts only on the owner's "Start Phase 25.2";
-  25.3 ❌ CANCELLED.** Decision table `docs/EDITOR_MOBILE_RESEARCH.md` §3.1;
-  record `docs/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.4–§4.6,
-  `docs/JOURNEY.md` §34.
+  25.3 ❌ CANCELLED.** Decision table `docs/research/EDITOR_MOBILE_RESEARCH.md` §3.1;
+  record `docs/phases/03-editor/chat-phase25/PART_25_1_SPIKE_BENCH.md` §4.4–§4.6,
+  `docs/journal/JOURNEY.md` §34.
 - **Phase 25.2 (sora-editor integration) IMPLEMENTED (2026-09-04, owner:
   "Start Phase 25.2")** on `arena/01a06b20-codec` — widget-only swap,
   VM canonical, sora as a BINARY Gradle dep (LGPL-2.1 checklist in
@@ -873,8 +900,8 @@ Every update updates the docs **in the same commit**:
   `:bench` on `arena/01a070ae-codec` (K1 compose core / K2 sora core,
   IME-free grid fed through the production key model; latency/echo/IME-
   flicker probes; CI bench wrapper re-added — §5). **The owner's device
-  round IS the gate** (recipe `docs/chat-phase28/PART_28_1_SPIKE.md` §5,
-  runbook `docs/TROUBLESHOOTING.md` §10). **Device round 1 recorded
+  round IS the gate** (recipe `docs/phases/03-editor/chat-phase28/PART_28_1_SPIKE.md` §5,
+  runbook `docs/guides/TROUBLESHOOTING.md` §10). **Device round 1 recorded
   (2026-09-05, §6): K2/sora meets every budget; K1's reds are the core, not
   the keyboard. OWNER VERDICT: GO ("Go", 2026-09-05) — the four human
   confirmations ride 28.2's device round; 28.2 (S2 path) started the same
@@ -883,7 +910,7 @@ Every update updates the docs **in the same commit**:
   previews). **CodeC Keys is DEFAULT ON per owner ("user can off it")** —
   off returns the 22.x strip+IME world intact (L0 fallback). Retest card
   `TROUBLESHOOTING.md` §11; PASS opens 28.3 (recorded in
-  `docs/EDITOR_MOBILE_RESEARCH.md` §9.1).**
+  `docs/research/EDITOR_MOBILE_RESEARCH.md` §9.1).**
 - **Open owner items (not blocking):** Phase 17 optional conflict recipe (needs
   a real conflict), Phases 15/16 device-round-3 dedicated pass, Phase 14 §5
   device round, Phase 24 E.3 hardware-shortcut device pass (needs a Bluetooth
@@ -891,8 +918,8 @@ Every update updates the docs **in the same commit**:
   confirmation).
 - **Phases 29–33 📋 PLANNED (2026-09-05, docs only, no app code):** VS Code
   TextMate colour, snippets/Emmet, LSP as Packages, phone canvas, first-hour
-  UX — `docs/chat-phase29/` … `docs/chat-phase33/`. Research:
-  `docs/OSS_REPLACEMENT_RESEARCH.md`, `docs/PHONE_UX_ANALYSIS.md`.
+  UX — `docs/phases/03-editor/chat-phase29/` … `docs/phases/09-onboarding-setup/chat-phase33/`. Research:
+  `docs/research/OSS_REPLACEMENT_RESEARCH.md`, `docs/research/PHONE_UX_ANALYSIS.md`.
   Implementation only on owner `"Start Phase N"`. 28.3/28.4 remain the
   Keys remainder.
 - **Phase 31 (IntelliSense as Packages) ✅ MERGED (2026-09-08, owner: "Ok update all md files and merge it").** CI `34210108408` GREEN (tip `278099e`, 9m14s). Hand-rolled LSP stdio JSON-RPC (`LspWire`/`LspStdioClient`/`StdioLspProviderFactory`); sora `editor-lsp` AAR stays gated (`editorLsp` property) — minSdk 26 vs CodeC 24. Chip strip + ghost merge LSP on `EditorViewModel.refreshCompletionItems`. Device recipe (`TROUBLESHOOTING.md` §15) **not run**. Earlier: Pure-Kotlin engine under `ui/editor/lsp/` (`LspServerConfig`, `LspItemMapping`, `LspManager`, `ActiveLspManager`) + `editor-lsp` 0.24.6 binary Gradle dep (LGPL-2.1, same family as the owner-accepted 25.2 sora editor) + activity lifecycle on `onResume`/`onPause` (L2) + `completionMasterFlow` collection (master OFF = no LSP process, L3) + 25 host tests pre-validated on a local JVM (Temurin 25 + kotlinc 2.4.20) via reflection on the same `@Test` methods JUnit will execute in CI → **25/25 pass** = 31.1. Then 31.2 + 31.3 + 31.4 added: the eight Packages hub install cards (C/C++ `intellisense-c-cpp-clangd` → `pkg install -y clang`; Python `intellisense-python-pylsp` → `pkg install -y python-pip && pip install --user python-lsp-server`; JS/TS `intellisense-js-tsserver` → `npm install -g typescript typescript-language-server`; **31.4:** shell `intellisense-shell-bash` → `npm install -g bash-language-server`; HTML/CSS/JSON `intellisense-{html,css,json}-vscode` → `npm install -g @zed-industries/vscode-langservers-extracted`; YAML `intellisense-yaml-redhat` → `npm install -g yaml-language-server`), a pure `LspStatusResolver` so the editor can read "installed / available card / no card" without touching the manager, and a `SystemBinaryProbe(filesDir)` upgrade so the device probe resolves to the same `$PREFIX/bin/<binary>` path the `ModulesScreen.checkIsInstalled` check and the Phase 21 D.2 install gate already use. **+29 host cases (39 from 31.1–31.3 + 5 LspServerCatalog updates + 4 LspStatusResolver + 5 IntelliSenseCatalog in 31.4 → 54/54 planned; local pre-validation: 39/39 confirmed on the JRE/kotlinc harness before the sandbox reset; CI is the executor of record for the full 54).** **CI `Build APK` run `34148225060` GREEN on tip `30af7d6` (8 m 9 s) — assemble + `:app:testDebugUnitTest` + `:app:lintDebug` + bench.** Trip history: 31.4 first push `cced35f` failed at `Unresolved reference 'schema'` (the `$schema` literal in card descriptions was parsed as a Kotlin string template); `30dc08a` escaped with `${'$'}schema`; second push `30dc08a` failed at `Redeclaration: LspServerCatalogTest` because the 31.1 commit had put the class in `LspItemMappingTest.kt` and the new `LspServerCatalogTest.kt` file collided; `30af7d6` deleted the new file and updated the existing class for the 10-language scope. The 13 NoCard languages shrink to 8 in 31.4 (TEXT, MARKDOWN, GO, RUST, PHP, RUBY, LUA, XML — gopls/rust-analyzer stay deferred until those compilers are in the repo; PHP/Ruby/Lua need complex installs; XML has no widely-deployed LSP; markdown/text have no good LSP). **The owner runs phase 32 in parallel on a different branch** — 31.x changes do not touch the editor surface area phase 32 modifies (bottom nav, 28.3 chips-as-row-0), so the two should compose cleanly on `main` whenever each ships. **No PR/merge without the owner's command.** CI is the executor of record (local pre-validation is a smoke, not a substitute).
@@ -908,9 +935,9 @@ Every update updates the docs **in the same commit**:
   Lazy per-language grammar loading + background warm-up; LGPL/MIT notices
   in `assets/licenses/`. Host tests: `TextMateGrammarsTest` (pure) +
   `TextMateSupportTest` (Robolectric, real assets, analyzer-swap law).
-  **Gate = owner device round** (`docs/TROUBLESHOOTING.md` §12; budgets:
+  **Gate = owner device round** (`docs/guides/TROUBLESHOOTING.md` §12; budgets:
   keystroke p95 ≤ 16.7 ms bench.c, APK delta ≤ +1.5 MiB). Records:
-  `docs/chat-phase29/` (README + §4/§3 sections), JOURNEY §40. **No
+  `docs/phases/03-editor/chat-phase29/` (README + §4/§3 sections), JOURNEY §40. **No
   PR/merge without the owner's command.**
 - **Session-tooling note (2026-09-05, final):** a mid-session GitHub
   token expiry (401s) was resolved when the owner reconnected Arena.
@@ -1016,7 +1043,7 @@ Every update updates the docs **in the same commit**:
   (the `gradle-bootstrap` shim runs `:app:testDebugUnitTest` inside the
   assemble step, before the upload step), so a coin-flip third-party flake
   blocks the owner's build — tolerate it narrowly and loudly, never broadly.**
-  Records: `docs/chat-phase30/` (README + §3 of each part), JOURNEY §41,
+  Records: `docs/phases/03-editor/chat-phase30/` (README + §3 of each part), JOURNEY §41,
   TROUBLESHOOTING §13/§14. **Merged via PR #55 on the owner's explicit
   command.**
 - **Session-tooling note (2026-09-06, Phase 30):** §5's "the agent sandbox has
@@ -1154,7 +1181,7 @@ Every update updates the docs **in the same commit**:
   release 6,714,740 B = +27,066 B / +0.40 %** (same `versionName` 1.3.17). **Device round F1-F16 +
   the four regression rows F17-F20: ALL PASS by the owner's report (2026-09-21, verbatim: *"All pass
   record and merge"*)**, recorded per row in the owning part docs' `## Test log (Phase 51 — the
-  feel)` and in [`chat-phase51/README.md`](docs/chat-phase51/README.md) §Test log — the report named
+  feel)` and in [`chat-phase51/README.md`](docs/phases/11-phone-ui-parity/chat-phase51/README.md) §Test log — the report named
   no device/OS/theme, and the record keeps exactly that. **✅ MERGED to `main` on the owner's own
   command via [PR #82](https://github.com/pabi277/CodeC/pull/82)** (merge commit recorded in
   JOURNEY §75). Next: **`Start Phase 52`** — the return (visible, decline-able resume; measured
@@ -1198,3 +1225,4 @@ provisions Gradle 9.0.0 and routes through the `gradle-bootstrap` shim
 `./gradlew` and listing `:app:assembleDebug :app:testDebugUnitTest
 :app:lintDebug` explicitly would delete the shim — but only once the readable
 `::error` annotations the shim produces today are preserved.
+ed.

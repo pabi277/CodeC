@@ -1,0 +1,160 @@
+# Phase 38.2 — Settings audit: one row, one effect
+
+> **Law (PART_38_2 §Design 3):** every control in Settings must change
+> something observable, and the stored value behind it must have a
+> reader. A dead switch is worse than no switch, because the user
+> believes it did something. `SettingsAuditTest` pins this table to the
+> code (section order + control count), and `SettingsKeysHaveReadersTest`
+> walks the real chain (key → flow/setter → out-of-store reader) for
+> every DataStore key in the three stores, so the NEXT dead row fails
+> the build instead of rotting back.
+
+Audit date: 2026-09-22, against `SettingsScreen.kt` as edited by Phase
+52.3 (12 sections, 66 `Settings*` control rows). Phase 41 added a 12th
+section — **Feedback & Support** (one OPEN row since the follow-up round;
+the content lives on `FeedbackScreen`, see "Other surfaces"). Phase 52.3
+adds one read-only About progress line backed by the existing StatsManager
+counters.
+
+**Phase 62 reads this table too.** The search added in Phase 62 is built over the *same* 66
+rows this document numbers: `ui/settings/SettingsSearch.kt`'s catalog is generated from each
+`Settings*` call's own `title = …` argument in screen order, and `SettingsSearchPolicyTest` re-counts
+this table per section against it — so *one row, one effect* and *one row, one search result* are
+the same promise. Nothing in the numbered rows below changed for it.
+
+## 2026-09-27 update — guide removal
+
+The owner removed the guide system. The live inventory is now **64 controls**:
+Help & guide and Reset tips are removed from the screen and search catalog.
+The guide/coach-mark/typing-tip preference readers are removed; legacy stored
+values are harmless and ignored. Earlier dated census counts above are history.
+
+## Deleted by this audit (with evidence)
+
+| Was | Kind | Evidence it was dead | Disposition |
+|---|---|---|---|
+| "Termux Engine" section (status row, OPEN TERMUX, CHECK BRIDGE, "How to enable") | card + buttons | `BACKEND_AUTO` is the only backend since Phase 21 removed the picker — nothing to choose; the four steps moved to the error path (`CompilerRemediation`, Output Panel) | **deleted**; fallback engine + `RUN_COMMAND` permission + `<queries>` kept |
+| "Built-in Compiler" section header | header | its only row (TCC status) is informational; three compiler sections for one automatic policy was the confusion the owner reported | **merged** into the single "Compiler" section |
+| "Compiler Settings" header (name) | header | same merge | **renamed** to "Compiler" |
+| "Terminal Theme" dropdown in Appearance | dropdown | exact duplicate of the Terminal section's dropdown (both call `themeManager.setTerminalTheme`) — two rows, one effect | **deleted** (Terminal section owns it, next to its preview) |
+| "Licenses" item in About | item | duplicated "Open-source licenses" directly above it; controlled nothing | **deleted** |
+| `recent_files_csv` key + `recentFilesOrderedFlow` + `addRecentFile`/`replaceRecentFile` | DataStore key (no UI row) | write-only: EditorScreen/EditorViewModel wrote it on open/rename; **no reader anywhere** (the Files tab lists from disk) | **deleted** with its 4 call sites |
+| `smart_typing_delete_word` key + flow + setter | DataStore key (no UI row) | no reader, no writer; the ⌫ flick-up delete-word gesture is hardcoded on (`SmartTyping.Config(deleteWord = true)`), with a comment admitting the toggle was "kept for future" | **deleted**; gesture stays, always on |
+
+## Kept sections, stated with their readers (so the next audit does not re-open them)
+
+- **Package Repository & Trust** — drives the Part D trust material:
+  `ShellEnvironment.getRepositoryTrustInfo` reads the installed keyring;
+  the CHECK button verifies InRelease reachability.
+- **GitHub Account** — writes `GitCredentialsStore` (`git_token`,
+  `git_username`, `git_author_name`, `git_author_email`), read by
+  `GitManager` for every push/pull and by the commit-identity path.
+- **Terminal Extra-Keys & Shortcuts** — writes `terminal_extra_keys_macros`,
+  read by `terminalExtraKeysMacrosFlow` → the terminal key bar.
+
+## Control rows (one row per Settings* control, in screen order)
+
+Screen order (machine-checked): Editor Settings | CodeC Keys | Compiler | Terminal | Terminal Extra-Keys & Shortcuts | Package Repository & Trust | GitHub Account | Appearance | Storage | About | Feedback & Support | Developer Options
+
+This table is what `SettingsAuditTest` counts: 12 sections, 64 rows
+(three of the sections — Terminal Extra-Keys & Shortcuts, Package
+Repository & Trust, GitHub Account — are custom cards with no
+`Settings*` rows; they are covered under "Other surfaces" below and in
+the kept-sections list above). "Info" rows are deliberate prose (they
+change nothing and say so).
+
+| # | Section | Control | Kind | What it changes | Reader (who observes it) | Verdict |
+|---|---|---|---|---|---|---|
+| 1 | Editor Settings | Font Size | slider | `font_size` | `fontSizeFlow` → EditorScreen text size | keep |
+| 2 | Editor Settings | Font Family | dropdown | `font_family` | `fontFamilyFlow` → EditorScreen font | keep |
+| 3 | Editor Settings | Tab Size | dropdown | `tab_size` | `tabSizeFlow` → TAB indent + formatter | keep |
+| 4 | Editor Settings | Line Numbers | switch | `line_numbers` | `lineNumbersFlow` → editor gutter | keep |
+| 5 | Editor Settings | Auto Indent | switch | `auto_indent` | `autoIndentFlow` → SmartTyping indent | keep |
+| 6 | Editor Settings | Word Wrap | switch | `word_wrap` | `wordWrapFlow` → editor layout | keep |
+| 7 | Editor Settings | Autocompletion | switch | `completion_master` | `completionMasterFlow` → ALL completion surfaces (master off = gone) | keep |
+| 8 | Editor Settings | How suggestions appear | item | — (info) | — | keep |
+| 9 | Editor Settings | Inline ghost text | switch | `completion_ghost` | `completionGhostFlow` → ghost surface | keep |
+| 10 | Editor Settings | Suggestion chips in the keys row | switch | `completion_strip` | `completionStripFlow` → chip strip | keep |
+| 11 | Editor Settings | "⌄ more" opens the full completion panel | switch | `completion_panel` | `completionPanelFlow` → ⌄-more panel | keep |
+| 12 | Editor Settings | Suggestion delay | dropdown | `completion_debounce_ms` | `completionDebounceMsFlow` → VM debounce | keep |
+| 13 | CodeC Keys | Dedicated in-app code keyboard | item | — (info) | — | keep |
+| 14 | CodeC Keys | CodeC Keys | switch | `codec_keys_enabled` | `codecKeysEnabledFlow` → Keys vs L0 strip + IME | keep |
+| 15 | CodeC Keys | Keep the code keyboard open while editing | switch | `editor.keep_keys_open` | `editorKeepKeysOpenFlow` → Keys stay policy | keep |
+| 16 | CodeC Keys | Haptic tick per key | switch | `codec_keys_haptics` | `codecKeysHapticsFlow` → Keys haptics | keep |
+| 17 | CodeC Keys | Key row height | slider | `codec_keys_height` | `codecKeysHeightFlow` → row height scale | keep |
+| 18 | Compiler | C Standard | dropdown | `c_standard` | `cStandardFlow` → `compilerSettingsFrom` → `cc -std=` | keep |
+| 19 | Compiler | Warning Level | dropdown | `warning_level` | `warningLevelFlow` → `-Wall -Wextra` flags | keep |
+| 20 | Compiler | Optimization Level | dropdown | `optimization_level` | `optimizationLevelFlow` → `-O` flag | keep |
+| 21 | Compiler | Engine | item | — (info; carries the one-sentence terminal-app promise since 38.2) | — | keep |
+| 22 | Compiler | Built-in TCC status | item | — (info; reads EmbeddedCompiler state) | — | keep |
+| 23 | Terminal | Terminal Font Size | slider | `terminal_font_size` | `terminalFontSizeFlow` → TerminalScreen | keep |
+| 24 | Terminal | Terminal Font Family | dropdown | `terminal_font_family` | `terminalFontFamilyFlow` → TerminalScreen | keep |
+| 25 | Terminal | Terminal Theme | dropdown | `terminal_theme` (ThemeManager) | `terminalThemeFlow` → terminal colours (Appearance duplicate deleted) | keep |
+| 26 | Terminal | Terminal | item | — (info) | — | keep |
+| 27 | Appearance | Editor Theme | dropdown | `editor_theme` (ThemeManager) | `editorThemeFlow` → editor colours | keep |
+| 28 | Appearance | Accent Color | dropdown | `accent_color` | `accentColorFlow` → app accent | keep |
+| 64 | Appearance | Match my wallpaper | switch | `match_wallpaper` | `matchWallpaperFlow` → IdentityPolicy DYNAMIC branch on API 31+ (Phase 50.2; a stored accent wins over the switch) | keep |
+| 65 | Appearance | Haptics | switch | `haptics` | `hapticsFlow` → `rememberCodecHaptics()` (ui/components/CodecHaptics.kt) → the eight app-chrome moments (Phase 51.4; distinct from `codec_keys_haptics`, which stays the keyboard's own per-key tick) | keep |
+| 29 | Storage | Terminal Storage Access (~/storage) | item + button | storage permission + `~/storage` setup | `ShellEnvironment.hasStoragePermission` / setup | keep |
+| 30 | Storage | Projects Location | item | — (info; displays `getExternalFilesDir`) | — | keep |
+| 31 | Storage | Temporary files | item | — (info; `TempGc.measure` of `CodeC/temp/runs`) | size shown; Phase 39.1 | keep |
+| 32 | Storage | Clear temporary files | action | `TempGc.clearIdle` (idle run dirs only) | space freed; live stamps kept; Phase 39.1 | keep |
+| 33 | Storage | Clear Cache | action | deletes `cacheDir` | space freed; toast confirms | keep |
+| 34 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
+| 66 | About | Your CodeC progress | item | — (info; read-only current streak, runs and files) | `StatsManager` flows → `StreakLine` (52.3) | keep |
+| 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |
+| 36 | About | GitHub | item | — (info) | — | keep |
+| 48 | About | Build date | item | — (info; `BuildConfig.BUILD_DATE` UTC — 42.3: "which build is this?" from inside the app) | — | keep |
+| 49 | About | Authors | item | — (info; builder identity for tester builds) | — | keep |
+| 50 | About | Privacy & permissions — all-files access (optional) | item | — (info; honest-correction row, `MANAGE_EXTERNAL_STORAGE`) | — | keep |
+| 51 | About | Legacy storage read/write (≤ Android 12L) | item | — (info) | — | keep |
+| 52 | About | Camera (optional) | item | — (info) | — | keep |
+| 53 | About | Internet | item | — (info; "no telemetry anywhere" is checkable in DATA_AND_PRIVACY.md) | — | keep |
+| 54 | About | Network & Wi-Fi state | item | — (info) | — | keep |
+| 55 | About | Run notification + foreground service | item | — (info; why a notification exists while a run lives) | — | keep |
+| 56 | About | Install packages | item | — (info; updater + bootstrap only) | — | keep |
+| 57 | About | Wake lock | item | — (info) | — | keep |
+| 58 | About | Vibration | item | — (info) | — | keep |
+| 59 | About | Termux bridge (optional) | item | — (info; declared by Termux, guarded) | — | keep |
+| 60 | About | The full table | item | — (info; points at docs/guides/DATA_AND_PRIVACY.md) | — | keep |
+| 37 | About | Open-source licenses | item | — (info; LGPL/MIT obligations) | — | keep |
+| 38 | About | Check for updates | action | app-release channel check (app-v* only), versioned/SHA-256-verified download or a named refusal | `ApkUpdateManager`+`UpdatePolicy`+`ReleaseFetch` (42.1: the updater no longer installs a bootstrap's "latest") | keep |
+| 39 | Feedback & Support | Send feedback, rate, or report a bug | action | navigates to `Screen.Feedback` | `FeedbackScreen` (Phase 41 follow-up moved the card to its own screen; the exit-prompt switch lives there) | keep |
+| 47 | Feedback & Support | Report the last crash | action | navigates to `Screen.Feedback?crash=1` (both attachments pre-ticked); row exists only while `crash-log.txt` has a record | `CrashLog` presence (42.3: the Settings twin of the overlay's SEND REPORT) | keep |
+| 48 | Feedback & Support | Tell us before you go | action | opens the host's exit-feedback dialog on demand (`onShowExitPrompt` → the one `exitPromptVisible`) | Phase 49.2's SECOND DOOR (PART_49_2): cause C — a gesture-nav home swipe sends no back event, so the prompt can never appear on some devices; this row makes the dialog reachable everywhere (exit 7). No new dialog, no new copy, no new store key | keep |
+| 41 | Developer Options | Show File Paths | switch | `show_file_paths` | `showFilePathsFlow` → file tree labels | keep |
+| 41 | Developer Options | Export App Logs | action | ACTION_SHARE with `AppLogger` logs | share sheet | keep |
+| 42 | Developer Options | View App Logs | action | navigates to log screen | `onNavigateToLogs` | keep |
+| 43 | Developer Options | Clear ALL Data | action | deletes single-file storage | `FileManager` | keep |
+| 44 | Developer Options | Test Compiler Service | action | probe compile of `int main(){return 0;}` | toast result | keep (dev-only) |
+| 45 | Developer Options | Simulate Module Download | action | fake 2s download | logs + toast | keep (dev-only) |
+| 46 | Developer Options | Force Crash | action | throws RuntimeException | CrashReportOverlay | keep (dev-only) |
+
+## Other surfaces (not Settings* rows — listed for completeness, not counted)
+
+| Surface | Section | Effect | Verdict |
+|---|---|---|---|
+| App Theme radio group (3 options) | Appearance | `app_theme` (ThemeManager) → `appThemeFlow` → app dark/light | keep (one row per option would be noise; one effect) |
+| Editor theme preview box | Appearance | renders current editor theme | keep |
+| Terminal theme preview box | Terminal | renders current terminal theme | keep |
+| CodeC Keys live preview | CodeC Keys | renders the keyboard at current height | keep |
+| Terminal Extra-Keys card (text field + buttons) | Terminal Extra-Keys & Shortcuts | writes `terminal_extra_keys_macros` | keep |
+| Package Repository & Trust card | Package Repository & Trust | shows trust info; CHECK verifies repo | keep |
+| GitHub Account card (4 fields, link, disconnect/save) | GitHub Account | writes `GitCredentialsStore` | keep |
+| About header (app mark + name + tagline) | About | identity only (Phase 38.1) | keep |
+| Feedback screen (`FeedbackScreen`, Phase 41 follow-up: the card moved out of Settings to its own screen) — text field, 2 ephemeral checkboxes, CHAT/COPY/EMAIL/GITHUB buttons, exit-prompt switch | Feedback & Support | builds the `FeedbackDraft` report; every channel points at the HARDCODED developer contact (`DeveloperContact`, round 2 — no contact store keys exist); writes only `feedback_exit_prompt_enabled` (`SettingsManager`); the checkboxes are deliberately NOT stored (fresh choice per report, pinned by `FeedbackCheckboxNotPersistedTest`) | keep |
+
+## Store keys NOT surfaced as Settings rows (config surface, read-only)
+
+These keys are read by the app but have no editing UI yet — they are
+not dead (readers exist), they are unfinished API. Listed so the next
+audit sees them deliberately:
+
+| Key | Reader |
+|---|---|
+| `editor_custom_snippets` | `editorCustomSnippetsFlow` → editor custom-snippet row |
+| `editor_key_strip_json` | `editorKeyStripJsonFlow` → editor key strip layout |
+| `codec_keys_layout_json` | `codecKeysLayoutJsonFlow` → Keys layout override (dev builds) |
+| `smart_typing_type_over` / `wrap_selection` / `empty_pair` / `auto_indent` / `string_aware` | the five `smartTyping*Flow`s → EditorScreen `SmartTyping.Config` |
+| `dev_mode` | `devModeUnlockedFlow` → Developer Options + About 7-tap |
+| `git_token` / `git_username` / `git_author_name` / `git_author_email` | `GitCredentialsStore.stored()` → `GitManager`, commit identity |

@@ -4,7 +4,7 @@
 · **Depends on:** W1
 · **Target file:** `website/engines.html`
 
-> Source: `README.md` — "Compiler engines (automatic — the picker left in Phase 21)" + surrounding prose; Termux setup section for fallback; `docs/TROUBLESHOOTING.md` §27 (four steps appear in Output Panel); `docs/chat-phase38/PART_38_2_SETTINGS_TRIM.md` (Termux card deleted, guidance moved to CompilerRemediation → finishFailedBuild); `docs/chat-phase21/PART_21_IMPLEMENTATION.md` (picker deleted, Auto only, TCC default, -o-last invariant permanent).
+> Source: `README.md` — "Compiler engines (automatic — the picker left in Phase 21)" + surrounding prose; Termux setup section for fallback; `docs/guides/TROUBLESHOOTING.md` §27 (four steps appear in Output Panel); `docs/phases/10-app-polish-settings/chat-phase38/PART_38_2_SETTINGS_TRIM.md` (Termux card deleted, guidance moved to CompilerRemediation → finishFailedBuild); `docs/phases/02-packages-toolchains/chat-phase21/PART_21_IMPLEMENTATION.md` (picker deleted, Auto only, TCC default, -o-last invariant permanent).
 > **v2.2 update:** picker deleted Phase 21, Termux Engine card deleted Phase 38.2, Auto is only mode, CHECK BRIDGE no longer in Settings, four steps appear in Output Panel only when build fails with Permission denied signature.
 
 ---

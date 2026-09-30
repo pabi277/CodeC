@@ -25,6 +25,7 @@ class TypeAdoptionTest {
         "ModulesScreen.kt",
         "TerminalScreen.kt",
         "SettingsScreen.kt",
+        "FirstRunIntroScreen.kt",
     )
 
     @Test

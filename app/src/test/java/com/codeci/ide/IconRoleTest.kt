@@ -25,6 +25,7 @@ class IconRoleTest {
         "ModulesScreen.kt",
         "TerminalScreen.kt",
         "SettingsScreen.kt",
+        "FirstRunIntroScreen.kt",
     )
 
     private fun codeOf(name: String): String = RepoFiles.codeOnly(

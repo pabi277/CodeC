@@ -73,6 +73,17 @@ class CompletionCapacityTest {
             .filter { it.kind == CompletionKind.SNIPPET }
         assertTrue("Python snippets for `for`: ${py.map { it.label }}", py.size >= 2)
         assertTrue(py.any { it.insertText.contains("for ") && it.insertText.contains(":") })
+        // Phase 75.3 — and accepting any of those `for` or `if` suggestions on
+        // the strip writes only the suggestion word (`for`, `if`), never the
+        // condition or body.
+        assertEquals("for", CodeCompletionEngine.suggestionInsertText(c.first()))
+        assertEquals("for", CodeCompletionEngine.suggestionInsertText(py.first()))
+        val cIf = CodeCompletionEngine.completions("if", 2, LanguageType.C, "main.c")
+            .first { it.kind == CompletionKind.SNIPPET }
+        assertEquals("if", CodeCompletionEngine.suggestionInsertText(cIf))
+        val pyDef = CodeCompletionEngine.completions("def", 3, LanguageType.PYTHON, "a.py")
+            .first { it.kind == CompletionKind.SNIPPET }
+        assertEquals("def", CodeCompletionEngine.suggestionInsertText(pyDef))
 
         // The real widening is the pack itself: 84 C and 76 Python snippets
         // where the tables had 7 and 9.
@@ -117,9 +128,9 @@ class CompletionCapacityTest {
         // `rankSnippets` sorts a tier by label length.
         assertEquals("property", py.first().label)
 
-        // The shell/python TRIGGER path: pack labels ARE trigger words (`if`,
-        // `def`), so "don't offer the word back" has to test the INSERT TEXT,
-        // not the label — otherwise the one matching block is dropped and the
+        // The shell TRIGGER path: pack labels ARE trigger words (`if`), so
+        // "don't offer the word back" has to test the INSERT TEXT, not the
+        // label — otherwise the one matching block is dropped and the
         // whole-pack fallback dumps 16 unrelated shell snippets instead.
         val sh = CodeCompletionEngine.completions("if ", 3, LanguageType.SHELL, "run.sh")
         assertTrue(
@@ -127,10 +138,12 @@ class CompletionCapacityTest {
             sh.any { it.insertText.contains("then") && it.insertText.contains("fi") }
         )
         val pyDef = CodeCompletionEngine.completions("def ", 4, LanguageType.PYTHON, "a.py")
-        assertTrue("Python `def `: ${pyDef.map { it.label }}", pyDef.any { it.label == "def" })
-        // Before the tail + the insert-text test this was `deft`/`defs`/`defst`
-        // only; it is now the pack's `def` first and CodeC's `def function():`.
+        assertTrue(
+            "Python `def `: ${pyDef.map { it.label }}",
+            pyDef.any { it.label == "def" && it.insertText.contains("def ") }
+        )
         assertEquals("def", pyDef.first().label)
+        assertEquals("def", CodeCompletionEngine.suggestionInsertText(pyDef.first()))
         assertTrue(pyDef.size >= 4)
         // The 16-item whole-pack dump is gone: a trigger offers the blocks it
         // names, not every shell snippet that happens to start with `if`.

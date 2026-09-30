@@ -19,16 +19,25 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     // turns an editor route into a SINGLE_FILE peek (one file, real path in
     // the status bar, no project chrome). Absent → PROJECT, exactly as every
     // pre-46 route built.
+    // Phase 73.7 — `panel=repository` selects the side panel's Repository
+    // slot on entry (the hub ⋮'s "Source Control" lands there). Absent →
+    // the default slot, exactly as every pre-73.7 route built.
     object Editor : Screen(
-        "editor?projectName={projectName}&fileName={fileName}&single={single}",
+        "editor?projectName={projectName}&fileName={fileName}&single={single}&panel={panel}",
         "Editor",
         Icons.Default.Create
     ) {
-        fun createRoute(fileName: String? = null, projectName: String? = null, single: Boolean = false): String {
+        fun createRoute(
+            fileName: String? = null,
+            projectName: String? = null,
+            single: Boolean = false,
+            panel: String? = null
+        ): String {
             val args = buildList {
                 projectName?.takeIf { it.isNotBlank() }?.let { add("projectName=${Uri.encode(it)}") }
                 fileName?.takeIf { it.isNotBlank() }?.let { add("fileName=${Uri.encode(it)}") }
                 if (single) add("single=1")
+                panel?.takeIf { it.isNotBlank() }?.let { add("panel=${Uri.encode(it)}") }
             }
             return if (args.isEmpty()) "editor" else "editor?${args.joinToString("&")}"
         }

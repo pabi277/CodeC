@@ -65,7 +65,9 @@ class GitHubPhase40Test {
     fun `push needs a token and a remote, in that order`() {
         assertEquals(GitBlocker.NO_TOKEN, ready(hasToken = false).blocker(GitOp.PUSH))
         assertEquals(GitBlocker.NO_REMOTE, ready(remoteName = null).blocker(GitOp.PUSH))
-        assertEquals(GitReadiness.ACTION_PUBLISH_REPO, ready(remoteName = null).actionId(GitOp.PUSH))
+        // Phase 73.9 — the one-tap remedy is the Remotes dialog now
+        // (manual-first: most tokens lack the repo-create permission).
+        assertEquals(GitReadiness.ACTION_ADD_REMOTE, ready(remoteName = null).actionId(GitOp.PUSH))
         assertTrue(ready().isReady(GitOp.PUSH))
     }
 

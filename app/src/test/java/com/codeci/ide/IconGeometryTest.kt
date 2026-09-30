@@ -140,9 +140,9 @@ class IconGeometryTest {
 
     @Test
     fun `master svg agrees with the shipped foreground`() {
-        // docs/icon/codec-mark.svg is the single source of truth; the
+        // docs/brand/icon/codec-mark.svg is the single source of truth; the
         // drawable must not have drifted from it.
-        val svg = RepoFiles.mainSource("docs/icon/codec-mark.svg").readText()
+        val svg = RepoFiles.mainSource("docs/brand/icon/codec-mark.svg").readText()
         val svgPaths = Regex("<path[^>]*\\bd=\"([^\"]+)\"").findAll(svg).map { it.groupValues[1].trim() }.toList()
         assertTrue("master svg must have >= 2 paths", svgPaths.size >= 2)
         val fg = drawable("ic_launcher_foreground")
