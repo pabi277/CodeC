@@ -235,6 +235,14 @@ object FeedbackDraft {
     /** Server / OAuth / user / refresh tokens. */
     private val shapeGhFamily = Regex("gh[soru]_[A-Za-z0-9]{8,}")
 
+    /**
+     * Phase 76 — Google API keys (the AI helper's Gemini key): `AIza` + 35
+     * url-safe chars. 20 is the floor for the same reason as the PAT rule — a
+     * truncated paste is still a secret. The helper itself never logs its key;
+     * this catches one pasted into a terminal or a crash line.
+     */
+    private val shapeGoogleApiKey = Regex("AIza[0-9A-Za-z_\\-]{20,}")
+
     /** The CI-style remote username spelling: x-access-token:<secret>. */
     private val shapeXAccessToken = Regex("(?i)(x-access-token:)[A-Za-z0-9_\\-]+")
 
@@ -253,6 +261,7 @@ object FeedbackDraft {
         r = r.replace(shapeClassicPat, "<redacted>")
         r = r.replace(shapeFineGrainedPat, "<redacted>")
         r = r.replace(shapeGhFamily, "<redacted>")
+        r = r.replace(shapeGoogleApiKey, "<redacted>")
         r = r.replace(shapeXAccessToken, "$1<redacted>")
         r = r.replace(shapeAuthorization, "$1<redacted>")
         r = r.replace(shapeKeyValue, "$1=<redacted>")

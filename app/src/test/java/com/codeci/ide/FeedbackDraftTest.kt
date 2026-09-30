@@ -204,6 +204,17 @@ class FeedbackDraftTest {
     }
 
     @Test
+    fun `Phase 76 - a Google API key shape is redacted anywhere in a line`() {
+        val key = "AIzaSyA1b2C3d4E5f6G7h8I9j0K_L-mnopqrstu"
+        val redacted = FeedbackDraft.redact(
+            listOf("curl -H x-goog-api-key:$key https://x", "pasted $key here", "AIza alone stays")
+        )
+        redacted.forEach { assertFalse("leaked: $it", it.contains(key)) }
+        assertEquals("pasted <redacted> here", redacted[1])
+        assertEquals("AIza alone stays", redacted[2])
+    }
+
+    @Test
     fun `a custom files dir shortens through the factory`() {
         val paths = FeedbackDraft.RedactionPaths.forApp("/data/data/com.codeci.ide/files")
         val redacted = FeedbackDraft.redact(
