@@ -1,20 +1,27 @@
-> **Owner's latest phase instruction — 2026-09-30 (later the same day): Phase 75.1 + 75.2
-> (device round 1 follow-up) are STARTED and IMPLEMENTED.** His initial words: *“1st you read this
-> file than find the problems with relevant with this and fix after that i will test on device give
-> you latter instructions”*, followed by his 5-item device round 1 report: (1) `def` completing to
-> `def fname():\n    pass`, (2–4) `int main(){` and `{}` in C / Java / brace languages not
-> auto-indenting, and (5) lining up spaces/indentation between lines. All five are now fixed in
-> 75.2 on top of 75.1: Python block keywords stay quiet on the completion surfaces at the exact
-> keyword moment (`SmartTyping.typedBlockKeyword`, sharing `pythonBlockKeywords` with
-> `opensPythonBlock`); `CodeCLanguage.indentAdvanceFor` returns `indentStep.coerceIn(2, 8)` for
-> both `trimmed.endsWith('{')` and Python block headers; `SoraEditorHost` enables Sora's leading
+> **Owner's latest phase instruction — 2026-09-30 (later the same day): Phase 75.1 + 75.2 + 75.3
+> (editor typing reliability) are ✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98.** His initial
+> words: *“1st you read this file than find the problems with relevant with this and fix after that
+> i will test on device give you latter instructions”*, followed by device round 1 (5 items,
+> shipped in 75.2, CI ✅ `36692498787`), device round 2 (3 items, shipped in 75.3, CI ✅
+> `36701799600` on `26dbf9e`), and his device acceptance and merge authorization:
+> ***“Ok device test passed … You can complete the docs part and merged”***.
+> Shipped across 75.1–75.3: `CodeCLanguage.indentAdvanceFor` returns `indentStep.coerceIn(2, 8)`
+> for both `trimmed.endsWith('{')` and `SmartTyping.opensPythonBlock(trimmed)` so Python and brace
+> languages indent by a full level on both Enter routes; `deleteEmptyLineFast = false` +
+> `deleteMultiSpaces = 1` + `SmartTyping.handleIndentBackspace` keep Backspace inside leading
+> indentation at one space per press (`DeleteWord` opts out); `SoraEditorHost` enables leading
 > whitespace dots (`FLAG_DRAW_WHITESPACE_LEADING or FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE`) with
-> `CodecPalette.INDENT_MARK` re-applied on every theme switch; and `SmartTyping.indentRun` makes
-> Tab on both keyboards advance to the next multiple of `tabSize` in spaces. **Build APK ✅ GREEN
-> round 1 `36692498787` on `e5d66a8`** (75.1 was ✅ `36679767045` on `5acac43`). The 65.1 navigation
-> and 74.1 Settings decisions below remain preserved and untouched. **The next device round is his;
-> the §3 merge gate is unchanged — no PR, no merge, nothing to `main` until he commands it.**
-> Record: `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` §“Phase 75.2”.
+> `CodecPalette.INDENT_MARK` re-applied on every theme switch and `SmartTyping.indentRun` advances
+> Tab to the next multiple of `tabSize` in spaces; `CodeCompletionEngine.suggestionInsertText(item)`
+> makes suggestion chips and panel rows insert only the suggestion word (`if`, `def`, `for`,
+> `while`, `main`, …) while preserving `#include`, shebangs, HTML `<tag>`/`<!DOCTYPE html>`,
+> CSS/Markdown, and Emmet; `EditorKeysRow`, `EditorKeyCap`, `RunKeyCap`, and `SuggestionStrip` wrap
+> `.pointerInput` callbacks in `rememberUpdatedState` with live-buffer `commitEditorKey` on
+> `BottomStrip`; `SoraEditorHost` guards `SelectionChangeEvent` against `CAUSE_TEXT_MODIFICATION`
+> and stale `syncedText` and checks `cursorDrifted` after `ed.text.replace`; and `{` / `{}` inside
+> empty `(|)` steps past `)` to form `int main(){|}`. The 65.1 navigation and 74.1 Settings
+> decisions below remain preserved and untouched; future changes still require the owner's command
+> under the §3 merge gate. Record: `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md`.
 >
 > **Owner's earlier instruction — 2026-09-30, superseded by the block above:** preserve the independent 65.1 navigation and 74.1 Settings decisions, undo the code-writing/typing patches from that chat, and prepare a dedicated typing-only editor phase (proposed 75.1). The fixes are undone and not approved for reimplementation yet. Await the owner's answers to the phase MCQs and explicit “Start Phase 75.1” before coding. The §3 merge gate remains unchanged.
 >

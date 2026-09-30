@@ -1,12 +1,15 @@
-> **Latest owner instruction — 2026-09-30 (Phase 75.1 + 75.2 + 75.3 device round 2 follow-up, editor typing):** *"1st you read this
+> **Latest owner instruction — 2026-09-30 (Phase 75.1 + 75.2 + 75.3 editor typing reliability — ✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98):** *"1st you read this
 > file than find the problems with relevant with this and fix after that i will test on device
-> give you latter instructions"*, followed by his device round 1 (5 items, shipped in 75.2, CI ✅ `36692498787`) and device round 2 (3 items, shipped in 75.3):
-> (1) *"You make it even more complex and more errors I want I wanted like that when I type if and click on the suggestions it only write the suggestions and not the full if condition etc other parts"*,
-> (2) *"and now in c coding I tried to write int main() then curly brackets it sent the brackets inside the first brackets like ({})"*,
-> (3) *"And use #include <stdio.h> And then int main() it's erasing the #include <stdio.h>"*.
-> All three are now fixed in 75.3 on top of 75.1/75.2: (1) `CodeCompletionEngine.suggestionInsertText(item)` (used by both `EditorViewModel.acceptCompletionItem` on the strip and `CodeCLanguage.requireAutoComplete` in the `⌄ more` panel) strips code snippets to their suggestion word (`if`, `def`, `for`, `while`, `switch`, `try`, `class`, `printf`, `print`, `return`, `import`, `main` / `int main`, `else if`, `typedef struct`) while keeping single-line `#include` (`#include <stdio.h>\n`, `#include <>`), shebangs, HTML `<tag>`/`<!DOCTYPE html>`, CSS/Markdown, and Emmet expansions intact, and 75.2's Python-only `keywordMoment` suppression is removed so suggestions stay uniformly visible; (2 & 3) `EditorKeysRow`, `EditorKeyCap`, `RunKeyCap`, and `SuggestionStrip` now wrap their `.pointerInput` callbacks in `rememberUpdatedState` and `BottomStrip` (`EditorScreen.kt`) passes live-buffer `commitEditorKey = { key -> viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) }` so tapping quick keys never reads a stale `textFieldValue` snapshot (`""` erasing `#include <stdio.h>` or `"int main(|)"` putting `{}` inside `()`); `SoraEditorHost` ignores `SelectionChangeEvent.CAUSE_TEXT_MODIFICATION` (which fired before `pushToVm` and shifted `old.selection` ahead by 1 whenever any char followed the caret, breaking `SmartTyping.handleTypeOver` on `int main(|)` + `)`) and ignores `SelectionChangeEvent` when `syncedText != viewModel.codeText.value.text`, and checks `cursorDrifted` after `ed.text.replace` so `ed.setSelection` always restores Sora's cursor; and both `EditorKeySet.apply(EditorKey.Pair("{", "}"), ...)` and `SmartTyping.handleAutoPair` + `handleBraceInEmptyParens` step `{` / `{}` past `)` when the caret sits inside empty `(|)` (`int main(|)` → `int main(){|}`). **The next device round is his, and so is the merge command: nothing was merged and no PR opened** (`rule.md` §3). Record:
-> `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` §"Phase 75.3". The 74.1
-> Settings-search follow-up stays merged at `cdc6c93` (PR #96) and 65.1 navigation is unchanged —
+> give you latter instructions"*, followed by device round 1 (5 items, shipped in 75.2, CI ✅ `36692498787`), device round 2 (3 items, shipped in 75.3, CI ✅ `36701799600` on `26dbf9e`), and his device acceptance and merge command:
+> ***"Ok device test passed … You can complete the docs part and merged"***.
+> All items across 75.1, 75.2, and 75.3 are shipped, CI-green, device-passed, and merged to `main` via [PR #98](https://github.com/pabi277/CodeC/pull/98):
+> (1) Python block indentation on both Enter routes (`SmartTyping.opensPythonBlock`, 14 keywords, comment-aware, string-aware) and full-level brace indentation (`trimmed.endsWith('{') -> level`) across C, C++, Java (`.java`), JS/TS, Go, Rust, and Shell;
+> (2) One-space Backspace inside leading indentation (`deleteEmptyLineFast = false`, `deleteMultiSpaces = 1`, `SmartTyping.handleIndentBackspace`, with `DeleteWord` opting out);
+> (3) Leading indentation alignment dots (`FLAG_DRAW_WHITESPACE_LEADING or FLAG_DRAW_WHITESPACE_FOR_EMPTY_LINE` + `CodecPalette.INDENT_MARK` on every theme switch) and `SmartTyping.indentRun` advancing Tab to the next multiple of `tabSize` in spaces on both keyboards;
+> (4) Clicking a suggestion writes only the suggestion word (`CodeCompletionEngine.suggestionInsertText(item)` in `EditorViewModel.acceptCompletionItem` and `CodeCLanguage.requireAutoComplete`: `if`, `def`, `for`, `while`, `switch`, `try`, `class`, `printf`, `print`, `return`, `import`, `main` / `int main`, `else if`, `typedef struct`, while keeping `#include <stdio.h>\n`, shebangs, HTML `<tag>`/`<!DOCTYPE html>`, CSS/Markdown, and Emmet intact);
+> (5) Live-buffer quick-key commits (`rememberUpdatedState` across `EditorKeysRow`, `EditorKeyCap`, `RunKeyCap`, `SuggestionStrip` + `commitEditorKey = viewModel::applyEditorKey` on `BottomStrip`), `SoraEditorHost` ignoring `SelectionChangeEvent.CAUSE_TEXT_MODIFICATION` and stale `syncedText != viewModel.codeText.value.text` plus checking `cursorDrifted` after `ed.text.replace`, and `{` / `{}` inside empty `(|)` stepping past `)` to form `int main(){|}`.
+> Record: `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md`. The 74.1
+> Settings-search follow-up stays merged (PR #96/#97) and 65.1 navigation is unchanged —
 > see `docs/chat-phase74/README.md`.
 
 > **Latest owner instruction — 2026-09-29 (the 73.x git series):** after PR #94
@@ -58,29 +61,22 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-09-30 (Phase 75.1 implemented on the session branch; the owner’s device round and the merge command are owed).**
+**CURRENT HANDOFF — 2026-09-30 (Phase 75.1–75.3 complete, device-passed & merged via PR #98).**
 Read `rule.md`,
-`docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,
+`docs/NEXT_STEPS.md` (head entry), `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md`,
+`docs/ui-polish-chats/PHASE_73_9_MANUAL_FIRST_REMOTE.md`,
 `docs/ui-polish-chats/PHASE_73_8_GIT_PAGE_OWNS_IT.md`,
 `docs/ui-polish-chats/PHASE_73_7_GIT_PANEL_MOVE.md` and `docs/UI_POLISH_REVIEW_20260927.md` §5
 before the historical entries below (73.1–73.6 records stand as history behind them).
 
-*State verified for this follow-up (2026-09-30):* session branch remote is `arena/01a0ee39-codec` at `d65ca64`; remote `main` remains PR #95 merge `6c6a98025bb37acd7df5e50e7a1eea6f98c16792`. The latest pre-revert Build APK run `36608912686` was green on `d65ca64`; it does not validate the requested source reversion. PRs #83 and #42 remain open and untouched. The sandbox had reset local HEAD to `main` while files remained newer; it was realigned safely with `git fetch origin arena/01a0ee39-codec && git reset --mixed FETCH_HEAD` (never hard). Recheck `git status`, `git log -1`, `git ls-remote origin main`, `gh pr list`, and `gh run list --limit 3`; before each commit follow rule.md §2.4 and inspect only your changes.
-
-*This session — current status:* **Phase 75.1 (editor typing reliability) is 🚧 IMPLEMENTED on
-`arena/01a0f0fb-codec`**, on the owner’s start command quoted at the top. 65.1 navigation and
-the 74.1 Settings defaults are preserved unchanged (16sp editor default, ghost off, all 12
-sections collapsed, exit/welcome as they were). Production change is four files
-(`ui/editor/SmartTyping.kt`, `ui/editor/sora/CodeCAnalyzer.kt`,
-`ui/editor/sora/SoraEditorHost.kt`, `ui/viewmodels/EditorViewModel.kt`); tests are
-`SmartTypingTest` (+14 cases), `CodeCLanguageLogicTest` (one pin moved, with its reason) and
-the new `EditorTypingRouteWiringTest` (6 source pins on the seam). Sora 0.24.6 was read from
-the tag through the GitHub API — the sandbox builds nothing, so `Build APK` is the executor of
-record, and it is **✅ GREEN round 1 `36679767045` on tip `5acac43`** (unit + screenshot tests,
-debug + release assemble, lint, the weight check, zero error annotations; release APK 6,291,527 B
-= +1,077 B / +0.02 % over the post-#96 run). **No device pass
-is claimed**: the owner tests Enter/Backspace on his phone with the system keyboard and CodeC
-Keys and reports back; no PR, no merge, until he commands it (`rule.md` §3). Read
+*This session — current status:* **Phase 75.1–75.3 (editor typing reliability) is ✅ COMPLETE,
+DEVICE-PASSED & MERGED via [PR #98](https://github.com/pabi277/CodeC/pull/98)** on the owner's
+command (*"Ok device test passed … You can complete the docs part and merged"*, 2026-09-30).
+65.1 navigation and the 74.1 Settings defaults are preserved unchanged (16sp editor default,
+ghost off, all 12 sections collapsed, bespoke Settings search, exit/welcome as they were).
+`Build APK` passed across all three rounds: 75.1 run `36679767045` on `5acac43`, 75.2 run
+`36692498787` on `e5d66a8`, and 75.3 run `36701799600` on `26dbf9e` (release APK `6,292,527 B`,
+debug APK `25,440,267 B`, zero error annotations). Read
 `docs/ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md` before touching typing behaviour again.
 
 *What is done and must not be redone:* the UI polish series (`docs/UI_POLISH_REVIEW_20260927.md`

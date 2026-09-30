@@ -1,4 +1,4 @@
-> **2026-09-29 — Python indentation and Backspace report (deferred):** the owner reported that Python `def` indents but `for` does not, and Backspace over indentation jumps by a whole indent instead of one space. Initial source fixes were later undone at the owner's request so the writing path can be handled as a single focused editor phase. Current post-revert Build APK run `36625653233` is green on `902c9f6`; it validates the restored source, not the typing behavior. These issues remain unresolved; see [Phase 75.1](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
+> **2026-09-30 — Phase 75.1–75.3 editor typing reliability (✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98):** the Python `def`/`for` indentation, full-level brace indentation (`{`), one-space Backspace inside indentation, leading indentation dots + Tab alignment, suggestion word-only accept, live-buffer quick-key commits, Sora cursor/selection sync, and `{}` outside empty `(|)` are all resolved, CI-green (`36679767045` / `36692498787` / `36701799600`), device-passed by the owner (*"Ok device test passed … You can complete the docs part and merged"*), and merged via [PR #98](https://github.com/pabi277/CodeC/pull/98). See §§49–51 below and [Phase 75.1](ui-polish-chats/PHASE_75_1_EDITOR_TYPING.md).
 
 > **2026-09-27 update — Phase 64:** installation no longer locks tabs or the
 > editor drawer, and the guide/tour/typing tips are removed. “Help & guide” and
@@ -2112,5 +2112,8 @@ Three fixes work together:
 3. Both `EditorKeySet.apply(EditorKey.Pair("{", "}"), ...)` and `SmartTyping.handleAutoPair` +
    `handleBraceInEmptyParens` step `{` / `{}` past `)` when the caret sits inside empty `(|)`,
    turning `int main(|)` + `{}` / `{` into `int main(){|}`.
+
+**Status (2026-09-30):** `Build APK` ✅ GREEN on `26dbf9e` (`36701799600`, 7m 48s); owner device pass ✅ (*"Ok device test passed … You can complete the docs part and merged"*); merged to `main` via [PR #98](https://github.com/pabi277/CodeC/pull/98).
+
 
 

@@ -1,8 +1,9 @@
-# Phase 75.1 — Editor typing reliability
+# Phase 75.1 — Editor typing reliability (75.1 + 75.2 + 75.3)
 
-**Status: 🚧 IMPLEMENTED on `arena/01a0f0fb-codec` (2026-09-30), CI pending/recorded
-below; device round owed by the owner.** This page was the draft; the owner then
-commanded it into being:
+**Status: ✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98 (2026-09-30, branch `arena/01a0f0fb-codec`,
+CI runs `36679767045` / `36692498787` / `36701799600` ✅ GREEN; owner device pass: *"Ok device
+test passed … You can complete the docs part and merged"*).** This page was the draft; the owner
+then commanded it into being:
 
 > *"1st you read this file than find the problems with relevant with this and fix
 > after that i will test on device give you latter instructions"*
@@ -288,6 +289,18 @@ checks pass). Awaiting the owner's device round 2; the §3 merge gate remains in
 | **2 & 3 (Cause A). Stale `textFieldValue` captured in `EditorKeysRow.kt` `.pointerInput(def)`** | In `EditorKeysRow.kt`, `EditorKeyCap` (`:236`) and `RunKeyCap` (`:427`) used `.pointerInput(def)` without `rememberUpdatedState(onKey)` and without a live-buffer `commitKey` callback (unlike `CodecKeyboard.kt:78-83,173` from Phase 28.2 round 2). Because `def` is stable across recompositions while `StripContext.Keys` stays mounted, `.pointerInput(def)` never restarted and kept calling the initial `onKey` closure with the `textFieldValue` from when `EditorKeysRow` first mounted: (a) opening a `.c` file (`textFieldValue = ""`), tapping `#include` (`#include <stdio.h>\n`), and then tapping `int ` / `main(` / `()` applied against the stale `""`, **erasing `#include <stdio.h>`**; (b) typing `int main` (which shows `Suggestions`) and then typing `(` (which auto-pairs to `int main(|)` at index 9 and mounts `EditorKeysRow` with `"int main(|)"`), typing `)` to move to index 10, and tapping `{}` on `EditorKeysRow` applied against the stale `"int main(|)"` at index 9, **inserting `{}` inside `()` as `int main({})`**. | `EditorKeyCap`, `RunKeyCap`, and `SuggestionStrip` now wrap their gesture callbacks in `rememberUpdatedState`, and `EditorKeysRow` + `BottomStrip` (`EditorScreen.kt`) pass `commitKey = { key -> viewModel.applyEditorKey(key, autoIndent = autoIndent, tabSize = tabSize, suppressAutoPair = true) }` so every strip keycap applies directly against the ViewModel's live `_codeText.value`. |
 | **2 & 3 (Cause B). `SoraEditorHost.kt` `SelectionChangeEvent` ordering & post-replace cursor sync** | (1) In Sora 0.24.6, `CodeEditor` is `contentListeners[0]` and our `contentListener` (`pushToVm`) is `contentListeners[1]`. Inside `CodeEditor.afterInsert`/`afterDelete`, Sora fires `SelectionChangeEvent(CAUSE_TEXT_MODIFICATION)` *before* `pushToVm` runs — while `syncedText` is still the pre-edit text and `event.left.index` is the post-edit cursor. Whenever any character followed the caret (such as `)` in `int main(|)`), `SelectionChangeEvent` advanced `old.selection.start` in `_codeText.value` to `pos + 1` before `pushToVm` ran, causing `if (newPos != pos + 1) return null` in `SmartTyping.handleTypeOver`, `handleAutoPair`, `handleAutoIndent`, `handleDedentOnCloser`, and `handleTabAsIndent` to fail! And if the VM held a pending programmatic edit (`#include <stdio.h>\n`), a pre-replay `SelectionChangeEvent` pushed `syncedText` back over `_codeText.value`. (2) At `SoraEditorHost.kt:626`, after `ed.text.replace` deleted the duplicate `)` from `int main())`, Sora's internal `ed.cursor.left` sat at `9` while both `target.selection` and `syncedSelection` were `10`, so `target.selection != syncedSelection` was `false` and `ed.setSelection` was skipped — leaving Sora's real cursor inside `int main(|)`! | `SoraEditorHost`'s `SelectionChangeEvent` receiver now ignores `SelectionChangeEvent.CAUSE_TEXT_MODIFICATION` and returns early when `syncedText != viewModel.codeText.value.text`; and `AndroidView.update` checks `cursorDrifted` (`ed.cursor.left != start || ed.cursor.right != end`) in addition to `target.selection != syncedSelection` so `ed.setSelection` always restores Sora's cursor after `ed.text.replace`. |
 | **2 (Cause C). Tapping `{}` or typing `{` while the caret is still inside empty `(|)`** | After tapping the `()` quick-key cap or typing `(` with auto-pair, the caret sits inside `int main(|)`. Tapping `{}` or typing `{` immediately (without first stepping past `)`) inserted `{}` at the caret inside `()` → `int main({|})`. | Both `EditorKeySet.apply(EditorKey.Pair("{", "}"), ...)` and `SmartTyping.handleAutoPair` + `SmartTyping.handleBraceInEmptyParens` detect when `{` / `{}` is inserted at a collapsed caret inside empty parentheses `(|)` and step past `)` to produce `int main(){|}`. |
+
+### Coverage added / updated in 75.3
+
+- `CodeCompletionTest` + `CompletionCapacityTest` — `clicking a code suggestion writes only the suggestion word and not the condition or body` (verifies `if`, `for`, `while`, `printf`, `def`, `try`, `print` across C, Python, and Shell, plus `#include <stdio.h>\n` and `<!DOCTYPE html>` preservation).
+- `SmartTypingTest` + `EditorKeySetTest` — `typing open brace inside empty parens steps outside to form function body` (single `{` step 1, Sora `SymbolPairMatch` step 2, and batch `{}`), `curly brace pair key inside empty parens steps outside to form block`, and `c quick keys sequence keeps include header and places braces after main parens` (`#include` → `int ` → `main` → `()` → `{}` produces `#include <stdio.h>\nint main(){|}`).
+- `EditorTypingRouteWiringTest` — `clicking a suggestion on either surface writes only suggestionInsertText`, `the keys row commits against the live buffer and refreshes pointerInput lambdas`, and `selection events during text modification or pending VM edits cannot clobber the buffer` (11 total wiring pins).
+
+### CI & Device Acceptance (Phase 75.3)
+
+- **`Build APK` ✅ GREEN round 1 — run [`36701799600`](https://github.com/pabi277/CodeC/actions/runs/36701799600)** on tip `26dbf9e` (7m 48s, step 8 host unit and screenshot tests, step 9 debug assemble, steps 10–13 release set + weight check, zero error annotations; release artifact `6,292,527 B`, debug artifact `25,440,267 B`).
+- **Owner device pass (2026-09-30, verbatim):** *"Ok device test passed … You can complete the docs part and merged"* — merged to `main` via [PR #98](https://github.com/pabi277/CodeC/pull/98).
+
 
 
 
