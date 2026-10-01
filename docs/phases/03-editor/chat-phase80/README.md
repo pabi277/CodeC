@@ -1,7 +1,7 @@
 # Phase 80 — AI Level 4: whole-project map, bounded tools, and an approved run loop
 
 > **Status: 🚧 IMPLEMENTED 2026-10-02 on `arena/01a0f9a5-codec`** (branch CI
-> `36939786754` ✅ GREEN; owner:
+> `36941118847` ✅ GREEN on `c5dd30a`; owner:
 > *"Start Phase 80 — full Level 4"*, then four explicit scope answers:
 > `task_preview` / `run_only` / `both_flows` / `looser` caps). Device round
 > ⏳ NOT RUN ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); **not merged** (`rule.md` §3).
@@ -206,9 +206,10 @@ new dependency, permission, or DataStore key.
   (`2367b9a`) failed CI on one real error — a missing
   `import kotlinx.coroutines.isActive` in `AiViewModel` (the agent's tool batch
   reads its scope's `isActive` between calls); that was the **only** error in
-  the module and is fixed in `bd3276e`.
+  the module and is fixed in `bd3276e`. Final branch CI **`36941118847` ✅ GREEN**
+  on `c5dd30a` (release APK `7,101,196 B`).
 - **Device round builds:** `CodeC-IDE-1.3.17-universal.apk`
-  (`7,101,208 B`, artifact `CodeC-IDE-release` of run `36939786754`).
+  (`7,101,196 B`, artifact `CodeC-IDE-release` of run `36941118847`).
 
 ## Risks, honest limits, and what is explicitly not done
 

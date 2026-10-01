@@ -10,9 +10,9 @@
 Phase 76's Gemini key already saved. A second file, e.g. `README.md` or a comment
 you can paste a sentence into, is useful for row E1.
 
-**Build:** `CodeC-IDE-1.3.17-universal.apk` (`7,101,208 B`) from the Phase 80
-**Build APK** CI run **`36939786754` ✅ GREEN** on `arena/01a0f9a5-codec` @
-`bd3276e` (artifact `CodeC-IDE-release`; debug `26,826,604 B`).
+**Build:** `CodeC-IDE-1.3.17-universal.apk` (`7,101,196 B`) from the Phase 80
+**Build APK** CI run **`36941118847` ✅ GREEN** on `arena/01a0f9a5-codec` @
+`c5dd30a` (artifact `CodeC-IDE-release`; debug `26,826,600 B`).
 
 ---
 
