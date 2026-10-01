@@ -1415,3 +1415,17 @@ The local kotlinc/JRE harness paid for itself three times before CI: a real comp
 assertion that was wrong rather than the code, and two source pins that asserted things which were
 simply false. CI was green on the first round. The device round is owed, and its row C4/C5 — search the
 answer and the payload for the `.env` secret — is the one that must not fail.
+
+## 2026-10-01 — Phase 78 merges, with the device round still open
+
+The owner reported one thing from the phone — *"if i question anything it's saying select some code in
+the editor"* — and it turned out to be the sheet's send arrow, hardcoded to *Explain selection* since
+before this phase. Phase 78 had turned an odd corner into a real dead end: two intents and the arrow
+served the primary one; three intents and it still served only the first. One line of routing fixed it,
+with the selection path left byte-for-byte alone.
+
+Then he said *"Merge it"* — PR #104, merge commit `bd1aa06`, post-merge CI green. Worth recording
+plainly: **the device round was partial, not passed.** Groups A, C, D, E, F and G1–G5 are still owed,
+including C4/C5, the row that searches the answer and the payload for a `.env` secret. The protection
+is covered by host tests and sixteen wiring pins, all green — but the on-device confirmation is a debt,
+and it is written down as one rather than quietly converted into a pass.

@@ -1,9 +1,6 @@
 # Phase 78 — device round 1 (AI Level 2: whole-project context)
 
-> **Status: ⏳ NOT RUN.** These rows are owed. Nothing here is a claimed pass.
-> Run them on a real phone and paste the table back with ✅ / ❌ per row.
-> On ❌ a screenshot helps. Then say *"merge"* only when you want it merged —
-> nothing merges without that word (`rule.md` §3).
+> **Status: ⚠️ PARTIALLY RUN, and Phase 78 is already MERGED.** The owner merged on 2026-10-01 (*"Merge it"*) via [PR #104](https://github.com/pabi277/CodeC/pull/104) (merge commit `bd1aa06`, post-merge CI ✅ `36884609111`) after running **part of group B** and reporting the ➤ arrow defect, which is fixed. **Groups A, C, D, E, F and G1–G5 below are still owed** and nothing here is a claimed pass. Run them on a real phone and paste the table back with ✅ / ❌ per row — **C4/C5 first**, since the credential protection has never been confirmed on a device. On ❌ a screenshot helps; a fix goes back through the normal lifecycle on a new phase number.
 
 **You need:** a project with **several** source files (a demo project is fine),
 Phase 76's Gemini key already saved (or a fresh one from

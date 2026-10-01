@@ -69,8 +69,15 @@ Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.
 `docs/phases/03-editor/chat-phase78/README.md` + its three part docs + `DEVICE_ROUND.md`,
 `docs/roadmaps/ai-integration/02_WHOLE_PROJECT_CONTEXT.md` and `00_LEVEL0_DECISION_RECORD.md` (binding AI laws D1–D6, O1–O3).
 
-*Status:* Phase 78 is 🚧 IMPLEMENTED on `arena/01a0f5d2-codec`, tip `8abd49e`, **CI ✅ GREEN `36822370600`**
-(first round, zero error annotations). Device round **NOT RUN**; **not merged** — stop at the §3 merge gate.
+*Status:* Phase 78 is ✅ **MERGED to `main`** 2026-10-01 on the owner's command (*"Merge it"*) —
+[PR #104](https://github.com/pabi277/CodeC/pull/104), merge commit `bd1aa06`, post-merge `Build APK`
+✅ GREEN `36884609111`. Branch tip was `4e1412c` (the round-1 fix), CI green on all five commits.
+⚠️ **The device round was PARTIAL, not passed**: the owner ran part of group B, reported the
+➤ arrow defect (fixed), and merged. Groups **A, C, D, E, F and G1–G5 remain owed** — see
+`chat-phase78/DEVICE_ROUND.md`. **C4/C5** (search the streamed answer *and* the verbatim payload
+for a `.env` secret) has never been confirmed on a device; the credential protection rests on
+host tests + 16 wiring pins, which are green. Treat any owner report about the AI surfaces as
+a *first* symptom from these unrun rows, not a regression of something already passed.
 Level 2 = whole-project context, still **read-only**: the AI can answer a question using up to 5 project
 files, chosen by deterministic keyword relevance, and the preview names every file that will be sent.
 

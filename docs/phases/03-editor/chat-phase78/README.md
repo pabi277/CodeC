@@ -1,9 +1,10 @@
 # Phase 78 — AI Level 2: whole-project context (read-only)
 
-> **Status: 🚧 IMPLEMENTED 2026-10-01 on `arena/01a0f5d2-codec`. CI ✅ GREEN
-> `36822370600` on `8abd49e` (first round, zero error annotations, release APK
-> 7,055,936 B = +7,980 B / +0.11 % over the merged Phase 77 tip). Device round
-> ⏳ NOT RUN — [`DEVICE_ROUND.md`](DEVICE_ROUND.md). NOT merged (`rule.md` §3).**
+> **Status: ✅ MERGED to `main` 2026-10-01 on the owner's command (*"Merge it"*) — [PR #104](https://github.com/pabi277/CodeC/pull/104), merge commit `bd1aa06`, post-merge `Build APK` ✅ GREEN `36884609111` on `bd1aa06`.**
+>
+> **⚠️ The device round was PARTIAL, not passed.** The owner ran part of group B and reported the ➤ arrow defect (fixed in `4e1412c`, CI ✅ `36837952797`). Groups **A, C, D, E, F and the new G1–G5 are still owed** — see [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **Row C4/C5** (put `zebra42` in a `.env`, then search the streamed answer *and* the verbatim payload for it) has **not** been confirmed on a device; the credential protection rests on host tests and wiring pins, which are green.
+>
+> CI history, all ✅ green with zero error annotations: `36819642718` (`fd20fc2` brief) · `36822370600` (`8abd49e` code) · `36823784822` (`836a93c` docs) · `36837952797` (`4e1412c` round-1 fix, release APK 7,057,268 B) · `36884609111` (post-merge on `bd1aa06`).
 >
 > The owner authorized **Level 2** of the AI roadmap as the next phase in this
 > chat (2026-10-01) by selecting *"Authorize AI Level 2 (whole-project
