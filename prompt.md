@@ -64,7 +64,44 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-10-01 (Phase 76 merged; Phase 77 AI UI for phones device-passed and merged).**
+**CURRENT HANDOFF — 2026-10-01 (Phase 78, AI Level 2, implemented; device round owed; at the merge gate).**
+Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
+`docs/phases/03-editor/chat-phase78/README.md` + its three part docs + `DEVICE_ROUND.md`,
+`docs/roadmaps/ai-integration/02_WHOLE_PROJECT_CONTEXT.md` and `00_LEVEL0_DECISION_RECORD.md` (binding AI laws D1–D6, O1–O3).
+
+*Status:* Phase 78 is 🚧 IMPLEMENTED on `arena/01a0f5d2-codec`, tip `8abd49e`, **CI ✅ GREEN `36822370600`**
+(first round, zero error annotations). Device round **NOT RUN**; **not merged** — stop at the §3 merge gate.
+Level 2 = whole-project context, still **read-only**: the AI can answer a question using up to 5 project
+files, chosen by deterministic keyword relevance, and the preview names every file that will be sent.
+
+*The six scope decisions are the AGENT's, not the owner's.* He said *"Complete the lavel 2"* without
+answering them: Q1 no multi-turn · Q2 `MAX_CONTEXT_CHARS` stays 12 000 · Q3 secret-like files are never
+offered and there is **no opt-in** · Q4 `.gitignore` is out of scope (no matcher exists in the app) ·
+Q5 the entry point is a third chip in the existing chat sheet · Q6 nothing new is persisted.
+Each is reversible on his word without reopening the others.
+
+*Laws that must not break here:* `ProjectSearch.isSearchable` must **never** be reused as the AI filter —
+`ProjectFilesPolicy.kt:9-16` puts `.env`/`.npmrc` in `configNames`, `:13` matches any `.env.*`, and
+`ProjectSearch.kt:172` lists `"env"`, so it reaches credentials on three routes. `AiLevel2WiringTest`
+fails the build if any file under `ui/ai` even mentions it. No index, no seventh key in
+`ai_settings.properties` (D6). Send stays the only road to the network — exactly two `client.stream(`
+call sites. minSdk 24: the walker uses `canonicalPath != absolutePath` for symlinks, **not**
+`Files.isSymbolicLink` (API 26+).
+
+*Lessons to keep:* `TypeAdoptionTest` forbids `FontFamily.Monospace` (use `CodecType.codeFamily`);
+`MotionWiringTest` bans `snap(`/`tween(`/`spring(`/`cubicBezier(` outside `CodecMotion.kt`;
+`InputStream.readNBytes` is API 33; model ids are device facts — keep the model editable.
+The kotlinc/JRE harness (pip `jdk4py` + npm `kotlin-compiler`) is worth the setup: it caught a real
+compile error, a wrong test assertion and two wrong source pins before CI. It cannot compile Compose.
+**Never trust a source pin you have not executed** — two of this phase's pins asserted things that were
+false (`READ_EXTERNAL_STORAGE` is already in the manifest; `"store":false` is written escaped in source).
+
+**PREVIOUS HANDOFF — 2026-10-01 (Phase 76 merged; Phase 77 AI UI for phones device-passed and merged).**
+*(⚠️ Stale in one respect, left as the owner instructed: the block below still says Phase 77 is*
+*"🚧 IMPLEMENTED … Do NOT merge". Phase 77 **is** merged — PR #103, merge commit `5abe768`, which is the*
+*current `main` tip. Phase 76 merged as PR #102 at `38754cd`. The owner declined to have this prose fixed*
+*on 2026-10-01, so it is flagged here rather than rewritten.)*
+
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
 `docs/phases/03-editor/chat-phase77/README.md` + its three part docs + `DEVICE_ROUND.md`,
 `docs/phases/03-editor/chat-phase76/README.md` (`app/src/main/java/com/codeci/ide/ui/ai/`),

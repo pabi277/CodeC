@@ -2141,3 +2141,32 @@ Three fixes work together:
 - **No "Ask AI" in the text-selection menu** — skipped on purpose: Sora 0.24.6's `EditorTextActionWindow` has no add-item API (only a fork or runtime view injection would work). Select code, then tap the bubble: the chat opens with "Explain selection" ready to preview.
 
 **Build lesson (Phase 77, CI run `36784200759`, red for cause):** `MotionWiringTest` bans `spring(` / `tween(` / `snap(` / `cubicBezier(` outside `CodecMotion.kt` (word-boundary scan of code). A pure bubble function named `snap(` tripped it, so it is `AiBubblePolicy.snapToEdge(`. Before naming a new helper, grep the `RepoFiles.mainKotlinSources()` scans (`MotionWiringTest`, `TypeAdoptionTest`, `TokenAdoptionTest`) for the word.
+
+## 54. AI project questions: "it only read one file" / "why isn't my `.env` there?" / "it says the project is too large" (Phase 78)
+
+| You see | What is actually happening |
+|---|---|
+| Only 2–3 files in the preview, though the project has more | By design. At most **5** files are sent, ranked by whether the question's words appear in the file name and body, with the file you are looking at first. The left-out line names how many were skipped and why. |
+| A file line says `first 120 of 310 lines` | The file is longer than one request's slice (3 000 characters). It is cut on a **whole line** and the cut is stated, in the preview and inside the sent text. |
+| `.env`, `.npmrc`, `id_rsa`, `*.pem` are missing from the list | **Correct and deliberate.** Credential-shaped files are never sent and there is no switch to send them. They are counted in the left-out line so you can see they were noticed, not missed. |
+| *"This project has no code or text file to send"* | The project has no file with a recognised code/text extension. Images, PDFs, `.zip` and data files are not code. |
+| *"This project is too large to fit one question"* | Files were found but none would fit a useful slice. Open the file you mean and use **Explain selection** instead. |
+| *"Reading the project…"* seems slow on a huge project | The walk is capped at 4 000 directory entries and reads at most 12 files, and `node_modules`, `.git`, `build` and friends are never entered. **Cancel** stops it; nothing was sent. |
+| A file's line says *includes unsaved edits* | That file is open and dirty, so the **buffer** was sent, not the disk copy — labelled so the model is not misled. Save or undo to change what is sent. |
+| The same question gives a different file list than yesterday | It should not. Ranking is deterministic — no index, no randomness. If it differs, the project's files changed, or the open file changed (the open file always ranks first). |
+
+**Nothing about a project question is saved.** There is no index and no cache: the file list is rebuilt
+from disk on every tap (D6). Closing the app forgets the exchange.
+
+**Build lesson (Phase 78, caught before CI on the local harness):** *never trust a source pin you have
+not executed.* Two of this phase's `AiLevel2WiringTest` pins were false as written: one asserted the
+manifest has no `READ_EXTERNAL_STORAGE`, which it **has** had for many phases (pre-existing — so the pin
+could never pass, and its absence was never this phase's claim); the other searched for `"store":false`,
+which in source is written escaped as `append("\"store\":false")`, so a plain substring could never
+match. Both were caught by running the pins through the real `RepoFiles.codeOnly` locally (139/139 after
+the fix). A wiring test that has never been executed is a wish, not a check.
+
+**Build lesson 2 (Phase 78):** a *wrong test assertion* is as costly as a wrong pin. The first draft
+asserted a whole-line slice "must not end with `padding padding`" — but a correct slice ends exactly at
+a line boundary, so it legitimately ends with the line's last word. The assertion was rewritten to
+require that every sent line be complete, which is the property actually wanted.

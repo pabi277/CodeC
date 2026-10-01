@@ -1,13 +1,25 @@
 # Phase 78 — AI Level 2: whole-project context (read-only)
 
-> **Status: 📋 BRIEFED 2026-10-01. NOT STARTED. No code exists for this phase.**
+> **Status: 🚧 IMPLEMENTED 2026-10-01 on `arena/01a0f5d2-codec`. CI ✅ GREEN
+> `36822370600` on `8abd49e` (first round, zero error annotations, release APK
+> 7,055,936 B = +7,980 B / +0.11 % over the merged Phase 77 tip). Device round
+> ⏳ NOT RUN — [`DEVICE_ROUND.md`](DEVICE_ROUND.md). NOT merged (`rule.md` §3).**
+>
 > The owner authorized **Level 2** of the AI roadmap as the next phase in this
-> chat (2026-10-01), by selecting *"Authorize AI Level 2 (whole-project
-> context)"* from the offered choices. That is the explicit word
-> `00_LEVEL0_DECISION_RECORD.md:125` and `AI_INTEGRATION_ROADMAP.md:5` require.
-> It authorizes **this brief**. Coding still needs the owner's **"Start Phase
-> 78"**, and the scope questions in §5 are still **OPEN** — no answer here is
-> the agent's invention.
+> chat (2026-10-01) by selecting *"Authorize AI Level 2 (whole-project
+> context)"* — the explicit word `00_LEVEL0_DECISION_RECORD.md:125` and
+> `AI_INTEGRATION_ROADMAP.md:5` require — and then started it with
+> ***"Complete the lavel 2"***.
+>
+> **The six scope questions in §5 were NOT answered by the owner.** He said
+> "complete it", so each was taken at its **most conservative** option and is
+> recorded in §5 and in the part docs as **the agent's decision, not the
+> owner's** (the `PHASE_73_1_GIT.md` precedent). Any one of them can be changed
+> without re-litigating the others.
+>
+> Parts: [78.1 the file policy](PART_78_1_FILE_POLICY.md) ·
+> [78.2 the walk and the third source](PART_78_2_WALK_AND_CONTEXT.md) ·
+> [78.3 the surface](PART_78_3_SURFACE.md).
 >
 > Baseline for every claim below: **`main` @ `5abe768`** (PR #103, Phase 77),
 > read **2026-10-01** in the session sandbox. Every repository claim is a
@@ -186,31 +198,70 @@ Widen `AiPrompt`, leave the pipeline alone:
 
 ---
 
-## 5. OPEN scope questions — the owner must answer these
+## 5. Scope questions — decided conservatively BY THE AGENT (2026-10-01)
 
-**None of these are answered. The agent has not chosen for the owner.**
+The owner was asked these six and answered *"Complete the lavel 2"* instead.
+Each was therefore taken at its most conservative option. **These are the
+agent's decisions, not the owner's** — recorded so a later chat can tell the
+difference, and so any one of them can be reversed on the owner's word without
+reopening the others.
 
-| # | Question | Why it matters | Options |
+| # | Question | **Decision taken** | Why this is the conservative one |
 |---|---|---|---|
-| Q1 | **Multi-turn?** Phase 77's Q1 answer was *"No i just making the ui future pruff"* — one question at a time. Level 2's spec never asks for turns. | Changes `AiViewModel`'s state machine and re-opens D4 (a later turn must re-show the whole resent history). | (a) stay one question at a time — Level 2 is context only; (b) allow follow-ups in the same sheet. |
-| Q2 | **The context budget.** `MAX_CONTEXT_CHARS` is 12 000 (`AiPolicy.kt:23`). Five whole files blow it. | Sets the whole relevance design. | (a) keep 12 000 and send ranges only; (b) raise it to a new documented ceiling; (c) make it model-dependent. Note: a raise touches a value the 76 device round validated. |
-| Q3 | **Secret-like files: refuse, or ask?** | The §2.4 hazard. | (a) exclude silently but list them in the preview; (b) exclude and require an explicit per-file opt-in; (c) never offer them at all. |
-| Q4 | **`.gitignore` in scope?** | §2.6: no matcher exists; writing one is a real sub-project. | (a) yes, write a minimal matcher; (b) no — use the fixed `excludedDirectories` set only and record it as deferred. |
-| Q5 | **Where does the entry point live?** | Phase 77's surfaces are fixed: ✨ home is setup-only; the bubble opens the sheet; "Explain with AI" is on the Output header. A project question needs a home. | (a) a third chip in the sheet next to *Explain selection* / *Explain last error*; (b) a new row in ✨ home; (c) both. |
-| Q6 | **Persistence.** D6 forbids an index. Does the *last chosen exclusion set* persist? | Would be a 7th key in `ai_settings.properties` — needs an explicit owner decision. | (a) no, rebuild every time; (b) yes, save the exclusion list. |
+| Q1 | Multi-turn? | **No** — one question at a time; Level 1's exchange behaviour unchanged | Phase 77's Q1 answer was already *"No i just making the ui future pruff"*; the Level 2 spec never asks for turns; a turn would re-open D4 (the whole resent history must be re-previewed). |
+| Q2 | The context budget | **`MAX_CONTEXT_CHARS` stays 12 000** (`AiPolicy.kt:23`); answer with relevance + whole-line ranges | Does not touch a value the Phase 76 device round validated. Pinned by `AiLevel2WiringTest`. |
+| Q3 | Secret-like files | **Never offered, no opt-in**, but counted and reported in the preview | A false positive costs one file of context; a false negative sends a credential to Google. |
+| Q4 | `.gitignore` | **Out of scope** — the fixed `ProjectFilesPolicy.excludedDirectories` set only | §2.6: no glob matcher exists anywhere in the app; writing one is a separate sub-project with its own bug surface. Recorded deferred. |
+| Q5 | Entry point | **A third chip in the existing chat sheet**, beside *Explain selection* / *Explain last error* | No new surface. ✨ home stays setup-only (`AiSurfaceWiringTest`), and Sora's selection menu has no add-item API. |
+| Q6 | Persistence | **Nothing new saved**; context rebuilt from disk every request | D6. `ai_settings.properties` still has exactly its six keys; `AiLevel2WiringTest` pins that no seventh arrived. |
 
 ---
 
-## 6. Proposed parts (contingent on §5)
+## 6. Parts as built
 
-| Part | Scope | Depends on |
-|---|---|---|
-| 78.1 | Pure `AiProjectFiles` policy — include/exclude, secret-like set, budgets, the project-map shape. Host-testable with no Android at all. | Q2, Q3, Q4 |
-| 78.2 | The enumerator + dirty-buffer contract on the Android side, wired into `AiContextBuilder` as a third `AiSource`; the path-list preview. | 78.1, Q1, Q5 |
-| 78.3 | Entry points in the Phase 77 surfaces + the "too large" and exclusion-inspection UI. | 78.2, Q5, Q6 |
+| Part | Doc | What shipped | Tests |
+|---|---|---|---|
+| 78.1 | [PART_78_1_FILE_POLICY.md](PART_78_1_FILE_POLICY.md) | `ui/ai/AiProjectFiles.kt` (398 lines, pure) — the AI's own file filter, deterministic relevance, the shortlist, and a packer that enforces the budget on the rendered body | `AiProjectFilesTest` **28** |
+| 78.2 | [PART_78_2_WALK_AND_CONTEXT.md](PART_78_2_WALK_AND_CONTEXT.md) | `ui/ai/AiProjectReader.kt` (230 lines, `java.io` only) + `AiSource.PROJECT` + `AiContextBuilder.fromProject` + `AiViewModel.askProject` | `AiProjectReaderTest` **14** |
+| 78.3 | [PART_78_3_SURFACE.md](PART_78_3_SURFACE.md) | The third chip, the walk indicator, and a preview that names every file it sends | `AiLevel2WiringTest` **15** |
 
-Part docs are **not written yet** — they are written after §5 is answered, so
-no part doc can encode an answer the owner did not give.
+**57 new host cases**, all in `app/src/test/java/com/codeci/ide/`.
+
+> **Correction to the commit message of `8abd49e`:** it states
+> "AiProjectFilesTest 26, AiProjectReaderTest 15, AiLevel2WiringTest 14".
+> The real counts, `grep -c '@Test'`, are **28 / 14 / 15**. The commit is
+> pushed and is not rewritten (`rule.md` §2: never force-push); the correct
+> numbers are recorded here and in the part docs instead.
+
+### Pre-validation, and what it was worth
+
+The sandbox cannot compile Compose, but a JRE + kotlinc **are** installable
+(pip `jdk4py` 25.0.2 + npm `kotlin-compiler` 2.4.20). Before CI:
+
+- **102/102** policy + prompt assertions executed against the **real compiled**
+  `AiProjectFiles` / `AiContextBuilder` / `AiPromptText`;
+- **30/30** walker assertions against a **real temporary tree** containing
+  `.env`, `.env.production`, `.npmrc`, `node_modules`, `.git`, a NUL file, a
+  file symlink and a directory symlink escaping the root, plus a 4 005-file
+  entry-cap case;
+- **139/139** source-scan pins executed through the **real
+  `RepoFiles.codeOnly`**.
+
+Three real defects were caught locally, before CI:
+
+1. a genuine compile error — `return@buildString null` in a `String`-returning
+   `buildString` block (`AiContext.kt`);
+2. a **wrong test assertion** — "a slice must not end with `padding padding`"
+   is false for a *correct* whole-line slice, which legitimately ends with the
+   line's last word;
+3. **two wrong wiring pins** — `READ_EXTERNAL_STORAGE` is already in the
+   manifest (pre-existing, so its absence could never be asserted), and
+   `"store":false` is written escaped in source (`append("\"store\":false")`),
+   so a plain substring pin could never have matched.
+
+Pre-validation never replaces CI; CI is the only compile check for the Compose
+files (`AiChatSheet.kt`, `EditorScreen.kt`, `AiHome.kt`), which were **not**
+compiled locally.
 
 ---
 
