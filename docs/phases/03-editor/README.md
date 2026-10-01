@@ -26,3 +26,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [77](chat-phase77/) | ✅ AI UI for phones — floating AI button + bottom chat sheet |
 | [78](chat-phase78/) | ✅ AI Level 2 — whole-project context (read-only) |
 | [79](chat-phase79/) | ✅ AI Level 3 — proposed edits, review, and undo |
+| [80](chat-phase80/) | 🚧 AI Level 4 — whole-project map, bounded tools, approved run loop |

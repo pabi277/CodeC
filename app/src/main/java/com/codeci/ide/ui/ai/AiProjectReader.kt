@@ -69,7 +69,7 @@ object AiProjectReader {
         openText: String?,
         openDirty: Boolean
     ): Scan {
-        val rootDir = root.canonicalFileSafe() ?: return emptyScan()
+        val rootDir = canonicalFileSafe(root) ?: return emptyScan()
         if (!rootDir.isDirectory) return emptyScan()
 
         val paths = mutableListOf<String>()
@@ -179,7 +179,7 @@ object AiProjectReader {
     private fun emptyScan() = Scan(emptyList(), 0, 0, 0, 0, false)
 
     /** Reads at most [AiProjectFiles.MAX_READ_CHARS] characters; null when unreadable or too big. */
-    private fun readCapped(file: File): String? = runCatching {
+    internal fun readCapped(file: File): String? = runCatching {
         if (!file.isFile) return@runCatching null
         if (file.length() > MAX_FILE_BYTES) return@runCatching null
         val out = StringBuilder()
@@ -215,19 +215,19 @@ object AiProjectReader {
     }
 
     /** The minSdk-24-safe symlink test (`ProjectSearch.kt:181-182`), copied not imported. */
-    private fun isSymlink(file: File): Boolean =
+    internal fun isSymlink(file: File): Boolean =
         runCatching { file.canonicalPath != file.absolutePath }.getOrDefault(false)
 
     /** Canonical containment: the child must stay under the canonical root. */
-    private fun insideRoot(child: File, rootDir: File): Boolean = runCatching {
+    internal fun insideRoot(child: File, rootDir: File): Boolean = runCatching {
         val childPath = child.canonicalFile.path
         val rootPath = rootDir.path
         childPath == rootPath || childPath.startsWith(rootPath + File.separator)
     }.getOrDefault(false)
 
-    private fun File.canonicalFileSafe(): File? = runCatching { canonicalFile }.getOrNull()
+    internal fun canonicalFileSafe(file: File): File? = runCatching { file.canonicalFile }.getOrNull()
 
-    private fun relativePath(rootDir: File, file: File): String =
+    internal fun relativePath(rootDir: File, file: File): String =
         runCatching { file.relativeTo(rootDir).path.replace(File.separatorChar, '/') }
             .getOrDefault(file.name)
 }

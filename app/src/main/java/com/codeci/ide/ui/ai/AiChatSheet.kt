@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecTokens.Space
+import com.codeci.ide.ui.theme.CodecType
 import kotlin.math.roundToInt
 
 /**
@@ -105,6 +106,13 @@ fun AiChatSheet(
     onRejectProposal: () -> Unit = {},
     onUndoEdits: (Boolean) -> Unit = {},
     onDismissUndoConflict: () -> Unit = {},
+    /** Phase 80 (Level 4) — the agent's run approval; nothing runs until Run. */
+    onApproveRun: () -> Unit = {},
+    onSkipRun: () -> Unit = {},
+    /** The last command the editor ran, shown on the approval card when known. */
+    lastRunCommand: String? = null,
+    /** True while CodeC's own runner is busy, so the Run button cannot race it. */
+    runBusy: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -176,6 +184,7 @@ fun AiChatSheet(
                 state, hasSelection, question, onCancelGather,
                 onProposeEdits, onToggleEditFile, onApplyEdits, onRejectProposal,
                 onUndoEdits, onDismissUndoConflict,
+                onApproveRun, onSkipRun, lastRunCommand, runBusy,
                 Modifier.weight(1f)
             )
             HorizontalDivider()
@@ -239,6 +248,10 @@ private fun Conversation(
     onRejectProposal: () -> Unit,
     onUndoEdits: (Boolean) -> Unit,
     onDismissUndoConflict: () -> Unit,
+    onApproveRun: () -> Unit,
+    onSkipRun: () -> Unit,
+    lastRunCommand: String?,
+    runBusy: Boolean,
     modifier: Modifier
 ) {
     val scroll = rememberScrollState()
@@ -256,6 +269,12 @@ private fun Conversation(
         val prompt = state.prompt
         if (state.phase != AiPhase.IDLE && prompt != null) {
             YouBubble(AiCopy.youLine(prompt.source, prompt.fileLabel, prompt.question))
+        }
+        // Phase 80 — every step of the agent task, in order, as it happens:
+        // the reads it asked for, the refusals, the run it requested and the
+        // run's own result. In memory and never persisted (D6).
+        if (state.agentSteps.isNotEmpty()) {
+            AgentActivityCard(state)
         }
         when (state.phase) {
             AiPhase.IDLE -> {
@@ -282,20 +301,34 @@ private fun Conversation(
 
             AiPhase.PREVIEW -> prompt?.let {
                 val summary = it.project
-                if (summary != null) {
-                    // Phase 78 — the file list is the point of this preview:
-                    // WHICH files leave the phone, and whether one was cut.
-                    Text(AiCopy.PROJECT_PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
-                    Body(
-                        AiCopy.projectPreviewHeader(
-                            summary.projectName, summary.files.size, it.sentChars
+                when {
+                    // Phase 80 (Level 4) — an agent task: the map, not a five-file
+                    // list, is what leaves the phone, so the preview says how many
+                    // files the map names (the map's own sentence) and what the
+                    // AI may then do.
+                    it.agent && summary != null -> {
+                        Text(AiCopy.PROJECT_PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
+                        Body(AiCopy.agentPreviewHeader(summary.projectName, it.sentChars))
+                        summary.mapLine?.let { line -> Muted(line) }
+                        AiPromptText.projectLeftOutLine(summary)?.let { line -> Muted(line) }
+                        Muted(AiCopy.agentPreviewNote())
+                    }
+                    summary != null -> {
+                        // Phase 78 — the file list is the point of this preview:
+                        // WHICH files leave the phone, and whether one was cut.
+                        Text(AiCopy.PROJECT_PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
+                        Body(
+                            AiCopy.projectPreviewHeader(
+                                summary.projectName, summary.files.size, it.sentChars
+                            )
                         )
-                    )
-                    for (line in AiPromptText.projectFileLines(summary)) Muted("  ·  $line")
-                    AiPromptText.projectLeftOutLine(summary)?.let { line -> Muted(line) }
-                } else {
-                    Text(AiCopy.PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
-                    Body(AiCopy.previewHeader(state.model, it.sentChars))
+                        for (line in AiPromptText.projectFileLines(summary)) Muted("  ·  $line")
+                        AiPromptText.projectLeftOutLine(summary)?.let { line -> Muted(line) }
+                    }
+                    else -> {
+                        Text(AiCopy.PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
+                        Body(AiCopy.previewHeader(state.model, it.sentChars))
+                    }
                 }
                 if (it.unsaved && summary == null) Muted(AiCopy.UNSAVED_NOTE)
                 Body(AiCopy.FREE_TIER_NOTE)
@@ -307,6 +340,18 @@ private fun Conversation(
                     CircularProgressIndicator(modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV)))
                 } else {
                     AiBubble { Answer(state.answer) }
+                }
+                // Phase 80 — the loop is paused here: the AI asked to run the
+                // project and NOTHING runs until the user taps Run.
+                state.agentRun?.let { request ->
+                    AgentRunCard(
+                        request = request,
+                        lastRunCommand = lastRunCommand,
+                        running = state.agentRunRunning,
+                        runBusy = runBusy,
+                        onApproveRun = onApproveRun,
+                        onSkipRun = onSkipRun
+                    )
                 }
             }
 
@@ -477,6 +522,93 @@ private fun UndoTaskCard(
     }
 }
 
+/**
+ * Phase 80 (Level 4) — the activity timeline. One row per step, the counter of
+ * the caps in use, and the detail the model actually received. Nothing here is
+ * persisted (D6); it disappears with the task.
+ */
+@Composable
+private fun AgentActivityCard(state: AiUiState) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(CodecTokens.space(Space.M)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
+        ) {
+            Text(AiCopy.AGENT_ACTIVITY, style = MaterialTheme.typography.titleSmall)
+            state.agentUsage?.let { usage ->
+                Muted(AiCopy.agentUsageLine(usage.turns, usage.toolCalls, usage.runs))
+            }
+            for (step in state.agentSteps) {
+                Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.XXS))) {
+                    Text(
+                        text = step.title,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (step.ok) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (step.detail.isNotBlank()) {
+                        Text(
+                            text = step.detail,
+                            fontFamily = CodecType.codeFamily,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 12,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Phase 80 (Level 4) — the run approval card. It names the same RUN action the
+ * ▶ button performs, shows the last known command when there is one, and says
+ * plainly that nothing has run yet.
+ */
+@Composable
+private fun AgentRunCard(
+    request: AiAgentRunRequest,
+    lastRunCommand: String?,
+    running: Boolean,
+    runBusy: Boolean,
+    onApproveRun: () -> Unit,
+    onSkipRun: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(CodecTokens.space(Space.M)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
+        ) {
+            Text(AiCopy.AGENT_RUN_TITLE, style = MaterialTheme.typography.titleSmall)
+            Body(AiRunDigest.approvalQuestion(request.target, lastRunCommand))
+            if (running) {
+                Muted(AiCopy.AGENT_RUN_RUNNING)
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    Button(onClick = onApproveRun, enabled = !runBusy) { Text(AiCopy.AGENT_RUN_APPROVE) }
+                    OutlinedButton(onClick = onSkipRun) { Text(AiCopy.AGENT_RUN_SKIP) }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun YouBubble(text: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -607,7 +739,12 @@ private fun BottomBar(
                 OutlinedButton(onClick = onCancelPreview) { Text(AiCopy.CANCEL) }
             }
 
-            AiPhase.STREAMING -> OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
+            AiPhase.STREAMING -> {
+                if (state.agentSteps.isNotEmpty()) {
+                    Muted(AiCopy.agentWorkingLine(state.agentSteps.count { it.kind == AiAgentStepKind.TOOL }))
+                }
+                OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
+            }
 
             AiPhase.DONE -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
                 Button(onClick = { copyAnswer(context, state.answer) }) { Text(AiCopy.COPY) }

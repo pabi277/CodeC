@@ -100,8 +100,11 @@ class AiLevel3WiringTest {
 
     @Test
     fun `AiViewModel still has exactly two network stream entry points`() {
+        // Phase 79: two — send() and test connection. Phase 80 (Level 4) adds a
+        // third, agentTurn(), reachable only from the agent loop after the task
+        // preview's Send; see AiLevel4WiringTest for the full agent-law pin.
         val vm = ai("AiViewModel.kt")
-        assertEquals(2, Regex("client\\.stream\\(").findAll(vm).count())
+        assertEquals(3, Regex("client\\.stream\\(").findAll(vm).count())
         assertTrue(vm.contains("if (_state.value.phase != AiPhase.PREVIEW"))
     }
 
@@ -129,7 +132,12 @@ class AiLevel3WiringTest {
 
     @Test
     fun `EditorScreen synchronizes open tabs dirty buffers file tree and Git badges on apply and undo`() {
-        assertTrue(editor.contains("aiViewModel.proposeEdits("))
+        // Phase 80 (Level 4) amendment: both project chips now start the agent
+        // task (owner 2026-10-02, "both flows through the agent"), so the
+        // propose path enters through agentPropose(). The Level 3 method is
+        // kept compiled and tested as the documented rollback; its own pin
+        // lives in AiLevel4WiringTest.
+        assertTrue(editor.contains("aiViewModel.agentPropose("))
         assertTrue(editor.contains("viewModel.dirtyProjectBuffers()"))
         assertTrue(editor.contains("viewModel.syncAfterAiFileChanges("))
         assertTrue(editorVm.contains("fun syncAfterAiFileChanges("))

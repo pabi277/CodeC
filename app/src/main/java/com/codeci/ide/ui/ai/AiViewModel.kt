@@ -8,6 +8,7 @@ import com.codeci.ide.ui.projects.AiEditApplier
 import com.codeci.ide.ui.projects.AiUndoOutcome
 import com.codeci.ide.ui.projects.AiUndoSummary
 import com.codeci.ide.ui.projects.ProjectManager
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,8 +56,30 @@ data class AiUiState(
     /** Phase 79 — task paths edited by the user after the AI change was applied. */
     val undoConflictPaths: List<String> = emptyList(),
     /** Phase 79 — an approved apply or undo is running on IO. */
-    val applying: Boolean = false
+    val applying: Boolean = false,
+    /**
+     * Phase 80 (Level 4) — the visible activity timeline of the current agent
+     * task: one row per model step, tool read, refusal, run request and run
+     * result. **In memory only** (D6); it disappears with [clear], a project
+     * switch, or process death, and it is never written anywhere.
+     */
+    val agentSteps: List<AiAgentStep> = emptyList(),
+    /**
+     * Phase 80 — non-null while the AI is waiting for the user's Run/Skip
+     * decision. The loop is paused: no request is in flight and nothing runs.
+     */
+    val agentRun: AiAgentRunRequest? = null,
+    /** Phase 80 — true between the user's Run tap and the run's result. */
+    val agentRunRunning: Boolean = false,
+    /** Phase 80 — the caps in use for the running task, for the sheet's counter. */
+    val agentUsage: AiAgentUsage? = null
 )
+
+/** Phase 80 — the AI's pending run request, as the approval card renders it. */
+data class AiAgentRunRequest(val target: String?)
+
+/** Phase 80 — a snapshot of the task's usage counters (in memory, display only). */
+data class AiAgentUsage(val turns: Int, val toolCalls: Int, val runs: Int)
 
 /**
  * Phase 76 — the AI panel's state holder. One request at a time; the answer
@@ -77,6 +100,34 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     /** Phase 79 — baseline snapshot captured when a PROPOSE_EDITS prompt is built. */
     private var pendingBaselines: Map<String, AiFileBaseline> = emptyMap()
     private var pendingExistingPaths: Set<String> = emptySet()
+
+    /**
+     * Phase 80 (Level 4) — the running agent task, or null. Everything here is
+     * per-task and in memory (D6): the project root, the map that was sent, the
+     * walk's admitted paths, the caps in use, and the pack of tool results the
+     * next request carries. A project switch, [clear] or process death throws
+     * it away.
+     */
+    private class AgentSession(
+        val question: String,
+        val source: AiSource,
+        val root: File,
+        val mapText: String,
+        /** The Level 2 walk's admitted code/text paths — the tool surface's whole world. */
+        val paths: List<String>,
+        val dirtyBuffers: Map<String, String>,
+        val systemInstruction: String,
+        var budget: AiAgentBudget,
+        var pendingRun: AiToolCall? = null,
+        /** Tool calls that arrived in the same answer as a run request. */
+        var queuedAfterRun: List<AiToolCall> = emptyList(),
+        var queuedDeniedAfterRun: List<AiToolVerdict.Denied> = emptyList()
+    ) {
+        val projectView: AiToolProjectView
+            get() = AiToolProjectView(existingPaths = paths.toSet(), runsRemaining = budget.runsRemaining())
+    }
+
+    private var agent: AgentSession? = null
 
     private val _state = MutableStateFlow(AiUiState())
     val state: StateFlow<AiUiState> = _state.asStateFlow()
@@ -138,6 +189,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         project = name
         pendingBaselines = emptyMap()
         pendingExistingPaths = emptySet()
+        agent = null
         clear()
         closeSheet()
         _state.update { it.copy(undoSummary = null, undoConflictPaths = emptyList()) }
@@ -167,7 +219,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     phase = AiPhase.PREVIEW, prompt = result.prompt, notice = null,
                     answer = "", error = null, cutShort = false,
                     proposalResult = null, applyConflictPaths = emptyList(),
-                    undoConflictPaths = emptyList()
+                    undoConflictPaths = emptyList(),
+                    // A new preview is a new task: the previous timeline belongs
+                    // to a task that is over, and it is never persisted (D6).
+                    agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null
                 )
             }
         }
@@ -469,10 +524,407 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(undoConflictPaths = emptyList()) }
     }
 
+    // ---- Phase 80 (Level 4): the agent task -------------------------------
+    //
+    // What happens here, in the owner's words (2026-10-02): one preview, then
+    // read-only steps with a visible timeline and Stop; every run and every
+    // file apply still needs its own tap. The decisions live in the pure
+    // objects — AiRepoMap, AiToolPolicy, AiAgentPolicy, AiRunDigest — and this
+    // section only executes them, one at a time, on IO, with the caps checked
+    // before every request (D4 as amended; `04_AGENT_TOOLS_AND_RUN_LOOP.md`).
+
+    /**
+     * Phase 80 — start an **agent question** (the *Ask about the project* chip).
+     * Reads the project, builds the map, and lands on the same preview gate as
+     * every other source; nothing leaves the phone until Send.
+     */
+    fun agentAsk(question: String, openPath: String?, openText: String?, openDirty: Boolean) =
+        startAgent(AiSource.PROJECT, question, openPath, openText, openDirty)
+
+    /**
+     * Phase 80 — start an **agent edit task** (the *Propose edits* chip). Same
+     * skills as [agentAsk], and when the model stops calling tools its
+     * `<<<CODEC_EDIT …>>>` blocks go through the Level 3 parser and diff
+     * review — so an agent edit is reviewed exactly like a Level 3 one.
+     */
+    fun agentPropose(question: String, openPath: String?, openText: String?, openDirty: Boolean) =
+        startAgent(AiSource.PROPOSE_EDITS, question, openPath, openText, openDirty)
+
+    private fun startAgent(
+        source: AiSource,
+        question: String,
+        openPath: String?,
+        openText: String?,
+        openDirty: Boolean
+    ) {
+        val s = _state.value
+        if (s.phase == AiPhase.STREAMING || s.gathering || s.applying) return
+        val q = question.trim()
+        if (source == AiSource.PROPOSE_EDITS && q.isEmpty()) {
+            _state.update { it.copy(notice = AiCopy.problem(AiContextProblem.EMPTY_EDIT_QUESTION)) }
+            return
+        }
+        if (q.length > AiLimits.MAX_QUESTION_CHARS) {
+            _state.update { it.copy(notice = AiCopy.problem(AiContextProblem.QUESTION_TOO_LONG)) }
+            return
+        }
+        val projectName = project
+        if (projectName == null) {
+            _state.update { it.copy(notice = AiCopy.NEEDS_PROJECT) }
+            return
+        }
+        _state.update { it.copy(gathering = true, notice = null) }
+        gatherJob = viewModelScope.launch {
+            val root = withContext(Dispatchers.IO) {
+                runCatching { ProjectManager(getApplication()).project(projectName)?.root }.getOrNull()
+            }
+            if (root == null) {
+                _state.update { it.copy(gathering = false, notice = AiCopy.NEEDS_PROJECT) }
+                return@launch
+            }
+            val scan = withContext(Dispatchers.IO) {
+                runCatching { AiProjectReader.scan(root, q, openPath, openText, openDirty) }.getOrNull()
+            }
+            if (scan == null || scan.allTextPaths.isEmpty()) {
+                _state.update { it.copy(gathering = false, notice = AiCopy.NO_PROJECT_FILES) }
+                return@launch
+            }
+            // The candidates carry text (so the map can name definitions); every
+            // other admitted path is listed by name alone — the map is bounded,
+            // and reading a 3 000-file project to print line counts is not a
+            // promise this app makes (AiRepoMap).
+            val infos = scan.candidates.map {
+                AiRepoMap.FileInfo(it.relativePath, it.lines, it.text)
+            }
+            val listed = infos.map { it.path }.toSet()
+            val rest = scan.allTextPaths.filter { path -> listed.none { AiProjectFiles.samePath(it, path) } }
+            val map = AiRepoMap.build(infos + rest.map { AiRepoMap.FileInfo(it, 0, null) })
+            // The live buffer is offered to the tools only under a path the
+            // walk admitted and addressed relatively — never an absolute device
+            // path, and never a file the AI filter never accepted.
+            val openRelative = openPath?.trim()?.takeIf { it.isNotEmpty() }
+                ?.replace('\\', '/')?.removePrefix("./")?.trimStart('/')
+            val dirty = if (openRelative != null && openDirty && openText != null &&
+                scan.allTextPaths.any { AiProjectFiles.samePath(it, openRelative) }
+            ) {
+                mapOf(openRelative to openText)
+            } else {
+                emptyMap()
+            }
+            val prompt = AiContextBuilder.fromAgent(
+                source = source,
+                map = map,
+                question = q,
+                projectName = projectName,
+                scannedFiles = scan.filesSeen,
+                skippedSecret = scan.skippedSecret,
+                skippedNotText = scan.skippedNotText,
+                hitEntryCap = scan.hitEntryCap
+            )
+            // Level 3's baseline snapshot still protects an agent edit: the
+            // proposal is parsed against the project as it was when the preview
+            // was built, and [AiEditApplier] re-checks before writing.
+            pendingBaselines = scan.candidates.associate { c ->
+                c.relativePath to AiFileBaseline(
+                    path = c.relativePath,
+                    exists = true,
+                    content = AiEditProposalParser.normalizeLf(c.text),
+                    cut = c.readCut,
+                    fromBuffer = c.fromBuffer
+                )
+            }
+            pendingExistingPaths = scan.allTextPaths.toSet()
+            if (prompt is AiContextResult.Ready) {
+                agent = AgentSession(
+                    question = q,
+                    source = source,
+                    root = root,
+                    mapText = map.text,
+                    paths = scan.allTextPaths,
+                    dirtyBuffers = dirty,
+                    systemInstruction = prompt.prompt.systemInstruction,
+                    budget = AiAgentBudget()
+                )
+            } else {
+                agent = null
+            }
+            _state.update { it.copy(gathering = false) }
+            preview(prompt)
+        }
+    }
+
+    /** Phase 80 — the user approved the run: the sheet calls the editor's RUN. */
+    fun approveAgentRun() {
+        val session = agent ?: return
+        val request = _state.value.agentRun ?: return
+        session.pendingRun = null
+        session.budget = session.budget.withRun()
+        _state.update { s ->
+            s.copy(
+                agentRun = null,
+                agentRunRunning = true,
+                agentSteps = s.agentSteps + AiAgentStep(
+                    kind = AiAgentStepKind.RUN_DECISION,
+                    title = AiCopy.agentRunApproved(request.target)
+                ),
+                agentUsage = s.agentUsage?.copy(runs = session.budget.runsUsed)
+            )
+        }
+    }
+
+    /** Phase 80 — the user declined the run; the model is told and carries on. */
+    fun skipAgentRun() {
+        val session = agent ?: return
+        if (_state.value.agentRun == null) return
+        session.pendingRun = null
+        val step = AiAgentStep(
+            kind = AiAgentStepKind.RUN_RESULT,
+            title = AiCopy.AGENT_RUN_SKIPPED,
+            detail = AiCopy.AGENT_RUN_SKIPPED_MODEL,
+            ok = false
+        )
+        appendAgentStep(step)
+        resumeAgentOrStop(session)
+    }
+
+    /** Phase 80 — the editor could not start the approved run (install prompt, no profile). */
+    fun onAgentRunNotStarted(reason: String) {
+        val session = agent ?: return
+        if (!_state.value.agentRunRunning) return
+        val step = AiAgentStep(
+            kind = AiAgentStepKind.RUN_RESULT,
+            title = AiCopy.AGENT_RUN_NOT_STARTED_TITLE,
+            detail = reason,
+            ok = false
+        )
+        _state.update { it.copy(agentRunRunning = false) }
+        appendAgentStep(step)
+        resumeAgentOrStop(session)
+    }
+
+    /**
+     * Phase 80 — the approved run finished. Only the digest goes back to the
+     * model, and the digest is exactly what the timeline shows (D4).
+     */
+    fun onAgentRunFinished(result: AiRunDigest.RunResult) {
+        val session = agent ?: return
+        if (!_state.value.agentRunRunning) return
+        val digest = AiRunDigest.build(result)
+        _state.update { it.copy(agentRunRunning = false) }
+        appendAgentStep(
+            AiAgentStep(AiAgentStepKind.RUN_RESULT, AiCopy.AGENT_RUN_FINISHED, digest, ok = !result.timedOut)
+        )
+        resumeAgentOrStop(session)
+    }
+
+    private fun appendAgentStep(step: AiAgentStep) {
+        _state.update { it.copy(agentSteps = it.agentSteps + step) }
+    }
+
+    /** Continues the loop when the budget allows, otherwise stops with the reason. */
+    private fun resumeAgentOrStop(session: AgentSession) {
+        val reason = session.budget.blockModelTurn(System.currentTimeMillis())
+        if (reason != null) {
+            stopAgent(reason)
+            return
+        }
+        val queued = session.queuedAfterRun
+        val deniedAfterRun = session.queuedDeniedAfterRun
+        session.queuedAfterRun = emptyList()
+        session.queuedDeniedAfterRun = emptyList()
+        if (queued.isNotEmpty() || deniedAfterRun.isNotEmpty()) {
+            executeToolBatch(session, queued, deniedAfterRun)
+            return
+        }
+        agentTurn(session)
+    }
+
+    /**
+     * One model turn of an agent task. This is the third and last `client.stream`
+     * call site in this file, and it is reachable only from the agent loop,
+     * which starts only after the task preview's **Send** (D4 as amended).
+     */
+    private fun agentTurn(session: AgentSession) {
+        val model = _state.value.model
+        val packed = AiAgentPrompt.pack(
+            question = session.question,
+            mapText = session.mapText,
+            steps = _state.value.agentSteps
+        )
+        val body = GeminiRequest.body(session.systemInstruction, packed.text, AiLimits.MAX_OUTPUT_TOKENS)
+        session.budget = session.budget.withTurn()
+        _state.update { it.copy(phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false, agentUsage = usage(session)) }
+        job = viewModelScope.launch {
+            val key = withContext(Dispatchers.IO) { store.loadKey() }
+            if (key == null) {
+                stopAgent(AiAgentStopReason.PROVIDER_FAILURE, AiCopy.KEY_UNREADABLE)
+                return@launch
+            }
+            val outcome = client.stream(key, model, body) { text ->
+                _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = text) else s }
+            }
+            when (outcome) {
+                is AiOutcome.Answer -> onAgentAnswer(session, outcome.text, outcome.cutShort)
+                is AiOutcome.Failed -> stopAgent(AiAgentStopReason.PROVIDER_FAILURE, outcome.failure.message)
+            }
+        }
+    }
+
+    private fun usage(session: AgentSession): AiAgentUsage =
+        AiAgentUsage(session.budget.turnsUsed, session.budget.toolCallsUsed, session.budget.runsUsed)
+
+    private fun onAgentAnswer(session: AgentSession, text: String, cutShort: Boolean) {
+        _state.update { it.copy(agentUsage = usage(session)) }
+        val step = AiAgentStep(
+            kind = AiAgentStepKind.ANSWER,
+            title = AiCopy.agentStepAnswer(session.budget.turnsUsed),
+            detail = text.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS)
+        )
+        appendAgentStep(step)
+        when (val parsed = AiToolProtocol.parse(text)) {
+            is AiToolParse.Malformed -> {
+                // A block CodeC cannot read is answered like a refused tool, so
+                // the model can fix its own format — and it costs a call, because
+                // a free retry loop is a budget with no cap.
+                session.budget = session.budget.withToolCalls(1)
+                appendAgentStep(
+                    AiAgentStep(
+                        kind = AiAgentStepKind.DENIED,
+                        title = AiCopy.AGENT_STEP_MALFORMED,
+                        detail = parsed.reason,
+                        ok = false
+                    )
+                )
+                resumeAgentOrStop(session)
+            }
+            is AiToolParse.Calls -> when (val decision = AiAgentPolicy.decide(
+                parsed = parsed,
+                budget = session.budget,
+                nowMs = System.currentTimeMillis(),
+                projectView = session.projectView
+            )) {
+                is AiAgentDecision.Finish -> finishAgent(session, decision.answer, cutShort)
+                is AiAgentDecision.Stop -> stopAgent(decision.reason)
+                is AiAgentDecision.AskRunApproval -> {
+                    // The loop pauses for the user's tap; anything else the
+                    // model asked for in the same answer waits with it.
+                    session.pendingRun = decision.call
+                    session.queuedAfterRun = decision.alsoQueued
+                    session.queuedDeniedAfterRun = decision.denied
+                    _state.update { it.copy(agentRun = AiAgentRunRequest(target = decision.call.path)) }
+                }
+                is AiAgentDecision.ExecuteTools -> executeToolBatch(session, decision.calls, decision.denied)
+            }
+        }
+    }
+
+    /** Runs a batch of validated calls on IO, oldest first, then takes another turn. */
+    private fun executeToolBatch(
+        session: AgentSession,
+        calls: List<AiToolCall>,
+        denied: List<AiToolVerdict.Denied>
+    ) {
+        _state.update { s ->
+            var steps = s.agentSteps
+            for (d in denied) {
+                steps = steps + AiAgentStep(
+                    kind = AiAgentStepKind.DENIED,
+                    title = AiCopy.agentStepDenied(AiToolProtocol.describe(d.request), d.reason),
+                    detail = d.reason,
+                    ok = false
+                )
+            }
+            s.copy(agentSteps = steps)
+        }
+        if (calls.isEmpty()) {
+            session.budget = session.budget.withToolCalls(denied.size)
+            _state.update { it.copy(agentUsage = usage(session)) }
+            resumeAgentOrStop(session)
+            return
+        }
+        job = viewModelScope.launch {
+            val stop = { !isActive }
+            for (call in calls) {
+                val outcome = withContext(Dispatchers.IO) {
+                    AiToolRunner.execute(call, session.root, session.paths, session.dirtyBuffers, stop)
+                }
+                val step = AiAgentStep(
+                    kind = AiAgentStepKind.TOOL,
+                    title = AiToolProtocol.describeCall(call),
+                    detail = outcome.text.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS),
+                    ok = outcome.ok
+                )
+                session.budget = session.budget.withToolCalls(1)
+                _state.update { it.copy(agentSteps = it.agentSteps + step, agentUsage = usage(session)) }
+                if (!isActive) return@launch
+            }
+            if (denied.isNotEmpty()) {
+                session.budget = session.budget.withToolCalls(denied.size)
+                _state.update { it.copy(agentUsage = usage(session)) }
+            }
+            resumeAgentOrStop(session)
+        }
+    }
+
+    private fun finishAgent(session: AgentSession, answer: String, cutShort: Boolean) {
+        val parsed = if (session.source == AiSource.PROPOSE_EDITS) {
+            AiEditProposalParser.parse(answer, pendingBaselines, pendingExistingPaths)
+        } else {
+            null
+        }
+        _state.update {
+            it.copy(
+                phase = AiPhase.DONE,
+                answer = answer,
+                cutShort = cutShort,
+                proposalResult = parsed,
+                applyConflictPaths = emptyList(),
+                agentRun = null,
+                agentRunRunning = false
+            )
+        }
+    }
+
+    private fun stopAgent(reason: AiAgentStopReason, message: String? = null) {
+        job = null
+        _state.update { s ->
+            s.copy(
+                phase = if (message != null) AiPhase.FAILED else AiPhase.DONE,
+                error = message,
+                agentRun = null,
+                agentRunRunning = false,
+                notice = null,
+                agentSteps = s.agentSteps + AiAgentStep(
+                    kind = AiAgentStepKind.STOPPED,
+                    title = AiCopy.agentStopped(reason),
+                    ok = false
+                )
+            )
+        }
+    }
+
     /** The only path to a helper request: the user pressed Send on a preview. */
     fun send() {
         val prompt = _state.value.prompt ?: return
         if (_state.value.phase != AiPhase.PREVIEW || job?.isActive == true) return
+        if (prompt.agent) {
+            val session = agent
+            if (session == null) {
+                _state.update { it.copy(notice = AiCopy.NO_PROJECT_FILES) }
+                return
+            }
+            session.budget = AiAgentBudget(startedAtMs = System.currentTimeMillis())
+            _state.update {
+                it.copy(
+                    phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false,
+                    proposalResult = null, applyConflictPaths = emptyList(), undoConflictPaths = emptyList(),
+                    agentSteps = listOf(AiAgentStep(AiAgentStepKind.TASK, session.question)),
+                    agentRun = null, agentRunRunning = false, agentUsage = usage(session)
+                )
+            }
+            agentTurn(session)
+            return
+        }
         val model = _state.value.model
         _state.update { it.copy(phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false) }
         job = viewModelScope.launch {
@@ -511,18 +963,29 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Stop: disconnects the request; what arrived so far stays visible. */
     fun stop() {
+        val stoppingAgent = job != null && agent != null && _state.value.agentRun != null
         job?.cancel()
         job = null
+        if (stoppingAgent) _state.update { it.copy(agentRun = null, agentRunRunning = false) }
         _state.update { s ->
             if (s.phase != AiPhase.STREAMING) s
-            else if (s.answer.isBlank()) s.copy(phase = AiPhase.IDLE, prompt = null)
-            else {
+            else if (s.answer.isBlank() && s.agentSteps.none { it.kind == AiAgentStepKind.TOOL }) {
+                s.copy(phase = AiPhase.IDLE, prompt = null)
+            } else {
                 val parsed = if (s.prompt?.source == AiSource.PROPOSE_EDITS) {
                     AiEditProposalParser.parse(s.answer, pendingBaselines, pendingExistingPaths)
                 } else {
                     null
                 }
-                s.copy(phase = AiPhase.DONE, cutShort = true, proposalResult = parsed)
+                s.copy(
+                    phase = AiPhase.DONE, cutShort = true, proposalResult = parsed,
+                    agentRun = null, agentRunRunning = false,
+                    agentSteps = s.agentSteps + AiAgentStep(
+                        kind = AiAgentStepKind.STOPPED,
+                        title = AiCopy.agentStopped(AiAgentStopReason.USER_STOP),
+                        ok = false
+                    )
+                )
             }
         }
     }
@@ -543,12 +1006,14 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         job = null
         gatherJob?.cancel()
         gatherJob = null
+        agent = null
         _state.update {
             it.copy(
                 phase = AiPhase.IDLE, prompt = null, answer = "", error = null,
                 cutShort = false, notice = null, testResult = null, testing = false,
                 gathering = false, proposalResult = null, applyConflictPaths = emptyList(),
-                undoConflictPaths = emptyList()
+                undoConflictPaths = emptyList(),
+                agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null
             )
         }
     }

@@ -168,6 +168,61 @@ object AiCopy {
     fun undoneNotice(count: Int): String =
         "Restored $count " + (if (count == 1) "file" else "files") + " to before the last AI change."
 
+    // ---- Phase 80 (Level 4): the agent surface ----------------------------
+
+    /** The preview's note when the task will be run by the agent, not one shot. */
+    fun agentPreviewNote(): String =
+        "After you tap Send, the AI may read this project — list_files, search_project and read_file — " +
+            "one step at a time, shown below as it happens (up to ${AiAgentLimits.MAX_TOOL_CALLS} reads). " +
+            "It may ask to run the project (up to ${AiAgentLimits.MAX_RUNS} times); nothing runs until you tap Run. " +
+            "Nothing in your project is changed without the diff review, and Stop is always available."
+
+    /**
+     * The agent preview's own header: a task, not a file list. The map's own
+     * sentence (how many files it names) is rendered separately, from
+     * [AiProjectSummary.mapLine], so the preview cannot overstate what was sent.
+     */
+    fun agentPreviewHeader(projectName: String, chars: Int): String =
+        "Agent task · whole-project map from $projectName · $chars characters."
+
+    /** The activity timeline's heading. */
+    const val AGENT_ACTIVITY = "What the AI did"
+
+    /** One row's counter, e.g. `3 of 12 steps · 1 of 2 runs`. */
+    fun agentUsageLine(turns: Int, toolCalls: Int, runs: Int): String =
+        "$turns of ${AiAgentLimits.MAX_TURNS} steps · $toolCalls of ${AiAgentLimits.MAX_TOOL_CALLS} reads · " +
+            "$runs of ${AiAgentLimits.MAX_RUNS} runs"
+
+    /** The running label while the agent works. */
+    fun agentWorkingLine(steps: Int): String =
+        "Working on it" + (if (steps > 0) " — $steps steps done" else "") + "…"
+
+    /** The run approval card. */
+    const val AGENT_RUN_TITLE = "The AI wants to run the project"
+    const val AGENT_RUN_APPROVE = "Run"
+    const val AGENT_RUN_SKIP = "Skip"
+    const val AGENT_RUN_RUNNING = "Running the project… The output is in the Output panel."
+    const val AGENT_RUN_SKIPPED_NOTE = "Run skipped. The AI was told."
+    const val AGENT_RUN_NOT_STARTED =
+        "The run did not start (the project asked something first, or has no run profile). The AI was told."
+
+    /** Step titles for the timeline. Every sentence the agent surface shows. */
+    const val AGENT_STEP_ANSWER = "AI step"
+    const val AGENT_STEP_MALFORMED = "Tool block could not be read"
+    const val AGENT_RUN_APPROVED = "You approved the run"
+    fun agentRunApproved(target: String?): String =
+        AGENT_RUN_APPROVED + (if (target.isNullOrBlank()) "" else " ($target)")
+    const val AGENT_RUN_SKIPPED = "Run skipped by the user"
+    const val AGENT_RUN_SKIPPED_MODEL =
+        "The user skipped the run. Continue without it; do not ask to run again unless nothing else can answer the task."
+    const val AGENT_RUN_NOT_STARTED_TITLE = "Run did not start"
+    const val AGENT_RUN_FINISHED = "Run finished"
+    fun agentStepAnswer(number: Int): String = "$AGENT_STEP_ANSWER $number"
+    fun agentStepDenied(title: String, reason: String): String = "Refused $title — $reason"
+
+    /** Shown when the task ends because of a cap or the user. */
+    fun agentStopped(reason: AiAgentStopReason): String = AiAgentLimits.stopSentence(reason)
+
     /** Shown in the sheet while the project is being read. */
     const val GATHERING = "Reading the project…"
 
