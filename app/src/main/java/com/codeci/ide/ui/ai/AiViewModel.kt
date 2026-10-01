@@ -3,6 +3,7 @@ package com.codeci.ide.ui.ai
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.codeci.ide.ui.projects.ProjectManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +39,9 @@ data class AiUiState(
     val bubble: AiBubblePosition = AiBubblePolicy.DEFAULT,
     val showBubble: Boolean = true,
     /** Phase 77 device round only (owner Q3): which Output-conflict variant is being tried. In memory. */
-    val outputConflict: AiOutputConflict = AiSheetPolicy.DEFAULT_CONFLICT
+    val outputConflict: AiOutputConflict = AiSheetPolicy.DEFAULT_CONFLICT,
+    /** Phase 78 — the project is being read on IO. Nothing has been sent (D4). */
+    val gathering: Boolean = false
 )
 
 /**
@@ -52,6 +55,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     private val store = AiKeyStore(application)
     private val client = GeminiClient()
     private var job: Job? = null
+
+    /** Phase 78 — the project walk. Separate from [job]: it never touches the network. */
+    private var gatherJob: Job? = null
     private var project: String? = null
 
     private val _state = MutableStateFlow(AiUiState())
@@ -136,6 +142,73 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(phase = AiPhase.IDLE, prompt = null) }
     }
 
+    /**
+     * Phase 78 (Level 2) — build the PREVIEW for a whole-project question.
+     *
+     * Reads the project on [Dispatchers.IO] (a walk plus at most
+     * [AiProjectFiles.READ_SHORTLIST] file reads, both bounded by
+     * [AiProjectFiles]), then hands the packed plan to
+     * [AiContextBuilder.fromProject]. **Nothing is sent here** — the result
+     * goes through the same [preview] gate as the other two sources, and only
+     * Send on that preview reaches the network (D4).
+     *
+     * The open tab's live buffer is passed in and used when it is dirty, so a
+     * file the user is editing is never described from stale disk bytes
+     * (`02_WHOLE_PROJECT_CONTEXT.md`, "Editor consistency").
+     */
+    fun askProject(question: String, openPath: String?, openText: String?, openDirty: Boolean) {
+        val s = _state.value
+        if (s.phase == AiPhase.STREAMING || s.gathering) return
+        val q = question.trim()
+        if (q.length > AiLimits.MAX_QUESTION_CHARS) {
+            _state.update { it.copy(notice = AiCopy.problem(AiContextProblem.QUESTION_TOO_LONG)) }
+            return
+        }
+        val projectName = project
+        if (projectName == null) {
+            _state.update { it.copy(notice = AiCopy.NEEDS_PROJECT) }
+            return
+        }
+        _state.update { it.copy(gathering = true, notice = null) }
+        gatherJob = viewModelScope.launch {
+            val root = withContext(Dispatchers.IO) {
+                runCatching { ProjectManager(getApplication()).project(projectName)?.root }.getOrNull()
+            }
+            if (root == null) {
+                _state.update { it.copy(gathering = false, notice = AiCopy.NEEDS_PROJECT) }
+                return@launch
+            }
+            val scan = withContext(Dispatchers.IO) {
+                runCatching {
+                    AiProjectReader.scan(root, q, openPath, openText, openDirty)
+                }.getOrNull()
+            }
+            if (scan == null) {
+                _state.update { it.copy(gathering = false, notice = AiCopy.NO_PROJECT_FILES) }
+                return@launch
+            }
+            val plan = AiProjectFiles.plan(scan.candidates, q, openPath)
+            val result = AiContextBuilder.fromProject(
+                plan = plan,
+                question = q,
+                projectName = projectName,
+                scannedFiles = scan.filesSeen,
+                skippedSecret = scan.skippedSecret,
+                skippedNotText = scan.skippedNotText,
+                hitEntryCap = scan.hitEntryCap
+            )
+            _state.update { it.copy(gathering = false) }
+            preview(result)
+        }
+    }
+
+    /** Stops waiting on the walk. No request was in flight, so nothing to cancel. */
+    fun cancelGather() {
+        gatherJob?.cancel()
+        gatherJob = null
+        _state.update { it.copy(gathering = false) }
+    }
+
     /** The only path to a helper request: the user pressed Send on a preview. */
     fun send() {
         val prompt = _state.value.prompt ?: return
@@ -183,10 +256,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     fun clear() {
         job?.cancel()
         job = null
+        gatherJob?.cancel()
+        gatherJob = null
         _state.update {
             it.copy(
                 phase = AiPhase.IDLE, prompt = null, answer = "", error = null,
-                cutShort = false, notice = null, testResult = null, testing = false
+                cutShort = false, notice = null, testResult = null, testing = false,
+                gathering = false
             )
         }
     }
@@ -258,6 +334,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         job?.cancel()
+        gatherJob?.cancel()
         super.onCleared()
     }
 }

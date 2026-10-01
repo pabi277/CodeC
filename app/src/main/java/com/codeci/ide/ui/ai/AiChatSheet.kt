@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,6 +84,9 @@ fun AiChatSheet(
     onQuestionChange: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
     onExplainError: (String) -> Unit,
+    /** Phase 78 — the third source: read the project, then preview. Never sends. */
+    onAskProject: (String) -> Unit,
+    onCancelGather: () -> Unit,
     onSend: () -> Unit,
     onCancelPreview: () -> Unit,
     onStop: () -> Unit,
@@ -159,11 +163,12 @@ fun AiChatSheet(
                 Header(state.model, full, onExpand, onMinimize)
             }
             HorizontalDivider()
-            Conversation(state, hasSelection, Modifier.weight(1f))
+            Conversation(state, hasSelection, onCancelGather, Modifier.weight(1f))
             HorizontalDivider()
             BottomBar(
                 state, hasSelection, question, onQuestionChange,
-                onExplainSelection, onExplainError, onSend, onCancelPreview,
+                onExplainSelection, onExplainError, onAskProject, onCancelGather,
+                onSend, onCancelPreview,
                 onStop, onRetry, onClear, onDismissNotice
             )
         }
@@ -209,7 +214,12 @@ private fun Header(model: String, full: Boolean, onExpand: () -> Unit, onMinimiz
 // ---- the exchange ----------------------------------------------------------------
 
 @Composable
-private fun Conversation(state: AiUiState, hasSelection: Boolean, modifier: Modifier) {
+private fun Conversation(
+    state: AiUiState,
+    hasSelection: Boolean,
+    onCancelGather: () -> Unit,
+    modifier: Modifier
+) {
     val scroll = rememberScrollState()
     // Follow the stream; the user's own scrolling stops mattering once it ends.
     LaunchedEffect(state.answer.length, state.phase) {
@@ -228,15 +238,42 @@ private fun Conversation(state: AiUiState, hasSelection: Boolean, modifier: Modi
         }
         when (state.phase) {
             AiPhase.IDLE -> {
+                // Phase 78 — the walk is running on IO. Nothing has been sent
+                // (D4); this is a read of the user's own files.
+                if (state.gathering) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
+                        )
+                        Spacer(Modifier.width(CodecTokens.space(Space.M)))
+                        Body(AiCopy.GATHERING)
+                        Spacer(Modifier.width(CodecTokens.space(Space.M)))
+                        TextButton(onClick = onCancelGather) { Text(AiCopy.CANCEL) }
+                    }
+                }
                 if (!hasSelection) Muted(AiCopy.SELECTION_HINT)
                 state.notice?.let { ErrorLine(it) }
                 Muted(AiCopy.NOT_SAVED_NOTE)
             }
 
             AiPhase.PREVIEW -> prompt?.let {
-                Text(AiCopy.PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
-                Body(AiCopy.previewHeader(state.model, it.sentChars))
-                if (it.unsaved) Muted(AiCopy.UNSAVED_NOTE)
+                val summary = it.project
+                if (summary != null) {
+                    // Phase 78 — the file list is the point of this preview:
+                    // WHICH files leave the phone, and whether one was cut.
+                    Text(AiCopy.PROJECT_PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
+                    Body(
+                        AiCopy.projectPreviewHeader(
+                            summary.projectName, summary.files.size, it.sentChars
+                        )
+                    )
+                    for (line in AiPromptText.projectFileLines(summary)) Muted("  ·  $line")
+                    AiPromptText.projectLeftOutLine(summary)?.let { line -> Muted(line) }
+                } else {
+                    Text(AiCopy.PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
+                    Body(AiCopy.previewHeader(state.model, it.sentChars))
+                }
+                if (it.unsaved && summary == null) Muted(AiCopy.UNSAVED_NOTE)
                 Body(AiCopy.FREE_TIER_NOTE)
                 SentText(it.systemInstruction + "\n\n" + it.userText)
             }
@@ -302,6 +339,8 @@ private fun BottomBar(
     onQuestionChange: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
     onExplainError: (String) -> Unit,
+    onAskProject: (String) -> Unit,
+    onCancelGather: () -> Unit,
     onSend: () -> Unit,
     onCancelPreview: () -> Unit,
     onStop: () -> Unit,
@@ -330,6 +369,15 @@ private fun BottomBar(
                     }
                     OutlinedButton(onClick = { onDismissNotice(); onExplainError(question) }) {
                         Text(AiCopy.EXPLAIN_ERROR)
+                    }
+                    // Phase 78 — reads the project, then lands on a preview like
+                    // the other two. Disabled while a walk is running so two
+                    // walks cannot race for the same sheet.
+                    OutlinedButton(
+                        onClick = { onDismissNotice(); onAskProject(question) },
+                        enabled = !state.gathering
+                    ) {
+                        Text(AiCopy.ASK_PROJECT)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
