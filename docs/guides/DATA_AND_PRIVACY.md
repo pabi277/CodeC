@@ -56,16 +56,24 @@ not blocked. **Settings → About → Replay the CodeC introduction** shows the 
 again on the next launch. The full permission table and
 the implementation behind every claim remain below.
 
-## The AI helper (Phases 76–77) — what it sends, where, and what it keeps
+## The AI helper (Phases 76–79) — what it sends, where, and what it keeps
 
-The AI helper (setup in the side panel's ✨ slot; chat in a bottom sheet opened by a small floating button) is an optional, read-only Gemini helper that uses
+The AI helper (setup in the side panel's ✨ slot; chat in a bottom sheet opened by a small floating button) is an optional Gemini helper that uses
 **your own** Google Gemini API key. Your use of Gemini is covered by your own
 agreement with Google ([Gemini API terms](https://ai.google.dev/gemini-api/terms)).
 
 - **Sent only when you tap Send** (or **Test connection**, which sends one
   fixed line and no code). Every request is shown first, word for word: the
-  selection you chose or the tail of a failed run, plus CodeC's fixed
-  instruction. Nothing is sent in the background.
+  selection you chose, the tail of a failed run, or (Phases 78–79) up to 5
+  non-secret text files from the open project (≤ 12 000 characters total;
+  `.env`, `.npmrc`, private keys, `.git/`, `.codec/`, and build outputs are
+  excluded), plus CodeC's fixed instruction. Nothing is sent in the background.
+- **Changes files only after you review the diff and tap Apply (Phase 79):**
+  when you tap **Propose edits**, CodeC parses the model's structured edit
+  blocks and computes unified diffs locally on the phone. You can inspect each
+  file's diff, uncheck files you do not want, or tap **Reject** to leave every
+  file untouched. The AI helper never runs code, terminal commands, package
+  installs, or automatic Git stage/commit.
 - **Sent only to** `generativelanguage.googleapis.com`, with your key in a
   request header (never in the URL), and `store:false` so Google does not keep
   the conversation server-side. On Google's free tier Google may use what you
@@ -76,8 +84,14 @@ agreement with Google ([Gemini API terms](https://ai.google.dev/gemini-api/terms
   plain text; if it can't be decrypted it is deleted and you are asked again.
   Beside it, the non-secret model name, the date you confirmed 18+ and
   Google's terms, and (Phase 77) where you left the floating AI button and
-  whether it is shown — and how the chat sheet treats an open Output panel — non-secret layout values that **Delete key** keeps. **Delete key** removes the key, its Keystore entry and that
-  confirmation.
+  whether it is shown — and how the chat sheet treats an open Output panel — non-secret layout values that **Delete key** keeps. When you apply an AI edit
+  proposal (Phase 79), CodeC also keeps a bounded preimage journal for the
+  **last applied AI task only** (≤ 5 files, ≤ 256 KB) in
+  `no_backup/ai/undo/<project>/` so **Undo AI changes** can restore your files
+  even if the app restarts; that journal is never backed up and is deleted as
+  soon as you tap **Undo AI changes**, apply a newer AI task, delete the
+  project, or tap **Delete key**. **Delete key** removes the key, its Keystore
+  entry, the terms confirmation, and any AI undo journal.
 - **Not kept:** questions and answers live in memory only and vanish on New
   question, a project switch, or when the app closes.
 - **Not available** in single-file mode — only inside an open CodeC project.

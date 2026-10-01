@@ -1152,6 +1152,34 @@ fun EditorScreen(
             openDirty = viewModel.isDirty.value
         )
     }
+    // Phase 79 (Level 3) — propose reviewable multi-file edits, apply after
+    // diff approval, and undo the last applied AI task.
+    val aiProposeEdits: (String) -> Unit = { question ->
+        val buffer = viewModel.codeText.value
+        aiViewModel.proposeEdits(
+            question = question,
+            openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
+            openText = buffer.text,
+            openDirty = viewModel.isDirty.value
+        )
+    }
+    val aiApplyEdits: () -> Unit = {
+        aiViewModel.applyProposal(
+            dirtyBuffers = viewModel.dirtyProjectBuffers(),
+            onApplied = { updatedPaths, deletedPaths ->
+                viewModel.syncAfterAiFileChanges(context, updatedPaths, deletedPaths)
+            }
+        )
+    }
+    val aiUndoEdits: (Boolean) -> Unit = { force ->
+        aiViewModel.undoLastTask(
+            dirtyPaths = viewModel.dirtyProjectBuffers().keys,
+            force = force,
+            onUndone = { restoredPaths, deletedCreatedPaths ->
+                viewModel.syncAfterAiFileChanges(context, restoredPaths, deletedCreatedPaths)
+            }
+        )
+    }
     val aiSheet: @Composable (Boolean, Modifier) -> Unit = { full, sheetModifier ->
         AiChatSheet(
             full = full,
@@ -1173,6 +1201,12 @@ fun EditorScreen(
             onExpand = { aiViewModel.sheetEvent(AiSheetEvent.EXPAND) },
             onMinimize = { aiViewModel.sheetEvent(AiSheetEvent.MINIMIZE) },
             onDragEnd = { fraction -> aiViewModel.sheetEvent(AiSheetEvent.DRAG_END, fraction) },
+            onProposeEdits = aiProposeEdits,
+            onToggleEditFile = aiViewModel::toggleProposalFile,
+            onApplyEdits = aiApplyEdits,
+            onRejectProposal = aiViewModel::rejectProposal,
+            onUndoEdits = aiUndoEdits,
+            onDismissUndoConflict = aiViewModel::dismissUndoConflict,
             modifier = sheetModifier
         )
     }

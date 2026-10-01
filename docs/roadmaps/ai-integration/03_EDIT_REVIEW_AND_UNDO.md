@@ -1,6 +1,6 @@
 # Level 3 — Proposed edits, review, and undo
 
-**Status: proposed; depends on project context and stable editor/disk coordination.**
+**Status: ⏳ Implemented in [Phase 79](../../phases/03-editor/chat-phase79/README.md) (`arena/01a0f848-codec`, 2026-10-01) — awaiting [device round 1](../../phases/03-editor/chat-phase79/DEVICE_ROUND.md).**
 
 ## User value
 

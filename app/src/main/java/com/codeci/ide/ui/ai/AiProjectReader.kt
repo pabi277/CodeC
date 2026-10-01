@@ -49,7 +49,9 @@ object AiProjectReader {
         val skippedDirectories: Int,
         val filesSeen: Int,
         /** True when the walk stopped at [AiProjectFiles.MAX_ENTRIES]. */
-        val hitEntryCap: Boolean
+        val hitEntryCap: Boolean,
+        /** Phase 79 — every existing text file path seen in the walk, so CREATE cannot collide. */
+        val allTextPaths: List<String> = emptyList()
     ) {
         val totalLeftOut: Int get() = skippedSecret + skippedNotText
     }
@@ -169,7 +171,8 @@ object AiProjectReader {
             skippedNotText = notText + extraNotText,
             skippedDirectories = dirsSkipped,
             filesSeen = filesSeen,
-            hitEntryCap = capped
+            hitEntryCap = capped,
+            allTextPaths = paths.toList()
         )
     }
 

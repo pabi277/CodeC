@@ -138,10 +138,13 @@ class AiKeyStore(context: Context) {
         }
     }
 
-    /** Removes the key blob, the Keystore entry and the acceptance. The model choice stays. */
+    /** Removes the key blob, the Keystore entry, the acceptance, and any AI undo journals. The model choice stays. */
     fun deleteKey() {
         keyFile.delete()
         runCatching { keyStore().deleteEntry(ALIAS) }
+        runCatching {
+            dir.parentFile?.let { com.codeci.ide.ui.projects.AiEditApplier.clearAllJournals(it) }
+        }
         val p = settings()
         p.remove(PROP_TERMS)
         p.remove(PROP_ACCEPTED_AT)

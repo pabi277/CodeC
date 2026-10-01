@@ -120,8 +120,11 @@ class AiPolicyTest {
     }
 
     @Test
-    fun `the panel promises read-only and says answers can be wrong`() {
+    fun `the panel promises approval-gated edits and says answers can be wrong`() {
+        // Phase 79 (owner D1 amendment, 2026-10-01): AI can propose edits for
+        // review, and never changes files without the user's approval.
         assertTrue(AiCopy.READ_ONLY.contains("never changes files"))
+        assertTrue(AiCopy.READ_ONLY.contains("without your approval"))
         assertTrue(AiCopy.WRONG_NOTE.contains("can be wrong"))
         assertTrue(AiCopy.TEST_NOTE.contains("No code is sent"))
         assertTrue(AiCopy.previewHeader("m", 42).contains("42 characters"))

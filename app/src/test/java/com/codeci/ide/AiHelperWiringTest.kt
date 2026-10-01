@@ -33,7 +33,11 @@ class AiHelperWiringTest {
     }
 
     @Test
-    fun `the helper is read-only - it never writes project files or runs code`() {
+    fun `the helper is read-only in ui-ai - diff-approved writes live only in AiEditApplier`() {
+        // Phase 79 (owner D1 amendment, 2026-10-01): Level 3 may apply
+        // diff-approved project file edits, and that writer deliberately lives
+        // outside `ui/ai` in `ui/projects/AiEditApplier.kt`. Every file inside
+        // `ui/ai` remains free of direct file writes and command execution.
         for (banned in listOf("writeText(", "saveFile", "runCode", "ProcessBuilder", "Runtime.getRuntime", "updateCode(")) {
             assertFalse("ui/ai must not call $banned", all.contains(banned))
         }

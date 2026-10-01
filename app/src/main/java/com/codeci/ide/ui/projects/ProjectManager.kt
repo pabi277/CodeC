@@ -64,7 +64,13 @@ class ProjectManager(context: Context) {
 
     fun deleteProject(name: String): Boolean {
         val info = project(name) ?: return false
-        return info.root.deleteRecursively()
+        val deleted = info.root.deleteRecursively()
+        if (deleted) {
+            runCatching {
+                appContext.noBackupFilesDir?.let { AiEditApplier.clearProjectJournal(it, info.name) }
+            }
+        }
+        return deleted
     }
 
     fun readConfig(name: String): ProjectConfig? = project(name)?.config

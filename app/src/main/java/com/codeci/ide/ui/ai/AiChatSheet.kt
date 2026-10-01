@@ -1,6 +1,7 @@
 package com.codeci.ide.ui.ai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,6 +98,13 @@ fun AiChatSheet(
     onExpand: () -> Unit,
     onMinimize: () -> Unit,
     onDragEnd: (heightFraction: Float) -> Unit,
+    /** Phase 79 (Level 3) — propose reviewable multi-file edits, review diff, and undo. */
+    onProposeEdits: (String) -> Unit = {},
+    onToggleEditFile: (String) -> Unit = {},
+    onApplyEdits: () -> Unit = {},
+    onRejectProposal: () -> Unit = {},
+    onUndoEdits: (Boolean) -> Unit = {},
+    onDismissUndoConflict: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -163,12 +172,17 @@ fun AiChatSheet(
                 Header(state.model, full, onExpand, onMinimize)
             }
             HorizontalDivider()
-            Conversation(state, hasSelection, onCancelGather, Modifier.weight(1f))
+            Conversation(
+                state, hasSelection, question, onCancelGather,
+                onProposeEdits, onToggleEditFile, onApplyEdits, onRejectProposal,
+                onUndoEdits, onDismissUndoConflict,
+                Modifier.weight(1f)
+            )
             HorizontalDivider()
             BottomBar(
                 state, hasSelection, question, onQuestionChange,
-                onExplainSelection, onExplainError, onAskProject, onCancelGather,
-                onSend, onCancelPreview,
+                onExplainSelection, onExplainError, onAskProject, onProposeEdits,
+                onCancelGather, onSend, onCancelPreview,
                 onStop, onRetry, onClear, onDismissNotice
             )
         }
@@ -217,7 +231,14 @@ private fun Header(model: String, full: Boolean, onExpand: () -> Unit, onMinimiz
 private fun Conversation(
     state: AiUiState,
     hasSelection: Boolean,
+    question: String,
     onCancelGather: () -> Unit,
+    onProposeEdits: (String) -> Unit,
+    onToggleEditFile: (String) -> Unit,
+    onApplyEdits: () -> Unit,
+    onRejectProposal: () -> Unit,
+    onUndoEdits: (Boolean) -> Unit,
+    onDismissUndoConflict: () -> Unit,
     modifier: Modifier
 ) {
     val scroll = rememberScrollState()
@@ -253,6 +274,9 @@ private fun Conversation(
                 }
                 if (!hasSelection) Muted(AiCopy.SELECTION_HINT)
                 state.notice?.let { ErrorLine(it) }
+                if (state.undoSummary != null) {
+                    UndoTaskCard(state, onUndoEdits, onDismissUndoConflict)
+                }
                 Muted(AiCopy.NOT_SAVED_NOTE)
             }
 
@@ -287,12 +311,168 @@ private fun Conversation(
             }
 
             AiPhase.DONE -> {
-                AiBubble { Answer(state.answer) }
+                when (val pr = state.proposalResult) {
+                    is AiProposalResult.Proposal -> {
+                        if (pr.proposal.prose.isNotBlank()) {
+                            AiBubble { Answer(pr.proposal.prose) }
+                        }
+                        ProposalReviewCard(
+                            proposal = pr.proposal,
+                            state = state,
+                            question = question,
+                            onToggleEditFile = onToggleEditFile,
+                            onApplyEdits = onApplyEdits,
+                            onRejectProposal = onRejectProposal,
+                            onRebuildProposal = { onProposeEdits(question) }
+                        )
+                    }
+                    is AiProposalResult.Invalid -> {
+                        if (pr.prose.isNotBlank()) {
+                            AiBubble { Answer(pr.prose) }
+                        }
+                        ErrorLine(pr.reason)
+                    }
+                    else -> {
+                        AiBubble { Answer(state.answer) }
+                    }
+                }
                 if (state.cutShort) Muted(AiErrors.CUT_SHORT)
+                state.notice?.let { Body(it) }
+                if (state.undoSummary != null && state.proposalResult !is AiProposalResult.Proposal) {
+                    UndoTaskCard(state, onUndoEdits, onDismissUndoConflict)
+                }
                 Muted(AiCopy.WRONG_NOTE)
             }
 
             AiPhase.FAILED -> state.error?.let { ErrorLine(it) }
+        }
+    }
+}
+
+@Composable
+private fun ProposalReviewCard(
+    proposal: AiEditProposal,
+    state: AiUiState,
+    question: String,
+    onToggleEditFile: (String) -> Unit,
+    onApplyEdits: () -> Unit,
+    onRejectProposal: () -> Unit,
+    onRebuildProposal: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(CodecTokens.space(Space.M)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
+        ) {
+            Text(AiCopy.PROPOSAL_TITLE, style = MaterialTheme.typography.titleSmall)
+            Muted(
+                AiCopy.proposalSummaryLine(
+                    selected = proposal.selectedCount,
+                    total = proposal.files.size,
+                    added = proposal.selectedAddedLines,
+                    removed = proposal.selectedRemovedLines
+                )
+            )
+            for (edit in proposal.files) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onToggleEditFile(edit.path) }
+                ) {
+                    Checkbox(
+                        checked = edit.selected,
+                        onCheckedChange = { onToggleEditFile(edit.path) }
+                    )
+                    Text(
+                        "${AiCopy.opBadge(edit.op)} · ${edit.path} (+${edit.addedLines} -${edit.removedLines})",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                SentText(edit.unifiedDiff)
+            }
+            if (state.applyConflictPaths.isNotEmpty()) {
+                ErrorLine(AiCopy.applyConflictMessage(state.applyConflictPaths))
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    if (question.isNotBlank()) {
+                        Button(onClick = onRebuildProposal, enabled = !state.gathering && !state.applying) {
+                            Text(AiCopy.REBUILD_PROPOSAL)
+                        }
+                    }
+                    OutlinedButton(onClick = onRejectProposal, enabled = !state.applying) {
+                        Text(AiCopy.REJECT_CHANGES)
+                    }
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    Button(
+                        onClick = onApplyEdits,
+                        enabled = proposal.selectedCount > 0 && !state.applying
+                    ) {
+                        Text(if (state.applying) AiCopy.APPLYING else AiCopy.applyButtonLabel(proposal.selectedCount))
+                    }
+                    OutlinedButton(
+                        onClick = onRejectProposal,
+                        enabled = !state.applying
+                    ) {
+                        Text(AiCopy.REJECT_CHANGES)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UndoTaskCard(
+    state: AiUiState,
+    onUndoEdits: (Boolean) -> Unit,
+    onDismissUndoConflict: () -> Unit
+) {
+    val summary = state.undoSummary ?: return
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(CodecTokens.space(Space.M)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
+        ) {
+            Text(AiCopy.UNDO_TITLE, style = MaterialTheme.typography.titleSmall)
+            Body(AiCopy.undoSummaryLine(summary))
+            Muted(AiCopy.UNDO_SCOPE_NOTE)
+            if (state.undoConflictPaths.isNotEmpty()) {
+                ErrorLine(AiCopy.undoConflictMessage(state.undoConflictPaths))
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    Button(
+                        onClick = { onUndoEdits(true) },
+                        enabled = !state.applying
+                    ) {
+                        Text(AiCopy.UNDO_FORCE_CONFIRM)
+                    }
+                    OutlinedButton(
+                        onClick = onDismissUndoConflict,
+                        enabled = !state.applying
+                    ) {
+                        Text(AiCopy.UNDO_KEEP_MINE)
+                    }
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { onUndoEdits(false) },
+                    enabled = !state.applying
+                ) {
+                    Text(AiCopy.UNDO_CHANGES)
+                }
+            }
         }
     }
 }
@@ -340,6 +520,7 @@ private fun BottomBar(
     onExplainSelection: (String) -> Unit,
     onExplainError: (String) -> Unit,
     onAskProject: (String) -> Unit,
+    onProposeEdits: (String) -> Unit,
     onCancelGather: () -> Unit,
     onSend: () -> Unit,
     onCancelPreview: () -> Unit,
@@ -378,6 +559,14 @@ private fun BottomBar(
                         enabled = !state.gathering
                     ) {
                         Text(AiCopy.ASK_PROJECT)
+                    }
+                    // Phase 79 (Level 3) — reads the project and builds an
+                    // edit-proposal preview. Still requires Send on the preview (D4).
+                    OutlinedButton(
+                        onClick = { onDismissNotice(); onProposeEdits(question) },
+                        enabled = !state.gathering
+                    ) {
+                        Text(AiCopy.PROPOSE_EDITS)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
