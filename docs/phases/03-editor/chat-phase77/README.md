@@ -1,6 +1,6 @@
 # Phase 77 — AI UI for phones: floating AI button + bottom chat sheet
 
-> **Status: 🚧 BUILT, CI ✅ green `36784685021` (tip `3661264`), device round pending (2026-10-01).** All three parts are
+> **Status: ✅ DEVICE-PASSED, merged on the owner's command (2026-10-01; owner: "all good you can merge it").** All three parts are
 > implemented; both Output-conflict variants (A/B) are in the build for the owner to
 > pick on the phone — see `DEVICE_ROUND.md`. Not merged. Builds on
 > [Phase 76](../chat-phase76/README.md) (AI Level 1, ✅ device-passed, merged).
@@ -19,7 +19,7 @@ Answers to the agent's three questions:
 |---|---|---|---|
 | Q1 | Follow-up chat (multi-turn)? | *"No i just making the ui future pruff"* | **Still one question at a time** (Level 1 behaviour unchanged). The UI is shaped like a chat (message list + input) so multi-turn can arrive later without a redesign — but no earlier turns are ever re-sent in 77. |
 | Q2 | Remember the button position across restarts? | *"Yes i think"* | Position (edge + height) persists — see Part 77.1 for where (no DataStore key). |
-| Q3 | Output panel open when chat opens — replace or full? | *"When Build i will test whatever looking good i will select"* | **Build both variants** behind one internal constant/flag for the device round; the owner picks; the loser is deleted before merge. |
+| Q3 | Output panel open when chat opens — replace or full? | *"When Build i will test whatever looking good i will select"* | **Build both variants** (final: both stay as a user setting — see PART_77_2) behind one internal constant/flag for the device round; the owner picks; the loser is deleted before merge. |
 
 ## Why (evidence on `main` after Phase 76)
 

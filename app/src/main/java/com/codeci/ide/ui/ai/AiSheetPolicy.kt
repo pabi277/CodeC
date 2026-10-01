@@ -59,8 +59,21 @@ object AiSheetPolicy {
      */
     const val LIVE_DRAG_MAX = 0.80f
 
-    /** What the device round starts on for [AiOutputConflict]. */
+    /** What a phone starts on for [AiOutputConflict] until the user picks (owner: both stay, user chooses). */
     val DEFAULT_CONFLICT = AiOutputConflict.REPLACE_OUTPUT
+
+    /** Saved form of the choice (`sheet_with_output` in the AI properties file). */
+    fun encodeConflict(c: AiOutputConflict): String = when (c) {
+        AiOutputConflict.REPLACE_OUTPUT -> "REPLACE"
+        AiOutputConflict.OPEN_FULL -> "FULL"
+    }
+
+    /** Anything missing or unknown decodes to [DEFAULT_CONFLICT]. */
+    fun decodeConflict(raw: String?): AiOutputConflict = when (raw) {
+        "REPLACE" -> AiOutputConflict.REPLACE_OUTPUT
+        "FULL" -> AiOutputConflict.OPEN_FULL
+        else -> DEFAULT_CONFLICT
+    }
 
     /**
      * The transition table.

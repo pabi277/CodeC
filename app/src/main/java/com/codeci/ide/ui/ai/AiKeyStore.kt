@@ -78,6 +78,19 @@ class AiKeyStore(context: Context) {
         return writeSettings(props)
     }
 
+    /**
+     * Phase 77 — how the chat sheet treats an open Output panel (owner: "Stay
+     * both, user can select"). A third non-secret layout choice in the same
+     * properties file; [deleteKey] keeps it.
+     */
+    fun outputConflict(): AiOutputConflict = AiSheetPolicy.decodeConflict(settings().getProperty(PROP_SHEET_OUTPUT))
+
+    fun setOutputConflict(c: AiOutputConflict): Boolean {
+        val props = settings()
+        props.setProperty(PROP_SHEET_OUTPUT, AiSheetPolicy.encodeConflict(c))
+        return writeSettings(props)
+    }
+
     fun acceptedTermsVersion(): Int? = settings().getProperty(PROP_TERMS)?.toIntOrNull()
 
     /** Encrypts and stores [rawKey] with the terms acceptance. False on any failure (nothing half-written). */
@@ -170,5 +183,6 @@ class AiKeyStore(context: Context) {
         private const val PROP_ACCEPTED_AT = "terms_accepted_at"
         private const val PROP_BUBBLE_POS = "bubble_pos"
         private const val PROP_BUBBLE_SHOW = "bubble_show"
+        private const val PROP_SHEET_OUTPUT = "sheet_with_output"
     }
 }

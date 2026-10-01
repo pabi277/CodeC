@@ -1,7 +1,8 @@
 # Phase 77 — device round 1 (AI UI for phones: bubble, chat sheet, AI home)
 
-> **Result: ⏳ waiting for the owner.** Fill each row ✅ / ❌ + one line. Row **F** is the decision
-> the code is waiting on: pick **A** or **B**; the loser is deleted before merge.
+> **Result (owner, 2026-10-01): ✅ "all good", merge approved.** At the merge gate he decided both Output variants
+> stay and the user selects (*"Stay both user can select whatever they want"*), so row F became a permanent,
+> saved setting instead of a pick; its test-build wording below is kept as run.
 
 Build: `CodeC-IDE-release` (or `-debug`) from **Build APK run `36784685021`** (tip `3661264`, ✅ green) on
 `arena/01a0f452-codec` — https://github.com/pabi277/CodeC/actions/runs/36784685021

@@ -128,7 +128,7 @@ class AiSurfaceWiringTest {
     }
 
     @Test
-    fun `only the button's spot and visibility are saved, in the existing AI properties file`() {
+    fun `only layout choices are saved (button spot, visibility, Output-panel choice), in the existing AI properties file`() {
         val store = ai("AiKeyStore.kt")
         assertTrue(store.contains("PROP_BUBBLE_POS") && store.contains("PROP_BUBBLE_SHOW"))
         assertTrue(File(aiDir, "AiKeyStore.kt").readText().contains("\"bubble_pos\""))
@@ -138,8 +138,10 @@ class AiSurfaceWiringTest {
                 assertFalse("${f.name} must not use $banned", RepoFiles.codeOnly(f.readText()).contains(banned))
             }
         }
-        // the sheet state and the A/B choice are memory only
-        assertFalse(store.contains("sheet") || store.contains("outputConflict") || store.contains("OutputConflict"))
+        // the sheet's open/closed state is memory only; the Output-panel choice is the one
+        // other saved layout value (owner: both variants stay, the user selects)
+        assertTrue(File(aiDir, "AiKeyStore.kt").readText().contains("\"sheet_with_output\""))
+        assertFalse(store.contains("AiSheetState"))
     }
 
     @Test

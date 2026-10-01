@@ -63,7 +63,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val model = withContext(Dispatchers.IO) { store.model() }
             val bubble = withContext(Dispatchers.IO) { store.bubble() }
             val show = withContext(Dispatchers.IO) { store.showBubble() }
-            _state.update { it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show) }
+            val conflict = withContext(Dispatchers.IO) { store.outputConflict() }
+            _state.update {
+                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict)
+            }
         }
     }
 
@@ -88,7 +91,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     fun closeSheet() = sheetEvent(AiSheetEvent.MINIMIZE)
 
-    fun setOutputConflict(conflict: AiOutputConflict) = _state.update { it.copy(outputConflict = conflict) }
+    fun setOutputConflict(conflict: AiOutputConflict) {
+        _state.update { it.copy(outputConflict = conflict) }
+        viewModelScope.launch { withContext(Dispatchers.IO) { store.setOutputConflict(conflict) } }
+    }
 
     // ---- Phase 77.1: the floating button's two saved choices ----
 

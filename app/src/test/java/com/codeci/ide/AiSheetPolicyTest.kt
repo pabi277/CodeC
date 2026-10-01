@@ -110,4 +110,16 @@ class AiSheetPolicyTest {
         assertEquals(1f, AiSheetPolicy.heightFractionAfterDrag(400f, -9000f, 800f), 0.0001f)
         assertTrue(AiSheetPolicy.heightFractionAfterDrag(400f, 10f, 0f).isNaN())
     }
+
+    @Test
+    fun `the saved Output-panel choice round-trips and garbage falls back to the default`() {
+        for (c in AiOutputConflict.values()) {
+            assertEquals(c, AiSheetPolicy.decodeConflict(AiSheetPolicy.encodeConflict(c)))
+        }
+        assertEquals("REPLACE", AiSheetPolicy.encodeConflict(AiOutputConflict.REPLACE_OUTPUT))
+        assertEquals("FULL", AiSheetPolicy.encodeConflict(AiOutputConflict.OPEN_FULL))
+        for (bad in listOf(null, "", "full", "B", "OPEN_FULL ")) {
+            assertEquals(AiSheetPolicy.DEFAULT_CONFLICT, AiSheetPolicy.decodeConflict(bad))
+        }
+    }
 }

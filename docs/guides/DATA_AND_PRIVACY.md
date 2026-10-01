@@ -76,7 +76,7 @@ agreement with Google ([Gemini API terms](https://ai.google.dev/gemini-api/terms
   plain text; if it can't be decrypted it is deleted and you are asked again.
   Beside it, the non-secret model name, the date you confirmed 18+ and
   Google's terms, and (Phase 77) where you left the floating AI button and
-  whether it is shown — two non-secret values that **Delete key** keeps. **Delete key** removes the key, its Keystore entry and that
+  whether it is shown — and how the chat sheet treats an open Output panel — non-secret layout values that **Delete key** keeps. **Delete key** removes the key, its Keystore entry and that
   confirmation.
 - **Not kept:** questions and answers live in memory only and vanish on New
   question, a project switch, or when the app closes.

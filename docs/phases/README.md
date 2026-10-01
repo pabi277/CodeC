@@ -80,7 +80,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 70 | [Preview first — run output + preview (70.1 + 72.1)](12-ui-polish-program/chat-phase70/) | 12-ui-polish-program |
 | 74 | [Settings, support and final consistency](12-ui-polish-program/chat-phase74/) | 12-ui-polish-program |
 | 76 | [AI Level 1 — read-only Gemini helper](03-editor/chat-phase76/) | 03-editor |
-| 77 | [🚧 AI UI for phones — floating button + chat sheet (built, device round pending)](03-editor/chat-phase77/) | 03-editor |
+| 77 | [✅ AI UI for phones — floating button + chat sheet (device-passed, merged)](03-editor/chat-phase77/) | 03-editor |
 
 ## By category
 

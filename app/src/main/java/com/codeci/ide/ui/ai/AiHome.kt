@@ -184,7 +184,7 @@ private fun Ready(
     }
     Muted(AiCopy.DELETE_NOTE)
 
-    // ---- Phase 77 device round only (owner Q3) — delete with the losing variant ----
+    // ---- Phase 77: the user's Output-panel choice (saved in the AI properties file) ----
     HorizontalDivider()
     Text(AiCopy.VARIANT_TITLE, style = MaterialTheme.typography.titleSmall)
     VariantRow(AiCopy.VARIANT_A, state.outputConflict == AiOutputConflict.REPLACE_OUTPUT) {

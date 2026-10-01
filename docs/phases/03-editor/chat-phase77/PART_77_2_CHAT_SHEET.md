@@ -86,4 +86,4 @@ Tap → HALF with code visible; drag/⤢ → FULL; ▾/drag/Back → bubble with
 - **Free-floating windowed chat** — rejected (see README).
 - **Multi-turn history** — owner deferred (Q1).
 - **Persisting HALF/FULL** — not asked; always opens HALF.
-- **Variant loser** — deleted before merge, with the owner's pick quoted in this doc.
+- **Variant loser** — NOT deleted: **Owner decision (2026-10-01, at the merge gate): both variants STAY — the user chooses.** Answer to "which one did you pick?": *"Stay both user can select whatever they want"*. So nothing is deleted. The A/B choice is now a permanent ✨ home setting, "When the Output panel is open, AI chat" (A "Replaces the Output panel (bottom half)" default, B "Opens full screen"), saved as `sheet_with_output` (`REPLACE` | `FULL`) in the existing `no_backup/ai/ai_settings.properties` — still no DataStore key, no Settings-screen control; `deleteKey()` keeps it. This is a deliberate, owner-directed widening of "nothing saved except button position and visibility" to one more non-secret layout value.

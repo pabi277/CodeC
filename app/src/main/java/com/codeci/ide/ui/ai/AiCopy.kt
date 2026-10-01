@@ -89,11 +89,11 @@ object AiCopy {
         return if (question.isBlank()) head else head + "\n" + question.trim()
     }
 
-    // Test-build row for the owner's Q3 pick (Phase 77 device round). Deleted with the losing variant.
-    const val VARIANT_TITLE = "Test build: chat while the Output panel is open"
-    const val VARIANT_A = "A · chat replaces the Output panel (bottom half)"
-    const val VARIANT_B = "B · chat opens full screen"
-    const val VARIANT_NOTE = "Pick the one that feels right; this row disappears once you choose. Not saved: resets when the app restarts."
+    // The user's choice for opening chat while the Output panel is open (owner: both stay).
+    const val VARIANT_TITLE = "When the Output panel is open, AI chat"
+    const val VARIANT_A = "Replaces the Output panel (bottom half)"
+    const val VARIANT_B = "Opens full screen"
+    const val VARIANT_NOTE = "Your Output panel is not closed or changed either way; it comes back when the chat closes."
 
     // ---- settings ---------------------------------------------------------
 
