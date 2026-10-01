@@ -1,6 +1,7 @@
 # Phase 80 — AI Level 4: whole-project map, bounded tools, and an approved run loop
 
-> **Status: 🚧 IMPLEMENTED 2026-10-02 on `arena/01a0f9a5-codec`** (owner:
+> **Status: 🚧 IMPLEMENTED 2026-10-02 on `arena/01a0f9a5-codec`** (branch CI
+> `36939786754` ✅ GREEN; owner:
 > *"Start Phase 80 — full Level 4"*, then four explicit scope answers:
 > `task_preview` / `run_only` / `both_flows` / `looser` caps). Device round
 > ⏳ NOT RUN ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); **not merged** (`rule.md` §3).
@@ -197,9 +198,17 @@ new dependency, permission, or DataStore key.
   the third site is the private `agentTurn` behind the PREVIEW gate, so no other
   caller can appear (Phase 79's rollback note stays true: if this pin must move
   again, refactor into a shared private helper rather than relaxing the test).
-- **CI:** `Build APK` on `arena/01a0f9a5-codec` — recorded in
-  [`DEVICE_ROUND.md`](DEVICE_ROUND.md)'s header once the run finishes. The
-  release APK CI builds is what the device round installs.
+- **CI (`rule.md` §5, the executor of record):** `Build APK` run
+  **`36939786754` ✅ GREEN** on `arena/01a0f9a5-codec` @ `bd3276e` (release APK
+  `7,101,208 B`, debug `26,826,604 B`, 14 min). Its `:app:testDebugUnitTest`
+  step ran this phase's six new test classes in the real Android/JUnit
+  environment and passed, and the whole module compiled. The first push
+  (`2367b9a`) failed CI on one real error — a missing
+  `import kotlinx.coroutines.isActive` in `AiViewModel` (the agent's tool batch
+  reads its scope's `isActive` between calls); that was the **only** error in
+  the module and is fixed in `bd3276e`.
+- **Device round builds:** `CodeC-IDE-1.3.17-universal.apk`
+  (`7,101,208 B`, artifact `CodeC-IDE-release` of run `36939786754`).
 
 ## Risks, honest limits, and what is explicitly not done
 
