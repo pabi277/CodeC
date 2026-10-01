@@ -25,4 +25,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [76](chat-phase76/) | ✅ AI Level 1 — read-only Gemini helper (fifth rail slot) |
 | [77](chat-phase77/) | ✅ AI UI for phones — floating AI button + bottom chat sheet |
 | [78](chat-phase78/) | ✅ AI Level 2 — whole-project context (read-only) |
-| [79](chat-phase79/) | 🚧 AI Level 3 — proposed edits, review, and undo |
+| [79](chat-phase79/) | ✅ AI Level 3 — proposed edits, review, and undo |
