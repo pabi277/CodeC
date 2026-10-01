@@ -9,6 +9,18 @@ Phase: [77](README.md) · 📋 PLANNED (docs only)
 - `AiKeyStore` (`ui/ai/AiKeyStore.kt`) already owns `no_backup/ai/ai_settings.properties` with `Properties` read/write helpers — the persistence home.
 - Check `TokenAdoptionTest` / `AppContrastTest` / `TypeAdoptionTest` scopes before styling (Phase 76 CI lesson).
 
+### Evidence found (2026-10-01, before coding)
+
+- Bounds: the bubble lives in the code-area `Box` of `EditorScreen.kt` (the Box that hosts `SoraEditorHost(`), *above* the `BottomStrip(` / status bar, so the tab strip, coding row, keyboard and bottom bar are outside it by construction. `imeVisible` already exists there (Phase 22.2) and the IME top is fed to `AiBubblePolicy` as a lift.
+- Persistence: `AiKeyStore.kt` already owns `no_backup/ai/ai_settings.properties` (`settings()` / `Properties`). Added `bubble()` / `setBubble()` (prop `bubble_pos`, `"RIGHT:0.620"`) and `showBubble()` / `setShowBubble()` (prop `bubble_show`, absent = shown). `deleteKey()` (`AiKeyStore.kt:129`) does not touch either.
+- Adoption scopes checked first: `TokenAdoptionTest` covers `EditorScreen` (CodecTokens only, no `Color(0x`), `TypeAdoptionTest` forbids `FontFamily.Monospace`. The bubble uses `secondaryContainer` / `onSecondaryContainer` and no raw numbers beyond `AiBubblePolicy` constants.
+
+### Built
+
+- `ui/ai/AiBubblePolicy.kt` (pure) — constants `VISUAL_DP 40`, `TOUCH_DP 48`, `EDGE_MARGIN_DP 8`, `MIN_Y_FRACTION 0.05`, `MAX_Y_FRACTION 0.95`; default RIGHT / 0.62; snap to nearest edge (exact middle → RIGHT), y clamp, keyboard lift above `imeTopPx`, tiny-area bounds, encode/decode (garbage → default). `AiBubblePolicyTest` — 14 cases.
+- `ui/ai/AiFloatingButton.kt` — draggable circle `Surface`, content description "AI chat", tap → sheet, long-press → DropdownMenu *Hide AI button* / *Move to other side*; drop persists via `AiKeyStore`. Hide also shows a snackbar (`AiCopy.BUBBLE_HIDDEN_NOTE`) pointing at ✨ → Show AI button.
+- Shown only when `aiReady` (`AiGate` READY) && `showBubble` && sheet HIDDEN. No pulse, tooltip or coach mark.
+
 ## Design — pure `ui/ai/AiBubblePolicy.kt`
 
 ```kotlin
@@ -25,7 +37,7 @@ object AiBubblePolicy {
     const val MAX_Y_FRACTION = 0.95f
 
     /** Release after a drag: nearest edge wins; y clamped into the code area. */
-    fun snap(xPx: Float, yPx: Float, areaW: Float, areaH: Float): AiBubblePosition
+    fun snapToEdge(xPx: Float, yPx: Float, areaW: Float, areaH: Float): AiBubblePosition
 
     /** Where to draw it now; lifts above the keyboard (never under it). */
     fun offsetPx(p: AiBubblePosition, areaW: Float, areaH: Float, imeTopPx: Float?, bubblePx: Float, marginPx: Float): Pair<Float, Float>

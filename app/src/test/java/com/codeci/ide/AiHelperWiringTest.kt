@@ -65,8 +65,10 @@ class AiHelperWiringTest {
         // Exactly two network entry points: send() and the content-free test.
         assertTrue(Regex("client\\.stream\\(").findAll(vm).count() == 2)
         assertTrue(vm.contains("GeminiRequest.testBody()"))
-        val panel = src("AiPanel.kt")
-        assertTrue(panel.contains("Button(onClick = onSend)"))
+        // Phase 77: the chat sheet is where Send lives now, on the PREVIEW phase only.
+        val sheet = src("AiChatSheet.kt")
+        assertTrue(sheet.contains("Button(onClick = onSend)"))
+        assertTrue(sheet.contains("AiPhase.PREVIEW ->"))
     }
 
     @Test
@@ -84,7 +86,9 @@ class AiHelperWiringTest {
     }
 
     @Test
-    fun `the panel uses theme colours only`() {
-        assertFalse(src("AiPanel.kt").contains("Color(0x"))
+    fun `the AI surfaces use theme colours only`() {
+        for (f in listOf("AiHome.kt", "AiChatSheet.kt", "AiFloatingButton.kt", "AiParts.kt")) {
+            assertFalse("$f must use theme roles, not Color(0x…)", src(f).contains("Color(0x"))
+        }
     }
 }

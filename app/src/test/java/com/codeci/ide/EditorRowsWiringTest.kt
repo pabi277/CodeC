@@ -47,13 +47,17 @@ class EditorRowsWiringTest {
         // Phase 70.1 — Q3: the row is gated on `stripVisible` now
         // (editor keys OR the run-keys row a waiting program needs), so a
         // program waiting for stdin no longer takes the strip away with it.
+        // Phase 77.2 — pin MOVED, not loosened: both rows also step aside while
+        // the AI chat sheet is up (its question field would otherwise share the
+        // keyboard with a row that types into the CODE). AiSurfaceWiringTest
+        // pins the same two gates.
         assertTrue(
             "the docked touch row (keyboard down) is gone",
-            editor.contains("if (stripVisible && !imeVisible) {"),
+            editor.contains("if (stripVisible && !imeVisible && !aiSheetOpen) {"),
         )
         assertTrue(
             "the keyboard-anchored touch row (IME up) is gone",
-            editor.contains("if (stripVisible && imeVisible) {"),
+            editor.contains("if (stripVisible && imeVisible && !aiSheetOpen) {"),
         )
         assertTrue(
             "the run-keys row must survive the stdin yield (Q3)",
@@ -66,7 +70,8 @@ class EditorRowsWiringTest {
     fun `the status line yields the row to the keyboard`() {
         assertTrue(
             "the status line must not be drawn under a raised keyboard",
-            editor.contains("if (caretPlaced && !imeVisible && !codecKeysUp) {"),
+            // Phase 77.2 — moved: the status line also yields while the AI sheet is up.
+            editor.contains("if (caretPlaced && !imeVisible && !codecKeysUp && !aiSheetOpen) {"),
         )
         assertTrue(
             "the editor surface must agree with the status line's own gate",

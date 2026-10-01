@@ -123,7 +123,7 @@ enum class RailPanel(val id: String, val label: String) {
     /**
      * The fifth slot — the owner's AI slot (*“Reseserve it i have plan for ai
      * i can use that”*), reserved from Phase 55 until Phase 76 wired the
-     * read-only Gemini helper (`ui/ai/AiPanel.kt`) into it. Same position,
+     * read-only Gemini helper (`ui/ai/AiHome.kt` since Phase 77; the chat is `AiChatSheet.kt`) into it. Same position,
      * same glyph; only now it opens something.
      */
     AI("ai", "AI helper")

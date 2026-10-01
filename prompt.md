@@ -64,20 +64,17 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-10-01 (AI Level 1 / Phase 76 device-passed & merged via PR #102; next: Phase 77, the phone AI UI).**
+**CURRENT HANDOFF — 2026-10-01 (Phase 76 merged; Phase 77 AI UI for phones device-passed and merged).**
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
-`docs/phases/03-editor/chat-phase77/README.md` + its three part docs (THE BRIEF FOR THIS CHAT),
-`docs/phases/03-editor/chat-phase76/README.md` (what exists: `app/src/main/java/com/codeci/ide/ui/ai/`),
+`docs/phases/03-editor/chat-phase77/README.md` + its three part docs + `DEVICE_ROUND.md`,
+`docs/phases/03-editor/chat-phase76/README.md` (`app/src/main/java/com/codeci/ide/ui/ai/`),
 and `docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md` (binding AI laws D1–D6, O1–O3).
 
-*Status:* Phase 76 is ✅ COMPLETE, DEVICE-PASSED and MERGED (CI ✅ `36775542997`). Phase 77 is
-📋 BRIEFED, docs only: ✨ rail slot → AI home (setup only); a draggable, edge-snapping floating AI
-button (only after key setup; position persisted in `no_backup/ai/ai_settings.properties`, no
-DataStore key); a bottom chat sheet HIDDEN/HALF/FULL reusing `OutputPanelHeight`; Output-panel
-conflict variants A (replace) and B (open full) BOTH built so the owner picks on device; still ONE
-question at a time (UI shaped for chat later). Start implementing only when the owner says so; then
-brief → code → green CI → DEVICE_ROUND.md → stop at the merge gate. Levels 2+ of the AI roadmap
-remain unauthorized. Next free phase number after 77: **78**.
+*Status:* Phase 77 is 🚧 IMPLEMENTED (✨ slot = AI home; floating bubble; HIDDEN/HALF/FULL chat sheet;
+"Explain with AI" on a failed run; both Output-conflict variants A/B built). CI ✅ green `36784685021`. Device round passed ("all good"); at the merge gate the owner kept BOTH Output variants as a
+user setting (`sheet_with_output`, ✨ home). "Ask AI" in the selection menu was skipped (Sora has no add-item API).
+Do NOT merge without the owner's command. Levels 2+ of the AI roadmap remain unauthorized. Next free
+phase number: **78**.
 
 *Lessons to keep:* `TypeAdoptionTest` forbids `FontFamily.Monospace` (use `CodecType.codeFamily`);
 `InputStream.readNBytes` is API 33 (minSdk 24); model ids are device facts — keep the model editable.

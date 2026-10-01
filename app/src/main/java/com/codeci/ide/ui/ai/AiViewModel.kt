@@ -29,10 +29,16 @@ data class AiUiState(
     val error: String? = null,
     /** A one-line reason a prompt could not be built (no selection, …). */
     val notice: String? = null,
-    val showSettings: Boolean = false,
     val testing: Boolean = false,
     val testResult: String? = null,
-    val setupError: String? = null
+    val setupError: String? = null,
+    /** Phase 77.2 — the chat sheet. Never persisted (minimize keeps the exchange; nothing else does). */
+    val sheet: AiSheetState = AiSheetState.HIDDEN,
+    /** Phase 77.1 — the two values the AI surface saves (owner Q2), loaded once at start. */
+    val bubble: AiBubblePosition = AiBubblePolicy.DEFAULT,
+    val showBubble: Boolean = true,
+    /** Phase 77 device round only (owner Q3): which Output-conflict variant is being tried. In memory. */
+    val outputConflict: AiOutputConflict = AiSheetPolicy.DEFAULT_CONFLICT
 )
 
 /**
@@ -55,8 +61,51 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val ready = withContext(Dispatchers.IO) { store.isReady() }
             val model = withContext(Dispatchers.IO) { store.model() }
-            _state.update { it.copy(keySaved = ready, model = model) }
+            val bubble = withContext(Dispatchers.IO) { store.bubble() }
+            val show = withContext(Dispatchers.IO) { store.showBubble() }
+            val conflict = withContext(Dispatchers.IO) { store.outputConflict() }
+            _state.update {
+                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict)
+            }
         }
+    }
+
+    // ---- Phase 77: the chat sheet (surface state only; requests are unchanged) ----
+
+    /**
+     * Opens the sheet from the bubble, "Open AI chat" or "Explain with AI".
+     * [outputOpen] is the Output panel's own expanded flag; the policy picks
+     * HALF (variant A) or FULL (variant B) when it is open. Minimizing later
+     * never clears the exchange.
+     */
+    fun openSheet(outputOpen: Boolean) {
+        _state.update { s ->
+            if (s.sheet != AiSheetState.HIDDEN) s
+            else s.copy(sheet = AiSheetPolicy.openWithOutput(s.outputConflict, outputOpen).first)
+        }
+    }
+
+    fun sheetEvent(event: AiSheetEvent, dragFraction: Float? = null) {
+        _state.update { it.copy(sheet = AiSheetPolicy.next(it.sheet, event, dragFraction)) }
+    }
+
+    fun closeSheet() = sheetEvent(AiSheetEvent.MINIMIZE)
+
+    fun setOutputConflict(conflict: AiOutputConflict) {
+        _state.update { it.copy(outputConflict = conflict) }
+        viewModelScope.launch { withContext(Dispatchers.IO) { store.setOutputConflict(conflict) } }
+    }
+
+    // ---- Phase 77.1: the floating button's two saved choices ----
+
+    fun saveBubblePosition(p: AiBubblePosition) {
+        _state.update { it.copy(bubble = p) }
+        viewModelScope.launch { withContext(Dispatchers.IO) { store.setBubble(p) } }
+    }
+
+    fun setShowBubble(show: Boolean) {
+        _state.update { it.copy(showBubble = show) }
+        viewModelScope.launch { withContext(Dispatchers.IO) { store.setShowBubble(show) } }
     }
 
     /** D6: a different project never sees the previous project's exchange. */
@@ -64,10 +113,14 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         if (name == project) return
         project = name
         clear()
+        closeSheet()
     }
 
     /** Shows the exact text that would be sent (D4). Nothing leaves the device here. */
     fun preview(result: AiContextResult) {
+        // A stream in flight is never replaced behind its back (Phase 77: the
+        // sheet can be re-opened from several doors while it runs).
+        if (_state.value.phase == AiPhase.STREAMING) return
         when (result) {
             is AiContextResult.Refused -> _state.update { it.copy(notice = AiCopy.problem(result.problem)) }
             is AiContextResult.Ready -> _state.update {
@@ -140,8 +193,6 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissNotice() = _state.update { it.copy(notice = null) }
 
-    fun toggleSettings() = _state.update { it.copy(showSettings = !it.showSettings, testResult = null, setupError = null) }
-
     /** O1: only after the 18+/terms checkbox (the panel also disables the button). */
     fun saveKey(rawKey: String, model: String, confirmedAdultAndTerms: Boolean) {
         if (!AiKeySetup.canSave(rawKey, confirmedAdultAndTerms)) {
@@ -156,7 +207,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val ok = withContext(Dispatchers.IO) { store.saveKey(rawKey, model) }
             val storedModel = withContext(Dispatchers.IO) { store.model() }
             _state.update {
-                if (ok) it.copy(keySaved = true, model = storedModel, setupError = null, showSettings = false)
+                if (ok) it.copy(keySaved = true, model = storedModel, setupError = null)
                 else it.copy(setupError = AiCopy.SAVE_FAILED)
             }
         }
@@ -180,7 +231,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         clear()
         viewModelScope.launch {
             withContext(Dispatchers.IO) { store.deleteKey() }
-            _state.update { it.copy(keySaved = false, showSettings = false, testResult = null) }
+            _state.update { it.copy(keySaved = false, testResult = null, sheet = AiSheetState.HIDDEN) }
         }
     }
 

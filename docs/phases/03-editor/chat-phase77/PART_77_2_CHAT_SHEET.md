@@ -8,6 +8,20 @@ Phase: [77](README.md) · 📋 PLANNED (docs only)
 - Read `ui/navigation/BackRouter.kt` + `BackHandlerWiringTest`: every `BackHandler(` must be root-or-router (Phase 49 law). The sheet's Back is a new router row, not an ad-hoc handler.
 - Read `ui/ai/AiPanel.kt`: its sections (setup / ask / preview / streaming / done / failed / settings) are split in 77.2 (chat) vs 77.3 (AI home).
 
+### Evidence found (2026-10-01, before coding)
+
+- `OutputPanelHeight.kt`: `IME_FRACTION 0.38` (l.34), `DEFAULT_FRACTION 0.40` (l.37), `defaultFor` (l.41), `resolve(requested, available, imeVisible)` (l.43). `AiSheetPolicy.halfHeight` *calls* `resolve` — no fork.
+- `BackRouter.kt`: `BackHandlerWiringTest` pins exactly one `BackHandler(` in `EditorScreen` plus `BackRouter.decide(` and each `BackAction.* ->` branch. New state `aiSheetOpen` (l.51), action `CollapseAiSheet` (l.78), row 0 guarded `aiSheetOpen && !editorDrawerOpen && !keyboardVisible` (l.137) — existing rows were not reordered; with the IME up Back is the platform's, as for the Output panel.
+- `AiPanel.kt` (deleted, copy not kept in repo) sections moved: ask/preview/streaming/done/failed → `AiChatSheet.kt` + shared `AiParts.kt`; setup/settings → `AiHome.kt` (77.3). `AiHelperWiringTest`'s Send pin moved to `AiChatSheet.kt`.
+- Prompts were built at tap time in `EditorScreen` from `codeText` selection, `activeTabPath`, `outputState`, `diagnostics`; that code is hoisted to lambdas (`aiExplainSelection`, `aiExplainError`) that feed both the sheet chips and the Output header action.
+
+### Built
+
+- `ui/ai/AiSheetPolicy.kt` (pure): `AiSheetState` HIDDEN/HALF/FULL, `AiSheetEvent` TAP_BUBBLE/EXPAND/COLLAPSE/BACK/DRAG_END (>0.75 FULL, <0.20 HIDDEN, else HALF), `AiOutputConflict` REPLACE_OUTPUT (A) / OPEN_FULL (B), `openWithOutput`, `halfHeight`, `outputVisible`, `LIVE_DRAG_MAX 0.80`. `AiSheetPolicyTest` — 12 cases.
+- `AiViewModel`: `sheet`, `outputConflict` (in memory, default A = `AiSheetPolicy.DEFAULT_CONFLICT`), `openSheet` / `sheetEvent` / `openWithOutput`; `preview()` refuses while STREAMING. Only `AiViewModel`, `AiContextBuilder` and `GeminiClient` logic otherwise unchanged; still exactly two `client.stream(` calls.
+- `EditorScreen`: HALF sheet is a Column slot in the Output panel's place (A: Output hidden while the sheet is up — its state is untouched; B: the FULL overlay with `imePadding()`). The coding row, status bar, collapsed Output strip and Codec keyboard step aside while the sheet is open (`!aiSheetOpen`). Sheet closes on project change or when availability ≠ READY.
+- Variant choice for the device round: ✨ home shows two temporary rows (A / B). Loser is deleted before merge, then `DEFAULT_CONFLICT`, the rows, `AiCopy.VARIANT_*` and `AiSheetPolicy.openWithOutput`'s other branch go with it.
+
 ## Design — pure `ui/ai/AiSheetPolicy.kt`
 
 ```kotlin
@@ -72,4 +86,4 @@ Tap → HALF with code visible; drag/⤢ → FULL; ▾/drag/Back → bubble with
 - **Free-floating windowed chat** — rejected (see README).
 - **Multi-turn history** — owner deferred (Q1).
 - **Persisting HALF/FULL** — not asked; always opens HALF.
-- **Variant loser** — deleted before merge, with the owner's pick quoted in this doc.
+- **Variant loser** — NOT deleted: **Owner decision (2026-10-01, at the merge gate): both variants STAY — the user chooses.** Answer to "which one did you pick?": *"Stay both user can select whatever they want"*. So nothing is deleted. The A/B choice is now a permanent ✨ home setting, "When the Output panel is open, AI chat" (A "Replaces the Output panel (bottom half)" default, B "Opens full screen"), saved as `sheet_with_output` (`REPLACE` | `FULL`) in the existing `no_backup/ai/ai_settings.properties` — still no DataStore key, no Settings-screen control; `deleteKey()` keeps it. This is a deliberate, owner-directed widening of "nothing saved except button position and visibility" to one more non-secret layout value.

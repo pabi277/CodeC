@@ -42,6 +42,13 @@ data class BackState(
     val findBarOpen: Boolean = false,
     /** The editor's output panel is expanded. */
     val outputPanelExpanded: Boolean = false,
+    /**
+     * Phase 77.2 — the AI chat sheet (HALF or FULL) is up over the editor. It
+     * is a surface, not a route, so Back must put it away before anything
+     * underneath (an unsaved-changes prompt about the file is not what a
+     * press on a chat sheet means).
+     */
+    val aiSheetOpen: Boolean = false,
     /** The first-run intro page, or null outside that screen. */
     val firstRunIntroPage: Int? = null,
     /**
@@ -66,7 +73,10 @@ data class BackState(
 enum class BackAction {
     ShowUnsavedDialog, CloseEditorDrawer, CloseHubProject,
     CloseFindBar, CollapseOutputPanel, PreviousIntroPage,
-    GoBackInWebView, PopRoute, ShowExitPrompt, ExitApp, None
+    GoBackInWebView, PopRoute, ShowExitPrompt, ExitApp,
+    /** Phase 77.2 — one step down: FULL → HALF → the bubble (`AiSheetPolicy.next(BACK)`). */
+    CollapseAiSheet,
+    None
 }
 
 object BackRouter {
@@ -76,6 +86,8 @@ object BackRouter {
      * (PART_49_1; `BackRouterTest` walks exactly these pairs):
      *
      * ```text
+     * 0  aiSheetOpen && !editorDrawerOpen && !keyboardVisible
+     *                                          -> CollapseAiSheet   (Phase 77.2)
      * 1  unsavedChanges                        -> ShowUnsavedDialog
      * 2  editorDrawerOpen                      -> CloseEditorDrawer
      * 3  hubProjectOpen                        -> CloseHubProject
@@ -93,6 +105,12 @@ object BackRouter {
      * ```
      *
      * Deliberate choices, kept from the spec and extended for onboarding:
+     * - **Row 0 is the AI chat sheet (Phase 77.2) and sits ABOVE row 1.** The
+     *   sheet is an overlay on the editor: Back closes the topmost thing you
+     *   can see. Two guards: an open drawer is on top of it (row 2 answers),
+     *   and with the keyboard up Back is the user closing it — the platform
+     *   owns that press, exactly as rows 7 and 9 already say; the next Back
+     *   steps the sheet down. Rows 1-13 are unchanged.
      * - **`sheetOrDialogOpen -> None` sits AFTER the drawer/hub rows.** A
      *   Material3 sheet's own handler lives in its own window and wins the
      *   dispatch anyway; returning `None` is what lets it work, and if its
@@ -116,6 +134,7 @@ object BackRouter {
      *   passes the real switch.)
      */
     fun decide(s: BackState): BackAction = when {
+        s.aiSheetOpen && !s.editorDrawerOpen && !s.keyboardVisible -> BackAction.CollapseAiSheet
         s.unsavedChanges -> BackAction.ShowUnsavedDialog
         s.editorDrawerOpen -> BackAction.CloseEditorDrawer
         s.hubProjectOpen -> BackAction.CloseHubProject

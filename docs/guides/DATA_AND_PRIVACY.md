@@ -56,9 +56,9 @@ not blocked. **Settings → About → Replay the CodeC introduction** shows the 
 again on the next launch. The full permission table and
 the implementation behind every claim remain below.
 
-## The AI helper (Phase 76) — what it sends, where, and what it keeps
+## The AI helper (Phases 76–77) — what it sends, where, and what it keeps
 
-The side panel's ✨ slot is an optional, read-only Gemini helper that uses
+The AI helper (setup in the side panel's ✨ slot; chat in a bottom sheet opened by a small floating button) is an optional, read-only Gemini helper that uses
 **your own** Google Gemini API key. Your use of Gemini is covered by your own
 agreement with Google ([Gemini API terms](https://ai.google.dev/gemini-api/terms)).
 
@@ -74,8 +74,9 @@ agreement with Google ([Gemini API terms](https://ai.google.dev/gemini-api/terms
 - **Kept on the phone:** your key, encrypted with an Android Keystore
   AES-256-GCM key, in `no_backup/ai/` — never backed up, never written in
   plain text; if it can't be decrypted it is deleted and you are asked again.
-  Beside it, the non-secret model name and the date you confirmed 18+ and
-  Google's terms. **Delete key** removes the key, its Keystore entry and that
+  Beside it, the non-secret model name, the date you confirmed 18+ and
+  Google's terms, and (Phase 77) where you left the floating AI button and
+  whether it is shown — and how the chat sheet treats an open Output panel — non-secret layout values that **Delete key** keeps. **Delete key** removes the key, its Keystore entry and that
   confirmation.
 - **Not kept:** questions and answers live in memory only and vanish on New
   question, a project switch, or when the app closes.

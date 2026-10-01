@@ -147,7 +147,7 @@ fun EditorSidePanel(
     repositoryBadgeCount: Int = 0,
     /**
      * Phase 76 — the AI slot's content: the read-only Gemini helper
-     * (`ui/ai/AiPanel.kt`), owned by the editor screen and slotted in like
+     * (`ui/ai/AiHome.kt` since Phase 77; the chat is `AiChatSheet.kt`), owned by the editor screen and slotted in like
      * [files] and [repositoryContent].
      */
     aiContent: @Composable () -> Unit = {}
