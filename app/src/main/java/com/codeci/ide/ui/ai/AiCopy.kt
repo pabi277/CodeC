@@ -1,16 +1,23 @@
 package com.codeci.ide.ui.ai
 
+import com.codeci.ide.ui.projects.AiUndoSummary
+
 /**
  * Phase 76 — every sentence the AI panel shows, in one pure place so tests
  * can pin the disclosures the owner's decisions require (`AiPolicyTest`):
  * O1's own-key/terms text and 18+ checkbox, D2's free-tier note, D1's
- * read-only line. Google's terms are linked, quoted by name, never
+ * approval-gated line. Google's terms are linked, quoted by name, never
  * interpreted.
  */
 object AiCopy {
 
     const val TITLE = "AI helper · Gemini"
-    const val READ_ONLY = "Read-only: it explains code and errors. It never changes files or runs anything."
+    // Phase 79 (owner D1 amendment): diff-approved project file edits are now
+    // allowed; the helper still never changes files without approval and never
+    // runs anything.
+    const val READ_ONLY =
+        "Explains code and errors, and can propose file edits for your review. " +
+            "It never changes files without your approval and never runs anything."
 
     const val NEEDS_PROJECT = "Open a project to use the AI helper. It works only inside CodeC projects, not in single-file mode."
 
@@ -94,6 +101,7 @@ object AiCopy {
             AiSource.SELECTION -> EXPLAIN_SELECTION
             AiSource.RUN_OUTPUT -> EXPLAIN_ERROR
             AiSource.PROJECT -> ASK_PROJECT
+            AiSource.PROPOSE_EDITS -> PROPOSE_EDITS
         }
         val head = label + " · " + fileLabel
         return if (question.isBlank()) head else head + "\n" + question.trim()
@@ -103,6 +111,62 @@ object AiCopy {
 
     /** The third chip in the sheet, beside Explain selection / Explain last error. */
     const val ASK_PROJECT = "Ask about the project"
+
+    // ---- Phase 79 (Level 3): proposed edits, review, and undo -------------
+
+    /** The fourth chip in the sheet: ask for reviewable file edits. */
+    const val PROPOSE_EDITS = "Propose edits"
+    const val EDIT_QUESTION_REQUIRED =
+        "Type what you want to change first, then tap Propose edits."
+
+    const val PROPOSAL_TITLE = "Proposed file changes"
+    const val APPLY_SELECTED = "Apply selected"
+    const val APPLYING = "Applying changes…"
+    const val REJECT_CHANGES = "Reject changes"
+    const val REBUILD_PROPOSAL = "Rebuild proposal"
+    const val PROPOSAL_REJECTED = "Proposed changes rejected. No project files were touched."
+
+    const val UNDO_TITLE = "Last AI file change"
+    const val UNDO_CHANGES = "Undo AI changes"
+    const val UNDO_SCOPE_NOTE =
+        "Undo restores these files to their exact contents before this AI change. " +
+            "It does not undo terminal commands, package installs, Git actions, or edits you made afterward."
+    const val UNDO_FORCE_CONFIRM = "Restore pre-AI files anyway"
+    const val UNDO_KEEP_MINE = "Keep my edits"
+
+    fun applyButtonLabel(selectedCount: Int): String =
+        if (selectedCount <= 0) APPLY_SELECTED else "$APPLY_SELECTED ($selectedCount)"
+
+    fun proposalSummaryLine(selected: Int, total: Int, added: Int, removed: Int): String =
+        "$selected of $total " + (if (total == 1) "file" else "files") +
+            " selected · +$added -$removed lines"
+
+    fun opBadge(op: AiEditOp): String = when (op) {
+        AiEditOp.MODIFY -> "Modify"
+        AiEditOp.CREATE -> "Create"
+        AiEditOp.DELETE -> "Delete"
+    }
+
+    fun applyConflictMessage(paths: List<String>): String =
+        "You edited ${paths.joinToString(", ")} after this proposal was created. " +
+            "Your edits were not overwritten. Rebuild the proposal or reject these changes."
+
+    fun undoConflictMessage(paths: List<String>): String =
+        "You edited ${paths.joinToString(", ")} after this AI change was applied. " +
+            "Undoing will replace your newer edits in " +
+            (if (paths.size == 1) "that file." else "those files.")
+
+    fun undoSummaryLine(summary: AiUndoSummary): String {
+        val count = summary.files.size
+        val names = summary.files.joinToString(", ") { "${opBadge(it.op)}: ${it.path}" }
+        return "Applied to $count " + (if (count == 1) "file" else "files") + " ($names)."
+    }
+
+    fun appliedNotice(count: Int): String =
+        "Applied AI changes to $count " + (if (count == 1) "file." else "files.")
+
+    fun undoneNotice(count: Int): String =
+        "Restored $count " + (if (count == 1) "file" else "files") + " to before the last AI change."
 
     /** Shown in the sheet while the project is being read. */
     const val GATHERING = "Reading the project…"
@@ -151,5 +215,6 @@ object AiCopy {
         AiContextProblem.QUESTION_TOO_LONG -> "Your question is too long (max ${AiLimits.MAX_QUESTION_CHARS} characters)."
         AiContextProblem.NO_PROJECT_FILES -> NO_PROJECT_FILES
         AiContextProblem.PROJECT_TOO_LARGE -> PROJECT_TOO_LARGE
+        AiContextProblem.EMPTY_EDIT_QUESTION -> EDIT_QUESTION_REQUIRED
     }
 }

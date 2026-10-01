@@ -1,6 +1,6 @@
 # Level 2 — Whole-project context
 
-**Status: proposed; depends on the provider/request foundation.**
+**Status: ✅ Implemented & merged in [Phase 78](../../phases/03-editor/chat-phase78/README.md) (PR #104, `bd1aa06`, device-verified 2026-10-01).**
 
 ## User value
 

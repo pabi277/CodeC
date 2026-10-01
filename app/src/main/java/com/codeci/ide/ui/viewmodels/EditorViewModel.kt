@@ -2762,6 +2762,103 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         refreshGitMeta(context)
     }
 
+    /**
+     * Phase 79 (AI Level 3) — returns the LF-normalized text of every open
+     * project tab that currently has unsaved edits, so the AI edit applier and
+     * undo check can detect unsaved buffers across all open tabs.
+     */
+    fun dirtyProjectBuffers(): Map<String, String> {
+        if (_projectName.value == null) return emptyMap()
+        val active = _activeTabPath.value
+        val out = LinkedHashMap<String, String>()
+        for (tab in _openTabs.value) {
+            if (tab.relativePath == active) {
+                if (_isDirty.value) {
+                    out[tab.relativePath] = _codeText.value.text
+                }
+            } else if (tab.buffer.text != tab.savedText) {
+                out[tab.relativePath] = tab.buffer.text
+            }
+        }
+        return out
+    }
+
+    /**
+     * Phase 79 (AI Level 3) — synchronizes open tabs, the active buffer,
+     * per-tab undo stacks, the project file tree, and Git status badges after
+     * an approved AI change set is applied or undone on disk. Never stages or
+     * commits anything to Git.
+     */
+    fun syncAfterAiFileChanges(
+        context: Context,
+        updatedPaths: List<String>,
+        deletedPaths: List<String>
+    ) {
+        captureContext(context)
+        val appCtx = context.applicationContext
+        val project = _projectName.value ?: return
+        val info = ProjectManager(appCtx).project(project) ?: return
+        autoSaveJob?.cancel()
+        autoSaveJob = null
+        stashActiveTabBuffer(_codeText.value)
+
+        if (deletedPaths.isNotEmpty()) {
+            val deletedSet = deletedPaths.toSet()
+            val activePath = _activeTabPath.value ?: _fileName.value
+            val activeDeleted = activePath in deletedSet
+            _openTabs.value = _openTabs.value.filterNot { it.relativePath in deletedSet }
+            deletedSet.forEach { undoManagers.remove(it) }
+            if (activeDeleted) {
+                val next = _openTabs.value.firstOrNull()
+                _activeTabPath.value = null
+                if (next != null) {
+                    activateTab(next)
+                } else {
+                    _fileName.value = ""
+                    _codeText.value = TextFieldValue("")
+                    scratchSavedText = ""
+                    _isDirty.value = false
+                    undoManagers.clear()
+                    resetDecorationsForNewBuffer()
+                    syncUndoFlags(undoManager())
+                }
+            }
+        }
+
+        val nowMs = System.currentTimeMillis()
+        for (path in updatedPaths) {
+            val file = ProjectPathUtils.resolveInside(info.root, path) ?: continue
+            if (!file.isFile || !file.canRead()) continue
+            val raw = runCatching { file.readText() }.getOrNull() ?: continue
+            val ending = LineEndings.detect(raw)
+            val normalized = LineEndings.normalizeToLf(raw)
+            expandAncestors(path.substringBeforeLast('/', ""))
+            val existing = _openTabs.value.firstOrNull { it.relativePath == path }
+            if (existing != null) {
+                val mgr = undoManagers.getOrPut(path) { EditorUndoManager() }
+                val prevVal = if (_activeTabPath.value == path) _codeText.value else existing.buffer
+                val nextVal = TextFieldValue(normalized)
+                mgr.recordChange(prevVal, nextVal, nowMs)
+                val updated = EditorTab(path, nextVal, normalized, ending)
+                updateTab(path) { updated }
+                if (_activeTabPath.value == path) {
+                    resetCaretForOpen()
+                    _codeText.value = updated.buffer
+                    _activeLineEnding.value = ending
+                    _isDirty.value = false
+                    syncUndoFlags(undoManager())
+                    _diagnostics.value = emptyList()
+                    resetDecorationsForNewBuffer()
+                }
+            } else if (_openTabs.value.isEmpty()) {
+                openProjectFile(appCtx, project, path)
+            }
+        }
+
+        refreshFileEntries(appCtx)
+        refreshGitMeta(appCtx)
+    }
+
     fun reloadActiveTab(context: Context) {
         val project = _projectName.value
         if (project != null) {

@@ -1,9 +1,7 @@
 # Phase 78 — AI Level 2: whole-project context (read-only)
 
-> **Status: 🚧 IMPLEMENTED 2026-10-01 on `arena/01a0f5d2-codec`. CI ✅ GREEN
-> `36822370600` on `8abd49e` (first round, zero error annotations, release APK
-> 7,055,936 B = +7,980 B / +0.11 % over the merged Phase 77 tip). Device round
-> ⏳ NOT RUN — [`DEVICE_ROUND.md`](DEVICE_ROUND.md). NOT merged (`rule.md` §3).**
+> **Status: ✅ MERGED to `main` @ `bd1aa06` (PR #104, 2026-10-01; post-merge CI
+> `36884609111` green, release APK `7,055,936 B`).** Round-1CI `36822370600` on `8abd49e` + round-2 CI `36877351748` on `e3932fb` (send-arrow follow-up, [`DEVICE_ROUND.md`](DEVICE_ROUND.md)). Device-verified on the owner's phone (*"Yes device passed and merge"*).
 >
 > The owner authorized **Level 2** of the AI roadmap as the next phase in this
 > chat (2026-10-01) by selecting *"Authorize AI Level 2 (whole-project

@@ -79,8 +79,10 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 69 | [Typing, keyboard and selection (69.1–69.4)](12-ui-polish-program/chat-phase69/) | 12-ui-polish-program |
 | 70 | [Preview first — run output + preview (70.1 + 72.1)](12-ui-polish-program/chat-phase70/) | 12-ui-polish-program |
 | 74 | [Settings, support and final consistency](12-ui-polish-program/chat-phase74/) | 12-ui-polish-program |
-| 76 | [AI Level 1 — read-only Gemini helper](03-editor/chat-phase76/) | 03-editor |
+| 76 | [✅ AI Level 1 — read-only Gemini helper (device-passed, merged)](03-editor/chat-phase76/) | 03-editor |
 | 77 | [✅ AI UI for phones — floating button + chat sheet (device-passed, merged)](03-editor/chat-phase77/) | 03-editor |
+| 78 | [✅ AI Level 2 — whole-project context (device-passed, merged)](03-editor/chat-phase78/) | 03-editor |
+| 79 | [🚧 AI Level 3 — proposed edits, review, and undo](03-editor/chat-phase79/) | 03-editor |
 
 ## By category
 
@@ -88,7 +90,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 |---|---|---|
 | [01-terminal-userland](01-terminal-userland/) | Terminal & Linux userland | 6 |
 | [02-packages-toolchains](02-packages-toolchains/) | Packages & toolchains | 5 |
-| [03-editor](03-editor/) | Editor & languages | 16 |
+| [03-editor](03-editor/) | Editor & languages | 18 |
 | [04-projects-files](04-projects-files/) | Projects & files | 3 |
 | [05-run-output-preview](05-run-output-preview/) | Run, output & preview | 5 |
 | [06-git-github](06-git-github/) | Git & GitHub | 3 |
