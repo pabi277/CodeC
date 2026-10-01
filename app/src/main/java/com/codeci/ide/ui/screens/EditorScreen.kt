@@ -1140,6 +1140,18 @@ fun EditorScreen(
     } else {
         null
     }
+    // Phase 78 (Level 2) — the whole-project question. The reader runs on IO
+    // inside the view model; this only hands it the live buffer so a file the
+    // user is editing is never described from stale disk bytes.
+    val aiAskProject: (String) -> Unit = { question ->
+        val buffer = viewModel.codeText.value
+        aiViewModel.askProject(
+            question = question,
+            openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
+            openText = buffer.text,
+            openDirty = viewModel.isDirty.value
+        )
+    }
     val aiSheet: @Composable (Boolean, Modifier) -> Unit = { full, sheetModifier ->
         AiChatSheet(
             full = full,
@@ -1150,6 +1162,8 @@ fun EditorScreen(
             onQuestionChange = { aiQuestion = it },
             onExplainSelection = aiExplainSelection,
             onExplainError = aiExplainError,
+            onAskProject = aiAskProject,
+            onCancelGather = aiViewModel::cancelGather,
             onSend = aiViewModel::send,
             onCancelPreview = aiViewModel::cancelPreview,
             onStop = aiViewModel::stop,

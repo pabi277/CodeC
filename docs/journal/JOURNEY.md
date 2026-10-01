@@ -1392,3 +1392,26 @@ The owner asked for space, so the AI's chat became a 40dp bubble that snaps to a
 
 The owner ran the device round and said it was all good. The plan had been to pick one of the two Output behaviours and delete the other. When asked which he preferred, he declined to choose: *"Stay both user can select whatever they want."* That is a better answer than either variant, so neither was deleted. The A/B rows that were meant to vanish became a permanent setting in ✨ home, "When the Output panel is open, AI chat", with the old wording replaced by what each option does. It is saved as a third non-secret value in the same properties file, with no DataStore key, and it survives Delete key like the button's spot does. The earlier law "nothing saved except the button" was widened by one value on the owner's say-so, and the docs say so.
 
+
+## 2026-10-01 — Level 2: the AI is allowed to read more than one file
+
+The owner chose AI Level 2 as Phase 78 and then said *"Complete the lavel 2"* — without answering the six
+scope questions the brief had left open. So each was taken at its most conservative option and written
+down as the agent's decision, not his: no multi-turn, the 12 000-character ceiling unchanged, credential
+files never offered with no opt-in, no `.gitignore` matcher, a third chip in the sheet that already
+exists, and nothing new persisted.
+
+The evidence that shaped the phase was uncomfortable. The obvious thing to reuse — the editor's own
+`ProjectSearch.isSearchable` — admits `.env`, `.env.production` and `.npmrc` on three independent routes,
+because a *find-my-code* filter is supposed to. Level 2 therefore has its own, narrower filter, and a
+wiring test now fails the build if any file under `ui/ai` so much as mentions it.
+
+The cheap win was structural. `GeminiRequest.body(prompt)` builds the request from the same two strings
+the preview renders, so putting the file list *inside* `AiPrompt.userText` meant D4 — what you saw is
+what was sent — survived with **no change at all** to the request, key or streaming path. Widen the
+prompt, not the pipeline.
+
+The local kotlinc/JRE harness paid for itself three times before CI: a real compile error, a test
+assertion that was wrong rather than the code, and two source pins that asserted things which were
+simply false. CI was green on the first round. The device round is owed, and its row C4/C5 — search the
+answer and the payload for the `.env` secret — is the one that must not fail.
