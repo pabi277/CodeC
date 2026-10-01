@@ -2155,6 +2155,8 @@ Three fixes work together:
 | A file's line says *includes unsaved edits* | That file is open and dirty, so the **buffer** was sent, not the disk copy — labelled so the model is not misled. Save or undo to change what is sent. |
 | The same question gives a different file list than yesterday | It should not. Ranking is deterministic — no index, no randomness. If it differs, the project's files changed, or the open file changed (the open file always ranks first). |
 
+| I typed a question and pressed **➤** and it said *"Select some code in the editor first"* | Fixed in the Phase 78 round-1 follow-up. The arrow used to mean *Explain selection* only; it now follows the question — with code selected it explains the selection, with nothing selected it asks about the whole project. If you still see this on an older build, tap the **Ask about the project** chip instead. |
+
 **Nothing about a project question is saved.** There is no index and no cache: the file list is rebuilt
 from disk on every tap (D6). Closing the app forgets the exchange.
 

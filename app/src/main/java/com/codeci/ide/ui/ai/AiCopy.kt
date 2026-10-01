@@ -79,7 +79,12 @@ object AiCopy {
     const val SEND_QUESTION = "Preview question"
     const val YOU = "You"
     const val AI = "AI"
-    const val SELECTION_HINT = "Select code in the editor, then ask. You always see what will be sent before it leaves your phone."
+    // Phase 78 device round 1: this hint used to say only "Select code in the
+    // editor, then ask", which stopped being true once a question could be
+    // asked about the whole project with nothing selected.
+    const val SELECTION_HINT =
+        "Select code and ask about it, or just type a question and ask about the whole " +
+            "project. You always see what will be sent before it leaves your phone."
 
     fun sheetTitle(model: String): String = "AI · $model"
 

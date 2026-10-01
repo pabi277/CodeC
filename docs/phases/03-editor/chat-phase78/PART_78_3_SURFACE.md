@@ -152,3 +152,44 @@ tempted), and `"store":false` is written escaped in source
   files/folders"*); letting the user edit it needs a second preview round and a
   place to keep the choice, which collides with Q6 (nothing persisted).
 - **Persisting the last question per project** — rejected (D6).
+
+---
+
+## 6. Round 1 follow-up (2026-10-01) — symptom → cause → fix
+
+**Symptom (owner, device round 1, verbatim):** *"Can i directly question the ai? The device test B
+part if i question anything it's saying select some code in the editor. But full project explanation
+work"*
+
+**Root cause.** `BottomBar`'s ➤ `IconButton` was hardcoded to `onExplainSelection(question)` —
+a leftover from when Explain-selection was the only intent. `AiContextBuilder.fromSelection` refuses a
+blank selection (`AiContext.kt:122` → `NO_SELECTION` → `AiCopy.kt:142`), so typing a question with
+nothing selected could only produce *"Select some code in the editor first, then tap Explain
+selection."* The control that looks like "send" was a dead end. Phase 78 made it a *new* dead end:
+before this phase there were two intents and the arrow served the primary one; after it there were
+three and the arrow still served only the first. The **Ask about the project** chip was never
+affected, which is exactly what the owner observed.
+
+**Fix.** One line of routing plus the hint text:
+
+```kotlin
+if (hasSelection) onExplainSelection(question) else onAskProject(question)
+```
+
+`enabled = hasSelection || !state.gathering`, so the arrow cannot start a second walk while one runs.
+With code selected the behaviour is byte-for-byte the Phase 77 one (device-passed, untouched); with
+nothing selected it asks about the project. `AiCopy.SELECTION_HINT` was also stale — it read *"Select
+code in the editor, then ask"*, which stopped being true the moment a bare question became
+answerable — and now names both routes.
+
+**Answer to the owner's question:** before this fix, no; a typed question could not be asked on its
+own. Now it can.
+
+**Pinned.** A new `AiLevel2WiringTest` case (*"the send arrow follows the question, it is not
+hardcoded to the selection"*) asserts the branch exists, asserts the old hardcoded form is gone, and
+asserts the hint mentions the project route. Pre-validated in-sandbox: **142/142** source pins through
+the real `RepoFiles.codeOnly` (was 139/139), and the pure set recompiled clean. The Compose file
+itself still compiles only in CI.
+
+**Device rows:** G1–G5 in [`DEVICE_ROUND.md`](DEVICE_ROUND.md). B1–B6 still stand — they were run
+through the chip and were never broken.

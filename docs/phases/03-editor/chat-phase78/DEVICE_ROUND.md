@@ -85,3 +85,48 @@ https://github.com/pabi277/CodeC/actions/runs/36822370600
 
 Paste the table with ✅ / ❌ per row. Row **C4/C5** is the one that must not
 fail. Then say *"merge"* when you want it merged.
+
+---
+
+## Round 1 follow-up (2026-10-01) — the send arrow was a dead end
+
+**Owner report, verbatim:** *"Can i directly question the ai? The device test B part if i question
+anything it's saying select some code in the editor. But full project explanation work"*
+
+**Root cause (found by reading the code, `AiChatSheet.kt` `BottomBar`).** The ➤ arrow was hardcoded:
+
+```kotlin
+IconButton(onClick = { onDismissNotice(); onExplainSelection(question) }) { … }
+```
+
+It always meant *Explain selection*, whatever was typed. With no selection,
+`AiContextBuilder.fromSelection` refuses at `selected.isBlank()` (`AiContext.kt:122`) →
+`NO_SELECTION` → *"Select some code in the editor first, then tap Explain selection."*
+(`AiCopy.kt:142`). Phase 78 added a third intent and left the arrow serving only the first, so the
+one control that looks like "send" could only produce an error. The **Ask about the project** chip
+was never affected — which is why the owner's project questions worked.
+
+**Answer to the question asked:** before this fix, no — you could not type a question and just ask
+it; the three chips were the only doors. Now you can.
+
+**Fix.** The arrow follows the question:
+
+```kotlin
+if (hasSelection) onExplainSelection(question) else onAskProject(question)
+```
+
+With code selected it is **exactly** the Phase 77 behaviour (device-passed, untouched); with nothing
+selected it asks about the project, which is what a bare question is. The no-selection hint
+(`AiCopy.SELECTION_HINT`) now says so too — it used to read only *"Select code in the editor, then
+ask"*, which stopped being true in this phase. Pinned by a new `AiLevel2WiringTest` case so the arrow
+cannot silently go back to being selection-only.
+
+### Re-run these rows (they replace nothing above; B1–B6 still stand via the chip)
+
+| # | Do | Expect |
+|---|---|---|
+| G1 | Open the sheet with **nothing selected**, type a question, tap **➤**. | *"Reading the project…"*, then the project preview. **No** "Select some code in the editor". |
+| G2 | Read the grey hint above the box with nothing selected. | It offers **both** routes: select code, *or* just type a question about the whole project. |
+| G3 | **Select** some code, type a question, tap **➤**. | *Explain selection* preview — the Phase 77 behaviour, unchanged. |
+| G4 | With nothing selected, tap **➤** in a project with no code files. | *"This project has no code or text file to send…"* — not the selection error. |
+| G5 | Select code, tap the **Explain selection** chip. | Unchanged from Phase 77. |

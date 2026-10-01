@@ -112,6 +112,29 @@ class AiLevel2WiringTest {
         assertTrue(sheet.contains("AiPromptText.projectLeftOutLine("))
     }
 
+    @Test
+    fun `the send arrow follows the question, it is not hardcoded to the selection`() {
+        // Phase 78 device round 1: the arrow was wired straight to
+        // onExplainSelection, so a typed question with nothing selected hit the
+        // blank-selection refusal and answered "Select some code in the editor
+        // first" — a dead end wearing a send icon. Pinned so it cannot go back.
+        val sheet = ai("AiChatSheet.kt")
+        assertTrue(
+            "the arrow must branch on whether code is selected",
+            sheet.contains("if (hasSelection) onExplainSelection(question) else onAskProject(question)")
+        )
+        assertFalse(
+            "the arrow must no longer be a bare onExplainSelection call",
+            sheet.contains("IconButton(onClick = { onDismissNotice(); onExplainSelection(question) })")
+        )
+        // the hint shown when nothing is selected must offer the project route too
+        val copy = File(aiDir, "AiCopy.kt").readText()
+        assertTrue(
+            "the no-selection hint must mention asking about the project",
+            copy.contains("ask about the whole")
+        )
+    }
+
     // ---- 3. read-only, nothing saved, nothing logged (D1/D6) --------------
 
     @Test

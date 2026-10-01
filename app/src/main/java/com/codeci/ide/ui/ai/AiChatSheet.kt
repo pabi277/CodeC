@@ -391,7 +391,23 @@ private fun BottomBar(
                             .defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH))
                     )
                     // ➤ only builds the PREVIEW — nothing is sent until Send on it (D4).
-                    IconButton(onClick = { onDismissNotice(); onExplainSelection(question) }) {
+                    //
+                    // Phase 78 device round 1 (owner, 2026-10-01): *"The device test B
+                    // part if i question anything it's saying select some code in the
+                    // editor"*. The arrow was hardcoded to Explain-selection, so typing a
+                    // question with nothing selected hit `fromSelection`'s blank-selection
+                    // refusal (`AiContext.kt:122`) and the sheet answered "Select some code
+                    // in the editor first" — a dead end wearing a send icon. Now the arrow
+                    // means what the user meant: with code selected it still explains the
+                    // selection (Phase 77 device-passed, unchanged); with nothing selected
+                    // it asks about the project, which is what a bare question is.
+                    IconButton(
+                        onClick = {
+                            onDismissNotice()
+                            if (hasSelection) onExplainSelection(question) else onAskProject(question)
+                        },
+                        enabled = hasSelection || !state.gathering
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.Send, contentDescription = AiCopy.SEND_QUESTION)
                     }
                 }
