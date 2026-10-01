@@ -2762,6 +2762,38 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
         refreshGitMeta(context)
     }
 
+    fun reloadActiveTab(context: Context) {
+        val project = _projectName.value
+        if (project != null) {
+            val path = _activeTabPath.value ?: return
+            val info = ProjectManager(context).project(project) ?: return
+            val file = ProjectPathUtils.resolveInside(info.root, path) ?: return
+            if (!file.isFile || !file.canRead()) return
+            val content = runCatching { file.readText() }.getOrNull() ?: return
+            val ending = LineEndings.detect(content)
+            val normalized = LineEndings.normalizeToLf(content)
+            val tab = EditorTab(path, TextFieldValue(normalized), normalized, ending)
+            updateTab(path) { tab }
+            _fileName.value = path
+            resetCaretForOpen()
+            _codeText.value = tab.buffer
+            _activeLineEnding.value = ending
+            _isDirty.value = false
+        } else {
+            val fm = FileManager(context)
+            val content = fm.loadFile(_fileName.value) ?: return
+            scratchSavedText = content
+            resetCaretForOpen()
+            _codeText.value = TextFieldValue(content)
+            _isDirty.value = false
+        }
+        undoManager().reset()
+        syncUndoFlags(undoManager())
+        _diagnostics.value = emptyList()
+        resetDecorationsForNewBuffer()
+        _userMessage.value = context.getString(R.string.reloaded_from_disk)
+    }
+
     /**
      * Phase 79 (AI Level 3) — returns the LF-normalized text of every open
      * project tab that currently has unsaved edits, so the AI edit applier and
@@ -2818,7 +2850,6 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
                     _codeText.value = TextFieldValue("")
                     scratchSavedText = ""
                     _isDirty.value = false
-                    undoManagers.clear()
                     resetDecorationsForNewBuffer()
                     syncUndoFlags(undoManager())
                 }
@@ -2857,38 +2888,6 @@ class EditorViewModel : ViewModel(), com.codeci.ide.ui.projects.GitDiscardEditor
 
         refreshFileEntries(appCtx)
         refreshGitMeta(appCtx)
-    }
-
-    fun reloadActiveTab(context: Context) {
-        val project = _projectName.value
-        if (project != null) {
-            val path = _activeTabPath.value ?: return
-            val info = ProjectManager(context).project(project) ?: return
-            val file = ProjectPathUtils.resolveInside(info.root, path) ?: return
-            if (!file.isFile || !file.canRead()) return
-            val content = runCatching { file.readText() }.getOrNull() ?: return
-            val ending = LineEndings.detect(content)
-            val normalized = LineEndings.normalizeToLf(content)
-            val tab = EditorTab(path, TextFieldValue(normalized), normalized, ending)
-            updateTab(path) { tab }
-            _fileName.value = path
-            resetCaretForOpen()
-            _codeText.value = tab.buffer
-            _activeLineEnding.value = ending
-            _isDirty.value = false
-        } else {
-            val fm = FileManager(context)
-            val content = fm.loadFile(_fileName.value) ?: return
-            scratchSavedText = content
-            resetCaretForOpen()
-            _codeText.value = TextFieldValue(content)
-            _isDirty.value = false
-        }
-        undoManager().reset()
-        syncUndoFlags(undoManager())
-        _diagnostics.value = emptyList()
-        resetDecorationsForNewBuffer()
-        _userMessage.value = context.getString(R.string.reloaded_from_disk)
     }
 
     /**
