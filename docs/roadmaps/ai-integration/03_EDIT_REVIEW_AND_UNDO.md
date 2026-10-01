@@ -1,6 +1,6 @@
 # Level 3 — Proposed edits, review, and undo
 
-**Status: ⏳ Implemented in [Phase 79](../../phases/03-editor/chat-phase79/README.md) (`arena/01a0f848-codec`, 2026-10-01) — awaiting [device round 1](../../phases/03-editor/chat-phase79/DEVICE_ROUND.md).**
+**Status: ✅ Implemented & merged in [Phase 79](../../phases/03-editor/chat-phase79/README.md) (PR #105, `df2c5d4`, device-verified 2026-10-02).**
 
 ## User value
 

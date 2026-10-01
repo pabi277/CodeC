@@ -82,7 +82,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 76 | [✅ AI Level 1 — read-only Gemini helper (device-passed, merged)](03-editor/chat-phase76/) | 03-editor |
 | 77 | [✅ AI UI for phones — floating button + chat sheet (device-passed, merged)](03-editor/chat-phase77/) | 03-editor |
 | 78 | [✅ AI Level 2 — whole-project context (device-passed, merged)](03-editor/chat-phase78/) | 03-editor |
-| 79 | [🚧 AI Level 3 — proposed edits, review, and undo](03-editor/chat-phase79/) | 03-editor |
+| 79 | [✅ AI Level 3 — proposed edits, review, and undo (device-passed, merged)](03-editor/chat-phase79/) | 03-editor |
 
 ## By category
 
