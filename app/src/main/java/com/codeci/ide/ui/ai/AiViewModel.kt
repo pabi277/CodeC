@@ -153,7 +153,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
          * Phase 84 (fix 4): the reserved final-synthesis turn runs at most once
          * per task, so a budget stop can never loop back into another synthesis.
          */
-        var synthesisDone: Boolean = false
+        var synthesisDone: Boolean = false,
+        /**
+         * Phase 85 (Level 8, S11): the loop-local working set. Exact-duplicate reads
+         * are served from it at zero execution cost, and a run of identical
+         * no-progress calls stops the loop. Born with the task, gone when it ends.
+         */
+        var workingSet: AiAgentWorkingSet = AiAgentWorkingSet()
     ) {
         val projectView: AiToolProjectView
             get() = AiToolProjectView(existingPaths = paths.toSet(), runsRemaining = budget.runsRemaining())
@@ -958,25 +964,53 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         job = viewModelScope.launch {
             val stop = { !isActive }
             for (call in calls) {
-                val outcome = withContext(Dispatchers.IO) {
-                    AiToolRunner.execute(call, session.root, session.paths, session.dirtyBuffers, stop)
+                // S11: note every issued call so a run of identical, no-progress
+                // calls can be detected across the whole loop.
+                session.workingSet = session.workingSet.note(AiToolProtocol.describeCall(call))
+                // S11: an exact-duplicate read (same path, same range) is served from
+                // the loop-local working set at zero execution cost — counted as
+                // reused, never as an execution against MAX_TOOL_CALLS.
+                val readKey = if (call.name == AiToolName.READ_FILE && call.path != null) {
+                    AiAgentWorkingSet.readKey(
+                        call.path, call.start ?: 1, call.end ?: AiToolLimits.MAX_READ_LINES
+                    )
+                } else null
+                val cached = readKey?.let { session.workingSet.cached(it) }
+                val outcome: AiToolRunner.Outcome
+                if (cached != null) {
+                    outcome = AiToolRunner.Outcome(true, cached)
+                    session.budget = session.budget.withReused(1)
+                } else {
+                    outcome = withContext(Dispatchers.IO) {
+                        AiToolRunner.execute(call, session.root, session.paths, session.dirtyBuffers, stop)
+                    }
+                    if (readKey != null && outcome.ok) {
+                        session.workingSet = session.workingSet.record(readKey, outcome.text)
+                    }
+                    session.budget = session.budget.withToolCalls(1)
                 }
                 val step = AiAgentStep(
                     kind = AiAgentStepKind.TOOL,
-                    title = AiToolProtocol.describeCall(call),
+                    title = AiToolProtocol.describeCall(call) + if (cached != null) " (reused)" else "",
                     // Phase 84 (S1/S2): the model gets the full result (cut marker
                     // intact); the timeline gets a short preview that keeps the marker.
                     detail = AiAgentLimits.timelineDetail(outcome.text, AiToolRunner.CUT_NOTE),
                     modelResult = outcome.text,
                     ok = outcome.ok
                 )
-                session.budget = session.budget.withToolCalls(1)
                 _state.update { it.copy(agentSteps = it.agentSteps + step, agentUsage = usage(session)) }
                 if (!isActive) return@launch
             }
             if (denied.isNotEmpty()) {
                 session.budget = session.budget.withRefused(denied.size)
                 _state.update { it.copy(agentUsage = usage(session)) }
+            }
+            // S11: the model repeated one call MAX_IDENTICAL_REPEATS times with no
+            // progress in between — stop instead of spinning (a final synthesis turn
+            // still gives the user a prose answer).
+            if (session.workingSet.stalled()) {
+                stopAgent(AiAgentStopReason.NO_PROGRESS)
+                return@launch
             }
             resumeAgentOrStop(session)
         }

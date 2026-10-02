@@ -54,6 +54,14 @@ object AiAgentLimits {
      */
     const val MAX_EVICTION_POINTER_CHARS = 1_200
 
+    /**
+     * Phase 85 (Level 8, S11) — how many times the model may issue the *same* call
+     * with no other call in between before the loop stops as no-progress. Duplicate
+     * reads are already served from the working set at zero execution cost; this is
+     * the backstop that ends a loop spinning on one unanswerable request.
+     */
+    const val MAX_IDENTICAL_REPEATS = 3
+
     /** One line of the activity timeline shown to the user. */
     const val MAX_STEP_DETAIL_CHARS = 1_200
 
@@ -82,11 +90,18 @@ object AiAgentLimits {
         AiAgentStopReason.WALL_CLOCK -> "Stopped after ${MAX_WALL_CLOCK_MS / 60_000} minutes. Ask a narrower question to continue."
         AiAgentStopReason.USER_STOP -> "Stopped."
         AiAgentStopReason.PROVIDER_FAILURE -> "The AI could not finish. Nothing in your project was changed."
+        AiAgentStopReason.NO_PROGRESS ->
+            "Stopped: the AI repeated the same read $MAX_IDENTICAL_REPEATS times without making progress. " +
+                "Ask a narrower question to continue."
     }
 }
 
 /** Why the loop stopped. Every value is shown to the user, never swallowed. */
-enum class AiAgentStopReason { TURN_BUDGET, TOOL_BUDGET, RUN_BUDGET, WALL_CLOCK, USER_STOP, PROVIDER_FAILURE }
+enum class AiAgentStopReason {
+    TURN_BUDGET, TOOL_BUDGET, RUN_BUDGET, WALL_CLOCK, USER_STOP, PROVIDER_FAILURE,
+    /** Phase 85 (Level 8, S11): the model repeated one call with no progress in between. */
+    NO_PROGRESS
+}
 
 /** One row of the visible activity timeline. In memory only (D6). */
 data class AiAgentStep(
@@ -162,9 +177,12 @@ data class AiAgentBudget(
      */
     val toolCallsRefused: Int = 0,
     /**
-     * Phase 84 (fix 3): duplicate reads served from a working set at zero
-     * execution cost. **Always 0 until Level 9's working set exists (S11)**; the
-     * field is here so the three counts are structurally separate from day one.
+     * Phase 84 (fix 3) / Phase 85 (**S11**): duplicate reads served from the
+     * loop-local working set at zero execution cost. Populated by
+     * [AiViewModel.executeToolBatch] when an exact-duplicate read (same path, same
+     * range) is answered from [AiAgentWorkingSet] instead of touching the disk. It
+     * never gates [AiAgentLimits.MAX_TOOL_CALLS] and never mixes into
+     * [toolCallsUsed] — the three counts stay structurally separate.
      */
     val toolCallsReused: Int = 0,
     val runsUsed: Int = 0,
@@ -214,7 +232,46 @@ data class AiAgentBudget(
     fun withRefused(n: Int) =
         copy(toolCallsRefused = (toolCallsRefused + n).coerceAtLeast(0))
 
+    /** Phase 85 (S11): records [n] duplicate reads served from the working set. */
+    fun withReused(n: Int) =
+        copy(toolCallsReused = (toolCallsReused + n).coerceAtLeast(0))
+
     fun withRun() = copy(runsUsed = runsUsed + 1)
+}
+
+/**
+ * Phase 85 (Level 8, **S11**) — the loop-local working set. The agent loop is
+ * read-only (S6/S7: `ui/ai` never writes the project), so within one task an
+ * exact-duplicate read — same path, same range — returns the same bytes. Serving it
+ * from here costs zero execution budget (counted as `toolCallsReused`, never
+ * `toolCallsUsed`), and watching for a run of identical, no-progress calls lets the
+ * loop stop instead of spinning. Loop-local by design: born with the task, gone when
+ * it ends — not a persistent cross-task cache.
+ */
+data class AiAgentWorkingSet(
+    /** Read identity (`path\u0000start-end`) to the result text already delivered. */
+    val results: Map<String, String> = emptyMap(),
+    val lastSignature: String? = null,
+    val repeats: Int = 0
+) {
+    /** The cached result for [key], or null when this exact read has not run yet. */
+    fun cached(key: String): String? = results[key]
+
+    fun record(key: String, result: String): AiAgentWorkingSet =
+        copy(results = results + (key to result))
+
+    /** Notes one issued call by [signature]; consecutive identical calls accumulate. */
+    fun note(signature: String): AiAgentWorkingSet =
+        if (signature == lastSignature) copy(repeats = repeats + 1)
+        else copy(lastSignature = signature, repeats = 1)
+
+    /** True when one call has repeated [AiAgentLimits.MAX_IDENTICAL_REPEATS] times with no progress between. */
+    fun stalled(): Boolean = repeats >= AiAgentLimits.MAX_IDENTICAL_REPEATS
+
+    companion object {
+        /** A read's identity in the working set: its path plus the exact range asked for. */
+        fun readKey(path: String, start: Int, end: Int): String = "$path\u0000$start-$end"
+    }
 }
 
 /**
