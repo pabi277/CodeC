@@ -1,6 +1,15 @@
-# Level 7 — Higher autonomy and evaluation
+# Level 14 — Higher autonomy and evaluation
 
 **Status: future-only. Do not begin until the guarded project agent has real usage and evaluation evidence.**
+
+> **Renumbered 2026-10-02** from Level 7 → **Level 14**. The owner directed that the proposed agentic
+> optimization ([Levels 6–12](00_AGENTIC_MAP_AND_SECURITY_RULES.md)) be placed immediately after the
+> completed levels, with the not-yet-started levels moved after them. Content is unchanged; only the
+> number moved. Its *"Evaluation before expansion"* section is now partly superseded by
+> [Level 12 — Evaluation and acceptance](12_AGENT_EVALUATION_AND_ACCEPTANCE.md), which builds the
+> fixture-and-metric harness this level assumed would exist. **Read-only specialist review roles** listed
+> below are scoped in Level 12's *"Deferred beyond this series"*: read-only only, never parallel writes
+> (Cognition Principles 1 & 2; Anthropic reports multi-agent at ~15× more tokens).
 
 ## Possible later capabilities
 
