@@ -1,7 +1,7 @@
 # Phase 82 / 82B — device round 1
 
-> **Status: ⏳ NOT RUN.** Device acceptance is the owner's transcript, not host tests or CI.
-> Local core **462/462** + privacy/backup **13/13**; real Build APK **36995145462 green** on **7b2ecac**. No PR or merge authorized yet.
+> **Status: ⏸ POSTPONED by owner (2026-10-02), until after agent optimization. NOT PASSED.** Informal screenshot problem reports exist; this formal acceptance matrix has not been completed.
+> Local core **462/462** + privacy/backup **13/13**; real Build APK **36995145462 green** on **7b2ecac**. Owner explicitly authorized the current merge despite postponing this round; final-head CI remains required.
 
 ## Build for this round
 
@@ -9,8 +9,15 @@
 - **Build APK:** [**36995145462 — ✅ GREEN**](https://github.com/pabi277/CodeC/actions/runs/36995145462) (unit/screenshot tests, debug/lint, signed release + APK guards).
 - **Recommended install:** [**CodeC-IDE-release ZIP**](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11221750847), unzip and install `CodeC-IDE-1.3.17-universal.apk` (**7,117,440 B**). Keep the build type/signing consistent with the current app; do not uninstall/wipe project data just to change type.
 - **Debug alternative:** [CodeC-IDE-debug ZIP](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11220829913) → `CodeC-IDE-1.3.17-universal-debug.apk` (**26,869,612 B**) if currently on debug.
-- **Device result:** **NOT RUN**, awaiting owner transcript. GitHub reconnection and green CI are not device acceptance. No PR/merge authorized.
+- **Device result:** **POSTPONED until after optimization**, not passed. Existing informal screenshots report repetition/raw tool output/budget-counter issues. CI and merge permission are not device acceptance.
 - Round 1 `36994479128` had no APK (JUnit fixture signature); use the green build above, not a stale APK.
+
+### Owner scheduling decision / informal problem evidence
+
+> “The device test is postponed, 1st i will make it optimized than device test”
+> “Last merge it”
+
+See [agent-core research](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) for the three supplied screenshot names, observed Nemotron tool repetition/raw prompts/“49 of 24 reads”, source findings and proposed optimization. The displayed model is **nvidia/nemotron-3-super-120b-a12b**, not GLM-5.3. No row below is marked passed by this scheduling/merge decision; **all ⏳ entries mean deferred formal checks**. This is not a successful live-key/Keystore/model-quality acceptance claim.
 
 Use a non-secret demo project and your own keys. NVIDIA is **internal testing/evaluation only, not production**. Never paste a key into a screenshot or chat. Do not deliberately drain daily quotas; 429 rows can be exercised when the provider naturally returns one. Report NOT EXERCISED honestly if no 429 occurs; deterministic fixtures cover server metadata in CI.
 
@@ -53,4 +60,4 @@ Run the same five **non-secret** tasks once on Gemini and once on NVIDIA; record
 | Gemini / gemini-3-flash-preview | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 | NVIDIA / nvidia/nemotron-3-super-120b-a12b (or explicit tested id) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
-Reply with ✅ / ❌ / NOT EXERCISED per row (screenshot on ❌ without secrets). Device/Android/theme are optional facts to include. **STOP at rule.md §3** until the explicit merge command.
+After the agreed optimization, refresh this checklist to the new tested build and reply with ✅ / ❌ / NOT EXERCISED per row (screenshots without secrets). Device/Android/theme are optional facts. The owner's **“Last merge it”** authorizes the current Phase 82 delivery only; it does not pass these rows or authorize a later change's merge.

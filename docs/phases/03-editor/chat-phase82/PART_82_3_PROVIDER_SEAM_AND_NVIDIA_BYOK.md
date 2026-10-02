@@ -1,6 +1,6 @@
 # CodeC Phase 82B / 82.3 — Level 5A provider seam + NVIDIA development/testing BYOK
 
-> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device NOT RUN · merge gate · **Cost:** `[client-only / per-user BYOK]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device acceptance POSTPONED · MERGE AUTHORIZED · **Cost:** `[client-only / per-user BYOK]` · **Effort:** M
 > **Owner authorization:** ask_user option **authorize_82b**, selected 2026-10-02 before code.
 > This authorizes Level **5A only**. 5B second-model review and Levels 6+ are not started.
 
@@ -52,6 +52,14 @@ No second-model reviewer (5B), native provider tools, dynamic catalogue, custom 
 
 ## Delivery gate — 2026-10-02
 
-Owner reconnected GitHub; session branch pushed. [Build APK round 2 **36995145462**](https://github.com/pabi277/CodeC/actions/runs/36995145462) is **✅ GREEN** on **7b2ecac**: real unit/screenshot tests, debug build + lint, measured/signed release build, non-debuggable/ABI artifact checks. Signed release **7,117,440 B**, debug **26,869,612 B**; release is +13,128 B (~12.8 KiB, +0.18%) over merged Phase 81. [Device round](DEVICE_ROUND.md) handed over, **NOT RUN**; real vendor availability/model quality/Keystore success are not CI claims. **STOP at merge gate**: no PR or merge authorized. [Live ledger](README.md#ci--owner-handoff).
+Owner reconnected GitHub; session branch pushed. [Build APK round 2 **36995145462**](https://github.com/pabi277/CodeC/actions/runs/36995145462) is **✅ GREEN** on **7b2ecac**: real unit/screenshot tests, debug build + lint, measured/signed release build, non-debuggable/ABI artifact checks. Signed release **7,117,440 B**, debug **26,869,612 B**; release is +13,128 B (~12.8 KiB, +0.18%) over merged Phase 81. [Device round](DEVICE_ROUND.md) handed over, now **POSTPONED until after optimization**; real vendor availability/model quality/Keystore success are not CI claims. The initial STOP handoff was superseded by the owner follow-up below: **formal acceptance postponed; current merge authorized**. [Live ledger](README.md#ci--owner-handoff).
 
 Round 1 **36994479128** on **7921c01** failed at AiHttpStreamTest:180 because real JUnit fail() returns Unit, not HttpURLConnection. The fake opener now throws AssertionError explicitly (same strict no-network test), and the local shim now also returns Unit. Core **462/462** + privacy/backup **13/13** revalidated, compiler exit 0 / no error:; no assertion, permission, dependency or workflow change.
+
+## Owner follow-up — research, deferred device acceptance and merge authority
+
+Owner (2026-10-02): **“What ever we discussed add a research note in the project”**, **“The device test is postponed, 1st i will make it optimized than device test”**, **“Last merge it”**. This supersedes the initial pending-device/STOP handoff: document the discussion and merge the current work after final-head CI, with **formal device acceptance POSTPONED, not passed**.
+
+[Agent-core optimization research](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the informal screenshot issues, the 1,200-character preview/context coupling, prefix-only reads, last-four-result memory, duplicate/counter/final-answer problems, full-file/batch/native-tool/Markdown proposals and multi-API tradeoffs. No app/test/default-model changes are made here; GLM-5.3 remains manually selectable. Known agent issues remain open, not fixed by this record. **Optimization implementation, Level 5B and Levels 6+ are not started.** D1/D4/D5/D6 and the current caps/three stream sites stay unchanged.
+
+Existing code CI **36995145462** on **7b2ecac** and ledger CI **36996946243** on **e0665cb** are green. Authorized PR/merge and main CI/APK facts will be recorded after they actually happen, not predicted. This owner command changes this delivery's scheduling/merge gate, not the standing §3 rule. [Deferred device matrix](DEVICE_ROUND.md).

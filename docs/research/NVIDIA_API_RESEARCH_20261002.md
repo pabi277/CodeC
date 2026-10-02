@@ -268,3 +268,7 @@ switch (Level 5 acceptance).
   pecollective.com, tinkerllm.com, aifreeapi.com (Gemini free-tier numbers);
   Vertex AI model card for `gemini-3-flash-preview` (1 048 576 in / 65 536 out);
   NVIDIA Developer Forums threads July 2026 (free-tier RPM increases refused).
+
+## Owner follow-up — research, deferred device acceptance and merge authority
+
+[Agent-core optimization research](AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the subsequent GLM-5.3/manual-selection discussion, informal Nemotron screenshot issues, source audit, full-file/batch context and multi-API lead/backup/reviewer options. No default-model or optimization source change. Owner (2026-10-02) postpones formal device acceptance until after optimization and explicitly authorizes merging the current Phase 82/82B work; this is **not** a device pass or a start command for 5B/6+. The phase ledger records actual CI/PR/merge facts separately.

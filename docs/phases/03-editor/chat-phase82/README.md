@@ -1,6 +1,6 @@
 # Phase 82 — CodeC AI: rate-limit resilience and a bigger answer budget
 
-> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device NOT RUN · merge gate (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device acceptance POSTPONED · MERGE AUTHORIZED (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 > Work only on `arena/01a0fbc2-codec`; baseline `main` @ `e089880` (PR #106).
 > No PR, merge, or push to `main` without the owner's explicit command (`rule.md` §3).
@@ -34,7 +34,7 @@ All four were selected through ask_user in this chat (2026-10-02):
 1. [82.1 Fixed error classification, retry metadata, one retry, countdown and Stop](PART_82_1_RATE_LIMIT_RESILIENCE.md).
 2. [82.2 Larger per-request budgets, bounded Continue](PART_82_2_ANSWER_BUDGET.md).
 3. [82B / 82.3 Level 5A provider seam and NVIDIA development/testing BYOK](PART_82_3_PROVIDER_SEAM_AND_NVIDIA_BYOK.md).
-4. [Device round](DEVICE_ROUND.md) — pending, never inferred from host tests or CI.
+4. [Device round](DEVICE_ROUND.md) — **POSTPONED by owner until after optimization**; no acceptance inferred from host tests, CI or screenshots.
 
 Implementation decisions (agent, not additional owner answers): known daily exhaustion without a reset delay is not repaired by a short retry; server waits beyond a bounded automatic window are explained, never shortened. No replay after any visible partial text. Retrying a rejected agent request does not grant another tool/run budget and remains inside the task wall clock. Provider/model changes are explicit, cancel no hidden task, and require a fresh preview. The current provider is memory-only; after process death the setup defaults to Gemini and every request still names its recipient before Send.
 
@@ -51,8 +51,11 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 - [x] Code and living docs committed together: initial implementation **9285818**, with local date-parser follow-up recorded below.
 - [x] Session branch pushed: **7921c01** succeeded after owner reconnection (2026-10-02); first CI failure fixed for cause below.
 - [x] Build APK CI **36995145462 green** on **7b2ecac** (executor of record: real Gradle/JUnit/Robolectric/lint/APKs).
-- [x] Device checklist and signed release artifact handed to owner; **device acceptance NOT RUN**.
-- [x] **STOP at merge gate**. No PR opened, no merge authorized.
+- [x] Device checklist/artifact handed over; owner now **POSTPONED formal device acceptance until after optimization**. Informal screenshot issues are recorded, not passed.
+- [x] Initial handoff stopped at §3; later owner **“Last merge it”** explicitly authorizes this PR/merge with device acceptance deferred.
+- [x] Discussion/source/screenshot evidence recorded as research; **no optimization code changed**.
+- [ ] Authorized PR merged after final-head checks; record actual PR/SHA below.
+- [ ] Main Build APK green and exact APK bytes recorded; no device acceptance invented.
 
 ## Local prevalidation — 2026-10-02
 
@@ -85,8 +88,9 @@ Existing AI helper/Level2/Level3/Level4/Continue/surface wiring pins are **uncha
 |---|---|---|---|
 | [1 — 36994479128](https://github.com/pabi277/CodeC/actions/runs/36994479128) | 7921c01 | ❌ unit-test compilation | Annotation at AiHttpStreamTest.kt:180: real JUnit fail() returns Unit, not HttpURLConnection. Change the fake opener to explicit throw AssertionError; preserve the strict local-refusal assertion. |
 | [2 — 36995145462](https://github.com/pabi277/CodeC/actions/runs/36995145462) | 7b2ecac | ✅ GREEN (10m59s) | Real unit/screenshot tests, debug/lint, measured/signed release, non-debuggable/ABI checks and both APK artifacts pass; no failure annotation. |
+| [3 — 36996946243](https://github.com/pabi277/CodeC/actions/runs/36996946243) | e0665cb | ✅ GREEN (7m55s) | Verification-ledger-only head; same app/test code. Release 7,117,444 B, debug 26,869,572 B. |
 
-Production compilation passed the dependency gate before the unit-test compile failure. No phase APK was produced by round 1. The shim mismatch is recorded, not counted as Android proof. **No assertion/test was removed or relaxed**, no dependency/permission/workflow change. Round 2 is green; device checklist/artifact handed over, **NOT RUN**. **STOP at merge gate** until explicit owner instruction.
+Production compilation passed the dependency gate before the unit-test compile failure. No phase APK was produced by round 1. The shim mismatch is recorded, not counted as Android proof. **No assertion/test was removed or relaxed**, no dependency/permission/workflow change. Round 2 and ledger round 3 are green. The initial device handoff/merge gate below was later superseded by the owner follow-up: **formal acceptance postponed; this merge explicitly authorized**.
 
 ### Verified artifact facts — code CI round 2
 
@@ -101,8 +105,16 @@ This result is for tested code **7b2ecac**. Subsequent verification-ledger-only 
 
 A final local date fixture found that SimpleDateFormat's default two-digit year window could ignore a valid long RFC-850 Retry-After and fall back to 12s. The follow-up expands the century against the injected receiving clock before weekday validation; **21/44/exactly-50-year** minima are refused as too long, never shortened. AiRateLimitTest is now **18**, full core **462/462**; supplementary permission/backup **13/13**. Successful cipher/real endpoint/device proof is still pending.
 
-**Device round: NOT RUN**; no live provider availability or quality claim. HTTP 202 is a fixed pending-request failure, no polling; an empty NVIDIA test is not “NVIDIA answered”. Exactly one retry and manual selection only. **No PR opened or merge authorized.**
+**Formal device acceptance: POSTPONED until after optimization**, not passed. Informal Nemotron screenshots expose agent issues recorded in the follow-up below. HTTP 202 remains a fixed pending failure, no polling; empty NVIDIA is not success. Exactly one retry and manual selection only. **Current PR/merge authorized by the owner; final-head checks still required.**
 
 ## Risks / deliberate limits
 
 A larger output budget can cost more tokens, time and quota; it cannot enlarge a provider allowance. Only one retry, no background work, no generic 5xx/offline retry loop. NVIDIA catalogue/limits can change; unknown models have unknown capabilities, not invented numbers. No real vendor key is available in the sandbox: live NVIDIA connection, coding quality and tool-format correctness require the owner's BYOK device round. No custom endpoints, second-model reviewer, autonomous applies/runs, multi-agent work, or on-device inference.
+
+## Owner follow-up — research, deferred device acceptance and merge authority
+
+Owner (2026-10-02): **“What ever we discussed add a research note in the project”**, **“The device test is postponed, 1st i will make it optimized than device test”**, **“Last merge it”**. This supersedes the initial pending-device/STOP handoff: document the discussion and merge the current work after final-head CI, with **formal device acceptance POSTPONED, not passed**.
+
+[Agent-core optimization research](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the informal screenshot issues, the 1,200-character preview/context coupling, prefix-only reads, last-four-result memory, duplicate/counter/final-answer problems, full-file/batch/native-tool/Markdown proposals and multi-API tradeoffs. No app/test/default-model changes are made here; GLM-5.3 remains manually selectable. Known agent issues remain open, not fixed by this record. **Optimization implementation, Level 5B and Levels 6+ are not started.** D1/D4/D5/D6 and the current caps/three stream sites stay unchanged.
+
+Existing code CI **36995145462** on **7b2ecac** and ledger CI **36996946243** on **e0665cb** are green. Authorized PR/merge and main CI/APK facts will be recorded after they actually happen, not predicted. This owner command changes this delivery's scheduling/merge gate, not the standing §3 rule. [Deferred device matrix](DEVICE_ROUND.md).

@@ -134,7 +134,12 @@ Phase 82/82B implementation has local policy/source/transport-fixture proof and
 real Build APK **36995145462 green** on **7b2ecac** (unit/screenshot tests, lint,
 Android/Compose compilation and signed APK guards). The first CI fixture compile
 signature error was corrected without changing privacy behavior. Owner device,
-successful Keystore/live vendor/model-quality checks remain **NOT RUN**. The
+successful Keystore/live vendor/model-quality acceptance remains **POSTPONED**
+until after optimization at the owner's direction; not passed. Informal phone
+screenshots expose known agent-core issues documented in
+[research](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md). This documentation/current-merge authorization
+adds no routing/reviewer, persisted task memory, native-tool permission or
+new data recipient. The
 [phase record](../phases/03-editor/chat-phase82/README.md) is the verification
 ledger, not a claim of production NVIDIA entitlement.
 
