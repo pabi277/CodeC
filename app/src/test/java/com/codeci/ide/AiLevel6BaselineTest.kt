@@ -134,7 +134,12 @@ class AiLevel6BaselineTest {
             val outcome = AiToolRunner.execute(toolCall, project.root, scan.allTextPaths)
             assertTrue(outcome.ok)
             assertTrue(outcome.truncated)
-            assertTrue(outcome.text.startsWith("FILE ${project.normalPath} — lines 1-300 of 300"))
+            // Level 8: the header states the lines ACTUALLY delivered (bounded by the
+            // 8 000-char result cap) and the file's true total — not the old
+            // over-claimed "1-300 of 300" that the clip then silently truncated.
+            assertTrue(outcome.text.startsWith("FILE ${project.normalPath} — lines 1-"))
+            assertTrue(outcome.text.contains("of 300"))
+            assertTrue(outcome.text.contains("[partial: result cut"))
             assertTrue(outcome.text.contains(AiToolRunner.CUT_NOTE))
             assertTrue(outcome.text.length <= AiToolLimits.MAX_RESULT_CHARS)
 
@@ -154,10 +159,10 @@ class AiLevel6BaselineTest {
                     )
                 )
             )
-            // Fix 1: the whole 8 000-char result now rides along — a line the old
-            // ~22-line preview never reached, plus the cut marker (fix 5). Line 300
-            // is still beyond the runner's own 8 000-char result cap; reaching an
-            // arbitrary tail is Level 8's honest-reads work, not Level 7.
+            // Fix 1: the whole (bounded) result rides along — a line the old ~22-line
+            // preview never reached, plus the cut marker (fix 5). Level 8 makes the
+            // header honest about the delivered range and names the next range, so the
+            // tail is now reachable with the follow-up read it points at.
             assertTrue(packed.text.contains("1: "))
             assertTrue(packed.text.contains("L6_${project.id.uppercase()}_NORMAL_0100"))
             assertTrue(packed.text.contains(AiToolRunner.CUT_NOTE))
@@ -182,28 +187,46 @@ class AiLevel6BaselineTest {
     }
 
     @Test
-    fun `the prefix-only reader cannot reach a generated file tail range`() {
+    fun `the offset reader reaches a generated file tail range and its last line`() {
         for (project in projects()) {
             val scan = scan(project)
-            val toolCall = readCall(
+            // Phase 83 recorded this as a defect: the prefix-only reader could not
+            // reach lines 1 900-2 000 of a 2 000-line file — it returned a prefix and
+            // declared a false "of 304". Level 8's offset reader streams, so the
+            // requested tail start is reached and the true total is reported.
+            val tail = readCall(
                 path = project.largePath,
                 start = 1_900,
                 end = 2_000,
                 existingPaths = scan.allTextPaths.toSet()
             )
-            val outcome = AiToolRunner.execute(toolCall, project.root, scan.allTextPaths)
+            val outcome = AiToolRunner.execute(tail, project.root, scan.allTextPaths)
             assertTrue(outcome.ok)
-            assertFalse(outcome.text.contains(project.largeEndMarker))
             val coverage = Regex("""lines (\d+)-(\d+) of (\d+)""").find(outcome.text)
                 ?: throw AssertionError("read result had no line header: ${outcome.text.take(160)}")
             val deliveredStart = coverage.groupValues[1].toInt()
-            val deliveredEnd = coverage.groupValues[2].toInt()
-            assertTrue("the reader returned a prefix range, not the requested tail", deliveredStart < 1_900)
-            assertEquals(deliveredStart, deliveredEnd)
+            val total = coverage.groupValues[3].toInt()
+            assertEquals("the reader must reach the requested tail start, not a prefix", 1_900, deliveredStart)
+            assertEquals("the header must state the file's true line count", 2_000, total)
+
+            // The acceptance check: the LAST line of a >24 000-char file is reachable.
+            val lastLine = readCall(
+                path = project.largePath,
+                start = 2_000,
+                end = 2_000,
+                existingPaths = scan.allTextPaths.toSet()
+            )
+            val lastOutcome = AiToolRunner.execute(lastLine, project.root, scan.allTextPaths)
+            assertTrue(lastOutcome.ok)
+            assertTrue(
+                "the last line (end marker) of a >24 000-char file must be reachable",
+                lastOutcome.text.contains(project.largeEndMarker)
+            )
+            assertTrue(lastOutcome.text.contains("[complete]"))
             println(
-                "AI_LEVEL6_BASELINE tail=${project.id} sourceLines=2000 requested=1900-2000 " +
-                    "declared=${deliveredStart}-${deliveredEnd} of ${coverage.groupValues[3]} " +
-                    "tailMarkerReached=${outcome.text.contains(project.largeEndMarker)}"
+                "AI_LEVEL8_TAIL tail=${project.id} sourceLines=2000 requested=1900-2000 " +
+                    "declared=${coverage.groupValues[1]}-${coverage.groupValues[2]} of $total " +
+                    "lastLineReached=${lastOutcome.text.contains(project.largeEndMarker)}"
             )
         }
     }

@@ -199,6 +199,103 @@ object AiProjectReader {
         if (text.length <= AiProjectFiles.MAX_READ_CHARS) text
         else text.substring(0, AiProjectFiles.MAX_READ_CHARS)
 
+    /**
+     * Phase 85 (Level 8) — the result of reading one line range. [total] is the
+     * file's TRUE line count (the reader streams to EOF), so coverage is honest:
+     * a request for lines 1 900-2 000 of a 2 000-line file reports `of 2000`,
+     * not `of 304` the way the old 24 000-char prefix did.
+     */
+    internal data class LineRange(
+        val ok: Boolean,
+        /** Why the read was refused, when [ok] is false. */
+        val reason: String?,
+        /** The delivered lines, without line numbers. */
+        val slice: List<String>,
+        /** First delivered line, 1-based; 0 when nothing was delivered. */
+        val start: Int,
+        /** Last delivered line, 1-based; 0 when nothing was delivered. */
+        val end: Int,
+        /** The file's true total line count. */
+        val total: Int,
+        /** True when the head looked binary (NUL) — the caller refuses. */
+        val binary: Boolean,
+        /** True when accumulation stopped at the char budget before the requested end. */
+        val charCapped: Boolean,
+        /** True when [shouldStop] ended the read early. */
+        val stopped: Boolean
+    )
+
+    /**
+     * Phase 85 (Level 8, item 1) — read the line range `[requestedStart, requestedEnd]`
+     * by **streaming**, so any line of a file up to [MAX_FILE_BYTES] is reachable,
+     * not only the lines inside the first [AiProjectFiles.MAX_READ_CHARS] characters.
+     *
+     * - **minSdk 24:** `java.io` `BufferedReader.readLine`, never `java.nio.file`.
+     * - **UTF-8:** the reader decodes UTF-8, exactly as [readCapped] does.
+     * - **Bounded memory:** only the requested slice is held (≤ [maxChars]); the
+     *   rest of the file is counted, not stored, so [total] is honest.
+     * - **Cancellable:** [shouldStop] is checked between lines, so Stop ends a big
+     *   read promptly.
+     * - **Binary:** the head (first 8 192 chars) is checked for NUL, matching
+     *   [looksBinary]; a binary file is reported, never sliced.
+     */
+    internal fun readLineRange(
+        file: File,
+        requestedStart: Int,
+        requestedEnd: Int,
+        maxChars: Int,
+        shouldStop: () -> Boolean = { false }
+    ): LineRange = runCatching {
+        if (!file.isFile) {
+            return@runCatching LineRange(false, "not found", emptyList(), 0, 0, 0, false, false, false)
+        }
+        if (file.length() > MAX_FILE_BYTES) {
+            return@runCatching LineRange(
+                false, "larger than ${MAX_FILE_BYTES / 1024} KB", emptyList(), 0, 0, 0, false, false, false
+            )
+        }
+        val slice = mutableListOf<String>()
+        val head = StringBuilder()
+        var total = 0
+        var chars = 0
+        var binary = false
+        var stopped = false
+        var charCapped = false
+        file.bufferedReader(Charsets.UTF_8).use { r ->
+            while (true) {
+                if (shouldStop()) { stopped = true; break }
+                val line = r.readLine() ?: break
+                total++
+                if (head.length < 8192) {
+                    head.append(line).append('\n')
+                    // NUL anywhere in the head window means "not text" — the same cheap
+                    // check looksBinary makes, but caught while streaming so a SMALL
+                    // binary file is refused too, not only one that runs past 8 192 chars.
+                    if (line.indexOf('\u0000') >= 0) {
+                        binary = true
+                        break
+                    }
+                }
+                if (total >= requestedStart && total <= requestedEnd) {
+                    // Reserve ~9 chars per line for the "N: " prefix and newline the
+                    // formatter adds, so the formatted body fits the result cap and
+                    // the header never claims a line that was clipped away.
+                    if (chars + line.length + 9 > maxChars) {
+                        charCapped = true
+                    } else {
+                        slice += line
+                        chars += line.length + 9
+                    }
+                }
+            }
+        }
+        val start = if (slice.isEmpty()) 0 else requestedStart.coerceIn(1, maxOf(1, total))
+        val end = if (slice.isEmpty()) 0 else start + slice.size - 1
+        LineRange(true, null, slice, start, end, total, binary, charCapped, stopped)
+    }.getOrDefault(
+        LineRange(false, "could not be read", emptyList(), 0, 0, 0, false, false, false)
+    )
+
     /** NUL in the head means "not text" — the same cheap check the search uses. */
     fun looksBinary(text: String): Boolean = text.take(8192).any { it == '\u0000' }
 
