@@ -69,6 +69,7 @@ object AiToolRunner {
             AiToolName.LIST_FILES -> listFiles(call, paths)
             AiToolName.SEARCH_PROJECT -> search(call, rootDir, paths, shouldStop)
             AiToolName.READ_FILE -> read(call, rootDir, dirtyBuffers, shouldStop)
+            AiToolName.READ_FILES -> readFiles(call, rootDir, paths, dirtyBuffers, shouldStop)
             // request_run is an approval request; it must never execute anything.
             AiToolName.REQUEST_RUN -> Outcome(false, "request_run is approved by the user, not executed as a tool.")
         }
@@ -242,6 +243,98 @@ object AiToolRunner {
 
         return Outcome(true, formatRange(path, slice, start, end, total, fromBuffer != null, charCapped, stopped),
             truncated = end < total || charCapped || stopped)
+    }
+
+    // ---- read_files (batch) ----------------------------------------------
+
+    /**
+     * Phase 85 (Level 8, item 3) — read several files in one round trip. This is
+     * parallel read-only IO, NOT parallel agents (**S7**): one brain still writes.
+     * Each path is validated and read on its own, in the order asked, so a secret,
+     * escaping, binary, or missing path yields a per-file `[refused: …]` while its
+     * siblings still deliver (**S5**). [shouldStop] is checked between files, so
+     * Stop ends a batch promptly. The whole batch shares the one
+     * [AiToolLimits.MAX_RESULT_CHARS] result cap, divided across the files.
+     */
+    private fun readFiles(
+        call: AiToolCall,
+        rootDir: File,
+        paths: List<String>,
+        dirtyBuffers: Map<String, String>,
+        shouldStop: () -> Boolean = { false }
+    ): Outcome {
+        val specs = call.reads
+        if (specs.isNullOrEmpty()) return Outcome(false, "read_files needs a paths list.")
+        val admitted = paths.toSet()
+        // Divide the one result cap across the batch, leaving ~120 chars/file for
+        // the header and status line, so no file's block is clipped mid-delivery.
+        val perFile = ((AiToolLimits.MAX_RESULT_CHARS - specs.size * 120) / specs.size).coerceAtLeast(400)
+        val blocks = mutableListOf<String>()
+        var truncated = false
+        var stopped = false
+        for (spec in specs) {
+            if (!stopped && shouldStop()) stopped = true
+            if (stopped) {
+                blocks += "FILE ${spec.path} — [partial: stopped by the user]"
+                truncated = true
+                continue
+            }
+            val block = readBatchBlock(spec, rootDir, admitted, dirtyBuffers, perFile, shouldStop)
+            blocks += block.first
+            truncated = truncated || block.second
+        }
+        val body = blocks.joinToString("\n\n")
+        val clipped = clip(body)
+        return Outcome(true, clipped, truncated = truncated || clipped.length < body.length)
+    }
+
+    /** One file's block inside a batch: `(text, truncated)`. Per-path security is
+     *  re-applied here, never once for the whole batch. */
+    private fun readBatchBlock(
+        spec: ReadSpec,
+        rootDir: File,
+        admitted: Set<String>,
+        dirtyBuffers: Map<String, String>,
+        budget: Int,
+        shouldStop: () -> Boolean
+    ): Pair<String, Boolean> {
+        val path = spec.path
+        if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
+            return "FILE $path — [refused: credential-shaped]" to false
+        }
+        val fromBuffer = dirtyBuffers.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        if (fromBuffer == null && admitted.none { AiProjectFiles.samePath(it, path) }) {
+            return "FILE $path — [refused: not a code or text file in this project]" to false
+        }
+        val requestedStart = spec.start.coerceAtLeast(1)
+        val requestedEnd = spec.end.coerceAtLeast(requestedStart)
+        if (fromBuffer != null) {
+            val text = AiEditProposalParser.normalizeLf(fromBuffer)
+            val lines = text.split('\n')
+            val total = when {
+                text.isEmpty() -> 0
+                text.endsWith("\n") -> lines.size - 1
+                else -> lines.size
+            }
+            if (total == 0) return "FILE $path — empty [unsaved edits] [complete]" to false
+            val start = requestedStart.coerceIn(1, total)
+            val end = requestedEnd.coerceIn(start, total)
+            return formatRange(path, lines.subList(start - 1, end), start, end, total, true, false, false) to (end < total)
+        }
+        val file = File(rootDir, path)
+        if (!safeChild(file, rootDir)) return "FILE $path — [refused: outside the project]" to false
+        val range = AiProjectReader.readLineRange(file, requestedStart, requestedEnd, budget, shouldStop)
+        return when {
+            !range.ok -> "FILE $path — [refused: ${range.reason}]" to false
+            range.binary -> "FILE $path — [refused: not text]" to false
+            range.total == 0 -> "FILE $path — empty [complete]" to false
+            range.slice.isEmpty() ->
+                "FILE $path — [refused: start ${spec.start} is past the end of ${range.total} line" +
+                    (if (range.total == 1) "" else "s") + "]" to false
+            else -> formatRange(
+                path, range.slice, range.start, range.end, range.total, false, range.charCapped, range.stopped
+            ) to (range.end < range.total || range.charCapped || range.stopped)
+        }
     }
 
     /**
