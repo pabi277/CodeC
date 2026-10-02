@@ -1,9 +1,9 @@
 # Phase 81 — Continue: getting the rest of an answer that was cut off
 
 > **Status: 🚧 IMPLEMENTED 2026-10-02 on `arena/01a0f9a5-codec`** (owner row:
-> *"Add a continue open on Gemini so i can continue after cut off"*). Device
-> round ⏳ NOT RUN ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); branch CI recorded
-> below when green; **not merged** (`rule.md` §3).
+> *"Add a continue open on Gemini so i can continue after cut off"*). Branch CI
+> **`36946839410` ✅ GREEN** on `9f9ffac`. Device round ⏳ NOT RUN
+> ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); **not merged** (`rule.md` §3).
 >
 > Part:
 > - [81.1 Continue after cut off — the follow-up request and its bounds](PART_81_1_CONTINUE_AFTER_CUTOFF.md)
@@ -70,9 +70,14 @@ rest. Phase 81 adds the missing door.
   preview-only, three stream sites, the single user string, base + budget,
   resets, purity) — **19 new cases**, and **260/260** across the 19
   host-compilable AI test classes.
-- **CI:** `Build APK` on `arena/01a0f9a5-codec` — recorded when the run finishes;
-  its `:app:testDebugUnitTest` step runs these classes in the real Android/JUnit
-  environment and compiles the Compose changes.
+- **CI (`rule.md` §5, the executor of record):** `Build APK` run
+  **`36946839410` ✅ GREEN** on `arena/01a0f9a5-codec` @ `9f9ffac` (release APK
+  `7,104,312 B`, debug `26,831,328 B`) — `:app:testDebugUnitTest` ran the new
+  classes in the real Android/JUnit environment and the Compose changes
+  compiled. The first push (`14c14f7`) failed CI on exactly one real error —
+  the new button lives in `BottomBar`, which had not gained the `onContinue`
+  parameter (`AiChatSheet.kt:776 Unresolved reference 'onContinue'`) — fixed in
+  `9f9ffac`.
 
 ## Exit condition
 

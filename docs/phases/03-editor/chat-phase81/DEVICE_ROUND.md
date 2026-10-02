@@ -9,8 +9,9 @@
 enough to hit a length limit — the easiest is to select a whole file (or ask a
 broad question like *"explain this whole file in detail, line by line"*).
 
-**Build:** `CodeC-IDE-1.3.17-universal.apk` from the Phase 81 **Build APK** CI
-run on `arena/01a0f9a5-codec` (run id / size recorded here when it finishes).
+**Build:** `CodeC-IDE-1.3.17-universal.apk` (`7,104,312 B`) from the Phase 81
+**Build APK** CI run **`36946839410` ✅ GREEN** on `arena/01a0f9a5-codec` @
+`9f9ffac` (artifact `CodeC-IDE-release`; debug `26,831,328 B`).
 
 ---
 
