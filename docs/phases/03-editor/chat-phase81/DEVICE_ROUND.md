@@ -1,6 +1,6 @@
 # Phase 81 — device round 1 (Continue after cut off)
 
-> **Status: ✅ PASSED (2026-10-02 — owner, in chat: *"Mark the docs device pass and merge it"*).** The pass is recorded on the owner's instruction; the rows below are the checklist this round covers. Merge in progress via the Phase 80+81 pull request.
+> **Status: ✅ PASSED (2026-10-02 — owner, in chat: *"Mark the docs device pass and merge it"*).** The pass is recorded on the owner's instruction; the rows below are the checklist this round covers. Merge in progress via **PR #106**.
 
 **You need:** a project open, Phase 76's Gemini key saved, and something long
 enough to hit a length limit — the easiest is to select a whole file (or ask a
