@@ -109,6 +109,8 @@ fun AiChatSheet(
     /** Phase 80 (Level 4) — the agent's run approval; nothing runs until Run. */
     onApproveRun: () -> Unit = {},
     onSkipRun: () -> Unit = {},
+    /** Phase 81 — ask for the rest of an answer that was cut short (preview first, D4). */
+    onContinue: () -> Unit = {},
     /** The last command the editor ran, shown on the approval card when known. */
     lastRunCommand: String? = null,
     /** True while CodeC's own runner is busy, so the Run button cannot race it. */
@@ -184,7 +186,7 @@ fun AiChatSheet(
                 state, hasSelection, question, onCancelGather,
                 onProposeEdits, onToggleEditFile, onApplyEdits, onRejectProposal,
                 onUndoEdits, onDismissUndoConflict,
-                onApproveRun, onSkipRun, lastRunCommand, runBusy,
+                onApproveRun, onSkipRun, onContinue, lastRunCommand, runBusy,
                 Modifier.weight(1f)
             )
             HorizontalDivider()
@@ -250,6 +252,7 @@ private fun Conversation(
     onDismissUndoConflict: () -> Unit,
     onApproveRun: () -> Unit,
     onSkipRun: () -> Unit,
+    onContinue: () -> Unit,
     lastRunCommand: String?,
     runBusy: Boolean,
     modifier: Modifier
@@ -330,6 +333,7 @@ private fun Conversation(
                         Body(AiCopy.previewHeader(state.model, it.sentChars))
                     }
                 }
+                it.continuation?.let { c -> Muted(AiCopy.continuePreviewNote(c.index)) }
                 if (it.unsaved && summary == null) Muted(AiCopy.UNSAVED_NOTE)
                 Body(AiCopy.FREE_TIER_NOTE)
                 SentText(it.systemInstruction + "\n\n" + it.userText)
@@ -381,7 +385,21 @@ private fun Conversation(
                         AiBubble { Answer(state.answer) }
                     }
                 }
-                if (state.cutShort) Muted(AiErrors.CUT_SHORT)
+                if (state.cutShort) {
+                    Muted(AiErrors.CUT_SHORT)
+                    // Phase 81 — a cut answer either offers Continue (in the
+                    // pinned bar below) or says in one sentence why it cannot.
+                    val p = state.prompt
+                    when {
+                        p == null -> Unit
+                        p.agent -> Muted(AiCopy.CONTINUE_AGENT_NOTE)
+                        p.source == AiSource.PROPOSE_EDITS -> Muted(AiCopy.CONTINUE_PROPOSAL_NOTE)
+                        AiContinuation.canContinue(state.continuations, state.answer.length) ->
+                            Muted(AiCopy.CONTINUE_HINT)
+                        else -> AiContinuation.limitNote(state.continuations, state.answer.length)
+                            ?.let { Muted(it) }
+                    }
+                }
                 state.notice?.let { Body(it) }
                 if (state.undoSummary != null && state.proposalResult !is AiProposalResult.Proposal) {
                     UndoTaskCard(state, onUndoEdits, onDismissUndoConflict)
@@ -748,6 +766,15 @@ private fun BottomBar(
 
             AiPhase.DONE -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
                 Button(onClick = { copyAnswer(context, state.answer) }) { Text(AiCopy.COPY) }
+                // Phase 81 — only for a cut-off prose answer with room left, and
+                // only as a door to the preview: it sends nothing by itself (D4).
+                val p = state.prompt
+                val canContinue = state.cutShort && p != null && !p.agent &&
+                    p.source != AiSource.PROPOSE_EDITS &&
+                    AiContinuation.canContinue(state.continuations, state.answer.length)
+                if (canContinue) {
+                    OutlinedButton(onClick = onContinue) { Text(AiCopy.CONTINUE) }
+                }
                 OutlinedButton(onClick = { onQuestionChange(""); onClear() }) { Text(AiCopy.NEW_QUESTION) }
             }
 

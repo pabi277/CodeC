@@ -80,7 +80,15 @@ data class AiPrompt(
      * reached. The preview still shows every character of the first request
      * (D4, as amended by the owner on 2026-10-02).
      */
-    val agent: Boolean = false
+    val agent: Boolean = false,
+    /**
+     * Phase 81 — non-null when this prompt **continues an answer that was cut
+     * short**: the last lines of what the model already wrote travel back in
+     * the same user message ([AiContinuation]), on top of this same request.
+     * The preview renders [userText] verbatim, so what the user confirms is
+     * again exactly what leaves the phone (D4). Null for every fresh request.
+     */
+    val continuation: AiContinuationRequest? = null
 ) {
     val systemInstruction: String
         get() = when {
@@ -98,7 +106,10 @@ data class AiPrompt(
             // sent bytes cannot drift apart.
             AiAgentPrompt.pack(question = question, mapText = context, steps = emptyList()).text
         } else {
-            AiPromptText.userText(this)
+            // Phase 81: a continuation is the same request plus the tail of the
+            // answer so far and the resume sentence — one string, so the
+            // preview, the byte count and the sent body cannot drift.
+            AiPromptText.userText(this) + (continuation?.let { AiContinuation.block(it) } ?: "")
         }
 
     /** Characters that leave the device (instruction + message). */

@@ -1254,6 +1254,7 @@ fun EditorScreen(
             onDismissUndoConflict = aiViewModel::dismissUndoConflict,
             onApproveRun = aiApproveRun,
             onSkipRun = aiSkipRun,
+            onContinue = aiViewModel::continueAnswer,
             lastRunCommand = outputState.lastTerminalCommand,
             runBusy = outputState.busy,
             modifier = sheetModifier

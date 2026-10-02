@@ -262,6 +262,29 @@ object AiCopy {
     const val SAVE_FAILED = "Couldn't save securely on this phone. Try again."
     const val KEY_UNREADABLE = "Your saved key can't be read anymore. Please enter it again."
 
+    // ---- Phase 81: continuing an answer that was cut short ----------------
+
+    /** The button under a cut-off answer. It only builds a preview (D4). */
+    const val CONTINUE = "Continue"
+
+    /** Shown beside [AiErrors.CUT_SHORT] while a continuation is still possible. */
+    const val CONTINUE_HINT =
+        "Tap Continue for the rest. CodeC will show the exact follow-up request first — " +
+            "nothing is sent until you tap Send."
+
+    /** The preview's own line when the pending request continues an answer. */
+    fun continuePreviewNote(index: Int): String =
+        "Continuing this answer (part ${index + 1}). This is the same request plus the last " +
+            "lines of the answer so far; the reply will be added below what you already have."
+
+    /** An agent task has ended; its loop does not take a continuation. */
+    const val CONTINUE_AGENT_NOTE =
+        "The agent task has ended, so there is nothing left to continue. Ask a new question for the rest."
+
+    /** An edit proposal is reviewed as a diff, not as prose. */
+    const val CONTINUE_PROPOSAL_NOTE =
+        "This reply was an edit proposal — review the card above, or ask a new question for the rest."
+
     fun problem(p: AiContextProblem): String = when (p) {
         AiContextProblem.NO_SELECTION -> "Select some code in the editor first, then tap Explain selection."
         AiContextProblem.SELECTION_TOO_LONG ->

@@ -29,7 +29,18 @@ import kotlin.coroutines.coroutineContext
 class GeminiClient {
 
     /** Streams one request; [onText] receives the whole answer so far after each event. */
-    suspend fun stream(apiKey: String, model: String, body: String, onText: (String) -> Unit): AiOutcome =
+    suspend fun stream(
+        apiKey: String,
+        model: String,
+        body: String,
+        /**
+         * Phase 81 — the most characters this one reply may add. Defaults to
+         * [AiLimits.MAX_REPLY_CHARS]; a continuation passes what is left of
+         * [AiContinuation.MAX_TOTAL_CHARS], so one visible answer stays bounded.
+         */
+        maxChars: Int = AiLimits.MAX_REPLY_CHARS,
+        onText: (String) -> Unit
+    ): AiOutcome =
         withContext(Dispatchers.IO) {
             val url = GeminiRequest.streamUrl(model)
                 ?: return@withContext AiOutcome.Failed(AiErrors.fail(AiFailureKind.MODEL_NOT_FOUND))
@@ -52,7 +63,7 @@ class GeminiClient {
                     return@withContext AiOutcome.Failed(AiErrors.forHttp(code, errorBody))
                 }
 
-                val accumulator = AiAnswerAccumulator()
+                val accumulator = AiAnswerAccumulator(maxChars = maxChars)
                 val sse = SseLineSplitter()
                 connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
                     while (true) {

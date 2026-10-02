@@ -59,6 +59,12 @@ data class AiUiState(
     /** Phase 79 — an approved apply or undo is running on IO. */
     val applying: Boolean = false,
     /**
+     * Phase 81 — how many times the current answer has been continued after it
+     * was cut short. In memory only (D6); reset by every fresh preview, by
+     * [clear], and by a new question.
+     */
+    val continuations: Int = 0,
+    /**
      * Phase 80 (Level 4) — the visible activity timeline of the current agent
      * task: one row per model step, tool read, refusal, run request and run
      * result. **In memory only** (D6); it disappears with [clear], a project
@@ -218,7 +224,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             is AiContextResult.Ready -> _state.update {
                 it.copy(
                     phase = AiPhase.PREVIEW, prompt = result.prompt, notice = null,
-                    answer = "", error = null, cutShort = false,
+                    answer = "", error = null, cutShort = false, continuations = 0,
                     proposalResult = null, applyConflictPaths = emptyList(),
                     undoConflictPaths = emptyList(),
                     // A new preview is a new task: the previous timeline belongs
@@ -927,7 +933,16 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         val model = _state.value.model
-        _state.update { it.copy(phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false) }
+        // Phase 81: a continuation keeps what is already on screen and streams
+        // the rest underneath it, inside one shared total budget. A fresh
+        // request starts empty, exactly as before.
+        val base = if (prompt.continuation != null) _state.value.answer else ""
+        _state.update {
+            it.copy(
+                phase = AiPhase.STREAMING, answer = base, error = null, cutShort = false,
+                continuations = prompt.continuation?.index ?: 0
+            )
+        }
         job = viewModelScope.launch {
             val key = withContext(Dispatchers.IO) { store.loadKey() }
             if (key == null) {
@@ -936,8 +951,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 return@launch
             }
-            val outcome = client.stream(key, model, GeminiRequest.body(prompt)) { text ->
-                _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = text) else s }
+            val outcome = client.stream(
+                key,
+                model,
+                GeminiRequest.body(prompt),
+                AiContinuation.requestBudget(base.length)
+            ) { text ->
+                _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = base + text) else s }
             }
             _state.update { s ->
                 if (s.phase != AiPhase.STREAMING) return@update s
@@ -950,7 +970,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         s.copy(
                             phase = AiPhase.DONE,
-                            answer = outcome.text,
+                            answer = base + outcome.text,
                             cutShort = outcome.cutShort,
                             proposalResult = parsed,
                             applyConflictPaths = emptyList()
@@ -1002,6 +1022,49 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Phase 81 — the user tapped **Continue** on an answer CodeC cut short.
+     *
+     * This builds a new PREVIEW of the same request with the tail of the answer
+     * and the resume sentence appended ([AiContinuation]); it sends nothing.
+     * The user reads the exact follow-up text on the preview and taps Send, so
+     * D4 ("preview every request") is untouched. Not offered for an agent task
+     * (its loop has ended) or for an edit proposal (its review card owns the
+     * reply) — those get a plain sentence instead of a button.
+     */
+    fun continueAnswer() {
+        val s = _state.value
+        val prompt = s.prompt ?: return
+        if (s.phase != AiPhase.DONE || !s.cutShort || job?.isActive == true) return
+        if (prompt.agent) {
+            _state.update { it.copy(notice = AiCopy.CONTINUE_AGENT_NOTE) }
+            return
+        }
+        if (prompt.source == AiSource.PROPOSE_EDITS) {
+            _state.update { it.copy(notice = AiCopy.CONTINUE_PROPOSAL_NOTE) }
+            return
+        }
+        if (!AiContinuation.canContinue(s.continuations, s.answer.length)) {
+            _state.update {
+                it.copy(notice = AiContinuation.limitNote(s.continuations, s.answer.length))
+            }
+            return
+        }
+        val next = prompt.copy(
+            continuation = AiContinuationRequest(
+                index = s.continuations + 1,
+                tail = AiContinuation.tailOf(s.answer)
+            )
+        )
+        _state.update {
+            it.copy(
+                phase = AiPhase.PREVIEW, prompt = next, notice = null, error = null,
+                cutShort = false, proposalResult = null, applyConflictPaths = emptyList(),
+                undoConflictPaths = emptyList()
+            )
+        }
+    }
+
     fun clear() {
         job?.cancel()
         job = null
@@ -1011,7 +1074,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update {
             it.copy(
                 phase = AiPhase.IDLE, prompt = null, answer = "", error = null,
-                cutShort = false, notice = null, testResult = null, testing = false,
+                cutShort = false, continuations = 0, notice = null, testResult = null, testing = false,
                 gathering = false, proposalResult = null, applyConflictPaths = emptyList(),
                 undoConflictPaths = emptyList(),
                 agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null
