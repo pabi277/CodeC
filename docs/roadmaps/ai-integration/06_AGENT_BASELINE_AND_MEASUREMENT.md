@@ -1,7 +1,9 @@
 # Level 6 — Agent baseline and measurement
 
-**Status: PROPOSED. Not implemented. Not a phase start command. Depends on nothing; blocks Levels 7–12.**
+**Status (2026-10-03): IMPLEMENTED as [Phase 83](../../phases/03-editor/chat-phase83/README.md); test-only baseline, no production-source or behavior delta. Build APK CI pending; not merged. The owner explicitly started Level 6. Depends on nothing; baseline gates Levels 7–12.**
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
+
+**Measurement boundary:** every metric is either backed by the owner screenshots or deterministic offline replay, or explicitly marked **not captured** with its reason in the Phase 83 ledger. No provider request or device profiler was authorized/performed; host-JVM timing is not substituted for phone/provider latency.
 
 ## User value
 
@@ -42,11 +44,11 @@ onward. Nothing is sent to a provider during this level except the owner's own m
 
 ## Acceptance checks
 
-- [ ] The four fixture projects exist and are non-secret test data, not real user projects.
-- [ ] Baseline numbers recorded for every metric above on the current build.
-- [ ] The baseline reproduces the reported symptom: repeated prefix reads of the same file.
-- [ ] `git diff` shows **zero** production source changes.
-- [ ] Existing 418 AI tests still pass unchanged.
+- [x] Four synthetic fixture projects are generated offline; no user project or credential data is used.
+- [x] The ledger records each metric as an observation/replay value or explicitly **not captured** with a reason; no provider/device value is inferred.
+- [x] The baseline reproduces the reported symptom: repeated prefix reads of the same file.
+- [x] `git diff` shows **zero** production-source changes.
+- [ ] The pre-Level-6 AI suite (386 tests / 30 classes) is unchanged, and Build APK CI passes the complete 391-test / 31-class AI suite with the five new cases.
 
 ## Research references
 
@@ -54,4 +56,4 @@ onward. Nothing is sent to a provider during this level except the owner's own m
 - SWE-agent ablation methodology (hold the model fixed, vary the interface) — https://arxiv.org/abs/2405.15793
 - Anthropic, *Building Effective Agents* — "think like your agent"; log what is actually in context — https://www.anthropic.com/research/building-effective-agents
 
-**Next:** [Level 7 — Agent correctness](07_AGENT_CORRECTNESS.md)
+**Dependency next, not authorized or started:** [Level 7 — Agent correctness](07_AGENT_CORRECTNESS.md). It requires its own explicit owner start command.

@@ -1,6 +1,6 @@
 # CodeC AI integration — staged roadmap
 
-**Status: Levels 0–4 + Continue are merged; Level 5A is owner-authorized and implemented as Phase 82B (code CI green; device acceptance postponed, current merge authorized). Level 5B and Levels 6–14 are all PROPOSED and unauthorized. This roadmap alone grants no new scope.**
+**Status (2026-10-03): Levels 0–4 + Continue are merged; Level 5A shipped in Phase 82/82B (PR #107 merged; formal device acceptance POSTPONED); Level 6 was explicitly started and implemented test-only as Phase 83 (Build APK CI pending, not merged, zero production-source/behavior changes). Level 5B and Levels 7–14 remain PROPOSED and unauthorized. This roadmap grants no scope beyond the owner's explicit Level 6 start.**
 
 > ### ⚠️ Level renumbering — 2026-10-02
 >
@@ -19,7 +19,7 @@
 > Shared foundation for Levels 6–12 — defect register, security rules **S1–S12**, architecture, sources:
 > [`ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md`](ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 > **All of 6–14 are PROPOSED. Nothing is implemented. No phase is started by this table.**
-**Level 0 ✅ COMPLETE 2026-09-30:** owner decisions recorded in [`ai-integration/00_LEVEL0_DECISION_RECORD.md`](ai-integration/00_LEVEL0_DECISION_RECORD.md) — read-only first, Gemini BYOK, Keystore-encrypted key, preview every request, open project only, nothing saved. Also decided: 18+ and Google-terms confirmation at key setup, `HttpURLConnection` + stateless `streamGenerateContent` with `store:false` (no new dependency), and a pre-filled Flash model with Test connection. Level 1 is next but still needs the owner's explicit start command.
+**Level 0 ✅ COMPLETE 2026-09-30:** owner decisions recorded in [`ai-integration/00_LEVEL0_DECISION_RECORD.md`](ai-integration/00_LEVEL0_DECISION_RECORD.md) — read-only first, Gemini BYOK, Keystore-encrypted key, preview every request, open project only, nothing saved. Also decided: 18+ and Google-terms confirmation at key setup, `HttpURLConnection` + stateless `streamGenerateContent` with `store:false` (no new dependency), and a pre-filled Flash model with Test connection. At that time, Level 1 still awaited the owner's explicit start; it was later shipped as Phases 76–77, device-passed and merged.
 **Level 1 ✅ IMPLEMENTED & MERGED (2026-09-30 / 2026-10-01) as [Phase 76](../phases/03-editor/chat-phase76/README.md) + [Phase 77](../phases/03-editor/chat-phase77/README.md)** — read-only Gemini helper in the fifth side-panel rail slot (Phase 76, PR #102) and floating button + bottom chat sheet (Phase 77, PR #103), both device-verified.
 **Level 2 ✅ IMPLEMENTED & MERGED (2026-10-01) as [Phase 78](../phases/03-editor/chat-phase78/README.md)** — whole-project context with secret/symlink/excluded-dir filtering and per-file preview (PR #104, `bd1aa06`, device-verified).
 **Level 3 ✅ IMPLEMENTED & MERGED (2026-10-01 / 2026-10-02) as [Phase 79](../phases/03-editor/chat-phase79/README.md)** — reviewable multi-file edit/create/delete proposals, locally computed unified diffs with per-file checkboxes, baseline conflict checks, and a 1-task preimage undo journal in `noBackupFilesDir/ai/undo/` (owner D1/D6 amendments recorded in [`00_LEVEL0_DECISION_RECORD.md`](ai-integration/00_LEVEL0_DECISION_RECORD.md); PR #105, `df2c5d4`, device-verified).
@@ -40,7 +40,7 @@ Build toward an agent that works across the user's selected whole CodeC project;
 
 ## Current-main baseline
 
-Latest baseline verified 2026-10-02: **`main` @ `e089880`**, Phases 76–81 device-passed/merged via PR #106; main CI `36972776771` green. Phase 82/82B is on the session branch `arena/01a0fbc2-codec`, not merged. The original pre-AI audit below is historical.
+Latest baseline verified 2026-10-03: **`main` @ `741956647933562dd5056972e71473581dd21233`**; Phase 82/82B merged via PR #107 at `4cb4151`, docs follow-up PR #108 at this tip, and main Build APK CI `37047037300` is green. Formal device acceptance remains POSTPONED. Phase 83 / Level 6 is active on session branch `arena/01a0fded-codec`, test-only with zero production-source/behavior changes; its Build APK CI is pending and no PR/merge is authorized. The original pre-AI audit below is historical.
 
 ### Original pre-AI baseline
 
@@ -62,7 +62,7 @@ The companion [research dossier](../research/AI_INTEGRATION_RESEARCH_20260930.md
 | 3 | [Reviewable edits and task undo](ai-integration/03_EDIT_REVIEW_AND_UNDO.md) | Propose multi-file diffs, apply after approval, undo the agent file change set | Level 2; conflict-safe project/editor APIs | Medium-high; preserve user work |
 | 4 | [Bounded tools and verified run loop](ai-integration/04_AGENT_TOOLS_AND_RUN_LOOP.md) | Inspect → plan → approved edit → approved run → inspect output | Levels 1–3; tool policy and runner integration | High; commands and side effects |
 | 5 | [Providers and model collaboration](ai-integration/05_PROVIDERS_AND_MODEL_COLLABORATION.md) | Choose among BYOK providers/models; optionally get a second, read-only review | Stable Level 1–4 contracts | High; provider compatibility, spend, extra data recipients |
-| 6 | [Agent baseline and measurement](ai-integration/06_AGENT_BASELINE_AND_MEASUREMENT.md) · **PROPOSED** | A recorded baseline so every later change is a measured delta, not an impression | Level 4; the Level 6 fixtures | Lowest — **no behaviour change at all** |
+| 6 | [Agent baseline and measurement](ai-integration/06_AGENT_BASELINE_AND_MEASUREMENT.md) · **IMPLEMENTED as Phase 83; CI pending** | A recorded baseline so every later change is a measured delta, not an impression | Level 4; the Level 6 fixtures | Lowest — **no behaviour change at all** |
 | 7 | [Agent correctness](ai-integration/07_AGENT_CORRECTNESS.md) · **PROPOSED** | The six defects that make the agent unreliable today, fixed | Level 6 | Medium; pure policy, no wire-contract change |
 | 8 | [Full context and honest reads](ai-integration/08_FULL_CONTEXT_AND_HONEST_READS.md) · **PROPOSED** | Any line reachable; batch reads; every read states its true coverage | Level 7 | Medium-high; reader offset on minSdk 24 |
 | 9 | [Task memory and planning](ai-integration/09_TASK_MEMORY_AND_PLANNING.md) · **PROPOSED — needs a D6 amendment** | The missing third augmentation: working set, findings, recited plan | Level 8; **owner approval** | High; new on-disk store, S4/S5/S6 |

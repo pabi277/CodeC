@@ -1,6 +1,6 @@
 # Agentic optimization — shared map, defect register, and security rules
 
-> **Date:** 2026-10-02 · **Status:** PROPOSED / RESEARCH. **Not implemented. Not a phase start command.**
+> **Date:** 2026-10-02 · **Status:** Shared map is **RESEARCH**; no implementation is authorized by this record alone.
 > **Source audit:** `main` @ `4cb4151` (PR #107). Paths below are relative to
 > `app/src/main/java/com/codeci/ide/ui/ai/` unless stated.
 > **Owner direction:** *"add a step wise ai map update for full agentic vive with stronger security rules
@@ -9,18 +9,25 @@
 > This file is the **shared foundation** for Levels 6–12. It holds what every one of those levels depends
 > on: the verified defect register, security rules S1–S12, the architecture, and the sources. The
 > step-by-step work itself lives in the numbered level docs below.
+>
+> **Current delivery update — 2026-10-03:** the owner explicitly started **Level 6 only**, delivered as
+> [Phase 83](../../phases/03-editor/chat-phase83/README.md): two test-only Kotlin files plus its baseline
+> ledger, zero production-source/behavior changes, host-shim smoke 5/5, and Build APK CI pending. No
+> PR or merge is authorized. Level 7 and later remain proposed/unauthorized; Level 8's bounded-but-honest
+> reads and Level 9's D6 task-memory amendment still require their separate owner decisions.
 
 ---
 
 ## Level index
 
-**Done:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md)
+**Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md)
 
-**Proposed next — the agentic optimization, in dependency order:**
+**Implemented on the active session branch, not merged:** [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md); test-only, CI pending.
+
+**Proposed and unauthorized next — the agentic optimization, in dependency order:**
 
 | Level | Doc | Fixes | Gate |
 |---|---|---|---|
-| **6** | [Baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) | — (measurement only) | No behaviour change |
 | **7** | [Agent correctness](07_AGENT_CORRECTNESS.md) | defects 1–5 | All S-rules |
 | **8** | [Full context and honest reads](08_FULL_CONTEXT_AND_HONEST_READS.md) | defects 6, 7 | S1, S2, S7, S11 |
 | **9** | [Task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) | defect 8 — **the agentic step** | S3–S6, S11 |
@@ -79,7 +86,7 @@ augmentation: **retrieval ✅ + tools ✅ + memory ❌**.
 **Do not regress:** canonical containment and the minSdk-24 symlink test; the AI's **own** secret filter
 (deliberately not `ProjectSearch.isSearchable`); fail-closed validation; dirty-buffer precedence;
 `store:false` on every Gemini body; `request_run` never executing; `GeminiResponse` skipping `thought`
-parts; the 418 `@Test` host-JVM suite across 35 AI test classes.
+parts; before Phase 83, the 386 `@Test` cases across 30 AI test classes. Phase 83 adds five tests, for an expected 391 cases across 31 AI test classes, subject to final Build APK CI.
 
 ---
 
@@ -195,6 +202,6 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 ---
 
-**Status: PROPOSED. No production or test source is changed by this record. No dependency, permission,
-runtime, SDK, endpoint, DataStore key, or phase is authorized by it. Next free phase number remains 83;
-this is not a Phase 83 start command.**
+**Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
+
+**Current status — 2026-10-03:** the owner separately started Level 6 as Phase 83. Its two additions are test-only plus documentation; Build APK CI is pending, and no PR/merge is authorized. The next unused phase number is 84, but this map does not start it. Level 7+ remain proposed and unauthorized.
