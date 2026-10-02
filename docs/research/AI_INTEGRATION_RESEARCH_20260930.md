@@ -161,3 +161,7 @@ Decisions derived from this research: [`docs/roadmaps/ai-integration/00_LEVEL0_D
 ## Owner follow-up — research, deferred device acceptance and merge authority
 
 [Agent-core optimization research](AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the subsequent GLM-5.3/manual-selection discussion, informal Nemotron screenshot issues, source audit, full-file/batch context and multi-API lead/backup/reviewer options. No default-model or optimization source change. Owner (2026-10-02) postpones formal device acceptance until after optimization and explicitly authorizes merging the current Phase 82/82B work; this is **not** a device pass or a start command for 5B/6+. The phase ledger records actual CI/PR/merge facts separately.
+
+## Merge / post-merge CI — PR #107
+
+[Phase 82/82B](../phases/03-editor/chat-phase82/README.md): **PR **#107 MERGED** @ **4cb4151**; main Build APK **37006780729 GREEN**; release **7,117,440 B**, debug **26,869,596 B**; formal device acceptance **POSTPONED until after optimization, NOT PASSED****. The [optimization note](AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) is research only; known informal screenshot issues remain open. No model-default/optimization/native-tool/routing change or device acceptance is inferred from this authorized merge. Post-merge verification docs are carried on the current session branch.

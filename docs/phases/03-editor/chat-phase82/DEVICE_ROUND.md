@@ -1,7 +1,7 @@
 # Phase 82 / 82B — device round 1
 
 > **Status: ⏸ POSTPONED by owner (2026-10-02), until after agent optimization. NOT PASSED.** Informal screenshot problem reports exist; this formal acceptance matrix has not been completed.
-> Local core **462/462** + privacy/backup **13/13**; real Build APK **36995145462 green** on **7b2ecac**. Owner explicitly authorized the current merge despite postponing this round; final-head CI remains required.
+> Local core **462/462** + privacy/backup **13/13**; real Build APK **36995145462 green** on **7b2ecac**. Owner explicitly authorized the merge despite postponing this round; PR #107 merged at 4cb4151, main CI 37006780729 green. No acceptance inferred.
 
 ## Build for this round
 
@@ -61,3 +61,15 @@ Run the same five **non-secret** tasks once on Gemini and once on NVIDIA; record
 | NVIDIA / nvidia/nemotron-3-super-120b-a12b (or explicit tested id) | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ |
 
 After the agreed optimization, refresh this checklist to the new tested build and reply with ✅ / ❌ / NOT EXERCISED per row (screenshots without secrets). Device/Android/theme are optional facts. The owner's **“Last merge it”** authorizes the current Phase 82 delivery only; it does not pass these rows or authorize a later change's merge.
+
+## Merge / post-merge CI — PR #107
+
+The owner explicitly commanded **“Last merge it”** while postponing formal device acceptance until after optimization. Both final-head checks passed on **268ed24e2123cd7a55aa6f535bbff594d5004407**: [push **37005368058**](https://github.com/pabi277/CodeC/actions/runs/37005368058) and [PR **37005372003**](https://github.com/pabi277/CodeC/actions/runs/37005372003). The guarded merge used that exact head; old PRs #42/#83 were not touched.
+
+- **[PR #107](https://github.com/pabi277/CodeC/pull/107): MERGED** at **`4cb4151f1a59f9b719cc9bd64224ea9040c1a022`** on **2026-10-02**.
+- **Main [Build APK 37006780729](https://github.com/pabi277/CodeC/actions/runs/37006780729): GREEN** on that merge SHA; real unit/screenshot tests, debug/lint, signed release and APK guards passed.
+- **Release:** `CodeC-IDE-1.3.17-universal.apk` = **7,117,440 B**; **debug:** `CodeC-IDE-1.3.17-universal-debug.apk` = **26,869,596 B**. APK bytes are annotations, not compressed artifact ZIP sizes. Release manifest has no android:debuggable flag; no failure annotation, no release/tag published.
+- Delta over Phase 81/main baseline **7,104,312 B**: **+13,128 B** (~12.8 KiB / 0.18%). Different build artifacts have their own measured sizes; earlier branch facts remain historical.
+- **Formal device acceptance: POSTPONED until after optimization, NOT PASSED.** Informal Nemotron screenshot issues remain open; successful Keystore/live GLM access/model quality not inferred.
+- **Research only:** full-file/batch/context/loop/native-tool/Markdown/multi-API proposals are not implemented; no default-model change, automatic provider fallback or new tool permission.
+- Post-merge verification-ledger-only record is committed/pushed on **`arena/01a0fbc2-codec`**, not to main. Next: agree/start optimization, then refresh/run the postponed owner device matrix. Standing §3 still requires the next change's explicit merge command.

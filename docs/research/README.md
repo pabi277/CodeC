@@ -6,7 +6,7 @@ Research records evidence and options. It does not authorize implementation. New
 
 - [AI coding-agent research, repository map and OSS/runtime comparison](AI_INTEGRATION_RESEARCH_20260930.md) — with Addendum A (current-main recheck at `1785b92`) and Addendum B (Gemini API/terms research)
 - [NVIDIA NIM / Build free API provider research](NVIDIA_API_RESEARCH_20261002.md) — the owner's 429/answer-length report against CodeC's own caps, NVIDIA's free-tier facts (~40 RPM, OpenAI-compatible), the multiple-model catalogue and how it drifts, the trial-terms limits (including what personal research may and may not do), the other free providers a Level 5 seam could carry, and the provider-seam options (research only; no code authorized)
-- [Agent-core optimization, full-file/batch context and multi-API research](AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) — owner screenshots/source audit, GLM-5.3 manual selection, context/loop/presentation proposals, lead/backup/reviewer tradeoffs; device acceptance postponed until after optimization, no new implementation authorized
+- [Agent-core optimization, full-file/batch context and multi-API research](AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) — owner screenshots/source audit, GLM-5.3 manual selection, context/loop/presentation proposals, lead/backup/reviewer tradeoffs; merged via PR #107; device acceptance postponed until after optimization, no new implementation authorized
 - [Staged AI integration roadmap](../roadmaps/AI_INTEGRATION_ROADMAP.md)
 
 ## Existing research

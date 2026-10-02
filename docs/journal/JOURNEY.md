@@ -1,4 +1,4 @@
-**2026-10-02 — Phase 82 / 82B implemented, code CI green; owner-authorized merge pending final checks, formal device acceptance POSTPONED until after optimization.** Informal screenshots report unresolved agent repetition/context/formatting issues; [research note](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) preserves the discussion and options. No new optimization code or device pass. This is the latest state; earlier entries keep their original chronology.
+**2026-10-02 — Phase 82 / 82B: PR **#107 MERGED** @ **4cb4151**; main Build APK **37006780729 GREEN**; release **7,117,440 B**, debug **26,869,596 B**; formal device acceptance **POSTPONED until after optimization, NOT PASSED**.** The owner's explicit current-merge command was followed after both final-head checks passed. [Research](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) retains known agent-core problems and future options; no optimization code or device acceptance. Earlier entries keep their original chronology.
 
 # CodeC — the full journey
 
@@ -1436,3 +1436,15 @@ The owner reconnected GitHub (“I reconnect check now”). The branch really pu
 ## Owner follow-up — research, deferred device acceptance and merge authority
 
 Later on 2026-10-02 the owner asked to retain the whole discussion as a [research note](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md), explicitly postponed formal device testing until after optimization, and said **“Last merge it”**. Three informal Nemotron screenshots showed repeated reads, raw tool/prompt clutter and the misleading “49 of 24 reads” counter; no successful acceptance is inferred. Read-only source inspection found preview/context coupling at 1,200 chars, prefix-only loading, four-result packing, no enforced deduplication and no reliable final-synthesis handoff. Research proposes full-file/multi-file context and a better agent core first, not unrestricted tools or all models querying everything. GLM-5.3 stays manually selectable; no default or source change. Device rows remain deferred, with known issues open. This command authorizes the current PR/merge after final-head CI, not optimization implementation or future auto-merge. Actual merge/main CI will be appended after completion.
+
+## Merge / post-merge CI — PR #107
+
+The owner explicitly commanded **“Last merge it”** while postponing formal device acceptance until after optimization. Both final-head checks passed on **268ed24e2123cd7a55aa6f535bbff594d5004407**: [push **37005368058**](https://github.com/pabi277/CodeC/actions/runs/37005368058) and [PR **37005372003**](https://github.com/pabi277/CodeC/actions/runs/37005372003). The guarded merge used that exact head; old PRs #42/#83 were not touched.
+
+- **[PR #107](https://github.com/pabi277/CodeC/pull/107): MERGED** at **`4cb4151f1a59f9b719cc9bd64224ea9040c1a022`** on **2026-10-02**.
+- **Main [Build APK 37006780729](https://github.com/pabi277/CodeC/actions/runs/37006780729): GREEN** on that merge SHA; real unit/screenshot tests, debug/lint, signed release and APK guards passed.
+- **Release:** `CodeC-IDE-1.3.17-universal.apk` = **7,117,440 B**; **debug:** `CodeC-IDE-1.3.17-universal-debug.apk` = **26,869,596 B**. APK bytes are annotations, not compressed artifact ZIP sizes. Release manifest has no android:debuggable flag; no failure annotation, no release/tag published.
+- Delta over Phase 81/main baseline **7,104,312 B**: **+13,128 B** (~12.8 KiB / 0.18%). Different build artifacts have their own measured sizes; earlier branch facts remain historical.
+- **Formal device acceptance: POSTPONED until after optimization, NOT PASSED.** Informal Nemotron screenshot issues remain open; successful Keystore/live GLM access/model quality not inferred.
+- **Research only:** full-file/batch/context/loop/native-tool/Markdown/multi-API proposals are not implemented; no default-model change, automatic provider fallback or new tool permission.
+- Post-merge verification-ledger-only record is committed/pushed on **`arena/01a0fbc2-codec`**, not to main. Next: agree/start optimization, then refresh/run the postponed owner device matrix. Standing §3 still requires the next change's explicit merge command.

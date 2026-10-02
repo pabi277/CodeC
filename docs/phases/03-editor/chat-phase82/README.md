@@ -1,6 +1,6 @@
 # Phase 82 — CodeC AI: rate-limit resilience and a bigger answer budget
 
-> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device acceptance POSTPONED · MERGE AUTHORIZED (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
+> **Status:** MERGED via PR #107 · main CI ✅ GREEN · device acceptance POSTPONED (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 > Work only on `arena/01a0fbc2-codec`; baseline `main` @ `e089880` (PR #106).
 > No PR, merge, or push to `main` without the owner's explicit command (`rule.md` §3).
@@ -54,8 +54,8 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 - [x] Device checklist/artifact handed over; owner now **POSTPONED formal device acceptance until after optimization**. Informal screenshot issues are recorded, not passed.
 - [x] Initial handoff stopped at §3; later owner **“Last merge it”** explicitly authorizes this PR/merge with device acceptance deferred.
 - [x] Discussion/source/screenshot evidence recorded as research; **no optimization code changed**.
-- [ ] Authorized PR merged after final-head checks; record actual PR/SHA below.
-- [ ] Main Build APK green and exact APK bytes recorded; no device acceptance invented.
+- [x] Authorized [PR #107](https://github.com/pabi277/CodeC/pull/107) merged after both final-head checks, **4cb4151**; no device pass.
+- [x] Main [Build APK 37006780729](https://github.com/pabi277/CodeC/actions/runs/37006780729) green; release **7,117,440 B**, debug **26,869,596 B**; formal device acceptance still postponed.
 
 ## Local prevalidation — 2026-10-02
 
@@ -82,7 +82,7 @@ Existing AI helper/Level2/Level3/Level4/Continue/surface wiring pins are **uncha
 
 ## CI / owner handoff
 
-**GitHub reconnected; push succeeded.** Owner said “I reconnect check now” on 2026-10-02. The preserved branch `arena/01a0fbc2-codec` was pushed at **7921c01**; remote main remains **e089880**, and old PRs #42/#83 are untouched. `/user` now returns an integration-scope **403** rather than the prior credential **401**; actual repository push and Actions access work, so the identity endpoint is not a push/CI gate. No password/token was requested or printed.
+**GitHub reconnected; push succeeded.** Owner said “I reconnect check now” on 2026-10-02. The preserved branch `arena/01a0fbc2-codec` was pushed at **7921c01**; remote main was then **e089880** (later updated by PR #107 below), and old PRs #42/#83 are untouched. `/user` now returns an integration-scope **403** rather than the prior credential **401**; actual repository push and Actions access work, so the identity endpoint is not a push/CI gate. No password/token was requested or printed.
 
 | CI round | SHA | Result | Evidence / action |
 |---|---|---|---|
@@ -105,7 +105,7 @@ This result is for tested code **7b2ecac**. Subsequent verification-ledger-only 
 
 A final local date fixture found that SimpleDateFormat's default two-digit year window could ignore a valid long RFC-850 Retry-After and fall back to 12s. The follow-up expands the century against the injected receiving clock before weekday validation; **21/44/exactly-50-year** minima are refused as too long, never shortened. AiRateLimitTest is now **18**, full core **462/462**; supplementary permission/backup **13/13**. Successful cipher/real endpoint/device proof is still pending.
 
-**Formal device acceptance: POSTPONED until after optimization**, not passed. Informal Nemotron screenshots expose agent issues recorded in the follow-up below. HTTP 202 remains a fixed pending failure, no polling; empty NVIDIA is not success. Exactly one retry and manual selection only. **Current PR/merge authorized by the owner; final-head checks still required.**
+**Formal device acceptance: POSTPONED until after optimization**, not passed. Informal Nemotron screenshots expose agent issues recorded in the follow-up below. HTTP 202 remains a fixed pending failure, no polling; empty NVIDIA is not success. Exactly one retry and manual selection only. **PR #107 merged at 4cb4151 after final-head checks; main CI 37006780729 green.**
 
 ## Risks / deliberate limits
 
@@ -118,3 +118,15 @@ Owner (2026-10-02): **“What ever we discussed add a research note in the proje
 [Agent-core optimization research](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the informal screenshot issues, the 1,200-character preview/context coupling, prefix-only reads, last-four-result memory, duplicate/counter/final-answer problems, full-file/batch/native-tool/Markdown proposals and multi-API tradeoffs. No app/test/default-model changes are made here; GLM-5.3 remains manually selectable. Known agent issues remain open, not fixed by this record. **Optimization implementation, Level 5B and Levels 6+ are not started.** D1/D4/D5/D6 and the current caps/three stream sites stay unchanged.
 
 Existing code CI **36995145462** on **7b2ecac** and ledger CI **36996946243** on **e0665cb** are green. Authorized PR/merge and main CI/APK facts will be recorded after they actually happen, not predicted. This owner command changes this delivery's scheduling/merge gate, not the standing §3 rule. [Deferred device matrix](DEVICE_ROUND.md).
+
+## Merge / post-merge CI — PR #107
+
+The owner explicitly commanded **“Last merge it”** while postponing formal device acceptance until after optimization. Both final-head checks passed on **268ed24e2123cd7a55aa6f535bbff594d5004407**: [push **37005368058**](https://github.com/pabi277/CodeC/actions/runs/37005368058) and [PR **37005372003**](https://github.com/pabi277/CodeC/actions/runs/37005372003). The guarded merge used that exact head; old PRs #42/#83 were not touched.
+
+- **[PR #107](https://github.com/pabi277/CodeC/pull/107): MERGED** at **`4cb4151f1a59f9b719cc9bd64224ea9040c1a022`** on **2026-10-02**.
+- **Main [Build APK 37006780729](https://github.com/pabi277/CodeC/actions/runs/37006780729): GREEN** on that merge SHA; real unit/screenshot tests, debug/lint, signed release and APK guards passed.
+- **Release:** `CodeC-IDE-1.3.17-universal.apk` = **7,117,440 B**; **debug:** `CodeC-IDE-1.3.17-universal-debug.apk` = **26,869,596 B**. APK bytes are annotations, not compressed artifact ZIP sizes. Release manifest has no android:debuggable flag; no failure annotation, no release/tag published.
+- Delta over Phase 81/main baseline **7,104,312 B**: **+13,128 B** (~12.8 KiB / 0.18%). Different build artifacts have their own measured sizes; earlier branch facts remain historical.
+- **Formal device acceptance: POSTPONED until after optimization, NOT PASSED.** Informal Nemotron screenshot issues remain open; successful Keystore/live GLM access/model quality not inferred.
+- **Research only:** full-file/batch/context/loop/native-tool/Markdown/multi-API proposals are not implemented; no default-model change, automatic provider fallback or new tool permission.
+- Post-merge verification-ledger-only record is committed/pushed on **`arena/01a0fbc2-codec`**, not to main. Next: agree/start optimization, then refresh/run the postponed owner device matrix. Standing §3 still requires the next change's explicit merge command.

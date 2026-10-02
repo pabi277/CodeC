@@ -131,13 +131,14 @@ adult/terms confirmation. There is no bundled/shared key or remote proxy.
   leave only when you choose to share them; inspect before sharing.
 
 Phase 82/82B implementation has local policy/source/transport-fixture proof and
-real Build APK **36995145462 green** on **7b2ecac** (unit/screenshot tests, lint,
+PR **#107 merged** on the owner's explicit instruction, main Build APK
+**37006780729 green** on **4cb4151** (unit/screenshot tests, lint,
 Android/Compose compilation and signed APK guards). The first CI fixture compile
 signature error was corrected without changing privacy behavior. Owner device,
 successful Keystore/live vendor/model-quality acceptance remains **POSTPONED**
 until after optimization at the owner's direction; not passed. Informal phone
 screenshots expose known agent-core issues documented in
-[research](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md). This documentation/current-merge authorization
+[research](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md). This documentation/merge
 adds no routing/reviewer, persisted task memory, native-tool permission or
 new data recipient. The
 [phase record](../phases/03-editor/chat-phase82/README.md) is the verification
