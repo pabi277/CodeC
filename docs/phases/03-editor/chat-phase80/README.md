@@ -1,10 +1,11 @@
 # Phase 80 — AI Level 4: whole-project map, bounded tools, and an approved run loop
 
-> **Status: 🚧 IMPLEMENTED 2026-10-02 on `arena/01a0f9a5-codec`** (branch CI
-> `36941118847` ✅ GREEN on `c5dd30a`; owner:
+> **Status: ✅ DEVICE-PASSED 2026-10-02 — merge in progress** on
+> `arena/01a0f9a5-codec` (owner, in chat: *"Mark the docs device pass and merge
+> it"*; the round is recorded in [`DEVICE_ROUND.md`](DEVICE_ROUND.md)). Branch CI
+> `36941118847` ✅ GREEN on `c5dd30a`; owner authorized the phase with
 > *"Start Phase 80 — full Level 4"*, then four explicit scope answers:
-> `task_preview` / `run_only` / `both_flows` / `looser` caps). Device round
-> ⏳ NOT RUN ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); **not merged** (`rule.md` §3).
+> `task_preview` / `run_only` / `both_flows` / `looser` caps.
 >
 > Parts:
 > - [80.1 Whole-project map and the bounded tool surface](PART_80_1_REPO_MAP_AND_TOOLS.md)

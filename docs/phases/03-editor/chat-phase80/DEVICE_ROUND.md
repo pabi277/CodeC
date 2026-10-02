@@ -1,9 +1,6 @@
 # Phase 80 — device round 1 (AI Level 4: map, tools, and the approved run loop)
 
-> **Status: ⏳ NOT RUN.** These rows are owed. Nothing here is a claimed pass.
-> Run them on a real phone and paste the table back with ✅ / ❌ per row.
-> On ❌ a screenshot helps. Then say *"merge"* only when you want it merged —
-> nothing merges without that word (`rule.md` §3).
+> **Status: ✅ PASSED (2026-10-02 — owner, in chat: *"Mark the docs device pass and merge it"*).** The pass is recorded on the owner's instruction; the rows below are the checklist this round covers. Merge in progress via the Phase 80+81 pull request.
 
 **You need:** a project with several source files that actually builds and runs
 (a demo C or Python project is fine — CodeC must be able to run it with ▶) and

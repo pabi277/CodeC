@@ -1,9 +1,10 @@
 # Phase 81 — Continue: getting the rest of an answer that was cut off
 
-> **Status: 🚧 IMPLEMENTED 2026-10-02 on `arena/01a0f9a5-codec`** (owner row:
-> *"Add a continue open on Gemini so i can continue after cut off"*). Branch CI
-> **`36946839410` ✅ GREEN** on `9f9ffac`. Device round ⏳ NOT RUN
-> ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); **not merged** (`rule.md` §3).
+> **Status: ✅ DEVICE-PASSED 2026-10-02 (owner, in chat: *"Mark the docs device
+> pass and merge it"*; owner row: *"Add a continue open on Gemini so i can
+> continue after cut off"*) — merge in progress.** Branch CI
+> **`36946839410` ✅ GREEN** on `9f9ffac`; device round recorded in
+> [`DEVICE_ROUND.md`](DEVICE_ROUND.md).
 >
 > Part:
 > - [81.1 Continue after cut off — the follow-up request and its bounds](PART_81_1_CONTINUE_AFTER_CUTOFF.md)

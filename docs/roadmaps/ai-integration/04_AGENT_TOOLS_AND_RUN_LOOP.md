@@ -1,6 +1,6 @@
 # Level 4 — Bounded agent tools and verified run loop
 
-**Status: ⏳ IMPLEMENTED 2026-10-02 as [Phase 80](../../phases/03-editor/chat-phase80/README.md)** on `arena/01a0f9a5-codec` (owner: *"Start Phase 80 — full Level 4"*; the four scope answers are recorded in the Phase 80 README and in [`00_LEVEL0_DECISION_RECORD.md`](00_LEVEL0_DECISION_RECORD.md)). Awaiting [device round 1](../../phases/03-editor/chat-phase80/DEVICE_ROUND.md); **not merged** (`rule.md` §3). Advanced and security-sensitive; depends on Levels 1–3.
+**Status: ✅ DEVICE-PASSED 2026-10-02 as [Phase 80](../../phases/03-editor/chat-phase80/README.md)** on `arena/01a0f9a5-codec` (owner: *"Start Phase 80 — full Level 4"*; the four scope answers are recorded in the Phase 80 README and in [`00_LEVEL0_DECISION_RECORD.md`](00_LEVEL0_DECISION_RECORD.md)). Device-passed on the owner's instruction (*"Mark the docs device pass and merge it"*); merge in progress. Advanced and security-sensitive; depends on Levels 1–3.
 
 ## User value
 
