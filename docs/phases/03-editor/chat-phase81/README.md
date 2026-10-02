@@ -1,8 +1,9 @@
 # Phase 81 — Continue: getting the rest of an answer that was cut off
 
-> **Status: ✅ DEVICE-PASSED 2026-10-02 (owner, in chat: *"Mark the docs device
-> pass and merge it"*; owner row: *"Add a continue open on Gemini so i can
-> continue after cut off"*) — merging via PR #106.** Branch CI
+> **Status: ✅ DEVICE-PASSED & MERGED to `main` @ `e089880` (PR #106,
+> 2026-10-02; post-merge CI `36972776771` ✅ green, release APK `7,104,312 B`).**
+> Owner, in chat: *"Mark the docs device pass and merge it"*; owner row:
+> *"Add a continue open on Gemini so i can continue after cut off"*. Branch CI
 > **`36946839410` ✅ GREEN** on `9f9ffac`; device round recorded in
 > [`DEVICE_ROUND.md`](DEVICE_ROUND.md).
 >

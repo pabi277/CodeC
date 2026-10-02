@@ -1,8 +1,9 @@
 # Phase 80 — AI Level 4: whole-project map, bounded tools, and an approved run loop
 
-> **Status: ✅ DEVICE-PASSED 2026-10-02 — merging via PR #106** on
-> `arena/01a0f9a5-codec` (owner, in chat: *"Mark the docs device pass and merge
-> it"*; the round is recorded in [`DEVICE_ROUND.md`](DEVICE_ROUND.md)). Branch CI
+> **Status: ✅ DEVICE-PASSED & MERGED to `main` @ `e089880`** (PR #106,
+> 2026-10-02; post-merge CI `36972776771` ✅ green, release APK `7,104,312 B`).
+> Owner, in chat: *"Mark the docs device pass and merge it"*; the round is
+> recorded in [`DEVICE_ROUND.md`](DEVICE_ROUND.md). Branch CI
 > `36941118847` ✅ GREEN on `c5dd30a`; owner authorized the phase with
 > *"Start Phase 80 — full Level 4"*, then four explicit scope answers:
 > `task_preview` / `run_only` / `both_flows` / `looser` caps.
