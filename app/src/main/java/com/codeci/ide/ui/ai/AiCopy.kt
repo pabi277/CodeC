@@ -262,6 +262,44 @@ object AiCopy {
     const val SAVE_FAILED = "Couldn't save securely on this phone. Try again."
     const val KEY_UNREADABLE = "Your saved key can't be read anymore. Please enter it again."
 
+    // ---- Phase 82B: explicit recipients, dev/test consent and honest capability/cost notes ----
+
+    const val PROVIDER_LABEL = "Provider (manual selection)"
+    const val PROVIDER_CHANGED = "Provider changed. Start a new question and check its preview before sending."
+    const val MODEL_CHANGED = "Model changed. Start a new question and check its preview before sending."
+    const val PROVIDER_SWITCH_NOTE = "CodeC never switches provider or model automatically. Changing either starts a new question."
+    const val STOPPED = "Stopped."
+    const val NVIDIA_SETUP_INTRO = "Development/testing only — not for production. CodeC sends requests directly to NVIDIA " +
+        "using your own key for internal testing and evaluation. Never use a bundled or shared key."
+    const val NVIDIA_CONFIRM = "I am of legal adult age, accept NVIDIA's API Trial Terms, and will use this key " +
+        "only for internal testing and evaluation, not in production."
+    const val NVIDIA_TERMS_URL = "https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf"
+    const val NVIDIA_GET_KEY_URL = "https://build.nvidia.com/"
+    const val NVIDIA_DATA_NOTE = "This request goes to NVIDIA, a separate third party. Its API Trial Terms apply " +
+        "(including retention exceptions). Do not send confidential information, secrets or personal data. " +
+        "Internal testing/evaluation only; not for production."
+
+    fun title(provider: AiProviderId): String = "AI helper · ${provider.label}"
+    fun requestRecipient(provider: AiProviderId, model: String): String = "${provider.label} · $model"
+    fun sheetTitle(provider: AiProviderId, model: String): String = "AI · ${requestRecipient(provider, model)}"
+    fun setupIntro(provider: AiProviderId): String = if (provider == AiProviderId.GEMINI) SETUP_INTRO else NVIDIA_SETUP_INTRO
+    fun confirmation(provider: AiProviderId): String = if (provider == AiProviderId.GEMINI) CONFIRM else NVIDIA_CONFIRM
+    fun keyLabel(provider: AiProviderId): String = if (provider == AiProviderId.GEMINI) KEY_LABEL else "NVIDIA API key"
+    fun keyStorageNote(provider: AiProviderId): String = if (provider == AiProviderId.GEMINI) KEY_STORAGE_NOTE else
+        "The key is encrypted on this phone (Android Keystore), never backed up, and sent only to NVIDIA."
+    fun providerDataNote(provider: AiProviderId): String = if (provider == AiProviderId.GEMINI) FREE_TIER_NOTE else NVIDIA_DATA_NOTE
+    fun modelInvalid(provider: AiProviderId): String = if (provider == AiProviderId.GEMINI) MODEL_INVALID else
+        "Use a lowercase provider/model id (for example nvidia/nemotron-3-super-120b-a12b). No URL or endpoint is accepted."
+    fun previewHeader(provider: AiProviderId, model: String, chars: Int): String =
+        "Will be sent to ${requestRecipient(provider, model)} · $chars characters. Only the two strings below leave your phone."
+    fun answerBudgetNote(provider: AiProviderId, model: String, replyChars: Int = AiLimits.MAX_REPLY_CHARS): String =
+        "Requested output: ${AiProviders.outputBudget(provider, model)} tokens · this reply: up to $replyChars characters " +
+        "· whole answer with Continue: ${AiContinuation.MAX_TOTAL_CHARS} characters. Larger answers may use more time and quota."
+    fun testNote(provider: AiProviderId, model: String): String =
+        "Sends a short test to ${requestRecipient(provider, model)}. No code is sent. " +
+        "System instruction: none. User message: \"${GeminiRequest.TEST_PROMPT}\""
+    fun testOk(provider: AiProviderId): String = if (provider == AiProviderId.GEMINI) TEST_OK else "Connected. NVIDIA answered."
+
     // ---- Phase 81: continuing an answer that was cut short ----------------
 
     /** The button under a cut-off answer. It only builds a preview (D4). */

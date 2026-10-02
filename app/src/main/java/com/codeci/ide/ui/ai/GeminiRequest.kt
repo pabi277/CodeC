@@ -45,11 +45,11 @@ object GeminiRequest {
     fun body(prompt: AiPrompt): String = body(
         systemInstruction = prompt.systemInstruction,
         userText = prompt.userText,
-        maxOutputTokens = AiLimits.MAX_OUTPUT_TOKENS
+        maxOutputTokens = AiProviders.outputBudget(AiProviderId.GEMINI, prompt.model)
     )
 
     /** "Test connection": no code, no project text — [TEST_PROMPT] only. */
-    fun testBody(): String = body(systemInstruction = null, userText = TEST_PROMPT, maxOutputTokens = 256)
+    fun testBody(): String = body(systemInstruction = null, userText = TEST_PROMPT, maxOutputTokens = AiLimits.MAX_OUTPUT_TOKENS)
 
     fun body(systemInstruction: String?, userText: String, maxOutputTokens: Int): String = buildString {
         append('{')

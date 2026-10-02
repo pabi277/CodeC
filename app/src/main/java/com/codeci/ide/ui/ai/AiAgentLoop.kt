@@ -71,10 +71,16 @@ data class AiAgentStep(
     /** The result text as the user should see it (already clipped). */
     val detail: String = "",
     /** False when the step was refused or failed. */
-    val ok: Boolean = true
+    val ok: Boolean = true,
+    /** Phase 82B D4: REQUEST rows hold the exact two sent strings, never clipped. Memory only. */
+    val sentSystemInstruction: String? = null,
+    val sentUserText: String? = null
 )
 
 enum class AiAgentStepKind {
+    /** Exact request disclosure, not a tool result and never re-packed as one. */
+    REQUEST,
+
     /** The user's own question, shown first. */
     TASK,
 

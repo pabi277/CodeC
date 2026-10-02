@@ -251,6 +251,9 @@ object FeedbackDraft {
      */
     private val shapeGoogleApiKey = Regex("AIza[0-9A-Za-z_\\-]{20,}")
 
+    /** Phase 82B — NVIDIA key shape, also scrubbed by literal regardless of format. */
+    private val shapeNvidiaApiKey = Regex("nvapi-[0-9A-Za-z_\\-]{20,}")
+
     /** The CI-style remote username spelling: x-access-token:<secret>. */
     private val shapeXAccessToken = Regex("(?i)(x-access-token:)[A-Za-z0-9_\\-]+")
 
@@ -270,6 +273,7 @@ object FeedbackDraft {
         r = r.replace(shapeFineGrainedPat, "<redacted>")
         r = r.replace(shapeGhFamily, "<redacted>")
         r = r.replace(shapeGoogleApiKey, "<redacted>")
+        r = r.replace(shapeNvidiaApiKey, "<redacted>")
         r = r.replace(shapeXAccessToken, "$1<redacted>")
         r = r.replace(shapeAuthorization, "$1<redacted>")
         r = r.replace(shapeKeyValue, "$1=<redacted>")

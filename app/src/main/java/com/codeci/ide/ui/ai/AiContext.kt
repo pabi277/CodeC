@@ -88,7 +88,10 @@ data class AiPrompt(
      * The preview renders [userText] verbatim, so what the user confirms is
      * again exactly what leaves the phone (D4). Null for every fresh request.
      */
-    val continuation: AiContinuationRequest? = null
+    val continuation: AiContinuationRequest? = null,
+    /** Phase 82B: snapshot at preview time. Never switch the recipient behind Send/Continue/retry. */
+    val provider: AiProviderId = AiProviderId.GEMINI,
+    val model: String = AiModel.DEFAULT
 ) {
     val systemInstruction: String
         get() = when {

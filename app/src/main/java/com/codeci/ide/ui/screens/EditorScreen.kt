@@ -1728,7 +1728,9 @@ fun EditorScreen(
                                 closeDrawer(DrawerCloseReason.FILE_OPENED)
                                 aiViewModel.openSheet(outputOpen = outputExpanded)
                             },
-                            onOutputConflictChange = aiViewModel::setOutputConflict
+                            onOutputConflictChange = aiViewModel::setOutputConflict,
+                            onSelectProvider = aiViewModel::selectProvider,
+                            onStop = aiViewModel::stop
                         )
                     },
                     files = {

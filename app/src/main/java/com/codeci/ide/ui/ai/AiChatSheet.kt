@@ -179,7 +179,7 @@ fun AiChatSheet(
                             .background(MaterialTheme.colorScheme.outlineVariant)
                     )
                 }
-                Header(state.model, full, onExpand, onMinimize)
+                Header(state.provider, state.model, full, onExpand, onMinimize)
             }
             HorizontalDivider()
             Conversation(
@@ -201,7 +201,7 @@ fun AiChatSheet(
 }
 
 @Composable
-private fun Header(model: String, full: Boolean, onExpand: () -> Unit, onMinimize: () -> Unit) {
+private fun Header(provider: AiProviderId, model: String, full: Boolean, onExpand: () -> Unit, onMinimize: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,7 +215,7 @@ private fun Header(model: String, full: Boolean, onExpand: () -> Unit, onMinimiz
         )
         Spacer(Modifier.width(CodecTokens.space(Space.S)))
         Text(
-            AiCopy.sheetTitle(model),
+            AiCopy.sheetTitle(provider, model),
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -303,6 +303,11 @@ private fun Conversation(
             }
 
             AiPhase.PREVIEW -> prompt?.let {
+                Body(AiCopy.previewHeader(it.provider, it.model, it.sentChars))
+                Muted(AiCopy.answerBudgetNote(
+                    it.provider, it.model,
+                    if (it.continuation != null) AiContinuation.requestBudget(state.answer.length) else AiLimits.MAX_REPLY_CHARS
+                ))
                 val summary = it.project
                 when {
                     // Phase 80 (Level 4) — an agent task: the map, not a five-file
@@ -330,16 +335,16 @@ private fun Conversation(
                     }
                     else -> {
                         Text(AiCopy.PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
-                        Body(AiCopy.previewHeader(state.model, it.sentChars))
                     }
                 }
                 it.continuation?.let { c -> Muted(AiCopy.continuePreviewNote(c.index)) }
                 if (it.unsaved && summary == null) Muted(AiCopy.UNSAVED_NOTE)
-                Body(AiCopy.FREE_TIER_NOTE)
+                Body(AiCopy.providerDataNote(it.provider))
                 SentText(it.systemInstruction + "\n\n" + it.userText)
             }
 
             AiPhase.STREAMING -> {
+                state.retryCountdown?.let { Body(AiRateLimits.countdownLine(it)) }
                 if (state.answer.isEmpty()) {
                     CircularProgressIndicator(modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV)))
                 } else {
@@ -574,6 +579,10 @@ private fun AgentActivityCard(state: AiUiState) {
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
+                    step.sentSystemInstruction?.let { instruction ->
+                        // D4: whole strings, not the timeline's ellipsised result preview.
+                        SentText(instruction + "\n\n" + step.sentUserText.orEmpty())
+                    }
                     if (step.detail.isNotBlank()) {
                         Text(
                             text = step.detail,
@@ -755,11 +764,15 @@ private fun BottomBar(
             }
 
             AiPhase.PREVIEW -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
-                Button(onClick = onSend) { Text(AiCopy.SEND) }
+                if (!state.testing && !state.configuring) {
+                    Button(onClick = onSend) { Text(AiCopy.SEND) }
+                }
+                if (state.testing) OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
                 OutlinedButton(onClick = onCancelPreview) { Text(AiCopy.CANCEL) }
             }
 
             AiPhase.STREAMING -> {
+                state.retryCountdown?.let { Muted(AiRateLimits.countdownLine(it)) }
                 if (state.agentSteps.isNotEmpty()) {
                     Muted(AiCopy.agentWorkingLine(state.agentSteps.count { it.kind == AiAgentStepKind.TOOL }))
                 }

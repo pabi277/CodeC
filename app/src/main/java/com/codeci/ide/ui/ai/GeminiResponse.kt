@@ -19,7 +19,9 @@ data class GeminiChunk(
     val blockReason: String? = null,
     /** True when the event is an `error` object (details are never shown). */
     val isError: Boolean = false,
-    val errorCode: Int? = null
+    val errorCode: Int? = null,
+    /** Typed markers/delay only; the raw error payload is never retained. */
+    val errorFailure: AiFailure? = null
 )
 
 object GeminiResponse {
@@ -29,7 +31,11 @@ object GeminiResponse {
         val root = JSONObject(payload)
         val error = root.optJSONObject("error")
         if (error != null) {
-            GeminiChunk(isError = true, errorCode = error.optInt("code", 0).takeIf { it != 0 })
+            GeminiChunk(
+                isError = true,
+                errorCode = error.optInt("code", 0).takeIf { it != 0 },
+                errorFailure = AiErrors.forHttp(error.optInt("code", 0), payload)
+            )
         } else {
             val block = root.optJSONObject("promptFeedback")?.optString("blockReason")?.takeIf { it.isNotBlank() }
             val candidate = root.optJSONArray("candidates")?.optJSONObject(0)

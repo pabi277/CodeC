@@ -140,3 +140,10 @@ O1–O3 were answered on 2026-09-30 (§4), so **Level 0 is complete.** The next 
 > - **D1 and D6 are unchanged by Phase 80:** the agent proposes, never writes (`ui/ai/` still has zero direct file writes and zero command execution; the only write path remains a user tap on Apply through `AiEditApplier.kt`), and no new key or file is persisted — the map, timeline, tool results and run digests live in memory only.
 
 
+
+> **Update 2026-10-02 (Phase 82 / 82B owner answers):**
+> - **Retry/budget:** automatic_once / 32768_48000_64000 / every_request — one visible Stop-cancelable retry of the identical approved request; 32,768 output tokens and 48,000 reply chars for helper/edit/agent/test requests; Continue remains 64,000 total and eight taps. No replay after new partial text; known daily-without-reset or >120s waits are explained, never silently shortened.
+> - **Provider scope:** authorize_82b authorizes **Level 5A only**, manual provider/model seam and NVIDIA Build SSE BYOK. NVIDIA keys and acceptance are independent of Google's and encrypted outside backups; required API Trial Terms/internal testing/evaluation-only checkbox, **not production**; no shared key, silent switch, proxy or async polling. 5B and Levels 6+ stay unauthorized.
+> - **D4:** actual provider/model and exact system/user strings are frozen per request/task/Continue and disclosed in preview / memory-only REQUEST timeline. Retry sends the same strings and budget, not another undisclosed recipient. Subsequent read-only turns retain Phase 80's task-Send amendment; Apply/Run still each need a tap.
+> - **D6:** chat/map/timeline/countdown/provider selection remain memory-only. Authorized BYOK adds NVIDIA's own encrypted blob/Keystore alias and three non-secret model/terms-version/accepted-at properties beside existing credential/layout settings. Existing one-task undo journal scope is unchanged. D1/D5 tool/write/filter permissions are not widened by provider capability metadata.
+> - Record/verification: [Phase 82](../../phases/03-editor/chat-phase82/README.md), local **461/461**, real CI/device pending; no quality, availability or zero-retention promise.

@@ -1,3 +1,5 @@
+> **2026-10-02 — Phase 82 / 82B implemented (CI/device pending):** “Api rate limit” now has one visible Stop-cancelable retry, not unlimited retries. Answer caps rise to 32,768 tokens / 48,000 chars; Continue stays 64,000 total. Manual Gemini/NVIDIA BYOK selection is explicit; NVIDIA is **internal testing/evaluation only, not production**. See §55 below and [device round](../phases/03-editor/chat-phase82/DEVICE_ROUND.md). Local 461/461 is not device acceptance.
+
 > **2026-09-30 — Phase 75.1–75.3 editor typing reliability (✅ COMPLETE, DEVICE-PASSED & MERGED via PR #98):** the Python `def`/`for` indentation, full-level brace indentation (`{`), one-space Backspace inside indentation, leading indentation dots + Tab alignment, suggestion word-only accept, live-buffer quick-key commits, Sora cursor/selection sync, and `{}` outside empty `(|)` are all resolved, CI-green (`36679767045` / `36692498787` / `36701799600`), device-passed by the owner (*"Ok device test passed … You can complete the docs part and merged"*), and merged via [PR #98](https://github.com/pabi277/CodeC/pull/98). See §§49–51 below and [Phase 75.1](../phases/12-ui-polish-program/PHASE_75_1_EDITOR_TYPING.md).
 
 > **2026-09-27 update — Phase 64:** installation no longer locks tabs or the
@@ -2172,3 +2174,16 @@ the fix). A wiring test that has never been executed is a wish, not a check.
 asserted a whole-line slice "must not end with `padding padding`" — but a correct slice ends exactly at
 a line boundary, so it legitimately ends with the line's last word. The assertion was rewritten to
 require that every sent line be complete, which is the property actually wanted.
+
+
+## 55. AI: “Api rate limit” / “why did the retry stop?” / NVIDIA pending or empty test (Phase 82 / 82B)
+
+- A rate rejection before visible text gets **one automatic retry**, with “Limit hit; retrying in Ns” and **Stop**. Retry-After seconds/date and Google's RetryInfo set the minimum; otherwise CodeC waits 12s. A second rejection is final. Stop, project switch, New question/Clear or selected-key deletion cancel the old wait; no task resumes after app death.
+- **Daily** is shown only with known daily markers. Without a reset hint, a short retry cannot fix it: check the provider account and retry after the quota resets. Unknown quota stays unknown. Server waits over the 120s automatic window are **not shortened**. Larger output budgets do not increase free-tier allowances.
+- Once any new partial reply appears, CodeC will not replay it. An agent retry must fit inside the existing five-minute task clock; it does not add turns/tools/runs. Offline/5xx/key/region failures are not automatically retried.
+- Each preview names the actual provider/model, exact instruction + user strings and effective token/reply caps. **48,000 chars + 16,000 remaining** is the full first-reply Continue case; total remains **64,000** and ≤8 taps. A cut agent/edit reply still does not offer Continue.
+- Select NVIDIA **manually** in ✨ home, bring your own key, and accept the independent **API Trial Terms / internal evaluation-only, not production** checkbox. Google acceptance does not cover NVIDIA. Unknown capabilities are not a promise; Test connection is content-free and can be stopped. No fallback to Google, custom endpoint or shared key exists.
+- **Pending HTTP 202 is not connected.** CodeC reports a fixed pending-request sentence and does not poll. An empty NVIDIA response is not “NVIDIA answered”; check the selected model/account and try a later explicit Test. No availability/quality claim until the phone's fixed-task comparison. Deleting NVIDIA's key preserves Gemini's credential/model, but clears the shared last-task undo journal as disclosed.
+- Never paste an API key or provider error body into a screenshot/report. Feedback scrubs both stored literals and common AIza/nvapi- shapes. Quota failures display only fixed sentences and typed numeric metadata.
+
+[Phase record](../phases/03-editor/chat-phase82/README.md) · [device rows R/B/P/S](../phases/03-editor/chat-phase82/DEVICE_ROUND.md). Local **461/461** prevalidation, **real CI pending, device NOT RUN**; don't intentionally drain a daily allowance to test it.

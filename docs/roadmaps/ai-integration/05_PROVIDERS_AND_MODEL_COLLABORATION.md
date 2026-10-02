@@ -1,6 +1,8 @@
 # Level 5 — Multiple API providers and model collaboration
 
-**Status: proposed; add after one-provider agent workflow is reliable.**
+**Status 2026-10-02: 5A owner-authorized and implemented as [Phase 82B](../../phases/03-editor/chat-phase82/README.md), local 461/461; CI/device pending. 5B remains proposed and unauthorized.**
+
+Current 5A slice: Gemini native + NVIDIA Build fixed OpenAI-compatible HTTPS/SSE endpoints, manual provider/editable model, dated capability rows with unknowns preserved, Test connection, separate AES-GCM key/terms slots and no silent fallback. NVIDIA Trial Terms restrict this to **internal development/testing/evaluation, not production**; required checkbox, own key only. HTTP 202 is pending/fixed failure, no hidden polling. CodeC's bounded text tools and reviewed Apply/Run permissions do not depend on capability flags. Rate retry and budgets are Phase 82 policies shared by all three original VM stream sites. No custom endpoint, second reviewer, native provider tools or live catalog in this slice. Device/model quality is [NOT RUN](../../phases/03-editor/chat-phase82/DEVICE_ROUND.md).
 
 ## User value
 

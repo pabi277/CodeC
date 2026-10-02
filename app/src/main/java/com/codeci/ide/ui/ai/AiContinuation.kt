@@ -36,7 +36,10 @@ object AiContinuation {
     /** How many times one answer may be continued before the app stops offering it. */
     const val MAX_CONTINUATIONS = 8
 
-    /** The most characters one visible answer may grow to, across all continuations. */
+    /**
+     * The most characters one visible answer may grow to. Phase 82 deliberately keeps
+     * 64,000: a full 48,000-character first reply leaves 16,000 for Continue.
+     */
     const val MAX_TOTAL_CHARS = 64_000
 
     /** How much of the answer's tail travels back with the follow-up. */
