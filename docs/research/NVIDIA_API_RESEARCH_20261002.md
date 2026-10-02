@@ -42,13 +42,36 @@ terminated by `data: [DONE]`; `max_tokens` 1–32 768 on the model excerpt check
 (`docs.api.nvidia.com/nim/reference/llm-apis` and
 `…/nvidia-nemotron-3-super-120b-a12b-infer`, fetched 2026-10-02).
 
-**Model ids relevant to CodeC's task** (same model list page, fetched):
+**Multiple models — the catalog is the point, not one model.** The fetched
+model list (`docs.api.nvidia.com/nim/reference/llm-apis`, page footer
+"Updated 10 days ago" at fetch time) names families including `deepseek-ai`,
+`google`, `meta`, `microsoft`, `minimaxai`, `mistralai`, `moonshotai`, `nvidia`,
+`openai`, `poolside`, `qwen`, `sarvamai`, `stepfun-ai`, `stockmark`,
+`thinking machines`, `upstage` and `z-ai`. Coding-relevant ids seen in that
+list:
 
-- `nvidia/nemotron-3-super-120b-a12b` — up to 1M-token context, tool use,
-  `reasoning_effort` none/low/high (the RULER retention table is in the
-  model report: 91.75 @1M).
-- `moonshotai/kimi-k2-thinking`, `deepseek-ai/deepseek-v4-*`, `qwen/*`,
-  `openai/gpt-oss-120b`, `google/gemma-*`, `mistralai/*`, `stepfun-ai/*`.
+| Model id | Notes (from the same page / model reports) |
+|---|---|
+| `nvidia/nemotron-3-super-120b-a12b` | 120B MoE (12B active), up to 1M context, tool use, `reasoning_effort` none/low/high, `max_tokens` ≤ 32 768. RULER @1M: 91.75 (Nemotron 3 Super report, fetched). |
+| `nvidia/nemotron-3-ultra-550b-a55b` | NVIDIA's flagship "Ultra", agentic reasoning/coding (catalog). |
+| `nvidia/nemotron-3.5-lightning-30b-a3b` | Newer small/fast tier (catalog). |
+| `nvidia/nemotron-3-nano-30b-a3b` | Smallest Nemotron 3 tier (catalog). |
+| `deepseek-ai/deepseek-v4-pro` | ~1M context MoE, coding/reasoning. |
+| `deepseek-ai/deepseek-v4-flash` | Faster/cheaper sibling (trackers). |
+| `moonshotai/kimi-k3`, `moonshotai/kimi-k2-thinking`, `moonshotai/kimi-k2-instruct` | Kimi family, long context; kimi-k3 free designation reported as *limited-time*. |
+| `z-ai/glm-5.1`, `z-ai/glm-5.2`, `z-ai/glm-5.3`, `z-ai/glm-5.3-flash`, `z-ai/glm4.7` | GLM family (agentic coding). |
+| `qwen/qwen3-next-80b-a3b-instruct`, `qwen/qwen3-next-80b-a3b-thinking`, `qwen/qwen2.5-coder-32b-instruct` | Qwen family incl. a dedicated coder. |
+| `openai/gpt-oss-120b`, `openai/gpt-oss-20b` | OpenAI open-weight pair. |
+| `minimaxai/minimax-m2.7`, `minimaxai/minimax-m2.5` | MiniMax family. |
+| `stepfun-ai/step-3.5-flash` | Fast speculative model. |
+| `google/gemma-4-31b-it` (family `google/gemma-*`, `google/codegemma-7b`) | Gemma incl. a code variant. |
+| `mistralai/mistral-nemotron`, `meta/llama-3.3-70b-instruct`, `microsoft/phi-4-mini-instruct` | The general open-weight bench. |
+| `nvidia/usdcode`, `poolside/laguna-xs-2-1`, `thinking machines/inkling` | Specialists; checked only as catalog entries. |
+
+**Also seen on the NVIDIA catalog landing page** (`build.nvidia.com`, fetched):
+Nemotron 3 Ultra, Kimi K3, DeepSeek V4 Pro and Nemotron 3.5 Lightning are the
+headline models — i.e. the free catalog is **actively refreshed**, which is
+exactly why CodeC must not hard-code assumptions about which ids work (below).
 
 **Free tier, per third-party trackers read this session** (NVIDIA does not publish
 one universal table; the account's own console is authoritative):
@@ -68,6 +91,25 @@ truth — `ai.google.dev/gemini-api/docs/rate-limits`, fetched 2026-10-02), NVID
 free tier is a **larger allowance in requests per minute** and reports no daily
 request cap. It is **not unlimited** — it is ~40 RPM shared, and agent tasks are
 bursty by nature.
+
+### 2.1 Future updates — what changes, and what CodeC must not assume
+
+The catalog changes under the app's feet, and the trackers this session read
+give concrete evidence of each drift:
+
+| What changes | Evidence | CodeC consequence |
+|---|---|---|
+| Model ids appear and disappear | Catalog footer "Updated 10 days ago"; `z-ai/glm-5.3`, `glm-5.3-flash`, `nvidia/nemotron-3.5-lightning-30b-a3b` exist now; ID `z-ai/glm-5.2` even renders as an unresolved `ref:` on the page itself. | Never hard-code a "default model" list as truth. Ship a **pre-filled** id, keep the field editable (already the O3 pattern, `AiModel.DEFAULT`), and let **Test connection** decide. |
+| Free names are temporary | Reddit / OpenCode users (Aug 2026): "Kimi K3 … FREE on NVIDIA NIM (60 req/min)" with comments about capacity degradation; a tutorial (Jul 2026) notes `moonshotai/kimi-k3-free` labelled "free for a limited time". | Treat "free right now" as a cached fact with a date, never a promise in UI copy. |
+| Rate limits are model-specific and unpublished | NVIDIA forum moderator (fetched): limits depend on model, use-case and overall traffic; **no official way to raise free-tier RPM**; the credit system was replaced by model-specific limits ([decodethefuture](https://decodethefuture.org/en/nvidia-nim-api-pricing-limits-guide/)). | A provider must expose a **per-model capability row** (context, output cap, tool use, ~RPM if known) and CodeC's retry/backoff must be provider-agnostic (see §5.1). |
+| Reality deviates from the catalogue | A user report: "Most of their models are dead… all allocations in nemotron ultra"; another: a mid-conversation switch to a different model after a few requests. | The D4 preview and the timeline must name the **actual model id used** each turn; CodeC should surface a provider's error rather than switching silently (Level 5 acceptance). |
+| The terms can change | Trial ToS is "as updated from time to time"; §1.3 lets NVIDIA terminate a pre-release service "at any time without liability". | Keep NVIDIA behind the provider seam so it can be removed without touching the agent loop, tools, or permissions. |
+
+**Practical update check for the owner (no code needed):** the NVIDIA catalogue
+page (`docs.api.nvidia.com/nim/reference/llm-apis`), the individual model page
+(`…/<model>-infer` shows `max_tokens`, streaming and reasoning knobs), and
+`build.nvidia.com`'s landing page are the three places that move; the account's
+own console is the only authoritative source for the account's RPM.
 
 ## 3. The license trap — read this before adding a key
 
@@ -99,6 +141,31 @@ What this means for CodeC, stated plainly:
    testing/evaluation and not for production use.
 3. No CodeC marketing or UI text may imply NVIDIA free access is production-grade
    or unlimited.
+
+### 3.1 The owner's question: "I will use the NVIDIA API for my own research — is that a breach?"
+
+**No. That is what the free trial is for.** Straight from the documents read
+this session: the Trial ToS §1.4 restricts unpaid access to "internal testing and
+evaluation purposes", and the NIM FAQ says Developer Program members get free API
+access "for prototyping, research, development and testing". A solo developer
+using his own key, on his own projects, in his own app, is squarely inside that.
+What would fall outside, in the same words:
+
+- **"Production use … any non-testing activity including activity serving real
+  end-users"** (NIM FAQ) — e.g. shipping CodeC with *your* key baked in so
+  others use it, or running a service on it.
+- **§4.2**: you may not "copy, sell, rent, sublicense, transfer or distribute or
+  make available to others" the API or its Generated Content — so the key stays
+  yours, and each CodeC user brings their own.
+- **§2.6(a)**: do not submit confidential data you have no right to send —
+  CodeC's D4 preview already shows exactly what would leave the phone.
+- **The free tier's own limits** (no RPM increases, models can be withdrawn) —
+  not a rule breach, but a reason not to depend on it.
+
+So: **personal research = fine; a product that routes other people's use through
+your free key = not fine.** The design that keeps you on the right side is BYOK
+per user plus the explicit terms checkbox described above — never a shared or
+bundled key, never a CodeC-hosted proxy.
 
 This is the agent's conservative reading of the terms, and it is the part the
 owner must confirm before any implementation.
@@ -151,8 +218,34 @@ owner must confirm before any implementation.
 3. **Key policy:** always available, or offered only when Gemini says 429 / when
    the user switches manually? (CodeC's law: never switch silently.)
 4. **Cap policy:** raise the app's output caps globally, or per provider/model?
-5. Nothing here is authorized; Phase 80's device round is still owed and Levels
+5. **Model policy for NVIDIA:** keep today's pattern (one pre-filled id in an
+   editable field, exactly like `AiModel.DEFAULT`), or offer a short list of
+   known-good ids (e.g. Nemotron 3 Super, DeepSeek V4 Pro, Kimi K3, GLM-5.3) with
+   a "type any id" escape hatch? The catalogue's churn (§2.1) argues for the
+   editable field plus **Test connection**, with the list as a convenience only.
+6. Nothing here is authorized; Phase 80's device round is still owed and Levels
    5+ stay unauthorized until you start them (`rule.md` §3, roadmap status).
+
+## 7. Multiple providers and models — Level 5 candidates (tracker numbers, verify at source)
+
+Level 5 ([`05_PROVIDERS_AND_MODEL_COLLABORATION.md`](../roadmaps/ai-integration/05_PROVIDERS_AND_MODEL_COLLABORATION.md)) wants "a small number of well-tested providers". These are the free-tier numbers third-party trackers report for the obvious OpenAI-compatible candidates — **all are tracker values, not vendor SLAs, and they change**:
+
+| Provider | Free tier as reported | Models relevant to coding | OpenAI-compatible |
+|---|---|---|---|
+| **NVIDIA Build/NIM** | ~40 RPM shared, no published daily cap (see §2) | Nemotron 3 (Nano/Super/Ultra/Lightning), DeepSeek V4, Kimi K2/K3, GLM-5.x, Qwen3-Next, gpt-oss, Gemma | Yes |
+| **Google Gemini** (today's provider) | ~10–15 RPM, ~250 K TPM, ~1 000–1 500 RPD for Flash-class | `gemini-3-flash-preview` (1M in / 65 536 out) | Native (CodeC's existing client) |
+| **Groq** | ~30 RPM, ~1 000–14 400 RPD, ~6 K TPM | Llama 3.3 70B, DeepSeek R1, Mixtral, Gemma | Yes |
+| **Cerebras** | ~30 RPM, ~1 M tokens/day | gpt-oss-120b, Llama 3.1 8B, Qwen3 235B | Yes |
+| **Mistral "La Plateforme"** | ~2 RPM, ~1 B tokens/month (reported), Codestral 30 RPM / 2 000 req/day | Codestral (code), Mistral Small/Large | Yes |
+| **OpenRouter** | ~20 RPM/model, **50 RPD** free (1 000/day with a one-time $10 top-up) | ~30 free models (DeepSeek, Llama, Qwen, Gemma) | Yes |
+| **GitHub Models** | Daily limits, 100+ models (tracker) | Mixed | Yes |
+
+Reading for CodeC: **NVIDIA is a strong first second-provider** (breadth, long
+context, OpenAI-compatible, no card) and **Groq/Cerebras are the better fallback
+if latency matters**, while **OpenRouter is the wrong first pick** for an agent
+that makes 20+ calls per task (50 requests/day). The provider seam should carry
+per-provider capability rows and per-provider retry policy — never a silent
+switch (Level 5 acceptance).
 
 ## Sources (all read this session, 2026-10-02)
 
@@ -164,8 +257,14 @@ owner must confirm before any implementation.
   `assets.ngc.nvidia.com/.../NVIDIA API Trial Terms of Service.pdf` (§1.2, §1.4,
   §2.3); `ai.google.dev/gemini-api/docs/rate-limits` (RPM/TPM/RPD, tiers, AI
   Studio authoritative).
+- Fetched also: `build.nvidia.com` landing page (headline models: Nemotron 3
+  Ultra, Kimi K3, DeepSeek V4 Pro, Nemotron 3.5 Lightning).
 - Search results (third-party summaries, not primary): freellm.net, apis.io,
-  yangmao.ai, decodethefuture.org (NVIDIA 40 RPM / credits / model list);
+  yangmao.ai, decodethefuture.org, jaesolshin.com (NVIDIA 40 RPM / credits /
+  model list / reasoning-field note); Reddit r/opencode + volanea.com (Kimi K3
+  free "limited time", capacity/queue reports, 60 req/min claim); OpenRouter's
+  own comparison blog, agentdeals.dev, clawhosters.com, hypereal.cloud (Groq /
+  Cerebras / Mistral / OpenRouter / GitHub Models free-tier tables);
   pecollective.com, tinkerllm.com, aifreeapi.com (Gemini free-tier numbers);
   Vertex AI model card for `gemini-3-flash-preview` (1 048 576 in / 65 536 out);
   NVIDIA Developer Forums threads July 2026 (free-tier RPM increases refused).
