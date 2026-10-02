@@ -194,7 +194,7 @@ fun AiChatSheet(
                 state, hasSelection, question, onQuestionChange,
                 onExplainSelection, onExplainError, onAskProject, onProposeEdits,
                 onCancelGather, onSend, onCancelPreview,
-                onStop, onRetry, onClear, onDismissNotice
+                onStop, onRetry, onClear, onDismissNotice, onContinue
             )
         }
     }
@@ -677,7 +677,9 @@ private fun BottomBar(
     onStop: () -> Unit,
     onRetry: () -> Unit,
     onClear: () -> Unit,
-    onDismissNotice: () -> Unit
+    onDismissNotice: () -> Unit,
+    /** Phase 81 — the door to the continuation preview (the button sends nothing). */
+    onContinue: () -> Unit
 ) {
     val context = LocalContext.current
     Column(
