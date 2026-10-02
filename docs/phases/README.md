@@ -95,7 +95,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 |---|---|---|
 | [01-terminal-userland](01-terminal-userland/) | Terminal & Linux userland | 6 |
 | [02-packages-toolchains](02-packages-toolchains/) | Packages & toolchains | 5 |
-| [03-editor](03-editor/) | Editor & languages | 19 |
+| [03-editor](03-editor/) | Editor & languages | 20 |
 | [04-projects-files](04-projects-files/) | Projects & files | 3 |
 | [05-run-output-preview](05-run-output-preview/) | Run, output & preview | 5 |
 | [06-git-github](06-git-github/) | Git & GitHub | 3 |

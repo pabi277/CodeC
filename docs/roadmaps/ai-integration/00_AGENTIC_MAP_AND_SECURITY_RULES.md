@@ -76,6 +76,17 @@ augmentation: **retrieval ✅ + tools ✅ + memory ❌**.
 > and remain open; **8** (memory) is Level 9; **9–12** are Levels 10–12. See
 > [Phase 84](../../phases/03-editor/chat-phase84/README.md).
 
+> **Update 2026-10-03 (Phase 85 / Level 8):** defects **6 and 7 are FIXED** and **S11 is IMPLEMENTED**
+> on `arena/01a0fe36-codec` (host pre-validation 360/360, not merged), bounded-but-honest by the owner's
+> choice. **6** (prefix-only reader) — `AiProjectReader.readLineRange` streams any line range, so the
+> last line of a >24 000-char file is reachable. **7** (total eviction) — `AiAgentPrompt.pack` now leaves
+> a per-item re-read pointer (`path — lines a-b — status`) instead of a bare count. **S2** — every read
+> states `[complete]`/`[partial: reason]`/`[refused]`. **S5/S7** — the new `read_files` batch re-applies
+> per-path security per file (a secret is refused beside succeeding siblings) as parallel read-only IO.
+> **S11** — `AiAgentWorkingSet` serves exact-duplicate reads at zero execution cost (`toolCallsReused`
+> populated) and stops N identical no-progress calls (`NO_PROGRESS`). Retrieval ✅ + tools ✅ + memory ❌
+> is unchanged (memory stays Level 9). See [Phase 85](../../phases/03-editor/chat-phase85/README.md).
+
 | # | Defect | Evidence | Effect |
 |---|---|---|---|
 | 1 | The UI preview is the model's memory | `AiViewModel.kt:893` `detail = outcome.text.take(MAX_STEP_DETAIL_CHARS)` (1 200); `AiAgentPrompt.renderStep` then `.take(8 000)` on an already-≤1 200 string | Nominal 8 000-char / 400-line result delivered as **1 200 chars ≈ 22 lines**, `AiToolRunner.CUT_NOTE` cut away. Primary cause of repeated reads. |
@@ -212,4 +223,4 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 **Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
 
-**Current status — 2026-10-03:** the owner separately started Level 6 as Phase 83. Its two additions are test-only plus documentation; Build APK CI `37051539267` is green on code/test head `cf3f1be`; no PR/merge is authorized. The next unused phase number is 84, but this map does not start it. Level 7+ remain proposed and unauthorized.
+**Current status — 2026-10-03:** the owner started Level 6 (Phase 83, test-only baseline), then Level 7 (Phase 84, agent correctness — defects 1–5 fixed), then Level 8 (Phase 85, full context and honest reads — defects 6–7 fixed and S11 implemented, bounded-but-honest). All three are on `arena/01a0fe36-codec`/`arena/01a0fded-codec`, host-pre-validated, **not merged**; no PR/merge is authorized and this map starts nothing. The next unused phase number is 86. **Level 9+ remain proposed and unauthorized** — Level 9 (task memory) needs a separate owner command and the D6 task-memory amendment for `noBackupFilesDir/ai/task/<project>/`.
