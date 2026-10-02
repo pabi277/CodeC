@@ -1,6 +1,13 @@
-# Level 6 — Optional on-device model
+# Level 13 — Optional on-device model
 
 **Status: proposed; separate technical investigation required. Offline inference is optional.**
+
+> **Renumbered 2026-10-02** from Level 6 → **Level 13**. The owner directed that the proposed agentic
+> optimization ([Levels 6–12](00_AGENTIC_MAP_AND_SECURITY_RULES.md)) be placed immediately after the
+> completed levels, with the not-yet-started levels moved after them. Content is unchanged; only the
+> number moved. **Depends on Level 12** — an on-device model should not be evaluated as a coding agent
+> until the cloud agent's context and tool pipeline is correct and measured, otherwise the local model is
+> blamed for defects that belong to the harness.
 
 ## User value
 

@@ -117,7 +117,7 @@ Rules:
 
 - **Rollback scope** (Level 3). The recommendation remains file edits only; command, package and Git effects are separately approved and never called "undoable". Evidence it needs design: `EditorUndoManager` is in-memory, capped at 100 steps, and cleared on project or mode switch (`EditorUndoManager.kt`; `EditorViewModel.kt:470,1579,1667`), and no external-change detection was found.
 - **Custom OpenAI-compatible endpoints** (Level 5). Plain HTTP is allowed only to `127.0.0.1` and `localhost` (`res/xml/network_security_config.xml`).
-- **On-device targets** (Level 6). Relevant facts: minSdk 24, targetSdk 28, ABIs `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`, NDK 27.2 (`app/build.gradle.kts:18-59`).
+- **On-device targets** (Level 6 when this was written; **renumbered to Level 13 on 2026-10-02** — see the renumbering note in [`AI_INTEGRATION_ROADMAP.md`](../AI_INTEGRATION_ROADMAP.md)). Relevant facts: minSdk 24, targetSdk 28, ABIs `arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`, NDK 27.2 (`app/build.gradle.kts:18-59`).
 - **Agent run loop** (Level 4). `ExecutionRunner` defaults to a 30 s build and 10 s run timeout with a single live process (`ui/services/ExecutionRunner.kt:44-45`).
 
 ## 6. Level 0 exit condition — met
