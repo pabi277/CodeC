@@ -1,6 +1,6 @@
 # Phase 82 — CodeC AI: rate-limit resilience and a bigger answer budget
 
-> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device acceptance POSTPONED · MERGE AUTHORIZED (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
+> **Status:** CODE ✅ MERGED to `main` via PR #107 @ `4cb4151`; docs follow-up PR #108 @ `7419566`, main Build APK `37047037300` green. Formal device acceptance remains **POSTPONED, not passed** (2026-10-02 owner decision). · **Cost:** `[client-only / BYOK]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 > Work only on `arena/01a0fbc2-codec`; baseline `main` @ `e089880` (PR #106).
 > No PR, merge, or push to `main` without the owner's explicit command (`rule.md` §3).
@@ -54,8 +54,8 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 - [x] Device checklist/artifact handed over; owner now **POSTPONED formal device acceptance until after optimization**. Informal screenshot issues are recorded, not passed.
 - [x] Initial handoff stopped at §3; later owner **“Last merge it”** explicitly authorizes this PR/merge with device acceptance deferred.
 - [x] Discussion/source/screenshot evidence recorded as research; **no optimization code changed**.
-- [ ] Authorized PR merged after final-head checks; record actual PR/SHA below.
-- [ ] Main Build APK green and exact APK bytes recorded; no device acceptance invented.
+- [x] Authorized PR #107 merged at `4cb4151`; docs follow-up PR #108 merged at `7419566` (see the dated merge follow-up below).
+- [x] Main Build APK run `37047037300` is green; check annotations report release **7,117,444 B**, debug **26,869,612 B**, and mapping **69,415,790 B**. The artifact download URL has expired, so sizes are from the durable annotations. Device acceptance remains postponed.
 
 ## Local prevalidation — 2026-10-02
 
@@ -115,6 +115,10 @@ A larger output budget can cost more tokens, time and quota; it cannot enlarge a
 
 Owner (2026-10-02): **“What ever we discussed add a research note in the project”**, **“The device test is postponed, 1st i will make it optimized than device test”**, **“Last merge it”**. This supersedes the initial pending-device/STOP handoff: document the discussion and merge the current work after final-head CI, with **formal device acceptance POSTPONED, not passed**.
 
-[Agent-core optimization research](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the informal screenshot issues, the 1,200-character preview/context coupling, prefix-only reads, last-four-result memory, duplicate/counter/final-answer problems, full-file/batch/native-tool/Markdown proposals and multi-API tradeoffs. No app/test/default-model changes are made here; GLM-5.3 remains manually selectable. Known agent issues remain open, not fixed by this record. **Optimization implementation, Level 5B and Levels 6+ are not started.** D1/D4/D5/D6 and the current caps/three stream sites stay unchanged.
+[Agent-core optimization research](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the informal screenshot issues, the 1,200-character preview/context coupling, prefix-only reads, last-four-result memory, duplicate/counter/final-answer problems, full-file/batch/native-tool/Markdown proposals and multi-API tradeoffs. No app/test/default-model changes are made here; GLM-5.3 remains manually selectable. Known agent issues remain open, not fixed by this record. **As of 2026-10-02, optimization implementation, Level 5B and Levels 6+ were not started.** This historical handoff is superseded only by the explicitly started Level 6 record in [Phase 83](../chat-phase83/README.md). D1/D4/D5/D6 and the current caps/three stream sites stay unchanged.
 
-Existing code CI **36995145462** on **7b2ecac** and ledger CI **36996946243** on **e0665cb** are green. Authorized PR/merge and main CI/APK facts will be recorded after they actually happen, not predicted. This owner command changes this delivery's scheduling/merge gate, not the standing §3 rule. [Deferred device matrix](DEVICE_ROUND.md).
+Existing code CI **36995145462** on **7b2ecac** and ledger CI **36996946243** on **e0665cb** are green. [Deferred device matrix](DEVICE_ROUND.md).
+
+## Merge follow-up — 2026-10-03
+
+The owner’s “Last merge it” authorized the Phase 82 / 82B delivery only. **PR #107** merged the code to `main` at **`4cb4151f1a59f9b719cc9bd64224ea9040c1a022`**; **PR #108** merged the documentation follow-up at **`741956647933562dd5056972e71473581dd21233`**. Main Build APK run **`37047037300`** completed successfully. This is not a device pass: the formal acceptance matrix remains postponed until after optimization. Level 6 was separately started on 2026-10-03; this Phase 82 command does not authorize Level 7 or any later work.

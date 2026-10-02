@@ -13,7 +13,7 @@ code CI was green while the agent remained unusable on a phone.
 
 ## Host-JVM regression suite
 
-Extends the existing **418 `@Test`** across 35 AI test classes.
+Extends the post-Level-6 baseline of **391 `@Test` cases across 31 AI test classes**. Phase 83 adds five cases to the pre-Level-6 inventory of 386 cases across 30 classes; later counts must be measured from the checkout rather than copied forward.
 
 | Test | Status today |
 |---|---|
