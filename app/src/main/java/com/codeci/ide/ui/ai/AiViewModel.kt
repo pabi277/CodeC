@@ -10,6 +10,9 @@ import com.codeci.ide.ui.projects.AiUndoSummary
 import com.codeci.ide.ui.projects.ProjectManager
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +21,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.coroutineContext
 
 /** Where one helper exchange stands. */
 enum class AiPhase { IDLE, PREVIEW, STREAMING, DONE, FAILED }
@@ -29,6 +34,11 @@ enum class AiPhase { IDLE, PREVIEW, STREAMING, DONE, FAILED }
 data class AiUiState(
     val keySaved: Boolean = false,
     val model: String = AiModel.DEFAULT,
+    /** Phase 82B: manual selection, never persisted or silently changed on failure. */
+    val provider: AiProviderId = AiProviderId.GEMINI,
+    val configuring: Boolean = true,
+    /** Phase 82: plain additive field; the countdown type is declared outside this state. */
+    val retryCountdown: AiRetryCountdown? = null,
     val phase: AiPhase = AiPhase.IDLE,
     val prompt: AiPrompt? = null,
     val answer: String = "",
@@ -97,7 +107,7 @@ data class AiAgentUsage(val turns: Int, val toolCalls: Int, val runs: Int)
 class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     private val store = AiKeyStore(application)
-    private val client = GeminiClient()
+    private val client = AiProviderClient()
     private var job: Job? = null
 
     /** Phase 78 — the project walk. Separate from [job]: it never touches the network. */
@@ -124,6 +134,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         val paths: List<String>,
         val dirtyBuffers: Map<String, String>,
         val systemInstruction: String,
+        val provider: AiProviderId,
+        val model: String,
         var budget: AiAgentBudget,
         var pendingRun: AiToolCall? = null,
         /** Tool calls that arrived in the same answer as a run request. */
@@ -147,7 +159,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val show = withContext(Dispatchers.IO) { store.showBubble() }
             val conflict = withContext(Dispatchers.IO) { store.outputConflict() }
             _state.update {
-                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict)
+                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict, configuring = false)
             }
         }
     }
@@ -218,12 +230,14 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     fun preview(result: AiContextResult) {
         // A stream in flight is never replaced behind its back (Phase 77: the
         // sheet can be re-opened from several doors while it runs).
-        if (_state.value.phase == AiPhase.STREAMING) return
+        if (_state.value.phase == AiPhase.STREAMING || _state.value.testing || _state.value.configuring) return
         when (result) {
             is AiContextResult.Refused -> _state.update { it.copy(notice = AiCopy.problem(result.problem)) }
             is AiContextResult.Ready -> _state.update {
                 it.copy(
-                    phase = AiPhase.PREVIEW, prompt = result.prompt, notice = null,
+                    phase = AiPhase.PREVIEW,
+                    prompt = result.prompt.copy(provider = it.provider, model = it.model), notice = null,
+                    retryCountdown = null,
                     answer = "", error = null, cutShort = false, continuations = 0,
                     proposalResult = null, applyConflictPaths = emptyList(),
                     undoConflictPaths = emptyList(),
@@ -650,6 +664,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     paths = scan.allTextPaths,
                     dirtyBuffers = dirty,
                     systemInstruction = prompt.prompt.systemInstruction,
+                    provider = s.provider, model = s.model,
                     budget = AiAgentBudget()
                 )
             } else {
@@ -752,23 +767,40 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      * which starts only after the task preview's **Send** (D4 as amended).
      */
     private fun agentTurn(session: AgentSession) {
-        val model = _state.value.model
         val packed = AiAgentPrompt.pack(
             question = session.question,
             mapText = session.mapText,
             steps = _state.value.agentSteps
         )
-        val body = GeminiRequest.body(session.systemInstruction, packed.text, AiLimits.MAX_OUTPUT_TOKENS)
+        // Captured once. Every retry of this turn has the identical recipient, strings and budget.
+        val body = AiProviderRequests.body(session.provider, session.model, session.systemInstruction, packed.text)
         session.budget = session.budget.withTurn()
         _state.update { it.copy(phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false, agentUsage = usage(session)) }
+        appendAgentStep(AiAgentStep(
+            kind = AiAgentStepKind.REQUEST,
+            title = AiCopy.requestRecipient(session.provider, session.model),
+            sentSystemInstruction = session.systemInstruction,
+            sentUserText = packed.text
+        ))
         job = viewModelScope.launch {
-            val key = withContext(Dispatchers.IO) { store.loadKey() }
+            val key = withContext(Dispatchers.IO) { store.loadKey(session.provider) }
             if (key == null) {
+                _state.update { it.copy(keySaved = false) }
                 stopAgent(AiAgentStopReason.PROVIDER_FAILURE, AiCopy.KEY_UNREADABLE)
                 return@launch
             }
-            val outcome = client.stream(key, model, body) { text ->
-                _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = text) else s }
+            val outcome = try {
+                streamWithRetry(session = session, onText = { text ->
+                    _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = text) else s }
+                }) { publish ->
+                    client.stream(session.provider, key, session.model, body, onText = publish)
+                }
+            } catch (_: AgentDeadlineReached) {
+                stopAgent(AiAgentStopReason.WALL_CLOCK)
+                return@launch
+            } catch (_: TimeoutCancellationException) {
+                stopAgent(AiAgentStopReason.WALL_CLOCK)
+                return@launch
             }
             when (outcome) {
                 is AiOutcome.Answer -> onAgentAnswer(session, outcome.text, outcome.cutShort)
@@ -898,6 +930,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             s.copy(
                 phase = if (message != null) AiPhase.FAILED else AiPhase.DONE,
                 error = message,
+                retryCountdown = null,
                 agentRun = null,
                 agentRunRunning = false,
                 notice = null,
@@ -913,7 +946,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     /** The only path to a helper request: the user pressed Send on a preview. */
     fun send() {
         val prompt = _state.value.prompt ?: return
-        if (_state.value.phase != AiPhase.PREVIEW || job?.isActive == true) return
+        if (_state.value.phase != AiPhase.PREVIEW || job?.isActive == true || _state.value.configuring || _state.value.testing) return
         if (prompt.agent) {
             val session = agent
             if (session == null) {
@@ -932,7 +965,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             agentTurn(session)
             return
         }
-        val model = _state.value.model
+        val model = prompt.model
+        val provider = prompt.provider
+        val body = AiProviderRequests.body(prompt)
         // Phase 81: a continuation keeps what is already on screen and streams
         // the rest underneath it, inside one shared total budget. A fresh
         // request starts empty, exactly as before.
@@ -944,20 +979,17 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         job = viewModelScope.launch {
-            val key = withContext(Dispatchers.IO) { store.loadKey() }
+            val key = withContext(Dispatchers.IO) { store.loadKey(provider) }
             if (key == null) {
                 _state.update {
                     it.copy(phase = AiPhase.FAILED, keySaved = false, error = AiCopy.KEY_UNREADABLE)
                 }
                 return@launch
             }
-            val outcome = client.stream(
-                key,
-                model,
-                GeminiRequest.body(prompt),
-                AiContinuation.requestBudget(base.length)
-            ) { text ->
+            val outcome = streamWithRetry(onText = { text ->
                 _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = base + text) else s }
+            }) { publish ->
+                client.stream(provider, key, model, body, AiContinuation.requestBudget(base.length), onText = publish)
             }
             _state.update { s ->
                 if (s.phase != AiPhase.STREAMING) return@update s
@@ -984,10 +1016,17 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Stop: disconnects the request; what arrived so far stays visible. */
     fun stop() {
-        val stoppingAgent = job != null && agent != null && _state.value.agentRun != null
+        val stoppingAgent = agent != null && _state.value.prompt?.agent == true && _state.value.phase == AiPhase.STREAMING
         job?.cancel()
         job = null
-        if (stoppingAgent) _state.update { it.copy(agentRun = null, agentRunRunning = false) }
+        _state.update { it.copy(
+            retryCountdown = null, testing = false,
+            testResult = if (it.testing) AiCopy.STOPPED else it.testResult
+        ) }
+        if (stoppingAgent) {
+            stopAgent(AiAgentStopReason.USER_STOP)
+            return
+        }
         _state.update { s ->
             if (s.phase != AiPhase.STREAMING) s
             else if (s.answer.isBlank() && s.agentSteps.none { it.kind == AiAgentStepKind.TOOL }) {
@@ -1074,7 +1113,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update {
             it.copy(
                 phase = AiPhase.IDLE, prompt = null, answer = "", error = null,
-                cutShort = false, continuations = 0, notice = null, testResult = null, testing = false,
+                cutShort = false, continuations = 0, notice = null, testResult = null, testing = false, retryCountdown = null,
                 gathering = false, proposalResult = null, applyConflictPaths = emptyList(),
                 undoConflictPaths = emptyList(),
                 agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null
@@ -1084,74 +1123,153 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissNotice() = _state.update { it.copy(notice = null) }
 
-    /** O1: only after the 18+/terms checkbox (the panel also disables the button). */
+    private fun settingsBusy(): Boolean = _state.value.let {
+        it.configuring || it.testing || it.gathering || it.applying || it.phase == AiPhase.STREAMING || job?.isActive == true
+    }
+
+    /** Manual recipient selection. No request, no fallback; the old task/preview is discarded. */
+    fun selectProvider(provider: AiProviderId) {
+        if (provider == _state.value.provider || settingsBusy()) return
+        clear()
+        _state.update { it.copy(
+            provider = provider, model = AiProviders.defaultModel(provider), keySaved = false,
+            configuring = true, setupError = null, notice = AiCopy.PROVIDER_CHANGED
+        ) }
+        viewModelScope.launch {
+            val ready = withContext(Dispatchers.IO) { store.isReady(provider) }
+            val model = withContext(Dispatchers.IO) { store.model(provider) }
+            _state.update { it.copy(keySaved = ready, model = model, configuring = false) }
+        }
+    }
+
+    /** Each provider needs its own explicit adult/terms confirmation; the store checks too. */
     fun saveKey(rawKey: String, model: String, confirmedAdultAndTerms: Boolean) {
+        if (settingsBusy()) return
+        val provider = _state.value.provider
         if (!AiKeySetup.canSave(rawKey, confirmedAdultAndTerms)) {
             _state.update { it.copy(setupError = AiCopy.SETUP_INCOMPLETE) }
             return
         }
-        if (!AiModel.isValid(model)) {
-            _state.update { it.copy(setupError = AiCopy.MODEL_INVALID) }
+        if (!AiProviders.isValidModel(provider, model)) {
+            _state.update { it.copy(setupError = AiCopy.modelInvalid(provider)) }
             return
         }
+        _state.update { it.copy(configuring = true, setupError = null) }
         viewModelScope.launch {
-            val ok = withContext(Dispatchers.IO) { store.saveKey(rawKey, model) }
-            val storedModel = withContext(Dispatchers.IO) { store.model() }
+            val ok = withContext(Dispatchers.IO) { store.saveKey(rawKey, model, provider, confirmedAdultAndTerms) }
+            val storedModel = withContext(Dispatchers.IO) { store.model(provider) }
             _state.update {
-                if (ok) it.copy(keySaved = true, model = storedModel, setupError = null)
-                else it.copy(setupError = AiCopy.SAVE_FAILED)
+                if (ok) it.copy(keySaved = true, model = storedModel, setupError = null, configuring = false)
+                else it.copy(setupError = AiCopy.SAVE_FAILED, configuring = false)
             }
         }
     }
 
     fun saveModel(model: String) {
-        if (!AiModel.isValid(model)) {
-            _state.update { it.copy(setupError = AiCopy.MODEL_INVALID) }
+        if (settingsBusy()) return
+        val provider = _state.value.provider
+        if (!AiProviders.isValidModel(provider, model)) {
+            _state.update { it.copy(setupError = AiCopy.modelInvalid(provider)) }
             return
         }
+        clear()
+        _state.update { it.copy(configuring = true) }
         viewModelScope.launch {
-            val ok = withContext(Dispatchers.IO) { store.setModel(model) }
+            val ok = withContext(Dispatchers.IO) { store.setModel(model, provider) }
             _state.update {
-                if (ok) it.copy(model = AiModel.normalize(model), setupError = null, testResult = null)
-                else it.copy(setupError = AiCopy.SAVE_FAILED)
+                if (ok) it.copy(model = model.trim(), setupError = null, testResult = null, configuring = false, notice = AiCopy.MODEL_CHANGED)
+                else it.copy(setupError = AiCopy.SAVE_FAILED, configuring = false)
             }
         }
     }
 
     fun deleteKey() {
-        clear()
+        if (_state.value.configuring || _state.value.applying) return
+        val provider = _state.value.provider
+        clear() // also cancels any countdown/socket before deleting this slot
+        _state.update { it.copy(configuring = true) }
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { store.deleteKey() }
+            withContext(Dispatchers.IO) { store.deleteKey(provider) }
             _state.update {
                 it.copy(
-                    keySaved = false,
-                    testResult = null,
-                    sheet = AiSheetState.HIDDEN,
-                    undoSummary = null,
-                    undoConflictPaths = emptyList()
+                    keySaved = false, configuring = false,
+                    testResult = null, sheet = AiSheetState.HIDDEN,
+                    undoSummary = null, undoConflictPaths = emptyList()
                 )
             }
         }
     }
 
-    /** Sends [GeminiRequest.TEST_PROMPT] only — no code — after a tap (D4). */
+    /** Fixed content-free prompt after its disclosed tap, never project text. */
     fun testConnection() {
-        if (_state.value.testing || job?.isActive == true) return
+        if (settingsBusy() || !_state.value.keySaved) return
+        val provider = _state.value.provider
         val model = _state.value.model
+        val body = when (provider) {
+            AiProviderId.GEMINI -> GeminiRequest.testBody()
+            AiProviderId.NVIDIA -> NvidiaRequest.testBody(model)
+        }
         _state.update { it.copy(testing = true, testResult = null) }
         job = viewModelScope.launch {
-            val key = withContext(Dispatchers.IO) { store.loadKey() }
+            val key = withContext(Dispatchers.IO) { store.loadKey(provider) }
             val result = if (key == null) {
                 AiCopy.KEY_UNREADABLE
             } else {
-                when (val outcome = client.stream(key, model, GeminiRequest.testBody()) { }) {
-                    is AiOutcome.Answer -> AiCopy.TEST_OK
-                    // A test prompt that comes back empty still proves key + model + network.
-                    is AiOutcome.Failed ->
-                        if (outcome.failure.kind == AiFailureKind.EMPTY) AiCopy.TEST_OK else outcome.failure.message
+                when (val outcome = streamWithRetry(onText = {}) { publish ->
+                    client.stream(provider, key, model, body, onText = publish)
+                }) {
+                    is AiOutcome.Answer -> AiCopy.testOk(provider)
+                    is AiOutcome.Failed -> if (provider == AiProviderId.GEMINI && outcome.failure.kind == AiFailureKind.EMPTY) AiCopy.testOk(provider) else outcome.failure.message
                 }
             }
             _state.update { it.copy(testing = false, testResult = result, keySaved = key != null && it.keySaved) }
+        }
+    }
+
+    private class AgentDeadlineReached : Exception()
+
+    /**
+     * Phase 82 — ONE shared retry helper around the existing three call sites.
+     * The attempt closure captures the exact already-approved request and key.
+     * No network call here, no recursion, no extra turn/tool/run/Continue budget.
+     */
+    private suspend fun streamWithRetry(
+        session: AgentSession? = null,
+        onText: (String) -> Unit,
+        attempt: suspend ((String) -> Unit) -> AiOutcome
+    ): AiOutcome {
+        val caller = coroutineContext[Job]
+        var partial = false
+        val retry: suspend () -> AiOutcome = {
+            AiRetry.once(
+                attempt = {
+                    coroutineContext.ensureActive()
+                    attempt { text ->
+                        caller?.ensureActive()
+                        if (text.isNotEmpty()) partial = true
+                        if (job === caller) onText(text)
+                    }
+                },
+                wait = { delay(it) },
+                onCountdown = { countdown ->
+                    // A cancelled old request must not clear a new request's countdown.
+                    _state.update { if (job === caller) it.copy(retryCountdown = countdown) else it }
+                },
+                hasPartialText = { partial },
+                allowed = { seconds ->
+                    caller?.ensureActive()
+                    if (session != null) {
+                        val remaining = AiAgentLimits.MAX_WALL_CLOCK_MS - (System.currentTimeMillis() - session.budget.startedAtMs)
+                        if (remaining <= seconds * 1_000) throw AgentDeadlineReached()
+                    }
+                    true
+                }
+            )
+        }
+        return if (session == null) retry() else {
+            val remaining = AiAgentLimits.MAX_WALL_CLOCK_MS - (System.currentTimeMillis() - session.budget.startedAtMs)
+            if (remaining <= 0) throw AgentDeadlineReached()
+            withTimeout(remaining) { retry() }
         }
     }
 

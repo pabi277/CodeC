@@ -1,6 +1,8 @@
 # Level 5 — Multiple API providers and model collaboration
 
-**Status: proposed; add after one-provider agent workflow is reliable.**
+**Status 2026-10-02: 5A owner-authorized and implemented as [Phase 82B](../../phases/03-editor/chat-phase82/README.md), local 462/462; code CI green; formal device acceptance postponed, current merge authorized. 5B remains proposed and unauthorized.**
+
+Current 5A slice: Gemini native + NVIDIA Build fixed OpenAI-compatible HTTPS/SSE endpoints, manual provider/editable model, dated capability rows with unknowns preserved, Test connection, separate AES-GCM key/terms slots and no silent fallback. NVIDIA Trial Terms restrict this to **internal development/testing/evaluation, not production**; required checkbox, own key only. HTTP 202 is pending/fixed failure, no hidden polling. CodeC's bounded text tools and reviewed Apply/Run permissions do not depend on capability flags. Rate retry and budgets are Phase 82 policies shared by all three original VM stream sites. No custom endpoint, second reviewer, native provider tools or live catalog in this slice. Device/model quality acceptance is [POSTPONED](../../phases/03-editor/chat-phase82/DEVICE_ROUND.md).
 
 ## User value
 
@@ -42,3 +44,5 @@ Do not use a remote API proxy unless its operator, retention, credential handlin
 - The review provider and context are disclosed before a second call.
 - Keys remain private during configuration, requests, error handling, device backup, logs, and support export.
 - Compare model quality and tool-call correctness on a fixed CodeC task set, not only marketing benchmarks.
+
+> **Phase 82 delivery update (2026-10-02):** Code CI **36995145462 / 7b2ecac** and ledger CI **36996946243 / e0665cb** green. Owner now directs documentation of [agent-core research](../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md), **formal device acceptance POSTPONED until after optimization**, and **“Last merge it”** for this current delivery. No device pass or optimization/native-tool/routing implementation inferred. Current merge authorized after final-head checks; actual PR/merge/main CI/APK facts belong in the phase ledger. **5B/6+ remain unstarted.**

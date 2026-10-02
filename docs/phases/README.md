@@ -83,8 +83,9 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 77 | [✅ AI UI for phones — floating button + chat sheet (device-passed, merged)](03-editor/chat-phase77/) | 03-editor |
 | 78 | [✅ AI Level 2 — whole-project context (device-passed, merged)](03-editor/chat-phase78/) | 03-editor |
 | 79 | [✅ AI Level 3 — proposed edits, review, and undo (device-passed, merged)](03-editor/chat-phase79/) | 03-editor |
-| 80 | [✅ AI Level 4 — whole-project map, bounded tools, approved run loop (device-passed)](03-editor/chat-phase80/) | 03-editor |
-| 81 | [✅ AI — Continue: get the rest of an answer that was cut off (device-passed)](03-editor/chat-phase81/) | 03-editor |
+| 80 | [✅ AI Level 4 — whole-project map, bounded tools, approved run loop (device-passed, merged)](03-editor/chat-phase80/) | 03-editor |
+| 81 | [✅ AI — Continue: get the rest of an answer that was cut off (device-passed, merged)](03-editor/chat-phase81/) | 03-editor |
+| 82 / 82B | [🚧 AI — rate-limit resilience, bigger answers + Level 5A NVIDIA dev/test BYOK (CI green; device acceptance postponed; current merge authorized)](03-editor/chat-phase82/) | 03-editor |
 
 ## By category
 

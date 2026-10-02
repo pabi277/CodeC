@@ -14,7 +14,10 @@ sealed class AiOutcome {
     data class Failed(val failure: AiFailure) : AiOutcome()
 }
 
-class AiAnswerAccumulator(private val maxChars: Int = AiLimits.MAX_REPLY_CHARS) {
+class AiAnswerAccumulator(
+    private val maxChars: Int = AiLimits.MAX_REPLY_CHARS,
+    private val provider: AiProviderId = AiProviderId.GEMINI
+) {
     private val sb = StringBuilder()
     private var cutShort = false
     private var blocked = false
@@ -26,7 +29,7 @@ class AiAnswerAccumulator(private val maxChars: Int = AiLimits.MAX_REPLY_CHARS) 
     fun accept(chunk: GeminiChunk): Boolean {
         if (failure != null) return false
         if (chunk.isError) {
-            failure = AiErrors.forHttp(chunk.errorCode ?: 0, null)
+            failure = chunk.errorFailure ?: AiErrors.forHttp(chunk.errorCode ?: 0, null, provider = provider)
             return false
         }
         if (AiErrors.isBlockReason(chunk.blockReason)) blocked = true
@@ -50,7 +53,7 @@ class AiAnswerAccumulator(private val maxChars: Int = AiLimits.MAX_REPLY_CHARS) 
         failure?.let { return AiOutcome.Failed(it) }
         val t = sb.toString()
         if (t.isBlank()) {
-            return AiOutcome.Failed(AiErrors.fail(if (blocked) AiFailureKind.BLOCKED else AiFailureKind.EMPTY))
+            return AiOutcome.Failed(AiErrors.fail(if (blocked) AiFailureKind.BLOCKED else AiFailureKind.EMPTY, provider))
         }
         return AiOutcome.Answer(t, cutShort)
     }

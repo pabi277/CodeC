@@ -1,0 +1,120 @@
+# Phase 82 — CodeC AI: rate-limit resilience and a bigger answer budget
+
+> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device acceptance POSTPONED · MERGE AUTHORIZED (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
+> **Owner row (verbatim):** "Api rate limit".
+> Work only on `arena/01a0fbc2-codec`; baseline `main` @ `e089880` (PR #106).
+> No PR, merge, or push to `main` without the owner's explicit command (`rule.md` §3).
+
+## Read-first evidence (2026-10-02, baseline `e089880`)
+
+| Symptom / contract | Evidence |
+|---|---|
+| 429 is a dead end | `ui/ai/GeminiClient.kt:62–68` reads responseCode and maps the capped error body, but never reads Retry-After; `AiErrors.kt:40` supplies one fixed quota sentence. There is no retry or countdown. |
+| Answers stop too soon | `AiPolicy.kt:32,40`: 24,000 reply characters / 8,192 requested output tokens. These are different from provider quota failures. |
+| Continue has a separate total | `AiContinuation.kt:43–71`: 64,000 total characters, ≤ 8 continuations, each bounded by min(reply cap, remaining). |
+| Exactly three network entry points | `AiViewModel.kt:770,954,1147`: agentTurn, send, Test connection. AiHelper/Level2/Level3/Surface/Continue wiring pins all require three. |
+| One provider and encrypted slot | `AiViewModel.kt:114`; `AiKeyStore.kt:32–36,160–168`: Gemini client and AES-GCM key slot; deleting the key also clears the one-task undo journal. |
+| Payload disclosure | `AiChatSheet.kt:303–340`: exact instruction and user text on the preview; the provider/model must become immutable request data, not a setting re-read during retry. |
+
+Research input: [`NVIDIA_API_RESEARCH_20261002.md`](../../../research/NVIDIA_API_RESEARCH_20261002.md). The previous phases' laws remain binding: D1 Apply only through AiEditApplier; D4 preview the exact two strings (Phase 80's task-preview amendment); D5 AI's own filters; D6 conversation/task state in memory only, one-task undo journal unchanged.
+
+## Owner choices, asked before code
+
+All four were selected through ask_user in this chat (2026-10-02):
+
+| Choice | Owner answer |
+|---|---|
+| Automatic vs manual retry | **automatic_once** — one automatic resend of the identical approved request, visible cancelable countdown; Stop cancels it. |
+| Answer budgets | **32768_48000_64000** — 32,768 output tokens / 48,000 reply characters; Continue total stays 64,000 (a full first reply leaves 16,000). |
+| Scope of raised caps | **every_request** — includes selection/error helpers, agent/edit requests, and the content-free connection test. |
+| Optional Phase 82B | **authorize_82b** — explicitly start Level **5A**, provider seam + NVIDIA BYOK, development/testing-only terms checkbox, capabilities, Test connection, no silent switching. **5B and Levels 6+ are not authorized.** |
+
+## Parts and order
+
+1. [82.1 Fixed error classification, retry metadata, one retry, countdown and Stop](PART_82_1_RATE_LIMIT_RESILIENCE.md).
+2. [82.2 Larger per-request budgets, bounded Continue](PART_82_2_ANSWER_BUDGET.md).
+3. [82B / 82.3 Level 5A provider seam and NVIDIA development/testing BYOK](PART_82_3_PROVIDER_SEAM_AND_NVIDIA_BYOK.md).
+4. [Device round](DEVICE_ROUND.md) — **POSTPONED by owner until after optimization**; no acceptance inferred from host tests, CI or screenshots.
+
+Implementation decisions (agent, not additional owner answers): known daily exhaustion without a reset delay is not repaired by a short retry; server waits beyond a bounded automatic window are explained, never shortened. No replay after any visible partial text. Retrying a rejected agent request does not grant another tool/run budget and remains inside the task wall clock. Provider/model changes are explicit, cancel no hidden task, and require a fresh preview. The current provider is memory-only; after process death the setup defaults to Gemini and every request still names its recipient before Send.
+
+## Carry-forward
+
+`git cherry-pick -x 5a1dff0` completed as **`828be38`**, carrying the Phase 80/81 merge record: PR #106 merged @ `e089880`, post-merge CI `36972776771` green, release APK `7,104,312 B`. Old PRs #42 and #83 are untouched.
+
+## Exit condition / verification ledger
+
+- [x] State verified, required docs read, owner choices recorded before code.
+- [x] Phase 80/81 post-merge record carried forward.
+- [x] Pure policies and transport/provider fixtures implemented, existing safety pins unchanged.
+- [x] Local kotlinc/JRE prevalidation **462/462** across **38 classes**, compile exit 0 and no `error:` in transcript (a helper's "compiled" is not proof).
+- [x] Code and living docs committed together: initial implementation **9285818**, with local date-parser follow-up recorded below.
+- [x] Session branch pushed: **7921c01** succeeded after owner reconnection (2026-10-02); first CI failure fixed for cause below.
+- [x] Build APK CI **36995145462 green** on **7b2ecac** (executor of record: real Gradle/JUnit/Robolectric/lint/APKs).
+- [x] Device checklist/artifact handed over; owner now **POSTPONED formal device acceptance until after optimization**. Informal screenshot issues are recorded, not passed.
+- [x] Initial handoff stopped at §3; later owner **“Last merge it”** explicitly authorizes this PR/merge with device acceptance deferred.
+- [x] Discussion/source/screenshot evidence recorded as research; **no optimization code changed**.
+- [ ] Authorized PR merged after final-head checks; record actual PR/SHA below.
+- [ ] Main Build APK green and exact APK bytes recorded; no device acceptance invented.
+
+## Local prevalidation — 2026-10-02
+
+**107 new checks / 12 new test classes**, plus **355 unchanged existing checks**. Total: **462 passed / 0 failed**, 38 classes. Scratch JRE from `jdk4py` 25.0.2.1 and npm `kotlin-compiler` 2.4.20; **`-jvm-target 17`**, matching CI's target. `/tmp/codec-phase82/prevalidate.sh` compiles the actual AI core, VM/store and pure project/apply/undo dependencies; JUnit/Android/lifecycle/org.json have thin host shims, and relevant pure Git data/redactor fragments are extracted from their real source. Real CI now passes Android/JSON fixtures and Compose compilation; successful Keystore encryption/slot survival, actual endpoint access and UI feel still require the device. Slot tests intentionally use corrupt blobs, not fake crypto success. Compile transcript inspected for **`error:`** (none), compiler exit **0**, fresh jar required before reflection runs. No local Gradle build or credentialed vendor request.
+
+| New class | Checks | Covered |
+|---|---:|---|
+| AiRateLimitTest | 18 | Numeric/date/obsolete date with receiving-clock century expansion, RetryInfo rounding, maximum minimum, bad/huge delays, minute/day/unknown, error precedence/privacy |
+| AiRetryTest | 11 | At most two attempts, ticks, zero delay, deadline, cancellation, initial/late partial output, same captured request |
+| AiHttpStreamTest | 13 | Real adapters + fake connections: Retry-After, identical bytes/headers, SSE/DONE, remaining cap, streamed error, bounded error body, disconnect-before-countdown, blocked-read cancellation, malformed/async/redirect/IO/model failures |
+| AiRateLimitWiringTest | 8 | Three original sites/private helper, Stop/reset, both countdown surfaces, deadline, no persistence, busy test/Send, no pending polling |
+| AiAnswerBudgetTest | 6 | Exact global caps, 48,000 + 16,000 arithmetic, boundary accumulation, every request/test, unchanged tool/input caps |
+| AiProvidersTest | 12 | Provider/model ids, validation, known/unknown capabilities, ceiling clamp, consent/copy, frozen recipient/Continue, REQUEST rows excluded from tool-result packing |
+| AiProviderClientTest | 4 | Exhaustive routing, no fallback either way, same recipient/key/budget on retry |
+| NvidiaRequestTest | 7 | Fixed HTTPS/Bearer header, exact two strings, selected model, escaping, stateless/test body, 32,768 cap |
+| NvidiaResponseTest | 8 | Visible delta only, reasoning/native tools ignored, length/filter/error/usage/DONE, bounded CodeC text-tool fixture |
+| AiProviderWiringTest | 9 | Manual/busy selection, immutable recipient, independently enforced terms, encrypted slots, D4 timeline, D6, both feedback literals, no new endpoint/tool privileges |
+| AiKeyStoreSlotsTest | 8 | Actual metadata/deletion/decode-refusal code: separate consent/model slots, affected-slot-only deletion, shared undo/layout, cross-instance concurrent writers, failed atomic metadata update |
+| NvidiaRedactionTest | 3 | nvapi- shape, both stored literals, log/crash attachments |
+
+A separate supplementary compile/run also passes **13/13** unchanged privacy/backup checks: ManifestPermissionsTest **7**, BackupRulesTest **6**, compiler exit 0 and no `error:`. Both Android backup XMLs and the permission/dependency sets are unchanged. Thus local prevalidation covers **475 passing checks** across the core + supplementary batches, without treating host shims as a device pass.
+
+Existing AI helper/Level2/Level3/Level4/Continue/surface wiring pins are **unchanged**, including count=3; apply/undo/filter/tool/run, feedback, type and motion regressions are in the 355. During prevalidation the compiler found and fixed a duplicate trailing fragment in AiAgentLoop and an inferred coroutine return type; later checks caught one busy-Send source pin and a wrong new test's invalid-model expectation. None were hidden by the helper's "compiled" print. Final credential review also found that concurrent VM/layout/support store instances could race a read-modify-write of shared acceptance properties; one shared monitor and atomic minSdk-safe metadata replacement now preserve both provider slots, verified by actual metadata/deletion fixtures.
+
+## CI / owner handoff
+
+**GitHub reconnected; push succeeded.** Owner said “I reconnect check now” on 2026-10-02. The preserved branch `arena/01a0fbc2-codec` was pushed at **7921c01**; remote main remains **e089880**, and old PRs #42/#83 are untouched. `/user` now returns an integration-scope **403** rather than the prior credential **401**; actual repository push and Actions access work, so the identity endpoint is not a push/CI gate. No password/token was requested or printed.
+
+| CI round | SHA | Result | Evidence / action |
+|---|---|---|---|
+| [1 — 36994479128](https://github.com/pabi277/CodeC/actions/runs/36994479128) | 7921c01 | ❌ unit-test compilation | Annotation at AiHttpStreamTest.kt:180: real JUnit fail() returns Unit, not HttpURLConnection. Change the fake opener to explicit throw AssertionError; preserve the strict local-refusal assertion. |
+| [2 — 36995145462](https://github.com/pabi277/CodeC/actions/runs/36995145462) | 7b2ecac | ✅ GREEN (10m59s) | Real unit/screenshot tests, debug/lint, measured/signed release, non-debuggable/ABI checks and both APK artifacts pass; no failure annotation. |
+| [3 — 36996946243](https://github.com/pabi277/CodeC/actions/runs/36996946243) | e0665cb | ✅ GREEN (7m55s) | Verification-ledger-only head; same app/test code. Release 7,117,444 B, debug 26,869,572 B. |
+
+Production compilation passed the dependency gate before the unit-test compile failure. No phase APK was produced by round 1. The shim mismatch is recorded, not counted as Android proof. **No assertion/test was removed or relaxed**, no dependency/permission/workflow change. Round 2 and ledger round 3 are green. The initial device handoff/merge gate below was later superseded by the owner follow-up: **formal acceptance postponed; this merge explicitly authorized**.
+
+### Verified artifact facts — code CI round 2
+
+| Artifact | APK filename | APK bytes (not ZIP size) | Owner download |
+|---|---|---:|---|
+| CodeC-IDE-release | CodeC-IDE-1.3.17-universal.apk | **7,117,440** | [Signed release ZIP](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11221750847) |
+| CodeC-IDE-debug | CodeC-IDE-1.3.17-universal-debug.apk | **26,869,612** | [Debug ZIP](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11220829913) |
+
+Sizes come from check-run **110800051752** APK-size annotations; artifact IDs confirmed unexpired via Actions API. Release has no android:debuggable flag. Baseline main release is **7,104,312 B**: delta **+13,128 B (~12.8 KiB / +0.18%)**. Do not confuse compressed ZIP size with APK bytes. No release/tag published; these are branch CI artifacts. Node/setup-java/runner migration notices are non-failure infrastructure warnings, not a reason for scope-expanding workflow edits.
+
+This result is for tested code **7b2ecac**. Subsequent verification-ledger-only commits contain no app/test changes and get their own normal branch CI; the device checklist deliberately points to this verified code artifact. All old stream-count/filter/apply/run/Continue/source pins remain unchanged. No live vendor call, device result, coding-quality score or production NVIDIA entitlement is inferred.
+
+A final local date fixture found that SimpleDateFormat's default two-digit year window could ignore a valid long RFC-850 Retry-After and fall back to 12s. The follow-up expands the century against the injected receiving clock before weekday validation; **21/44/exactly-50-year** minima are refused as too long, never shortened. AiRateLimitTest is now **18**, full core **462/462**; supplementary permission/backup **13/13**. Successful cipher/real endpoint/device proof is still pending.
+
+**Formal device acceptance: POSTPONED until after optimization**, not passed. Informal Nemotron screenshots expose agent issues recorded in the follow-up below. HTTP 202 remains a fixed pending failure, no polling; empty NVIDIA is not success. Exactly one retry and manual selection only. **Current PR/merge authorized by the owner; final-head checks still required.**
+
+## Risks / deliberate limits
+
+A larger output budget can cost more tokens, time and quota; it cannot enlarge a provider allowance. Only one retry, no background work, no generic 5xx/offline retry loop. NVIDIA catalogue/limits can change; unknown models have unknown capabilities, not invented numbers. No real vendor key is available in the sandbox: live NVIDIA connection, coding quality and tool-format correctness require the owner's BYOK device round. No custom endpoints, second-model reviewer, autonomous applies/runs, multi-agent work, or on-device inference.
+
+## Owner follow-up — research, deferred device acceptance and merge authority
+
+Owner (2026-10-02): **“What ever we discussed add a research note in the project”**, **“The device test is postponed, 1st i will make it optimized than device test”**, **“Last merge it”**. This supersedes the initial pending-device/STOP handoff: document the discussion and merge the current work after final-head CI, with **formal device acceptance POSTPONED, not passed**.
+
+[Agent-core optimization research](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the informal screenshot issues, the 1,200-character preview/context coupling, prefix-only reads, last-four-result memory, duplicate/counter/final-answer problems, full-file/batch/native-tool/Markdown proposals and multi-API tradeoffs. No app/test/default-model changes are made here; GLM-5.3 remains manually selectable. Known agent issues remain open, not fixed by this record. **Optimization implementation, Level 5B and Levels 6+ are not started.** D1/D4/D5/D6 and the current caps/three stream sites stay unchanged.
+
+Existing code CI **36995145462** on **7b2ecac** and ledger CI **36996946243** on **e0665cb** are green. Authorized PR/merge and main CI/APK facts will be recorded after they actually happen, not predicted. This owner command changes this delivery's scheduling/merge gate, not the standing §3 rule. [Deferred device matrix](DEVICE_ROUND.md).

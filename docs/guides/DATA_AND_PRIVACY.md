@@ -56,52 +56,98 @@ not blocked. **Settings → About → Replay the CodeC introduction** shows the 
 again on the next launch. The full permission table and
 the implementation behind every claim remain below.
 
-## The AI helper (Phases 76–79) — what it sends, where, and what it keeps
+## CodeC AI (Phases 76–82 / 82B) — what it sends, where, and what it keeps
 
-The AI helper (setup in the side panel's ✨ slot; chat in a bottom sheet opened by a small floating button) is an optional Gemini helper that uses
-**your own** Google Gemini API key. Your use of Gemini is covered by your own
-agreement with Google ([Gemini API terms](https://ai.google.dev/gemini-api/terms)).
+AI is optional, set up in ✨ home and used in the floating button's chat sheet.
+**Your own** provider key is required. Gemini is the default; NVIDIA Build is an
+explicit manual selection for **internal testing/evaluation only, not production**
+(including generated output), under its [API Trial Terms](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
+Google use remains under your [Gemini API agreement](https://ai.google.dev/gemini-api/terms).
+Accepting Google terms does not accept NVIDIA terms; each key needs its own
+adult/terms confirmation. There is no bundled/shared key or remote proxy.
 
-- **Sent only when you tap Send** (or **Test connection**, which sends one
-  fixed line and no code). Every request is shown first, word for word: the
-  selection you chose, the tail of a failed run, or (Phases 78–79) up to 5
-  non-secret text files from the open project (≤ 12 000 characters total;
-  `.env`, `.npmrc`, private keys, `.git/`, `.codec/`, and build outputs are
-  excluded), plus CodeC's fixed instruction. Nothing is sent in the background.
-- **Changes files only after you review the diff and tap Apply (Phase 79):**
-  when you tap **Propose edits**, CodeC parses the model's structured edit
-  blocks and computes unified diffs locally on the phone. You can inspect each
-  file's diff, uncheck files you do not want, or tap **Reject** to leave every
-  file untouched. The AI helper never runs code, terminal commands, package
-  installs, or automatic Git stage/commit.
-- **Sent only to** `generativelanguage.googleapis.com`, with your key in a
-  request header (never in the URL), and `store:false` so Google does not keep
-  the conversation server-side. On Google's free tier Google may use what you
-  send to improve its products and human reviewers may read it; the panel says
-  so at setup and in every preview.
-- **Kept on the phone:** your key, encrypted with an Android Keystore
-  AES-256-GCM key, in `no_backup/ai/` — never backed up, never written in
-  plain text; if it can't be decrypted it is deleted and you are asked again.
-  Beside it, the non-secret model name, the date you confirmed 18+ and
-  Google's terms, and (Phase 77) where you left the floating AI button and
-  whether it is shown — and how the chat sheet treats an open Output panel — non-secret layout values that **Delete key** keeps. When you apply an AI edit
-  proposal (Phase 79), CodeC also keeps a bounded preimage journal for the
-  **last applied AI task only** (≤ 5 files, ≤ 256 KB) in
-  `no_backup/ai/undo/<project>/` so **Undo AI changes** can restore your files
-  even if the app restarts; that journal is never backed up and is deleted as
-  soon as you tap **Undo AI changes**, apply a newer AI task, delete the
-  project, or tap **Delete key**. **Delete key** removes the key, its Keystore
-  entry, the terms confirmation, and any AI undo journal.
-- **Not kept:** questions and answers live in memory only and vanish on New
-  question, a project switch, or when the app closes.
-- **Not available** in single-file mode — only inside an open CodeC project.
-- Feedback reports scrub Google API keys (`AIza…`) and your stored key.
+- **Only the task you start:** Send on a preview approves the actual named
+  provider/model and exact system instruction + user string. Selection/error
+  helpers send selected code or a bounded failed-run tail. Project tasks send
+  a bounded map and admitted text/file ranges; CodeC's own filter excludes
+  `.env`, `.npmrc`, private keys, `.git/`, `.codec/`, symlink escapes and build
+  output. Read-only agent follow-ups after task Send may send admitted file
+  results without a fresh tap, as disclosed in the memory-only timeline.
+  Each turn's exact two strings are there. Every run and file Apply still needs
+  separate approval; nothing schedules or resumes a hidden task after Stop,
+  project change or app death.
+- **Retry and Continue are disclosed:** a pre-text rate failure may resend the
+  **same approved request once**, with a visible Stop-cancelable countdown.
+  Provider minimum delays are honored, not shortened; daily-without-reset and
+  waits over 120s do not get an early retry. No replay after partial output.
+  Continue builds another exact preview and still needs Send; combined answer
+  ≤64,000 chars and eight continuations. Global per-request caps are 32,768
+  output tokens / 48,000 visible chars (remaining room limits Continue).
+  Larger caps can cost more time/tokens/quota, not increase free allowances.
+- **Test connection** is its own disclosed tap and sends only a fixed one-word
+  request, no code or project. It uses the same cancelable one-retry policy.
+  NVIDIA 202/pending or empty responses are not reported as answered; CodeC
+  does not poll a pending invocation.
+- **Changes only on reviewed Apply:** the model proposes local text edit/create/
+  delete diffs; you select files and tap Apply through `AiEditApplier` or Reject
+  everything. An agent can request CodeC's normal **RUN ▶** pipeline, but cannot
+  run before you approve that exact action; Skip runs nothing. Only bounded
+  real output/exit codes return to the selected model. No terminal typing,
+  package installs or automatic Git stage/commit. Provider/model capability
+  flags never grant additional file/tool/run permissions.
+- **Two recipients, never fallback:** Gemini uses
+  `generativelanguage.googleapis.com` with a header key and stateless requests
+  (`store:false`, no shared conversation handle). This is **not zero retention**:
+  free-tier Google may use input/output for product improvement or human
+  review. NVIDIA uses `integrate.api.nvidia.com/v1/chat/completions` with Bearer
+  header and only explicit messages, no conversation id. NVIDIA is a separate
+  organization, not Google; its trial terms allow retention exceptions/security
+  or abuse logging. No unsupported Google `store` flag is sent to NVIDIA.
+  **Do not send secrets, confidential/sensitive material or personal data.**
+  The UI repeats recipient/terms/data-use notes. Failures never silently send
+  your project to another provider; provider/model changes are manual and
+  require a fresh preview. No availability, unlimited-use or quality guarantee.
+- **Kept on the phone, outside backups:** independent AES-256-GCM Keystore
+  aliases and ciphertext files `no_backup/ai/gemini_key.bin` and
+  `nvidia_key.bin`; never plaintext. Non-secret per-provider model, terms version
+  and acceptance time sit beside existing floating-button/sheet layout values.
+  Existing Gemini slot names stay compatible. Serialized, atomic metadata writes
+  preserve the other slot/layout even with concurrent store instances. Delete/decrypt failure removes
+  only that provider's key/alias/acceptance, preserving the other credential and
+  layout; key deletion also clears the existing last-task AI undo journal.
+- **Undo journal:** only the last applied task's bounded preimages (≤5 files,
+  ≤256 KB) at `no_backup/ai/undo/<project>/task.journal`, outside the project and
+  excluded from backups. Deleted on undo/replacement/project deletion or any
+  provider key deletion; user-edit conflicts still prevent overwrite. Undo
+  reverses AI file changes, not runs/network/package/Git side effects.
+- **Not kept:** questions, replies, maps, timeline, tool/run results, countdowns
+  and active provider selection are memory-only. Clear/New question/project
+  switch/app death discard them; reopening defaults selection to Gemini, never
+  resumes a request. Saved per-provider credentials/model/layout are settings,
+  not task history. Single-file mode has no AI access.
+- **Support export:** feedback scrubs both stored key literals and common
+  Google `AIza…` / NVIDIA `nvapi-…` shapes from included log/crash text. No key
+  is placed in AiUiState, URLs, prompts, project files or app logs. Reports still
+  leave only when you choose to share them; inspect before sharing.
+
+Phase 82/82B implementation has local policy/source/transport-fixture proof and
+real Build APK **36995145462 green** on **7b2ecac** (unit/screenshot tests, lint,
+Android/Compose compilation and signed APK guards). The first CI fixture compile
+signature error was corrected without changing privacy behavior. Owner device,
+successful Keystore/live vendor/model-quality acceptance remains **POSTPONED**
+until after optimization at the owner's direction; not passed. Informal phone
+screenshots expose known agent-core issues documented in
+[research](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md). This documentation/current-merge authorization
+adds no routing/reviewer, persisted task memory, native-tool permission or
+new data recipient. The
+[phase record](../phases/03-editor/chat-phase82/README.md) is the verification
+ledger, not a claim of production NVIDIA entitlement.
 
 ## Permissions — every one, why, and the code that uses it
 
 | Permission (short name) | Why it exists (one line) | Reader in `app/src/main/java` |
 |---|---|---|
-| `INTERNET` | Repo/package downloads, git clone/fetch/push, the SHA-256-verified updater (42.1), the LAN dev-server surface, the AI helper's Gemini requests (Phase 76, only on Send / Test connection) | `HttpURLConnection` |
+| `INTERNET` | Repo/package downloads, git clone/fetch/push, the SHA-256-verified updater (42.1), the LAN dev-server surface, CodeC AI Gemini/NVIDIA requests (disclosed task Send / Test; scoped read follow-ups and one visible rate retry) | `HttpURLConnection` |
 | `ACCESS_NETWORK_STATE` | "Is any network up?" before fetches; the LAN-address hint | `ConnectivityManager` |
 | `ACCESS_WIFI_STATE` | The classic Wi-Fi fallback for `LanAddressProvider` (37.1) | `WifiManager` |
 | `READ_EXTERNAL_STORAGE` | Opening your project folders on legacy devices | `READ_EXTERNAL_STORAGE` |
@@ -156,8 +202,8 @@ in the manifest — the test above fails if any ever is.
 - `files/CodeC/tcc out/` — build output; clears with your project clean
 - `files/CodeC/usr/` + `files/CodeC/modules/` — the compiler userland +
   packages; re-downloadable
-- `no_backup/ai/` — the AI helper's encrypted key + its non-secret settings
-  (Phase 76); never backed up
+- `no_backup/ai/` — independently encrypted AI provider keys, terms/model/layout settings
+  and the bounded last-task undo journal (Phases 76–82B); never backed up
 
 ## How to verify a claim in this document
 

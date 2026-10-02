@@ -157,3 +157,7 @@ Primary sources only; recheck before the Level 1 brief.
 - **Key storage.** `androidx.security:security-crypto` (`EncryptedSharedPreferences`) is deprecated upstream (1.1.0). A Keystore AES-GCM key with ciphertext in app-private storage needs no new dependency.
 
 Decisions derived from this research: [`docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md`](../roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md).
+
+## Owner follow-up — research, deferred device acceptance and merge authority
+
+[Agent-core optimization research](AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records the subsequent GLM-5.3/manual-selection discussion, informal Nemotron screenshot issues, source audit, full-file/batch context and multi-API lead/backup/reviewer options. No default-model or optimization source change. Owner (2026-10-02) postpones formal device acceptance until after optimization and explicitly authorizes merging the current Phase 82/82B work; this is **not** a device pass or a start command for 5B/6+. The phase ledger records actual CI/PR/merge facts separately.

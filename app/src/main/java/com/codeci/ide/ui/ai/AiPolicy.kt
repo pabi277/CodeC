@@ -29,7 +29,7 @@ object AiLimits {
     const val MAX_OUTPUT_LINES = 60
 
     /** The streamed answer stops growing past this (and says so). */
-    const val MAX_REPLY_CHARS = 24_000
+    const val MAX_REPLY_CHARS = 48_000
 
     /**
      * Asked of the model too. Generous on purpose: Gemini models "often have
@@ -37,7 +37,7 @@ object AiLimits {
      * 2026-09-30), and a tight cap can be spent before any visible answer.
      * [MAX_REPLY_CHARS] is the real bound on what the panel shows.
      */
-    const val MAX_OUTPUT_TOKENS = 8_192
+    const val MAX_OUTPUT_TOKENS = 32_768
 
     const val CONNECT_TIMEOUT_MS = 15_000
     const val READ_TIMEOUT_MS = 60_000

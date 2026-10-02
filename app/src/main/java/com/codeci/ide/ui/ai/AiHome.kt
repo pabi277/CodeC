@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,6 +57,8 @@ fun AiHome(
     onShowBubbleChange: (Boolean) -> Unit,
     onOpenChat: () -> Unit,
     onOutputConflictChange: (AiOutputConflict) -> Unit,
+    onSelectProvider: (AiProviderId) -> Unit,
+    onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -65,16 +68,33 @@ fun AiHome(
             .padding(CodecTokens.space(Space.L)),
         verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))
     ) {
-        Text(AiCopy.TITLE, style = MaterialTheme.typography.titleMedium)
+        Text(AiCopy.title(state.provider), style = MaterialTheme.typography.titleMedium)
         Muted(AiCopy.READ_ONLY)
 
-        when (availability) {
-            AiAvailability.NEEDS_PROJECT -> Body(AiCopy.NEEDS_PROJECT)
-            AiAvailability.NEEDS_KEY -> KeySetup(state, onSaveKey)
-            AiAvailability.READY -> Ready(
-                state, onSaveModel, onTest, onDeleteKey,
-                onShowBubbleChange, onOpenChat, onOutputConflictChange
-            )
+        val busy = homeBusy(state)
+        Text(AiCopy.PROVIDER_LABEL, style = MaterialTheme.typography.titleSmall)
+        for (provider in AiProviderId.entries) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable(enabled = !busy) { onSelectProvider(provider) }
+            ) {
+                RadioButton(selected = state.provider == provider, onClick = { onSelectProvider(provider) }, enabled = !busy)
+                Text(provider.label, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        Muted(AiCopy.PROVIDER_SWITCH_NOTE)
+        Muted(AiProviders.constraintLine(state.provider))
+        Muted(AiProviders.capabilityLine(state.provider, state.model))
+        state.notice?.let { Muted(it) }
+        key(state.provider) {
+            when (availability) {
+                AiAvailability.NEEDS_PROJECT -> Body(AiCopy.NEEDS_PROJECT)
+                AiAvailability.NEEDS_KEY -> KeySetup(state, onSaveKey)
+                AiAvailability.READY -> Ready(
+                    state, onSaveModel, onTest, onDeleteKey,
+                    onShowBubbleChange, onOpenChat, onOutputConflictChange, onStop
+                )
+            }
         }
     }
 }
@@ -87,29 +107,37 @@ private fun KeySetup(state: AiUiState, onSaveKey: (String, String, Boolean) -> U
     var model by rememberSaveable { mutableStateOf(state.model) }
     var confirmed by rememberSaveable { mutableStateOf(false) }
 
-    Body(AiCopy.SETUP_INTRO)
-    Links(AiCopy.GET_KEY to AiCopy.GET_KEY_URL)
+    Body(AiCopy.setupIntro(state.provider))
+    if (state.provider == AiProviderId.GEMINI) {
+        Links(AiCopy.GET_KEY to AiCopy.GET_KEY_URL)
+    } else {
+        Links("Get your own NVIDIA key" to AiCopy.NVIDIA_GET_KEY_URL)
+    }
     OutlinedTextField(
         value = key,
         onValueChange = { key = it },
-        label = { Text(AiCopy.KEY_LABEL) },
+        label = { Text(AiCopy.keyLabel(state.provider)) },
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         modifier = Modifier.fillMaxWidth()
     )
-    Muted(AiCopy.KEY_STORAGE_NOTE)
+    Muted(AiCopy.keyStorageNote(state.provider))
     OutlinedTextField(
         value = model,
         onValueChange = { model = it },
         label = { Text(AiCopy.MODEL_LABEL) },
         singleLine = true,
-        isError = !AiModel.isValid(model),
+        isError = !AiProviders.isValidModel(state.provider, model),
         modifier = Modifier.fillMaxWidth()
     )
-    Body(AiCopy.FREE_TIER_NOTE)
-    Muted(AiCopy.REGION_NOTE)
-    Links(AiCopy.TERMS_LINK to AiCopy.TERMS_URL, AiCopy.POLICY_LINK to AiCopy.POLICY_URL)
+    Body(AiCopy.providerDataNote(state.provider))
+    if (state.provider == AiProviderId.GEMINI) {
+        Muted(AiCopy.REGION_NOTE)
+        Links(AiCopy.TERMS_LINK to AiCopy.TERMS_URL, AiCopy.POLICY_LINK to AiCopy.POLICY_URL)
+    } else {
+        Links("NVIDIA API Trial Terms" to AiCopy.NVIDIA_TERMS_URL)
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -117,7 +145,7 @@ private fun KeySetup(state: AiUiState, onSaveKey: (String, String, Boolean) -> U
             .clickable { confirmed = !confirmed }
     ) {
         Checkbox(checked = confirmed, onCheckedChange = { confirmed = it })
-        Text(AiCopy.CONFIRM, style = MaterialTheme.typography.bodyMedium)
+        Text(AiCopy.confirmation(state.provider), style = MaterialTheme.typography.bodyMedium)
     }
     state.setupError?.let { ErrorLine(it) }
     Button(
@@ -125,7 +153,7 @@ private fun KeySetup(state: AiUiState, onSaveKey: (String, String, Boolean) -> U
             onSaveKey(key, model, confirmed)
             key = ""
         },
-        enabled = AiKeySetup.canSave(key, confirmed) && AiModel.isValid(model),
+        enabled = !state.configuring && AiProviders.canSaveKey(state.provider, key, model, confirmed),
         modifier = Modifier.fillMaxWidth()
     ) { Text(AiCopy.SAVE_KEY) }
 }
@@ -140,12 +168,14 @@ private fun Ready(
     onDeleteKey: () -> Unit,
     onShowBubbleChange: (Boolean) -> Unit,
     onOpenChat: () -> Unit,
-    onOutputConflictChange: (AiOutputConflict) -> Unit
+    onOutputConflictChange: (AiOutputConflict) -> Unit,
+    onStop: () -> Unit
 ) {
     var model by rememberSaveable(state.model) { mutableStateOf(state.model) }
+    val busy = homeBusy(state)
 
     // The fallback door to the chat when the floating button is hidden.
-    Button(onClick = onOpenChat, modifier = Modifier.fillMaxWidth()) { Text(AiCopy.OPEN_CHAT) }
+    Button(onClick = onOpenChat, enabled = !state.testing && !state.configuring, modifier = Modifier.fillMaxWidth()) { Text(AiCopy.OPEN_CHAT) }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(AiCopy.SHOW_BUBBLE, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -160,26 +190,29 @@ private fun Ready(
         onValueChange = { model = it },
         label = { Text(AiCopy.MODEL_LABEL) },
         singleLine = true,
-        isError = !AiModel.isValid(model),
+        isError = !AiProviders.isValidModel(state.provider, model),
         modifier = Modifier.fillMaxWidth()
     )
     OutlinedButton(
         onClick = { onSaveModel(model) },
-        enabled = AiModel.isValid(model) && AiModel.normalize(model) != state.model
+        enabled = !busy && AiProviders.isValidModel(state.provider, model) && model.trim() != state.model
     ) { Text(AiCopy.SAVE_MODEL) }
     state.setupError?.let { ErrorLine(it) }
     HorizontalDivider()
     Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedButton(onClick = onTest, enabled = !state.testing) { Text(AiCopy.TEST) }
+        OutlinedButton(onClick = onTest, enabled = !busy) { Text(AiCopy.TEST) }
         if (state.testing) {
             Spacer(Modifier.size(CodecTokens.space(Space.M)))
             CircularProgressIndicator(modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)))
         }
     }
-    Muted(AiCopy.TEST_NOTE)
+    Muted(AiCopy.testNote(state.provider, state.model))
+    Muted(AiCopy.answerBudgetNote(state.provider, state.model))
+    state.retryCountdown?.let { ErrorLine(AiRateLimits.countdownLine(it)) }
+    if (state.testing) OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
     state.testResult?.let { Body(it) }
     HorizontalDivider()
-    TextButton(onClick = onDeleteKey) {
+    TextButton(onClick = onDeleteKey, enabled = !state.configuring && !state.applying) {
         Text(AiCopy.DELETE_KEY, color = MaterialTheme.colorScheme.error)
     }
     Muted(AiCopy.DELETE_NOTE)
@@ -208,3 +241,7 @@ private fun VariantRow(label: String, selected: Boolean, onSelect: () -> Unit) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }
+
+/** Same disable rule as the VM. Key deletion stays available to cancel a request/wait. */
+private fun homeBusy(state: AiUiState): Boolean = state.configuring || state.testing || state.gathering ||
+    state.applying || state.phase == AiPhase.STREAMING
