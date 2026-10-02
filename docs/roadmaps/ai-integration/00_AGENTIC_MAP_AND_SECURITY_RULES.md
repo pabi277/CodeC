@@ -10,25 +10,27 @@
 > on: the verified defect register, security rules S1–S12, the architecture, and the sources. The
 > step-by-step work itself lives in the numbered level docs below.
 >
-> **Current delivery update — 2026-10-03:** the owner explicitly started **Level 6 only**, delivered as
-> [Phase 83](../../phases/03-editor/chat-phase83/README.md): two test-only Kotlin files plus its baseline
-> ledger, zero production-source/behavior changes, host-shim smoke 5/5, and Build APK CI ✅ GREEN on
-> code/test head `cf3f1be` (run `37051539267`). No PR or merge is authorized. Level 7 and later remain proposed/unauthorized; Level 8's bounded-but-honest
+> **Current delivery update — 2026-10-03:** Level 6 (baseline/measurement) was delivered as
+> [Phase 83](../../phases/03-editor/chat-phase83/README.md) and merged to `main` @ `392a614` (PR #109).
+> The owner then explicitly started **Level 7 only**, delivered as
+> [Phase 84](../../phases/03-editor/chat-phase84/README.md) on `arena/01a0fe36-codec`: the six
+> agent-correctness defects (1–5) fixed as pure policy + thin wiring, defects 6/7 (Level 8) untouched,
+> host pre-validation 337/337, three `client.stream(` sites preserved, no PR/merge authorized.
+> Level 8 and later remain proposed/unauthorized; Level 8's bounded-but-honest
 > reads and Level 9's D6 task-memory amendment still require their separate owner decisions.
 
 ---
 
 ## Level index
 
-**Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md)
+**Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md) · [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md) (merged, `main` @ `392a614`, PR #109)
 
-**Implemented on the active session branch, not merged:** [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md); test-only, Build APK CI **37051539267 green** on code/test head `cf3f1be`.
+**Implemented on the active session branch, not merged:** [7 — agent correctness](07_AGENT_CORRECTNESS.md) as [Phase 84](../../phases/03-editor/chat-phase84/README.md); defects 1–5 fixed, host pre-validation 337/337, three `client.stream(` sites preserved.
 
 **Proposed and unauthorized next — the agentic optimization, in dependency order:**
 
 | Level | Doc | Fixes | Gate |
 |---|---|---|---|
-| **7** | [Agent correctness](07_AGENT_CORRECTNESS.md) | defects 1–5 | All S-rules |
 | **8** | [Full context and honest reads](08_FULL_CONTEXT_AND_HONEST_READS.md) | defects 6, 7 | S1, S2, S7, S11 |
 | **9** | [Task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) | defect 8 — **the agentic step** | S3–S6, S11 |
 | **10** | [Agent controls and options](10_AGENT_CONTROLS_AND_OPTIONS.md) | defect 11 | **S9** |
@@ -67,6 +69,12 @@ vs a 100-line window 18.0 % on SWE-bench Lite).
 The loop **shape** is sound — sequential ReAct (the pattern 7 of 13 surveyed coding agents use), fail-closed
 validation, hard caps, per-run approval, honest stop reasons. What is missing is Anthropic's third
 augmentation: **retrieval ✅ + tools ✅ + memory ❌**.
+
+> **Update 2026-10-03 (Phase 84 / Level 7):** defects **1–5 are FIXED** on `arena/01a0fe36-codec`
+> (host pre-validation 337/337, not merged). The evidence column below is the pre-fix `4cb4151` state,
+> kept as the historical record. Defects **6, 7** (prefix-only reader, total eviction) are **Level 8**
+> and remain open; **8** (memory) is Level 9; **9–12** are Levels 10–12. See
+> [Phase 84](../../phases/03-editor/chat-phase84/README.md).
 
 | # | Defect | Evidence | Effect |
 |---|---|---|---|

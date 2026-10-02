@@ -208,7 +208,9 @@ class AiAgentLoopTest {
     private fun step(i: Int) = AiAgentStep(
         kind = AiAgentStepKind.TOOL,
         title = "read_file src/file$i.c",
-        detail = "FILE src/file$i.c — line $i"
+        detail = "FILE src/file$i.c — line $i",
+        // Phase 84 (S1): the request is packed from modelResult, not the preview.
+        modelResult = "FILE src/file$i.c — line $i"
     )
 
     @Test
@@ -238,7 +240,8 @@ class AiAgentLoopTest {
         val huge = AiAgentStep(
             kind = AiAgentStepKind.TOOL,
             title = "read_file src/big.c",
-            detail = "x".repeat(AiToolLimits.MAX_RESULT_CHARS)
+            detail = "x".repeat(AiAgentLimits.MAX_STEP_DETAIL_CHARS),
+            modelResult = "x".repeat(AiToolLimits.MAX_RESULT_CHARS)
         )
         val packed = AiAgentPrompt.pack("q", "MAP", listOf(step(1), step(2), huge), budget = 2_000)
         assertTrue(packed.chars <= 2_000)
@@ -247,11 +250,16 @@ class AiAgentLoopTest {
 
     @Test
     fun `a result block keeps the tool name and the refusal marker`() {
-        val ok = AiAgentPrompt.renderStep(AiAgentStep(AiAgentStepKind.TOOL, "read_file a.c", "body"))
+        val ok = AiAgentPrompt.renderStep(
+            AiAgentStep(AiAgentStepKind.TOOL, "read_file a.c", "bo…", modelResult = "body")
+        )
         assertTrue(ok.startsWith("--- read_file a.c\n"))
         assertTrue(ok.endsWith("body\n"))
         val denied = AiAgentPrompt.renderStep(
-            AiAgentStep(AiAgentStepKind.DENIED, "read_file .env", "credential-shaped", ok = false)
+            AiAgentStep(
+                AiAgentStepKind.DENIED, "read_file .env", "credential-shaped",
+                modelResult = "credential-shaped", ok = false
+            )
         )
         assertTrue(denied.startsWith("--- read_file .env [refused]"))
     }

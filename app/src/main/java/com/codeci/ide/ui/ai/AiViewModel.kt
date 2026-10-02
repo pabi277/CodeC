@@ -96,7 +96,15 @@ data class AiUiState(
 data class AiAgentRunRequest(val target: String?)
 
 /** Phase 80 — a snapshot of the task's usage counters (in memory, display only). */
-data class AiAgentUsage(val turns: Int, val toolCalls: Int, val runs: Int)
+data class AiAgentUsage(
+    val turns: Int,
+    val toolCalls: Int,
+    val runs: Int,
+    /** Phase 84 (fix 3): refused blocks, counted separately from executions. */
+    val refused: Int = 0,
+    /** Phase 84 (fix 3): duplicate reads served from a working set (0 until Level 9). */
+    val reused: Int = 0
+)
 
 /**
  * Phase 76 — the AI panel's state holder. One request at a time; the answer
@@ -140,7 +148,12 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         var pendingRun: AiToolCall? = null,
         /** Tool calls that arrived in the same answer as a run request. */
         var queuedAfterRun: List<AiToolCall> = emptyList(),
-        var queuedDeniedAfterRun: List<AiToolVerdict.Denied> = emptyList()
+        var queuedDeniedAfterRun: List<AiToolVerdict.Denied> = emptyList(),
+        /**
+         * Phase 84 (fix 4): the reserved final-synthesis turn runs at most once
+         * per task, so a budget stop can never loop back into another synthesis.
+         */
+        var synthesisDone: Boolean = false
     ) {
         val projectView: AiToolProjectView
             get() = AiToolProjectView(existingPaths = paths.toSet(), runsRemaining = budget.runsRemaining())
@@ -703,6 +716,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             kind = AiAgentStepKind.RUN_RESULT,
             title = AiCopy.AGENT_RUN_SKIPPED,
             detail = AiCopy.AGENT_RUN_SKIPPED_MODEL,
+            modelResult = AiCopy.AGENT_RUN_SKIPPED_MODEL,
             ok = false
         )
         appendAgentStep(step)
@@ -717,6 +731,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             kind = AiAgentStepKind.RUN_RESULT,
             title = AiCopy.AGENT_RUN_NOT_STARTED_TITLE,
             detail = reason,
+            modelResult = reason,
             ok = false
         )
         _state.update { it.copy(agentRunRunning = false) }
@@ -734,7 +749,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         val digest = AiRunDigest.build(result)
         _state.update { it.copy(agentRunRunning = false) }
         appendAgentStep(
-            AiAgentStep(AiAgentStepKind.RUN_RESULT, AiCopy.AGENT_RUN_FINISHED, digest, ok = !result.timedOut)
+            AiAgentStep(
+                AiAgentStepKind.RUN_RESULT, AiCopy.AGENT_RUN_FINISHED, digest,
+                modelResult = digest, ok = !result.timedOut
+            )
         )
         resumeAgentOrStop(session)
     }
@@ -745,7 +763,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Continues the loop when the budget allows, otherwise stops with the reason. */
     private fun resumeAgentOrStop(session: AgentSession) {
-        val reason = session.budget.blockModelTurn(System.currentTimeMillis())
+        // Phase 84 (fix 2): gate on the turn/wall-clock AND the tool budget, so the
+        // malformed-parse, denied-only and post-run resume paths can no longer walk
+        // past an exhausted tool cap the way `AiAgentPolicy.decide` alone could not.
+        val reason = session.budget.blockResume(System.currentTimeMillis())
         if (reason != null) {
             stopAgent(reason)
             return
@@ -765,16 +786,33 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      * One model turn of an agent task. This is the third and last `client.stream`
      * call site in this file, and it is reachable only from the agent loop,
      * which starts only after the task preview's **Send** (D4 as amended).
+     *
+     * Phase 84 (fix 4): when [finalSynthesis] is set this is the reserved last
+     * turn — tools **masked, not removed** (the system instruction still defines
+     * them) — that turns a budget stop into a readable prose answer. It reuses
+     * this same call site, so the app still has exactly three stream call sites.
      */
-    private fun agentTurn(session: AgentSession) {
-        val packed = AiAgentPrompt.pack(
-            question = session.question,
-            mapText = session.mapText,
-            steps = _state.value.agentSteps
-        )
+    private fun agentTurn(
+        session: AgentSession,
+        finalSynthesis: Boolean = false,
+        stopReason: AiAgentStopReason? = null
+    ) {
+        val packed = if (finalSynthesis) {
+            AiAgentPrompt.finalSynthesis(
+                question = session.question,
+                mapText = session.mapText,
+                steps = _state.value.agentSteps
+            )
+        } else {
+            AiAgentPrompt.pack(
+                question = session.question,
+                mapText = session.mapText,
+                steps = _state.value.agentSteps
+            )
+        }
         // Captured once. Every retry of this turn has the identical recipient, strings and budget.
         val body = AiProviderRequests.body(session.provider, session.model, session.systemInstruction, packed.text)
-        session.budget = session.budget.withTurn()
+        if (!finalSynthesis) session.budget = session.budget.withTurn()
         _state.update { it.copy(phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false, agentUsage = usage(session)) }
         appendAgentStep(AiAgentStep(
             kind = AiAgentStepKind.REQUEST,
@@ -786,7 +824,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val key = withContext(Dispatchers.IO) { store.loadKey(session.provider) }
             if (key == null) {
                 _state.update { it.copy(keySaved = false) }
-                stopAgent(AiAgentStopReason.PROVIDER_FAILURE, AiCopy.KEY_UNREADABLE)
+                if (finalSynthesis) finalizeStop(session, stopReason ?: AiAgentStopReason.PROVIDER_FAILURE, AiCopy.KEY_UNREADABLE)
+                else stopAgent(AiAgentStopReason.PROVIDER_FAILURE, AiCopy.KEY_UNREADABLE)
                 return@launch
             }
             val outcome = try {
@@ -796,64 +835,96 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     client.stream(session.provider, key, session.model, body, onText = publish)
                 }
             } catch (_: AgentDeadlineReached) {
-                stopAgent(AiAgentStopReason.WALL_CLOCK)
+                if (finalSynthesis) finalizeStop(session, stopReason ?: AiAgentStopReason.WALL_CLOCK, null)
+                else stopAgent(AiAgentStopReason.WALL_CLOCK)
                 return@launch
             } catch (_: TimeoutCancellationException) {
-                stopAgent(AiAgentStopReason.WALL_CLOCK)
+                if (finalSynthesis) finalizeStop(session, stopReason ?: AiAgentStopReason.WALL_CLOCK, null)
+                else stopAgent(AiAgentStopReason.WALL_CLOCK)
                 return@launch
             }
             when (outcome) {
-                is AiOutcome.Answer -> onAgentAnswer(session, outcome.text, outcome.cutShort)
-                is AiOutcome.Failed -> stopAgent(AiAgentStopReason.PROVIDER_FAILURE, outcome.failure.message)
+                is AiOutcome.Answer ->
+                    if (finalSynthesis) {
+                        // Tools are masked: whatever came back is the user's answer.
+                        // Any stray block is stripped so the answer is always prose (S12).
+                        val prose = AiToolProtocol.proseOnly(outcome.text)
+                            .ifBlank { AiAgentLimits.stopSentence(stopReason ?: AiAgentStopReason.PROVIDER_FAILURE) }
+                        finalizeStop(session, stopReason ?: AiAgentStopReason.PROVIDER_FAILURE, null, prose)
+                    } else {
+                        onAgentAnswer(session, outcome.text, outcome.cutShort)
+                    }
+                is AiOutcome.Failed ->
+                    if (finalSynthesis) finalizeStop(session, stopReason ?: AiAgentStopReason.PROVIDER_FAILURE, outcome.failure.message)
+                    else stopAgent(AiAgentStopReason.PROVIDER_FAILURE, outcome.failure.message)
             }
         }
     }
 
     private fun usage(session: AgentSession): AiAgentUsage =
-        AiAgentUsage(session.budget.turnsUsed, session.budget.toolCallsUsed, session.budget.runsUsed)
+        AiAgentUsage(
+            turns = session.budget.turnsUsed,
+            toolCalls = session.budget.toolCallsUsed,
+            runs = session.budget.runsUsed,
+            refused = session.budget.toolCallsRefused,
+            reused = session.budget.toolCallsReused
+        )
 
     private fun onAgentAnswer(session: AgentSession, text: String, cutShort: Boolean) {
         _state.update { it.copy(agentUsage = usage(session)) }
         val step = AiAgentStep(
             kind = AiAgentStepKind.ANSWER,
             title = AiCopy.agentStepAnswer(session.budget.turnsUsed),
-            detail = text.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS)
+            detail = text.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS),
+            modelResult = text
         )
         appendAgentStep(step)
         when (val parsed = AiToolProtocol.parse(text)) {
             is AiToolParse.Malformed -> {
-                // A block CodeC cannot read is answered like a refused tool, so
-                // the model can fix its own format — and it costs a call, because
-                // a free retry loop is a budget with no cap.
-                session.budget = session.budget.withToolCalls(1)
+                // Phase 84 (fix 6): a block CodeC cannot read is refused, but the
+                // blocks that DID parse are kept and run — the old code threw them
+                // all away and the model re-read from scratch. The refusal is
+                // counted separately (fix 3); it never inflates the execution cap.
+                session.budget = session.budget.withRefused(1)
                 appendAgentStep(
                     AiAgentStep(
                         kind = AiAgentStepKind.DENIED,
                         title = AiCopy.AGENT_STEP_MALFORMED,
                         detail = parsed.reason,
+                        modelResult = parsed.reason,
                         ok = false
                     )
                 )
-                resumeAgentOrStop(session)
-            }
-            is AiToolParse.Calls -> when (val decision = AiAgentPolicy.decide(
-                parsed = parsed,
-                budget = session.budget,
-                nowMs = System.currentTimeMillis(),
-                projectView = session.projectView
-            )) {
-                is AiAgentDecision.Finish -> finishAgent(session, decision.answer, cutShort)
-                is AiAgentDecision.Stop -> stopAgent(decision.reason)
-                is AiAgentDecision.AskRunApproval -> {
-                    // The loop pauses for the user's tap; anything else the
-                    // model asked for in the same answer waits with it.
-                    session.pendingRun = decision.call
-                    session.queuedAfterRun = decision.alsoQueued
-                    session.queuedDeniedAfterRun = decision.denied
-                    _state.update { it.copy(agentRun = AiAgentRunRequest(target = decision.call.path)) }
+                if (parsed.calls.isEmpty()) {
+                    _state.update { it.copy(agentUsage = usage(session)) }
+                    resumeAgentOrStop(session)
+                } else {
+                    handleParsedCalls(session, AiToolParse.Calls(parsed.prose, parsed.calls), cutShort)
                 }
-                is AiAgentDecision.ExecuteTools -> executeToolBatch(session, decision.calls, decision.denied)
             }
+            is AiToolParse.Calls -> handleParsedCalls(session, parsed, cutShort)
+        }
+    }
+
+    /** Routes one parsed answer's calls through the policy and executes the decision. */
+    private fun handleParsedCalls(session: AgentSession, parsed: AiToolParse.Calls, cutShort: Boolean) {
+        when (val decision = AiAgentPolicy.decide(
+            parsed = parsed,
+            budget = session.budget,
+            nowMs = System.currentTimeMillis(),
+            projectView = session.projectView
+        )) {
+            is AiAgentDecision.Finish -> finishAgent(session, decision.answer, cutShort)
+            is AiAgentDecision.Stop -> stopAgent(decision.reason)
+            is AiAgentDecision.AskRunApproval -> {
+                // The loop pauses for the user's tap; anything else the
+                // model asked for in the same answer waits with it.
+                session.pendingRun = decision.call
+                session.queuedAfterRun = decision.alsoQueued
+                session.queuedDeniedAfterRun = decision.denied
+                _state.update { it.copy(agentRun = AiAgentRunRequest(target = decision.call.path)) }
+            }
+            is AiAgentDecision.ExecuteTools -> executeToolBatch(session, decision.calls, decision.denied)
         }
     }
 
@@ -870,13 +941,16 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     kind = AiAgentStepKind.DENIED,
                     title = AiCopy.agentStepDenied(AiToolProtocol.describe(d.request), d.reason),
                     detail = d.reason,
+                    modelResult = d.reason,
                     ok = false
                 )
             }
             s.copy(agentSteps = steps)
         }
         if (calls.isEmpty()) {
-            session.budget = session.budget.withToolCalls(denied.size)
+            // Phase 84 (fix 3): refusals are counted separately and never inflate
+            // the execution cap that gates MAX_TOOL_CALLS.
+            session.budget = session.budget.withRefused(denied.size)
             _state.update { it.copy(agentUsage = usage(session)) }
             resumeAgentOrStop(session)
             return
@@ -890,7 +964,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 val step = AiAgentStep(
                     kind = AiAgentStepKind.TOOL,
                     title = AiToolProtocol.describeCall(call),
-                    detail = outcome.text.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS),
+                    // Phase 84 (S1/S2): the model gets the full result (cut marker
+                    // intact); the timeline gets a short preview that keeps the marker.
+                    detail = AiAgentLimits.timelineDetail(outcome.text, AiToolRunner.CUT_NOTE),
+                    modelResult = outcome.text,
                     ok = outcome.ok
                 )
                 session.budget = session.budget.withToolCalls(1)
@@ -898,7 +975,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 if (!isActive) return@launch
             }
             if (denied.isNotEmpty()) {
-                session.budget = session.budget.withToolCalls(denied.size)
+                session.budget = session.budget.withRefused(denied.size)
                 _state.update { it.copy(agentUsage = usage(session)) }
             }
             resumeAgentOrStop(session)
@@ -925,15 +1002,48 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun stopAgent(reason: AiAgentStopReason, message: String? = null) {
+        val session = agent
+        // Phase 84 (fix 4 / S12): a budget stop with a reachable provider gets ONE
+        // reserved final-synthesis turn — tools masked, not removed — so the user
+        // receives a prose answer instead of a raw `<<<CODEC_TOOL` block. USER_STOP
+        // makes no delayed call ("stop means stop"); a failure message or the wall
+        // clock finalizes locally without another round-trip.
+        val synthesisEligible = session != null && message == null && !session.synthesisDone &&
+            reason != AiAgentStopReason.USER_STOP &&
+            reason != AiAgentStopReason.WALL_CLOCK &&
+            reason != AiAgentStopReason.PROVIDER_FAILURE
+        if (synthesisEligible) {
+            session.synthesisDone = true
+            agentTurn(session, finalSynthesis = true, stopReason = reason)
+            return
+        }
+        finalizeStop(session, reason, message)
+    }
+
+    /**
+     * Terminal stop: guarantees [AiUiState.answer] is prose on every stop reason
+     * (S12). [answerOverride] is the synthesis turn's prose; otherwise any partial
+     * answer is stripped of tool blocks, falling back to the stop sentence.
+     */
+    private fun finalizeStop(
+        session: AgentSession?,
+        reason: AiAgentStopReason,
+        message: String?,
+        answerOverride: String? = null
+    ) {
         job = null
+        val prose = (answerOverride ?: AiToolProtocol.proseOnly(_state.value.answer))
+            .ifBlank { AiAgentLimits.stopSentence(reason) }
         _state.update { s ->
             s.copy(
                 phase = if (message != null) AiPhase.FAILED else AiPhase.DONE,
                 error = message,
+                answer = prose,
                 retryCountdown = null,
                 agentRun = null,
                 agentRunRunning = false,
                 notice = null,
+                agentUsage = session?.let { usage(it) } ?: s.agentUsage,
                 agentSteps = s.agentSteps + AiAgentStep(
                     kind = AiAgentStepKind.STOPPED,
                     title = AiCopy.agentStopped(reason),

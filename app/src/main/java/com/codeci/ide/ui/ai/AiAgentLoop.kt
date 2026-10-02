@@ -49,6 +49,23 @@ object AiAgentLimits {
     /** One line of the activity timeline shown to the user. */
     const val MAX_STEP_DETAIL_CHARS = 1_200
 
+    /**
+     * Phase 84 (Level 7, fix 5 / **S2**) — clip a full tool result down to the
+     * on-screen [MAX_STEP_DETAIL_CHARS] preview **without losing the honest cut
+     * marker**. The old code did `full.take(MAX_STEP_DETAIL_CHARS)`, which threw
+     * away the runner's `CUT_NOTE` sitting at the end of a truncated result, so a
+     * fragment looked complete on the timeline. The full text still reaches the
+     * model untouched through [AiAgentStep.modelResult]; this only shapes what
+     * the user reads. When [full] carried [cutMarker], the clipped preview keeps
+     * it; when it did not, no marker is invented.
+     */
+    fun timelineDetail(full: String, cutMarker: String): String {
+        if (full.length <= MAX_STEP_DETAIL_CHARS) return full
+        val marker = if (cutMarker.isNotEmpty() && full.contains(cutMarker)) "\n" + cutMarker else ""
+        val room = (MAX_STEP_DETAIL_CHARS - marker.length).coerceAtLeast(0)
+        return full.substring(0, room.coerceAtMost(full.length)) + marker
+    }
+
     /** The user-facing sentence for each stop reason. */
     fun stopSentence(reason: AiAgentStopReason): String = when (reason) {
         AiAgentStopReason.TURN_BUDGET -> "Stopped after $MAX_TURNS steps with the AI. Ask a narrower question to continue."
@@ -68,8 +85,20 @@ data class AiAgentStep(
     val kind: AiAgentStepKind,
     /** Short label, e.g. `read_file src/main.c (lines 1-60)`. */
     val title: String,
-    /** The result text as the user should see it (already clipped). */
+    /**
+     * The result text as the user should see it — a short **preview**, already
+     * clipped to [AiAgentLimits.MAX_STEP_DETAIL_CHARS]. Phase 84 (**S1**): this
+     * is a UI string only and is **never** packed into a model request.
+     */
     val detail: String = "",
+    /**
+     * Phase 84 (Level 7, fix 1 / **S1**) — the full-fidelity result text that the
+     * **next model request** carries, clipped only to [AiAgentLimits.MAX_RESULT_CHARS]
+     * (the owner's 8 000-char per-result cap), never to the 1 200-char preview.
+     * [AiAgentPrompt.renderStep] reads this, not [detail]. Empty for steps that
+     * carry no model-facing payload (TASK/REQUEST/STOPPED).
+     */
+    val modelResult: String = "",
     /** False when the step was refused or failed. */
     val ok: Boolean = true,
     /** Phase 82B D4: REQUEST rows hold the exact two sent strings, never clipped. Memory only. */
@@ -112,7 +141,24 @@ enum class AiAgentStepKind {
  */
 data class AiAgentBudget(
     val turnsUsed: Int = 0,
+    /**
+     * Phase 84 (fix 3): tool calls that actually **executed**. This is the only
+     * counter that gates [AiAgentLimits.MAX_TOOL_CALLS]; refusals no longer
+     * inflate it (that inflation is what rendered "49 of 24 reads").
+     */
     val toolCallsUsed: Int = 0,
+    /**
+     * Phase 84 (fix 3): tool blocks that were **refused** — malformed, denied by
+     * policy, or over-budget. Counted and shown separately; it never gates the
+     * execution cap and never mixes into [toolCallsUsed].
+     */
+    val toolCallsRefused: Int = 0,
+    /**
+     * Phase 84 (fix 3): duplicate reads served from a working set at zero
+     * execution cost. **Always 0 until Level 9's working set exists (S11)**; the
+     * field is here so the three counts are structurally separate from day one.
+     */
+    val toolCallsReused: Int = 0,
     val runsUsed: Int = 0,
     val startedAtMs: Long = 0L
 ) {
@@ -130,6 +176,15 @@ data class AiAgentBudget(
         else -> null
     }
 
+    /**
+     * Phase 84 (fix 2): the reason the loop must stop on **any** resume path —
+     * the turn/wall-clock gate first, then the tool gate. `resumeAgentOrStop`
+     * consults this so the malformed-parse and denied-only paths can no longer
+     * walk past an exhausted tool budget the way `AiAgentPolicy.decide` alone
+     * could not stop them.
+     */
+    fun blockResume(nowMs: Long): AiAgentStopReason? = blockModelTurn(nowMs) ?: blockTool(nowMs)
+
     /** How many tool calls are still available, for the timeline and the packer. */
     fun toolCallsRemaining(): Int = (AiAgentLimits.MAX_TOOL_CALLS - toolCallsUsed).coerceAtLeast(0)
 
@@ -139,7 +194,17 @@ data class AiAgentBudget(
 
     fun withTurn() = copy(turnsUsed = turnsUsed + 1)
 
-    fun withToolCalls(n: Int) = copy(toolCallsUsed = toolCallsUsed + n)
+    /**
+     * Records [n] executed tool calls, **clamped** to the cap so the displayed
+     * count can never read past `MAX_TOOL_CALLS` (fix 3: "never exceed their
+     * caps").
+     */
+    fun withToolCalls(n: Int) =
+        copy(toolCallsUsed = (toolCallsUsed + n).coerceIn(0, AiAgentLimits.MAX_TOOL_CALLS))
+
+    /** Records [n] refused tool blocks (malformed/denied/over-budget), separately. */
+    fun withRefused(n: Int) =
+        copy(toolCallsRefused = (toolCallsRefused + n).coerceAtLeast(0))
 
     fun withRun() = copy(runsUsed = runsUsed + 1)
 }
@@ -285,7 +350,37 @@ object AiAgentPrompt {
     /** One result block exactly as it enters the request. */
     fun renderStep(step: AiAgentStep): String = buildString {
         append("--- ").append(step.title).append(if (step.ok) "" else " [refused]").append('\n')
-        append(step.detail.take(AiAgentLimits.MAX_RESULT_CHARS))
+        // Phase 84 (S1): the model reads the full-fidelity result, never the
+        // 1 200-char on-screen preview. A wiring pin fails if this reads `detail`.
+        append(step.modelResult.take(AiAgentLimits.MAX_RESULT_CHARS))
         append('\n')
+    }
+
+    /**
+     * Phase 84 (Level 7, fix 4 / **S12**) — the reserved final-synthesis request.
+     * Tools are **masked, not removed** (Manus): the system instruction still
+     * defines them, so the provider's KV-cache and the tool schema stay intact,
+     * but this turn's user text tells the model that tool use is disabled and it
+     * must answer in prose from what is already above. This is what guarantees a
+     * readable answer on a budget stop instead of a raw `<<<CODEC_TOOL` block.
+     */
+    const val FINAL_SYNTHESIS_INSTRUCTION: String =
+        "Tool use is disabled for this final turn. Using only the task, the project map and " +
+            "the tool results above, write the final answer to the user in prose. Do not emit " +
+            "any <<<CODEC_TOOL block. If you could not finish, say plainly what is known and what is not."
+
+    /**
+     * Builds the final-synthesis request: the ordinary packed context plus the
+     * mask instruction. Bounded by the same [AiAgentLimits.MAX_REQUEST_CHARS].
+     */
+    fun finalSynthesis(
+        question: String,
+        mapText: String,
+        steps: List<AiAgentStep>,
+        budget: Int = AiAgentLimits.MAX_REQUEST_CHARS
+    ): Packed {
+        val base = pack(question, mapText, steps, budget)
+        val text = base.text + "\n\n" + FINAL_SYNTHESIS_INSTRUCTION
+        return Packed(text = text, droppedResults = base.droppedResults, chars = text.length)
     }
 }

@@ -1,6 +1,6 @@
 # CodeC AI integration — staged roadmap
 
-**Status (2026-10-03): Levels 0–4 + Continue are merged; Level 5A shipped in Phase 82/82B (PR #107 merged; formal device acceptance POSTPONED); Level 6 was explicitly started and implemented test-only as Phase 83 (Build APK CI ✅ GREEN on code/test head `cf3f1be`, run `37051539267`; not merged; zero production-source/behavior changes). Level 5B and Levels 7–14 remain PROPOSED and unauthorized. This roadmap grants no scope beyond the owner's explicit Level 6 start.**
+**Status (2026-10-03): Levels 0–4 + Continue are merged; Level 5A shipped in Phase 82/82B (PR #107 merged; formal device acceptance POSTPONED); Level 6 was implemented test-only as Phase 83 (merged to `main` @ `392a614` via PR #109); Level 7 (agent correctness) was explicitly started by the owner and implemented as Phase 84 on `arena/01a0fe36-codec` (host pre-validation 337/337; not merged, no PR). Level 5B and Levels 8–14 remain PROPOSED and unauthorized. This roadmap grants no scope beyond the owner's explicit Level 7 start.**
 
 > ### ⚠️ Level renumbering — 2026-10-02
 >
@@ -63,7 +63,7 @@ The companion [research dossier](../research/AI_INTEGRATION_RESEARCH_20260930.md
 | 4 | [Bounded tools and verified run loop](ai-integration/04_AGENT_TOOLS_AND_RUN_LOOP.md) | Inspect → plan → approved edit → approved run → inspect output | Levels 1–3; tool policy and runner integration | High; commands and side effects |
 | 5 | [Providers and model collaboration](ai-integration/05_PROVIDERS_AND_MODEL_COLLABORATION.md) | Choose among BYOK providers/models; optionally get a second, read-only review | Stable Level 1–4 contracts | High; provider compatibility, spend, extra data recipients |
 | 6 | [Agent baseline and measurement](ai-integration/06_AGENT_BASELINE_AND_MEASUREMENT.md) · **IMPLEMENTED as Phase 83; CI green** | A recorded baseline so every later change is a measured delta, not an impression | Level 4; the Level 6 fixtures | Lowest — **no behaviour change at all** |
-| 7 | [Agent correctness](ai-integration/07_AGENT_CORRECTNESS.md) · **PROPOSED** | The six defects that make the agent unreliable today, fixed | Level 6 | Medium; pure policy, no wire-contract change |
+| 7 | [Agent correctness](ai-integration/07_AGENT_CORRECTNESS.md) · **IMPLEMENTED as Phase 84; host pre-validation 337/337, not merged** | The six defects that make the agent unreliable today, fixed | Level 6 | Medium; pure policy, no wire-contract change |
 | 8 | [Full context and honest reads](ai-integration/08_FULL_CONTEXT_AND_HONEST_READS.md) · **PROPOSED** | Any line reachable; batch reads; every read states its true coverage | Level 7 | Medium-high; reader offset on minSdk 24 |
 | 9 | [Task memory and planning](ai-integration/09_TASK_MEMORY_AND_PLANNING.md) · **PROPOSED — needs a D6 amendment** | The missing third augmentation: working set, findings, recited plan | Level 8; **owner approval** | High; new on-disk store, S4/S5/S6 |
 | 10 | [Agent controls and options](ai-integration/10_AGENT_CONTROLS_AND_OPTIONS.md) · **PROPOSED** | Nine bounded user controls; none can raise a permission (S9) | Level 9 | Medium; Settings surface |

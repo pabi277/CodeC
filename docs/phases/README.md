@@ -87,6 +87,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 81 | [✅ AI — Continue: get the rest of an answer that was cut off (device-passed, merged)](03-editor/chat-phase81/) | 03-editor |
 | 82 / 82B | [🚧 AI — rate-limit resilience, bigger answers + Level 5A NVIDIA dev/test BYOK (merged; device acceptance postponed)](03-editor/chat-phase82/) | 03-editor |
 | 83 | [🚧 AI Level 6 — synthetic fixtures, offline baseline/replay (test-only; Build APK CI 37051539267 green)](03-editor/chat-phase83/) | 03-editor |
+| 84 | [🚧 AI Level 7 — agent correctness: the six defects fixed (host pre-validation 337/337; not merged)](03-editor/chat-phase84/) | 03-editor |
 
 ## By category
 

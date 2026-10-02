@@ -188,10 +188,30 @@ object AiCopy {
     /** The activity timeline's heading. */
     const val AGENT_ACTIVITY = "What the AI did"
 
-    /** One row's counter, e.g. `3 of 12 steps · 1 of 2 runs`. */
-    fun agentUsageLine(turns: Int, toolCalls: Int, runs: Int): String =
-        "$turns of ${AiAgentLimits.MAX_TURNS} steps · $toolCalls of ${AiAgentLimits.MAX_TOOL_CALLS} reads · " +
-            "$runs of ${AiAgentLimits.MAX_RUNS} runs"
+    /**
+     * One row's counter, e.g. `3 of 12 steps · 1 of 24 reads · 0 of 2 runs`.
+     *
+     * Phase 84 (fix 3): executions and refusals are **separate** numbers and are
+     * never summed into one mixed value — the old line rendered "49 of 24 reads"
+     * because executed + refused were added together and never clamped. [toolCalls]
+     * is executions only (clamped to the cap here as a second guard); [refused]
+     * and [reused] are shown only when non-zero so a clean task stays readable.
+     */
+    fun agentUsageLine(
+        turns: Int,
+        toolCalls: Int,
+        runs: Int,
+        refused: Int = 0,
+        reused: Int = 0
+    ): String {
+        val reads = toolCalls.coerceAtMost(AiAgentLimits.MAX_TOOL_CALLS)
+        val extra = buildString {
+            if (refused > 0) append(" · ").append(refused).append(" refused")
+            if (reused > 0) append(" · ").append(reused).append(" reused")
+        }
+        return "$turns of ${AiAgentLimits.MAX_TURNS} steps · $reads of ${AiAgentLimits.MAX_TOOL_CALLS} reads" +
+            "$extra · $runs of ${AiAgentLimits.MAX_RUNS} runs"
+    }
 
     /** The running label while the agent works. */
     fun agentWorkingLine(steps: Int): String =

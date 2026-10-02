@@ -63,8 +63,17 @@ sealed class AiToolParse {
      * A block that could not be read (unclosed, no name, a line that is not
      * `key: value`). Nothing in it executes; the loop sends the reason back as
      * a tool result so the model can correct itself.
+     *
+     * Phase 84 (Level 7, fix 6): [calls] carries the blocks that **were** parsed
+     * successfully before the malformed one. The old parser did an early
+     * `return`, discarding them, so three good `read_file` blocks beside one
+     * broken block were all thrown away and the model re-read from scratch.
      */
-    data class Malformed(val prose: String, val reason: String) : AiToolParse()
+    data class Malformed(
+        val prose: String,
+        val reason: String,
+        val calls: List<AiToolRequest> = emptyList()
+    ) : AiToolParse()
 }
 
 object AiToolProtocol {
@@ -98,11 +107,11 @@ object AiToolProtocol {
             prose.append(answer, at, open)
             val nameStart = open + OPEN.length
             val bodyStart = answer.indexOf(">>>", nameStart)
-            if (bodyStart < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block was never closed")
+            if (bodyStart < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block was never closed", calls.toList())
             val header = answer.substring(nameStart, bodyStart).trim()
             val name = nameValue(header)
             val end = answer.indexOf(CLOSE, bodyStart + 3)
-            if (end < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block is missing $CLOSE")
+            if (end < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block is missing $CLOSE", calls.toList())
             val body = answer.substring(bodyStart + 3, end)
             val args = LinkedHashMap<String, String>()
             for (raw in body.lines()) {
@@ -110,17 +119,28 @@ object AiToolProtocol {
                 if (line.isEmpty()) continue
                 val colon = line.indexOf(':')
                 if (colon <= 0) {
-                    return AiToolParse.Malformed(prose.toString().trim(), "a tool argument line has no name: $line")
+                    return AiToolParse.Malformed(prose.toString().trim(), "a tool argument line has no name: $line", calls.toList())
                 }
                 val key = line.substring(0, colon).trim().lowercase()
                 val value = line.substring(colon + 1).trim()
-                if (key in args) return AiToolParse.Malformed(prose.toString().trim(), "the argument $key was given twice")
+                if (key in args) return AiToolParse.Malformed(prose.toString().trim(), "the argument $key was given twice", calls.toList())
                 args[key] = value
             }
             calls += AiToolRequest(name ?: "", args)
             at = end + CLOSE.length
         }
         return AiToolParse.Calls(prose.toString().trim(), calls)
+    }
+
+    /**
+     * Phase 84 (fix 4 / **S12**) — the answer text with every tool block removed,
+     * so a stop never leaves a raw `<<<CODEC_TOOL …>>>` on screen as the answer.
+     * Complete blocks are dropped; text from an unclosed/malformed block onward is
+     * cut. Returns prose only (possibly blank).
+     */
+    fun proseOnly(answer: String): String = when (val parsed = parse(answer)) {
+        is AiToolParse.Calls -> parsed.prose
+        is AiToolParse.Malformed -> parsed.prose
     }
 
     /** `name="read_file"` (or bare `read_file`) from a block header. */
