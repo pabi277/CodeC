@@ -29,4 +29,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [80](chat-phase80/) | ✅ AI Level 4 — whole-project map, bounded tools, approved run loop (merged) |
 | [81](chat-phase81/) | ✅ AI — Continue: get the rest of an answer that was cut off (merged) |
 | [82 / 82B](chat-phase82/) | 🚧 AI — rate-limit resilience, bigger answers + Level 5A NVIDIA dev/test BYOK (merged; device acceptance postponed) |
-| [83](chat-phase83/) | 🚧 AI Level 6 — synthetic fixtures, offline baseline/replay (test-only; Build APK CI pending) |
+| [83](chat-phase83/) | 🚧 AI Level 6 — synthetic fixtures, offline baseline/replay (test-only; Build APK CI 37051539267 green) |

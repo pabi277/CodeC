@@ -55,7 +55,7 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 - [x] Initial handoff stopped at §3; later owner **“Last merge it”** explicitly authorizes this PR/merge with device acceptance deferred.
 - [x] Discussion/source/screenshot evidence recorded as research; **no optimization code changed**.
 - [x] Authorized PR #107 merged at `4cb4151`; docs follow-up PR #108 merged at `7419566` (see the dated merge follow-up below).
-- [ ] Main Build APK run `37047037300` is green; exact main APK bytes remain unrecorded because the GitHub artifact download URL has expired (no size inferred). Device acceptance remains postponed.
+- [x] Main Build APK run `37047037300` is green; check annotations report release **7,117,444 B**, debug **26,869,612 B**, and mapping **69,415,790 B**. The artifact download URL has expired, so sizes are from the durable annotations. Device acceptance remains postponed.
 
 ## Local prevalidation — 2026-10-02
 

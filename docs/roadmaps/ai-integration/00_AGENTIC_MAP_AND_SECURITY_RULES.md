@@ -12,8 +12,8 @@
 >
 > **Current delivery update — 2026-10-03:** the owner explicitly started **Level 6 only**, delivered as
 > [Phase 83](../../phases/03-editor/chat-phase83/README.md): two test-only Kotlin files plus its baseline
-> ledger, zero production-source/behavior changes, host-shim smoke 5/5, and Build APK CI pending. No
-> PR or merge is authorized. Level 7 and later remain proposed/unauthorized; Level 8's bounded-but-honest
+> ledger, zero production-source/behavior changes, host-shim smoke 5/5, and Build APK CI ✅ GREEN on
+> code/test head `cf3f1be` (run `37051539267`). No PR or merge is authorized. Level 7 and later remain proposed/unauthorized; Level 8's bounded-but-honest
 > reads and Level 9's D6 task-memory amendment still require their separate owner decisions.
 
 ---
@@ -22,7 +22,7 @@
 
 **Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md)
 
-**Implemented on the active session branch, not merged:** [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md); test-only, CI pending.
+**Implemented on the active session branch, not merged:** [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md); test-only, Build APK CI **37051539267 green** on code/test head `cf3f1be`.
 
 **Proposed and unauthorized next — the agentic optimization, in dependency order:**
 
@@ -86,7 +86,7 @@ augmentation: **retrieval ✅ + tools ✅ + memory ❌**.
 **Do not regress:** canonical containment and the minSdk-24 symlink test; the AI's **own** secret filter
 (deliberately not `ProjectSearch.isSearchable`); fail-closed validation; dirty-buffer precedence;
 `store:false` on every Gemini body; `request_run` never executing; `GeminiResponse` skipping `thought`
-parts; before Phase 83, the 386 `@Test` cases across 30 AI test classes. Phase 83 adds five tests, for an expected 391 cases across 31 AI test classes, subject to final Build APK CI.
+parts; before Phase 83, the 386 `@Test` cases across 30 AI test classes. Phase 83 adds five tests, for 391 cases across 31 AI test classes; Build APK CI `37051539267` passes on code/test head `cf3f1be`.
 
 ---
 
@@ -204,4 +204,4 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 **Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
 
-**Current status — 2026-10-03:** the owner separately started Level 6 as Phase 83. Its two additions are test-only plus documentation; Build APK CI is pending, and no PR/merge is authorized. The next unused phase number is 84, but this map does not start it. Level 7+ remain proposed and unauthorized.
+**Current status — 2026-10-03:** the owner separately started Level 6 as Phase 83. Its two additions are test-only plus documentation; Build APK CI `37051539267` is green on code/test head `cf3f1be`; no PR/merge is authorized. The next unused phase number is 84, but this map does not start it. Level 7+ remain proposed and unauthorized.

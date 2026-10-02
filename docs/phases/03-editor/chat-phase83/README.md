@@ -1,6 +1,6 @@
 # Phase 83 — AI Level 6: baseline and measurement
 
-> **Status:** 🚧 IMPLEMENTED · local host-shim prevalidation **5/5** · Build APK CI pending · **no production source changed** · **not merged**.
+> **Status:** IMPLEMENTED test-only · temporary host-shim smoke **5/5** · Build APK CI ✅ GREEN on code/test head `cf3f1be` ([run 37051539267](https://github.com/pabi277/CodeC/actions/runs/37051539267)) · **zero production-source/behavior changes** · **not merged**.
 > **Owner command:** “Start level 6” (2026-10-03).
 > **Work branch:** `arena/01a0fded-codec`; baseline `main` @ `741956647933562dd5056972e71473581dd21233` (PR #108).
 > **Device acceptance:** not part of this measurement-only phase. The separate formal device round remains **POSTPONED until after optimization**, not passed.
@@ -31,9 +31,9 @@ The phone evidence itself is recorded in [`AI_AGENT_CORE_OPTIMIZATION_RESEARCH_2
 
 ## Baseline result
 
-[`BASELINE.md`](BASELINE.md) separates observed phone evidence from the deterministic, provider-free fixture replay. It records per-format lines actually delivered, request-body bytes produced by the existing NVIDIA serializer (not sent), the 49-call accounting reproduction, and the unreachable large-file tail. Live latency, model token usage, phone memory, and exact APK-byte delta are explicitly unmeasured rather than inferred.
+[`BASELINE.md`](BASELINE.md) separates observed phone evidence from the deterministic, provider-free fixture replay. It records per-format lines actually delivered, request-body bytes produced by the existing NVIDIA serializer (not sent), the 49-call accounting reproduction, the unreachable large-file tail, and exact APK artifact sizes from Build APK check annotations (main run 37047037300 vs code/test run 37051539267). Live/provider latency, model token usage/cost, and phone memory remain explicitly unmeasured rather than inferred.
 
-Pre-Level-6 inventory on this checkout: **310 Kotlin test files / 2,968 `@Test` annotations**; **30 `Ai*.kt` test classes / 386 AI tests**. Level 6 adds five test-only baseline cases, so the expected post-change inventory is **391 AI tests across 31 classes**; CI is the executor of record.
+Pre-Level-6 inventory on this checkout: **310 Kotlin test files / 2,968 `@Test` annotations**; **30 `Ai*.kt` test classes / 386 AI tests**. Level 6 adds five test-only baseline cases; the post-change inventory is **391 AI tests across 31 classes**, and the real Build APK workflow passes on code/test head `cf3f1be`.
 
 ## Guardrails
 
@@ -51,7 +51,7 @@ Pre-Level-6 inventory on this checkout: **310 Kotlin test files / 2,968 `@Test` 
 - [x] Baseline records owner-observed failures separately from replay-derived values and unknown live metrics.
 - [x] Five test-only baseline cases added; all **386** pre-existing AI tests remain unchanged in source.
 - [x] Local prevalidation: **5/5** new tests against the real agent/read/map classes with temporary host shims (smoke only; not a substitute for CI).
-- [ ] `Build APK` CI on the final pushed head: pending.
+- [x] Build APK CI **37051539267** green on code/test head `cf3f1be` (real Gradle/JUnit/Robolectric/screenshot tests, debug/lint, signed release/APK checks and artifacts).
 - [x] Production source delta: **0 files**.
 - [x] No device pass requested or claimed; postponed formal device acceptance stays with Level 12.
 - [ ] PR/merge: not authorized or opened. Stop at `rule.md` §3.

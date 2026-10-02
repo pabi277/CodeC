@@ -2,7 +2,7 @@
 
 **Code baseline:** `main` @ `741956647933562dd5056972e71473581dd21233` (2026-10-03). PR #108 changed docs only; the AI source remains the audited `4cb4151` code.
 **Method:** owner-supplied screenshots + deterministic offline host replay through the existing reader/tool/loop. The original screenshots are not in Git. The replay creates only fake fixture data, builds one hypothetical request body, and makes **no network call**.
-**Status:** structural baseline recorded. This is not a provider-quality benchmark, device acceptance, or claim that Level 6 fixed a defect.
+**Status:** structural baseline recorded; Build APK CI **37051539267** green on code/test head `cf3f1be`. This is not a provider-quality benchmark, device acceptance, or claim that Level 6 fixed a defect.
 
 ## 1. Owner-observed task (not a controlled benchmark)
 
@@ -21,7 +21,7 @@ The screenshots show NVIDIA Build / `nvidia/nemotron-3-super-120b-a12b` and the 
 | First token / total latency / wall clock | **Not captured** | No timers or provider transcript in the screenshot. |
 | Request bytes / tokens / cost | **Not captured** | The UI did not show payload bytes or provider usage. |
 | Peak memory | **Not captured** | No phone profiler sample. |
-| APK delta | Production-source delta is **0 files** for Level 6; APK byte delta **not measured** | CI artifacts are not available to this host-shim measurement. Test sources are not packaged in the APK. |
+| APK delta | Release **+8 B** and debug **−20 B** between main and the Phase 83 code/test Build APK runs (see §7) | Exact byte sizes come from the two runs' check annotations. There are zero production-source changes and tests are not packaged; these tiny artifact differences are observations, not evidence of an app-code size effect. |
 
 Source of observations and caveats: [`AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md`](../../../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md#2-phone-evidence--observed-behavior-not-an-acceptance-result).
 
@@ -82,4 +82,16 @@ This replay proves the accounting/repetition shape in CodeC's current policy; it
 
 ## 6. Metrics intentionally left unmeasured
 
-No credentialed model run or phone profiler was authorized or performed in Level 6. Therefore **first-token latency, end-to-end provider wall clock, provider token usage/cost, phone peak memory, model task-success/steerability rates, and byte-for-byte APK delta remain unmeasured**. The 9/12 and 0/2 screenshot counters are recorded as shown, not used as latency or run-attempt counts. These gaps must remain visible in later comparisons; do not fill them with host-JVM timings, model-card claims, or inferred APK sizes.
+No credentialed model run or phone profiler was authorized or performed in Level 6. Therefore **first-token latency, end-to-end provider wall clock, provider token usage/cost, and phone peak memory remain unmeasured**. The exact APK artifact sizes are compared in §7, but the small observed byte changes cannot be attributed to production code. The 9/12 and 0/2 screenshot counters are recorded as shown, not used as latency or run-attempt counts. These gaps must remain visible in later comparisons; do not fill them with host-JVM timings or model-card claims.
+
+## 7. Build APK byte comparison
+
+Both runs completed the repository's real Build APK workflow. Sizes below are APK bytes from the workflow check annotations, not compressed artifact ZIP sizes:
+
+| Build | Source | Release APK | Debug APK | Build APK run |
+|---|---|---:|---:|---|
+| Baseline | `main` @ `7419566` | **7,117,444 B** | **26,869,612 B** | [37047037300](https://github.com/pabi277/CodeC/actions/runs/37047037300) |
+| Level 6 code/test head | `cf3f1be` | **7,117,452 B** | **26,869,592 B** | [37051539267](https://github.com/pabi277/CodeC/actions/runs/37051539267) |
+| Observed difference | — | **+8 B** | **−20 B** | — |
+
+There are **zero production-source changes** in Phase 83. The two APKs differ by only 8/20 bytes across separate builds; this is an observed artifact comparison, not a measured app-feature footprint or evidence that the test sources ship. No release APK was downloaded into the repository.

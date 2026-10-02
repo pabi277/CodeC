@@ -1,6 +1,6 @@
 # Level 6 — Agent baseline and measurement
 
-**Status (2026-10-03): IMPLEMENTED as [Phase 83](../../phases/03-editor/chat-phase83/README.md); test-only baseline, no production-source or behavior delta. Build APK CI pending; not merged. The owner explicitly started Level 6. Depends on nothing; baseline gates Levels 7–12.**
+**Status (2026-10-03): IMPLEMENTED as [Phase 83](../../phases/03-editor/chat-phase83/README.md); test-only baseline, no production-source or behavior delta. Build APK CI ✅ GREEN on code/test head `cf3f1be` (run `37051539267`); not merged. The owner explicitly started Level 6. Depends on nothing; baseline gates Levels 7–12.**
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 
 **Measurement boundary:** every metric is either backed by the owner screenshots or deterministic offline replay, or explicitly marked **not captured** with its reason in the Phase 83 ledger. No provider request or device profiler was authorized/performed; host-JVM timing is not substituted for phone/provider latency.
@@ -48,7 +48,7 @@ onward. Nothing is sent to a provider during this level except the owner's own m
 - [x] The ledger records each metric as an observation/replay value or explicitly **not captured** with a reason; no provider/device value is inferred.
 - [x] The baseline reproduces the reported symptom: repeated prefix reads of the same file.
 - [x] `git diff` shows **zero** production-source changes.
-- [ ] The pre-Level-6 AI suite (386 tests / 30 classes) is unchanged, and Build APK CI passes the complete 391-test / 31-class AI suite with the five new cases.
+- [x] The pre-Level-6 AI suite (386 tests / 30 classes) is unchanged; Build APK CI **37051539267** is green on `cf3f1be` with the five new cases (391 tests / 31 classes).
 
 ## Research references
 
