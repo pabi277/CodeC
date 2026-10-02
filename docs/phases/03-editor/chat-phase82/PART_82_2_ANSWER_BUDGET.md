@@ -1,6 +1,6 @@
 # CodeC Phase 82.2 — a larger answer, still bounded across Continue
 
-> **Status:** 🚧 IMPLEMENTED · pushed; CI fixture fix / rerun pending; device NOT RUN · **Cost:** `[client-only / possible additional BYOK tokens]` · **Effort:** S
+> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device NOT RUN · merge gate · **Cost:** `[client-only / possible additional BYOK tokens]` · **Effort:** S
 > **Owner row (verbatim):** "Api rate limit"; dossier separates quota rejection from local answer truncation.
 
 ## First move: evidence, not code
@@ -28,7 +28,7 @@ Tests pin exact cap numbers, ceiling clamp, accumulator boundary, 48,000 + 16,00
 
 ## Tests (implemented)
 
-AiAnswerBudgetTest **6**, NvidiaRequestTest **7**, plus provider fixtures; AiContinuationTest/AiAnswerTest/GeminiRequestTest/AiContinueWiringTest re-run **unchanged**. Exact output/remaining caps pass in the **462/462** host suite; real CI and long-answer phone checks pending.
+AiAnswerBudgetTest **6**, NvidiaRequestTest **7**, plus provider fixtures; AiContinuationTest/AiAnswerTest/GeminiRequestTest/AiContinueWiringTest re-run **unchanged**. Exact output/remaining caps pass in the **462/462** host suite; real CI **36995145462 green**; long-answer phone checks still pending.
 
 ## Sources (record)
 
@@ -42,4 +42,6 @@ AiAnswerBudgetTest **6**, NvidiaRequestTest **7**, plus provider fixtures; AiCon
 
 ## Delivery gate — 2026-10-02
 
-Owner reconnected GitHub; push of **7921c01** on `arena/01a0fbc2-codec` succeeded. [Build APK round 1](https://github.com/pabi277/CodeC/actions/runs/36994479128) failed at `:app:compileDebugUnitTestKotlin`: `AiHttpStreamTest.kt:180` used JUnit `fail()` in a connection-opener lambda, but real JUnit returns **Unit**, not HttpURLConnection. The fixture now explicitly throws AssertionError (same strict no-network check, no assertion relaxed); the local JUnit shim also now declares Unit. Corrected host **462/462** + privacy/backup **13/13**, compiler exit 0 and transcript has no `error:`. Rerun pending after this code/docs push. No APK/device acceptance yet; no PR or merge. [Live ledger](README.md#ci--owner-handoff).
+Owner reconnected GitHub; session branch pushed. [Build APK round 2 **36995145462**](https://github.com/pabi277/CodeC/actions/runs/36995145462) is **✅ GREEN** on **7b2ecac**: real unit/screenshot tests, debug build + lint, measured/signed release build, non-debuggable/ABI artifact checks. Signed release **7,117,440 B**, debug **26,869,612 B**; release is +13,128 B (~12.8 KiB, +0.18%) over merged Phase 81. [Device round](DEVICE_ROUND.md) handed over, **NOT RUN**; real vendor availability/model quality/Keystore success are not CI claims. **STOP at merge gate**: no PR or merge authorized. [Live ledger](README.md#ci--owner-handoff).
+
+Round 1 **36994479128** on **7921c01** failed at AiHttpStreamTest:180 because real JUnit fail() returns Unit, not HttpURLConnection. The fake opener now throws AssertionError explicitly (same strict no-network test), and the local shim now also returns Unit. Core **462/462** + privacy/backup **13/13** revalidated, compiler exit 0 / no error:; no assertion, permission, dependency or workflow change.

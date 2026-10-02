@@ -1,6 +1,6 @@
 # Phase 82 — CodeC AI: rate-limit resilience and a bigger answer budget
 
-> **Status:** 🚧 IMPLEMENTED · pushed; CI fixture fix / rerun pending; device NOT RUN (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device NOT RUN · merge gate (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 > Work only on `arena/01a0fbc2-codec`; baseline `main` @ `e089880` (PR #106).
 > No PR, merge, or push to `main` without the owner's explicit command (`rule.md` §3).
@@ -50,13 +50,13 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 - [x] Local kotlinc/JRE prevalidation **462/462** across **38 classes**, compile exit 0 and no `error:` in transcript (a helper's "compiled" is not proof).
 - [x] Code and living docs committed together: initial implementation **9285818**, with local date-parser follow-up recorded below.
 - [x] Session branch pushed: **7921c01** succeeded after owner reconnection (2026-10-02); first CI failure fixed for cause below.
-- [ ] Build APK CI green (executor of record: Gradle/JUnit/Robolectric/lint/APKs).
-- [ ] Device round handed to owner; no device acceptance claimed.
-- [ ] Stop at merge gate. No PR opened.
+- [x] Build APK CI **36995145462 green** on **7b2ecac** (executor of record: real Gradle/JUnit/Robolectric/lint/APKs).
+- [x] Device checklist and signed release artifact handed to owner; **device acceptance NOT RUN**.
+- [x] **STOP at merge gate**. No PR opened, no merge authorized.
 
 ## Local prevalidation — 2026-10-02
 
-**107 new checks / 12 new test classes**, plus **355 unchanged existing checks**. Total: **462 passed / 0 failed**, 38 classes. Scratch JRE from `jdk4py` 25.0.2.1 and npm `kotlin-compiler` 2.4.20; **`-jvm-target 17`**, matching CI's target. `/tmp/codec-phase82/prevalidate.sh` compiles the actual AI core, VM/store and pure project/apply/undo dependencies; JUnit/Android/lifecycle/org.json have thin host shims, and relevant pure Git data/redactor fragments are extracted from their real source. JSON/Android behavior and Compose still require real CI; successful Keystore encryption/slot survival still require the device. Slot tests intentionally use corrupt blobs, not fake crypto success. Compile transcript inspected for **`error:`** (none), compiler exit **0**, fresh jar required before reflection runs. No local Gradle build or credentialed vendor request.
+**107 new checks / 12 new test classes**, plus **355 unchanged existing checks**. Total: **462 passed / 0 failed**, 38 classes. Scratch JRE from `jdk4py` 25.0.2.1 and npm `kotlin-compiler` 2.4.20; **`-jvm-target 17`**, matching CI's target. `/tmp/codec-phase82/prevalidate.sh` compiles the actual AI core, VM/store and pure project/apply/undo dependencies; JUnit/Android/lifecycle/org.json have thin host shims, and relevant pure Git data/redactor fragments are extracted from their real source. Real CI now passes Android/JSON fixtures and Compose compilation; successful Keystore encryption/slot survival, actual endpoint access and UI feel still require the device. Slot tests intentionally use corrupt blobs, not fake crypto success. Compile transcript inspected for **`error:`** (none), compiler exit **0**, fresh jar required before reflection runs. No local Gradle build or credentialed vendor request.
 
 | New class | Checks | Covered |
 |---|---:|---|
@@ -84,9 +84,20 @@ Existing AI helper/Level2/Level3/Level4/Continue/surface wiring pins are **uncha
 | CI round | SHA | Result | Evidence / action |
 |---|---|---|---|
 | [1 — 36994479128](https://github.com/pabi277/CodeC/actions/runs/36994479128) | 7921c01 | ❌ unit-test compilation | Annotation at AiHttpStreamTest.kt:180: real JUnit fail() returns Unit, not HttpURLConnection. Change the fake opener to explicit throw AssertionError; preserve the strict local-refusal assertion. |
-| 2 | Fixture correction in this follow-up | ⏳ rerun pending | Local JUnit shim corrected from Nothing to Unit; fresh core 462/462, supplemental 13/13; compiler exit 0 + no error:; real CI is still required. |
+| [2 — 36995145462](https://github.com/pabi277/CodeC/actions/runs/36995145462) | 7b2ecac | ✅ GREEN (10m59s) | Real unit/screenshot tests, debug/lint, measured/signed release, non-debuggable/ABI checks and both APK artifacts pass; no failure annotation. |
 
-Production compilation passed the dependency gate before the unit-test compile failure. No phase APK was produced by round 1. The shim mismatch is recorded, not counted as Android proof. **No assertion/test was removed or relaxed**, no dependency/permission/workflow change. Device round remains NOT RUN; next is green Build APK, then owner device handoff, then STOP at merge gate.
+Production compilation passed the dependency gate before the unit-test compile failure. No phase APK was produced by round 1. The shim mismatch is recorded, not counted as Android proof. **No assertion/test was removed or relaxed**, no dependency/permission/workflow change. Round 2 is green; device checklist/artifact handed over, **NOT RUN**. **STOP at merge gate** until explicit owner instruction.
+
+### Verified artifact facts — code CI round 2
+
+| Artifact | APK filename | APK bytes (not ZIP size) | Owner download |
+|---|---|---:|---|
+| CodeC-IDE-release | CodeC-IDE-1.3.17-universal.apk | **7,117,440** | [Signed release ZIP](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11221750847) |
+| CodeC-IDE-debug | CodeC-IDE-1.3.17-universal-debug.apk | **26,869,612** | [Debug ZIP](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11220829913) |
+
+Sizes come from check-run **110800051752** APK-size annotations; artifact IDs confirmed unexpired via Actions API. Release has no android:debuggable flag. Baseline main release is **7,104,312 B**: delta **+13,128 B (~12.8 KiB / +0.18%)**. Do not confuse compressed ZIP size with APK bytes. No release/tag published; these are branch CI artifacts. Node/setup-java/runner migration notices are non-failure infrastructure warnings, not a reason for scope-expanding workflow edits.
+
+This result is for tested code **7b2ecac**. Subsequent verification-ledger-only commits contain no app/test changes and get their own normal branch CI; the device checklist deliberately points to this verified code artifact. All old stream-count/filter/apply/run/Continue/source pins remain unchanged. No live vendor call, device result, coding-quality score or production NVIDIA entitlement is inferred.
 
 A final local date fixture found that SimpleDateFormat's default two-digit year window could ignore a valid long RFC-850 Retry-After and fall back to 12s. The follow-up expands the century against the injected receiving clock before weekday validation; **21/44/exactly-50-year** minima are refused as too long, never shortened. AiRateLimitTest is now **18**, full core **462/462**; supplementary permission/backup **13/13**. Successful cipher/real endpoint/device proof is still pending.
 

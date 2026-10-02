@@ -1,6 +1,6 @@
 # CodeC Phase 82B / 82.3 — Level 5A provider seam + NVIDIA development/testing BYOK
 
-> **Status:** 🚧 IMPLEMENTED · pushed; CI fixture fix / rerun pending; device NOT RUN · **Cost:** `[client-only / per-user BYOK]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · CI ✅ GREEN · device NOT RUN · merge gate · **Cost:** `[client-only / per-user BYOK]` · **Effort:** M
 > **Owner authorization:** ask_user option **authorize_82b**, selected 2026-10-02 before code.
 > This authorizes Level **5A only**. 5B second-model review and Levels 6+ are not started.
 
@@ -34,7 +34,7 @@ Request/SSE/error fixtures, independent credential-slot/persistence pins and no-
 
 ## Tests (implemented)
 
-AiProvidersTest **12**, AiProviderClientTest **4**, NvidiaRequestTest **7**, NvidiaResponseTest **8** (real Robolectric in CI), AiProviderWiringTest **9**, NvidiaRedactionTest **3**, AiKeyStoreSlotsTest **8**, plus shared transport fixtures. Local **462/462** green with host shims; existing AI and FeedbackDraft tests retained unchanged. Successful Keystore encryption/slot survival, consent UI, real SSE/model access and fixed-task comparison remain owner device rows, not claimed by source pins.
+AiProvidersTest **12**, AiProviderClientTest **4**, NvidiaRequestTest **7**, NvidiaResponseTest **8** (real Robolectric CI green), AiProviderWiringTest **9**, NvidiaRedactionTest **3**, AiKeyStoreSlotsTest **8**, plus shared transport fixtures. Local **462/462** green with host shims; existing AI and FeedbackDraft tests retained unchanged. Successful Keystore encryption/slot survival, consent UI, real SSE/model access and fixed-task comparison remain owner device rows, not claimed by source pins.
 
 ## Sources (record)
 
@@ -52,4 +52,6 @@ No second-model reviewer (5B), native provider tools, dynamic catalogue, custom 
 
 ## Delivery gate — 2026-10-02
 
-Owner reconnected GitHub; push of **7921c01** on `arena/01a0fbc2-codec` succeeded. [Build APK round 1](https://github.com/pabi277/CodeC/actions/runs/36994479128) failed at `:app:compileDebugUnitTestKotlin`: `AiHttpStreamTest.kt:180` used JUnit `fail()` in a connection-opener lambda, but real JUnit returns **Unit**, not HttpURLConnection. The fixture now explicitly throws AssertionError (same strict no-network check, no assertion relaxed); the local JUnit shim also now declares Unit. Corrected host **462/462** + privacy/backup **13/13**, compiler exit 0 and transcript has no `error:`. Rerun pending after this code/docs push. No APK/device acceptance yet; no PR or merge. [Live ledger](README.md#ci--owner-handoff).
+Owner reconnected GitHub; session branch pushed. [Build APK round 2 **36995145462**](https://github.com/pabi277/CodeC/actions/runs/36995145462) is **✅ GREEN** on **7b2ecac**: real unit/screenshot tests, debug build + lint, measured/signed release build, non-debuggable/ABI artifact checks. Signed release **7,117,440 B**, debug **26,869,612 B**; release is +13,128 B (~12.8 KiB, +0.18%) over merged Phase 81. [Device round](DEVICE_ROUND.md) handed over, **NOT RUN**; real vendor availability/model quality/Keystore success are not CI claims. **STOP at merge gate**: no PR or merge authorized. [Live ledger](README.md#ci--owner-handoff).
+
+Round 1 **36994479128** on **7921c01** failed at AiHttpStreamTest:180 because real JUnit fail() returns Unit, not HttpURLConnection. The fake opener now throws AssertionError explicitly (same strict no-network test), and the local shim now also returns Unit. Core **462/462** + privacy/backup **13/13** revalidated, compiler exit 0 / no error:; no assertion, permission, dependency or workflow change.

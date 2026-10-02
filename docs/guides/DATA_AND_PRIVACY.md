@@ -130,10 +130,11 @@ adult/terms confirmation. There is no bundled/shared key or remote proxy.
   is placed in AiUiState, URLs, prompts, project files or app logs. Reports still
   leave only when you choose to share them; inspect before sharing.
 
-Phase 82/82B implementation has local policy/source/transport-fixture proof;
-GitHub reconnection/push succeeded. First Android CI failed at a new test-fixture
-compile signature, corrected without changing privacy behavior; rerun and owner
-device checks remain pending. No phase APK has been produced. The
+Phase 82/82B implementation has local policy/source/transport-fixture proof and
+real Build APK **36995145462 green** on **7b2ecac** (unit/screenshot tests, lint,
+Android/Compose compilation and signed APK guards). The first CI fixture compile
+signature error was corrected without changing privacy behavior. Owner device,
+successful Keystore/live vendor/model-quality checks remain **NOT RUN**. The
 [phase record](../phases/03-editor/chat-phase82/README.md) is the verification
 ledger, not a claim of production NVIDIA entitlement.
 

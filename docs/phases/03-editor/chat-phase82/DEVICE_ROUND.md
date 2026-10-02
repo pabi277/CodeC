@@ -1,11 +1,16 @@
 # Phase 82 / 82B — device round 1
 
 > **Status: ⏳ NOT RUN.** Device acceptance is the owner's transcript, not host tests or CI.
-> Local prevalidation **462/462** green (38 classes, host shims); Build/run/APK details will be filled after Build APK is green. No PR or merge authorized yet.
+> Local core **462/462** + privacy/backup **13/13**; real Build APK **36995145462 green** on **7b2ecac**. No PR or merge authorized yet.
 
 ## Build for this round
 
-GitHub reconnection succeeded and **7921c01** was pushed. [CI round 1](https://github.com/pabi277/CodeC/actions/runs/36994479128) failed on one test-fixture compile signature (`JUnit fail()` returns Unit); narrow fixture/local-shim correction completed, **rerun pending**. **No APK from round 1**. Wait for real Build APK green before installing/testing. Device rows remain NOT RUN.
+- **Tested code:** `7b2ecac` on `arena/01a0fbc2-codec`.
+- **Build APK:** [**36995145462 — ✅ GREEN**](https://github.com/pabi277/CodeC/actions/runs/36995145462) (unit/screenshot tests, debug/lint, signed release + APK guards).
+- **Recommended install:** [**CodeC-IDE-release ZIP**](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11221750847), unzip and install `CodeC-IDE-1.3.17-universal.apk` (**7,117,440 B**). Keep the build type/signing consistent with the current app; do not uninstall/wipe project data just to change type.
+- **Debug alternative:** [CodeC-IDE-debug ZIP](https://github.com/pabi277/CodeC/actions/runs/36995145462/artifacts/11220829913) → `CodeC-IDE-1.3.17-universal-debug.apk` (**26,869,612 B**) if currently on debug.
+- **Device result:** **NOT RUN**, awaiting owner transcript. GitHub reconnection and green CI are not device acceptance. No PR/merge authorized.
+- Round 1 `36994479128` had no APK (JUnit fixture signature); use the green build above, not a stale APK.
 
 Use a non-secret demo project and your own keys. NVIDIA is **internal testing/evaluation only, not production**. Never paste a key into a screenshot or chat. Do not deliberately drain daily quotas; 429 rows can be exercised when the provider naturally returns one. Report NOT EXERCISED honestly if no 429 occurs; deterministic fixtures cover server metadata in CI.
 

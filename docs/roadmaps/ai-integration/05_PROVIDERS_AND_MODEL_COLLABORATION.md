@@ -1,6 +1,6 @@
 # Level 5 — Multiple API providers and model collaboration
 
-**Status 2026-10-02: 5A owner-authorized and implemented as [Phase 82B](../../phases/03-editor/chat-phase82/README.md), local 462/462; CI/device pending. 5B remains proposed and unauthorized.**
+**Status 2026-10-02: 5A owner-authorized and implemented as [Phase 82B](../../phases/03-editor/chat-phase82/README.md), local 462/462; code CI green; device NOT RUN. 5B remains proposed and unauthorized.**
 
 Current 5A slice: Gemini native + NVIDIA Build fixed OpenAI-compatible HTTPS/SSE endpoints, manual provider/editable model, dated capability rows with unknowns preserved, Test connection, separate AES-GCM key/terms slots and no silent fallback. NVIDIA Trial Terms restrict this to **internal development/testing/evaluation, not production**; required checkbox, own key only. HTTP 202 is pending/fixed failure, no hidden polling. CodeC's bounded text tools and reviewed Apply/Run permissions do not depend on capability flags. Rate retry and budgets are Phase 82 policies shared by all three original VM stream sites. No custom endpoint, second reviewer, native provider tools or live catalog in this slice. Device/model quality is [NOT RUN](../../phases/03-editor/chat-phase82/DEVICE_ROUND.md).
 
@@ -45,4 +45,4 @@ Do not use a remote API proxy unless its operator, retention, credential handlin
 - Keys remain private during configuration, requests, error handling, device backup, logs, and support export.
 - Compare model quality and tool-call correctness on a fixed CodeC task set, not only marketing benchmarks.
 
-> **Phase 82 delivery update (2026-10-02):** owner reconnected; push **7921c01** succeeded. Build APK **36994479128** failed at a new test fixture's JUnit fail() return signature (Unit vs connection); explicit-throw fixture correction/local-shim Unit fix prevalidate **462/462 + 13/13**. Rerun pending, no first-run APK, device NOT RUN, no PR/merge.
+> **Phase 82 delivery update (2026-10-02):** GitHub reconnection/push succeeded. First CI fixture signature failure **36994479128** fixed without relaxing assertions. **Code CI 36995145462 ✅ GREEN on 7b2ecac**; signed release **7,117,440 B**, debug **26,869,612 B**; real tests/lint/APK guards pass. Local **462/462 + 13/13**. Device checklist/artifact handed over, **NOT RUN**; no vendor quality, crypto-success/device acceptance or production NVIDIA entitlement inferred. **STOP at merge gate**, no PR/merge authorized.
