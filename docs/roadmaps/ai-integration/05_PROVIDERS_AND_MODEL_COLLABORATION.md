@@ -45,4 +45,4 @@ Do not use a remote API proxy unless its operator, retention, credential handlin
 - Keys remain private during configuration, requests, error handling, device backup, logs, and support export.
 - Compare model quality and tool-call correctness on a fixed CodeC task set, not only marketing benchmarks.
 
-> **Phase 82 delivery update (2026-10-02):** initial code/docs **9285818** committed locally; push blocked by GitHub auth (identity HTTP 401). Owner asked to reconnect GitHub in Arena. CI/APK not run/created, device NOT RUN, no PR/merge. Local core **462/462** + supplementary privacy/backup **13/13**; [ledger](../../phases/03-editor/chat-phase82/README.md).
+> **Phase 82 delivery update (2026-10-02):** owner reconnected; push **7921c01** succeeded. Build APK **36994479128** failed at a new test fixture's JUnit fail() return signature (Unit vs connection); explicit-throw fixture correction/local-shim Unit fix prevalidate **462/462 + 13/13**. Rerun pending, no first-run APK, device NOT RUN, no PR/merge.

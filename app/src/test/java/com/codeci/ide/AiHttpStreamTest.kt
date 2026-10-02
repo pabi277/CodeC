@@ -177,7 +177,7 @@ class AiHttpStreamTest {
         assertEquals(1, c.closed)
     }
     @Test fun `NVIDIA invalid model is refused locally before the network edge`() = runBlocking {
-        val client = NvidiaClient(AiHttpStream(open = { fail("invalid model must not open a connection") }))
+        val client = NvidiaClient(AiHttpStream(open = { throw AssertionError("invalid model must not open a connection") }))
         assertEquals(AiFailureKind.MODEL_NOT_FOUND, (client.request("own-key", "https://host", "body", 48_000, {}) as AiOutcome.Failed).failure.kind)
     }
     @Test fun `countdown begins only after the failed socket has disconnected`() = runBlocking {

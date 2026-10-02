@@ -1,6 +1,6 @@
 # CodeC Phase 82.2 — a larger answer, still bounded across Continue
 
-> **Status:** 🚧 IMPLEMENTED · push/CI BLOCKED (GitHub connection); device pending · **Cost:** `[client-only / possible additional BYOK tokens]` · **Effort:** S
+> **Status:** 🚧 IMPLEMENTED · pushed; CI fixture fix / rerun pending; device NOT RUN · **Cost:** `[client-only / possible additional BYOK tokens]` · **Effort:** S
 > **Owner row (verbatim):** "Api rate limit"; dossier separates quota rejection from local answer truncation.
 
 ## First move: evidence, not code
@@ -42,4 +42,4 @@ AiAnswerBudgetTest **6**, NvidiaRequestTest **7**, plus provider fixtures; AiCon
 
 ## Delivery gate — 2026-10-02
 
-Implementation is committed locally (initial code/docs **9285818**). Push failed on authentication; GitHub user API **401** confirmed the connection problem. **Reconnect GitHub in Arena**, then push this same session branch and run Build APK. No phase CI/APK, PR, merge or device acceptance exists yet. [Live ledger](README.md#ci--owner-handoff).
+Owner reconnected GitHub; push of **7921c01** on `arena/01a0fbc2-codec` succeeded. [Build APK round 1](https://github.com/pabi277/CodeC/actions/runs/36994479128) failed at `:app:compileDebugUnitTestKotlin`: `AiHttpStreamTest.kt:180` used JUnit `fail()` in a connection-opener lambda, but real JUnit returns **Unit**, not HttpURLConnection. The fixture now explicitly throws AssertionError (same strict no-network check, no assertion relaxed); the local JUnit shim also now declares Unit. Corrected host **462/462** + privacy/backup **13/13**, compiler exit 0 and transcript has no `error:`. Rerun pending after this code/docs push. No APK/device acceptance yet; no PR or merge. [Live ledger](README.md#ci--owner-handoff).

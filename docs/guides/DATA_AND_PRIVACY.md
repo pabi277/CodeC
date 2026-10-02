@@ -131,8 +131,9 @@ adult/terms confirmation. There is no bundled/shared key or remote proxy.
   leave only when you choose to share them; inspect before sharing.
 
 Phase 82/82B implementation has local policy/source/transport-fixture proof;
-real Android CI is blocked by the GitHub connection (401); owner device checks
-are still pending. No phase APK has been produced. The
+GitHub reconnection/push succeeded. First Android CI failed at a new test-fixture
+compile signature, corrected without changing privacy behavior; rerun and owner
+device checks remain pending. No phase APK has been produced. The
 [phase record](../phases/03-editor/chat-phase82/README.md) is the verification
 ledger, not a claim of production NVIDIA entitlement.
 

@@ -1,6 +1,6 @@
 # CodeC Phase 82.1 — one visible, cancelable rate-limit retry
 
-> **Status:** 🚧 IMPLEMENTED · push/CI BLOCKED (GitHub connection); device pending · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · pushed; CI fixture fix / rerun pending; device NOT RUN · **Cost:** `[client-only]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 
 ## First move: evidence, not code
@@ -27,7 +27,7 @@ Fixtures prove header/marker handling, one retry and unchanged payload, no retry
 
 ## Tests (implemented)
 
-AiRateLimitTest **18**, AiRetryTest **11**, AiRateLimitWiringTest **8**, AiHttpStreamTest **13**. Local total **462/462** across 38 classes; same-request bytes, disconnect-before-countdown, blocked read + Stop, partial-stream refusal and deadline fixtures pass. Valid obsolete dates expand their century against the receiving clock (21/44/50-year fixture) rather than falling back to a short delay. Real CI blocked by GitHub auth (HTTP 401); UI timing/device rows not run.
+AiRateLimitTest **18**, AiRetryTest **11**, AiRateLimitWiringTest **8**, AiHttpStreamTest **13**. Local total **462/462** across 38 classes; same-request bytes, disconnect-before-countdown, blocked read + Stop, partial-stream refusal and deadline fixtures pass. Valid obsolete dates expand their century against the receiving clock (21/44/50-year fixture) rather than falling back to a short delay. CI round 1 exposed a JUnit fixture return-type compile error; the narrow correction is in this follow-up and the rerun is pending. UI timing/device rows remain NOT RUN.
 
 ## Sources (record)
 
@@ -42,4 +42,4 @@ No retry library/new dependency (one bounded policy fits the existing coroutine/
 
 ## Delivery gate — 2026-10-02
 
-Implementation is committed locally (initial code/docs **9285818**). Push failed on authentication; GitHub user API **401** confirmed the connection problem. **Reconnect GitHub in Arena**, then push this same session branch and run Build APK. No phase CI/APK, PR, merge or device acceptance exists yet. [Live ledger](README.md#ci--owner-handoff).
+Owner reconnected GitHub; push of **7921c01** on `arena/01a0fbc2-codec` succeeded. [Build APK round 1](https://github.com/pabi277/CodeC/actions/runs/36994479128) failed at `:app:compileDebugUnitTestKotlin`: `AiHttpStreamTest.kt:180` used JUnit `fail()` in a connection-opener lambda, but real JUnit returns **Unit**, not HttpURLConnection. The fixture now explicitly throws AssertionError (same strict no-network check, no assertion relaxed); the local JUnit shim also now declares Unit. Corrected host **462/462** + privacy/backup **13/13**, compiler exit 0 and transcript has no `error:`. Rerun pending after this code/docs push. No APK/device acceptance yet; no PR or merge. [Live ledger](README.md#ci--owner-handoff).

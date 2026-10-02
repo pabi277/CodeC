@@ -5,7 +5,7 @@
 
 ## Build for this round
 
-CI/APK: **BLOCKED / NOT RUN**. Initial code/docs committed locally **9285818**; push failed on GitHub authentication (identity check HTTP 401). Owner must **reconnect GitHub in Arena**. No artifact exists for this round; wait for real Build APK green before installing/testing. No device acceptance claimed.
+GitHub reconnection succeeded and **7921c01** was pushed. [CI round 1](https://github.com/pabi277/CodeC/actions/runs/36994479128) failed on one test-fixture compile signature (`JUnit fail()` returns Unit); narrow fixture/local-shim correction completed, **rerun pending**. **No APK from round 1**. Wait for real Build APK green before installing/testing. Device rows remain NOT RUN.
 
 Use a non-secret demo project and your own keys. NVIDIA is **internal testing/evaluation only, not production**. Never paste a key into a screenshot or chat. Do not deliberately drain daily quotas; 429 rows can be exercised when the provider naturally returns one. Report NOT EXERCISED honestly if no 429 occurs; deterministic fixtures cover server metadata in CI.
 

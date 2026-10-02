@@ -1,6 +1,6 @@
 # Phase 82 — CodeC AI: rate-limit resilience and a bigger answer budget
 
-> **Status:** 🚧 IMPLEMENTED · push/CI BLOCKED (GitHub connection); device pending (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · pushed; CI fixture fix / rerun pending; device NOT RUN (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 > Work only on `arena/01a0fbc2-codec`; baseline `main` @ `e089880` (PR #106).
 > No PR, merge, or push to `main` without the owner's explicit command (`rule.md` §3).
@@ -49,7 +49,7 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 - [x] Pure policies and transport/provider fixtures implemented, existing safety pins unchanged.
 - [x] Local kotlinc/JRE prevalidation **462/462** across **38 classes**, compile exit 0 and no `error:` in transcript (a helper's "compiled" is not proof).
 - [x] Code and living docs committed together: initial implementation **9285818**, with local date-parser follow-up recorded below.
-- [ ] Session branch pushed — **BLOCKED**: Git push authentication error; authenticated GitHub user request **HTTP 401**. Owner must reconnect GitHub in Arena.
+- [x] Session branch pushed: **7921c01** succeeded after owner reconnection (2026-10-02); first CI failure fixed for cause below.
 - [ ] Build APK CI green (executor of record: Gradle/JUnit/Robolectric/lint/APKs).
 - [ ] Device round handed to owner; no device acceptance claimed.
 - [ ] Stop at merge gate. No PR opened.
@@ -79,7 +79,14 @@ Existing AI helper/Level2/Level3/Level4/Continue/surface wiring pins are **uncha
 
 ## CI / owner handoff
 
-**Push / Build APK: BLOCKED, NOT RUN.** Code + living docs were committed together as **9285818**. `git push origin arena/01a0fbc2-codec` then failed with “could not read Username … terminal prompts disabled”; a safe authenticated identity request returned **HTTP 401 / Bad credentials**, confirming that the Arena GitHub connection needs attention. Owner has been asked to **reconnect GitHub in Arena**; no password/token was requested, no credential was put in chat, and no other branch/push/PR/merge was attempted. Local work is preserved. After reconnect: push this session branch, obtain green Build APK (real Gradle/JUnit/Robolectric/Compose/release checks), then hand the owner the device round. No CI run or APK exists for this phase yet.
+**GitHub reconnected; push succeeded.** Owner said “I reconnect check now” on 2026-10-02. The preserved branch `arena/01a0fbc2-codec` was pushed at **7921c01**; remote main remains **e089880**, and old PRs #42/#83 are untouched. `/user` now returns an integration-scope **403** rather than the prior credential **401**; actual repository push and Actions access work, so the identity endpoint is not a push/CI gate. No password/token was requested or printed.
+
+| CI round | SHA | Result | Evidence / action |
+|---|---|---|---|
+| [1 — 36994479128](https://github.com/pabi277/CodeC/actions/runs/36994479128) | 7921c01 | ❌ unit-test compilation | Annotation at AiHttpStreamTest.kt:180: real JUnit fail() returns Unit, not HttpURLConnection. Change the fake opener to explicit throw AssertionError; preserve the strict local-refusal assertion. |
+| 2 | Fixture correction in this follow-up | ⏳ rerun pending | Local JUnit shim corrected from Nothing to Unit; fresh core 462/462, supplemental 13/13; compiler exit 0 + no error:; real CI is still required. |
+
+Production compilation passed the dependency gate before the unit-test compile failure. No phase APK was produced by round 1. The shim mismatch is recorded, not counted as Android proof. **No assertion/test was removed or relaxed**, no dependency/permission/workflow change. Device round remains NOT RUN; next is green Build APK, then owner device handoff, then STOP at merge gate.
 
 A final local date fixture found that SimpleDateFormat's default two-digit year window could ignore a valid long RFC-850 Retry-After and fall back to 12s. The follow-up expands the century against the injected receiving clock before weekday validation; **21/44/exactly-50-year** minima are refused as too long, never shortened. AiRateLimitTest is now **18**, full core **462/462**; supplementary permission/backup **13/13**. Successful cipher/real endpoint/device proof is still pending.
 
