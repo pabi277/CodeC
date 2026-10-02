@@ -1,8 +1,7 @@
 # Phase 79 — AI Level 3: proposed edits, diff review, and task-level undo
 
-> **Status: 🚧 IMPLEMENTED 2026-10-01 on `arena/01a0f848-codec` (owner:
-> explicitly approved the D1 and D6 amendments, selected full Level 3 scope,
-> and authorized *"Start Phase 79 (fold 78 bookkeeping + implement Level 3)"*).**
+> **Status: ✅ MERGED to `main` @ `df2c5d4` (PR #105, 2026-10-02; post-merge CI
+> `36934250423` green, release APK `7,079,820 B`).** Branch CI `36898288949` green on `607ccb7`. Device-verified on the owner's phone (*"All device tests passed"* → *"Ok merge it"*).
 >
 > Parts:
 > - [79.1 Structured edit proposals, validation, and local unified diff](PART_79_1_EDIT_PROPOSAL_AND_DIFF.md)

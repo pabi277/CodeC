@@ -87,17 +87,23 @@ class AiLevel2WiringTest {
         val ask = vm.substringAfter("fun askProject(").substringBefore("fun cancelGather(")
         assertTrue("askProject must land on preview()", ask.contains("preview(result)"))
         assertFalse("askProject must not reach the network", ask.contains("client.stream("))
-        assertEquals("still exactly two network entry points", 2, Regex("client\\.stream\\(").findAll(vm).count())
+        // Phase 80 (Level 4): a third site, agentTurn(), is reachable only after
+        // the task preview's Send; AiLevel4WiringTest pins that it stays private
+        // and behind the PREVIEW gate, and still no source calls it directly.
+        assertEquals("three network entry points, all behind PREVIEW", 3, Regex("client\\.stream\\(").findAll(vm).count())
         assertTrue(vm.contains("if (_state.value.phase != AiPhase.PREVIEW"))
     }
 
     @Test
     fun `the editor hands the live buffer over, so a dirty file is never described from disk`() {
-        assertTrue(editor.contains("aiViewModel.askProject("))
+        // Phase 80 (Level 4) amendment: the chip now starts the agent task
+        // (agentAsk), which takes the same live buffer into the same preview
+        // gate. The Level 2 method stays compiled as the documented rollback.
+        assertTrue(editor.contains("aiViewModel.agentAsk("))
         assertTrue(editor.contains("openText = buffer.text"))
         assertTrue(editor.contains("openDirty = viewModel.isDirty.value"))
         assertEquals(1, Regex("onAskProject = aiAskProject").findAll(editor).count())
-        assertEquals(1, Regex("aiViewModel\\.askProject\\(").findAll(editor).count())
+        assertEquals(1, Regex("aiViewModel\\.agentAsk\\(").findAll(editor).count())
     }
 
     @Test

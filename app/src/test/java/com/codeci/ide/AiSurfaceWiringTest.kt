@@ -85,7 +85,9 @@ class AiSurfaceWiringTest {
 
     @Test
     fun `the new surfaces add no network path - one stream call pair, in the view model only`() {
-        assertEquals(2, Regex("client\\.stream\\(").findAll(ai("AiViewModel.kt")).count())
+        // Phase 80 (Level 4) adds the agent's per-turn site (agentTurn), still
+        // in the view model only; the surfaces below still reach nothing.
+        assertEquals(3, Regex("client\\.stream\\(").findAll(ai("AiViewModel.kt")).count())
         for (f in surfaceFiles) {
             val code = ai(f)
             for (banned in listOf("GeminiClient", "GeminiRequest", "HttpURLConnection", "client.")) {

@@ -224,6 +224,8 @@ import com.codeci.ide.ui.projects.ProjectInfo
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.ProjectPathUtils
 import com.codeci.ide.ui.projects.ProjectRunTarget
+import com.codeci.ide.ui.ai.AiRunDigest
+import com.codeci.ide.ui.services.ExecutionRunner
 import com.codeci.ide.ui.services.LanguageRegistry
 import com.codeci.ide.ui.settings.SettingsManager
 import com.codeci.ide.ui.theme.EditorThemeType
@@ -1140,28 +1142,71 @@ fun EditorScreen(
     } else {
         null
     }
-    // Phase 78 (Level 2) — the whole-project question. The reader runs on IO
-    // inside the view model; this only hands it the live buffer so a file the
-    // user is editing is never described from stale disk bytes.
+    // Phase 78 → 80 — the whole-project question. Since Level 4 both project
+    // chips run through the agent: the map goes out, the model pulls the files
+    // it needs with the bounded read tools, and the timeline shows each step.
+    // The reader still runs on IO inside the view model; this only hands it the
+    // live buffer, so a file the user is editing is never described from stale
+    // disk bytes.
     val aiAskProject: (String) -> Unit = { question ->
         val buffer = viewModel.codeText.value
-        aiViewModel.askProject(
+        aiViewModel.agentAsk(
             question = question,
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
             openDirty = viewModel.isDirty.value
         )
     }
-    // Phase 79 (Level 3) — propose reviewable multi-file edits, apply after
-    // diff approval, and undo the last applied AI task.
+    // Phase 79 → 80 — propose reviewable multi-file edits. The agent reads what
+    // it needs first; its `<<<CODEC_EDIT …>>>` blocks land in the same Level 3
+    // diff review, so Apply, the per-file checkboxes, the conflict prompts and
+    // the 1-task undo are unchanged (D1).
     val aiProposeEdits: (String) -> Unit = { question ->
         val buffer = viewModel.codeText.value
-        aiViewModel.proposeEdits(
+        aiViewModel.agentPropose(
             question = question,
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
             openDirty = viewModel.isDirty.value
         )
+    }
+    // Phase 80 — the AI asked to run the project. The tap dispatches CodeC's
+    // own RUN action (`runFile`, the ▶ button's entry point) and nothing else:
+    // no second runner, no terminal, no package install. If the run cannot
+    // start (an install prompt, no run profile, the runner busy), the view
+    // model is told immediately so the loop does not wait forever.
+    val aiApproveRun: () -> Unit = {
+        val target = aiState.agentRun?.target
+        aiViewModel.approveAgentRun()
+        viewModel.runFile(context, target)
+        if (!viewModel.outputState.value.busy) {
+            aiViewModel.onAgentRunNotStarted(AiCopy.AGENT_RUN_NOT_STARTED)
+        }
+    }
+    val aiSkipRun: () -> Unit = { aiViewModel.skipAgentRun() }
+    // Phase 80 (Level 4) — the run the AI asked for has finished. Hand the loop
+    // a digest of CodeC's OWN run result: exit codes, the signal lines and the
+    // tail, and the diagnostics for the target. The digest is exactly what the
+    // timeline shows, and it is the only thing that goes back to the model.
+    var previousAgentRunBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(outputState.busy) {
+        if (previousAgentRunBusy && !outputState.busy && aiState.agentRunRunning) {
+            aiViewModel.onAgentRunFinished(
+                AiRunDigest.RunResult(
+                    targetLabel = viewModel.activeTabPath.value ?: viewModel.fileName.value,
+                    buildExitCode = outputState.buildExitCode,
+                    runExitCode = outputState.runExitCode,
+                    buildDurationMs = outputState.buildDurationMs,
+                    runDurationMs = outputState.runDurationMs,
+                    timedOut = outputState.buildExitCode == ExecutionRunner.TIMED_OUT_EXIT_CODE ||
+                        outputState.runExitCode == ExecutionRunner.TIMED_OUT_EXIT_CODE,
+                    outputLines = outputState.lines.map { it.text },
+                    diagnosticLines = diagnostics.map { "${it.line}:${it.column}: ${it.message}" },
+                    cancelled = outputState.phase == OutputPhase.CANCELLED
+                )
+            )
+        }
+        previousAgentRunBusy = outputState.busy
     }
     val aiApplyEdits: () -> Unit = {
         aiViewModel.applyProposal(
@@ -1207,6 +1252,11 @@ fun EditorScreen(
             onRejectProposal = aiViewModel::rejectProposal,
             onUndoEdits = aiUndoEdits,
             onDismissUndoConflict = aiViewModel::dismissUndoConflict,
+            onApproveRun = aiApproveRun,
+            onSkipRun = aiSkipRun,
+            onContinue = aiViewModel::continueAnswer,
+            lastRunCommand = outputState.lastTerminalCommand,
+            runBusy = outputState.busy,
             modifier = sheetModifier
         )
     }

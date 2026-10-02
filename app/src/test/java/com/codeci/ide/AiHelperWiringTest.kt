@@ -66,8 +66,10 @@ class AiHelperWiringTest {
     fun `a request is sent only from Send on a preview`() {
         val vm = src("AiViewModel.kt")
         assertTrue(vm.contains("if (_state.value.phase != AiPhase.PREVIEW"))
-        // Exactly two network entry points: send() and the content-free test.
-        assertTrue(Regex("client\\.stream\\(").findAll(vm).count() == 2)
+        // Exactly three network entry points since Phase 80 (Level 4): send(),
+        // agentTurn() — the agent loop's turn, reachable only after the task
+        // preview's Send — and the content-free test. See AiLevel4WiringTest.
+        assertTrue(Regex("client\\.stream\\(").findAll(vm).count() == 3)
         assertTrue(vm.contains("GeminiRequest.testBody()"))
         // Phase 77: the chat sheet is where Send lives now, on the PREVIEW phase only.
         val sheet = src("AiChatSheet.kt")

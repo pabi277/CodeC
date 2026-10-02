@@ -1,9 +1,6 @@
 # Phase 79 — device round 1 (AI Level 3: proposed edits, review, and undo)
 
-> **Status: ⏳ NOT RUN.** These rows are owed. Nothing here is a claimed pass.
-> Run them on a real phone and paste the table back with ✅ / ❌ per row.
-> On ❌ a screenshot helps. Then say *"merge"* only when you want it merged —
-> nothing merges without that word (`rule.md` §3).
+> **Status: ✅ PASSED (2026-10-02, owner: *"All device tests passed"* → *"Ok merge it"*).** Merged to `main` @ `df2c5d4` via PR #105; post-merge CI `36934250423` green.
 
 **You need:** a project with several source files (a demo C or Python project is
 fine) and Phase 76's Gemini key already saved.
