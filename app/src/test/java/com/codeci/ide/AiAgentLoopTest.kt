@@ -225,14 +225,18 @@ class AiAgentLoopTest {
     }
 
     @Test
-    fun `only the newest results ride along and the dropped ones are counted`() {
+    fun `the newest results ride along in full and the dropped ones become re-read pointers`() {
         val steps = (1..7).map { step(it) }
         val packed = AiAgentPrompt.pack("q", "MAP", steps)
-        assertTrue(packed.text.contains("src/file7.c"))
-        assertTrue(packed.text.contains("src/file6.c"))
-        assertFalse(packed.text.contains("src/file1.c"))
+        // The newest KEEP_LAST_RESULTS ride along as full result blocks.
+        assertTrue(packed.text.contains("--- read_file src/file7.c"))
+        assertTrue(packed.text.contains("--- read_file src/file6.c"))
         assertEquals(7 - AiAgentLimits.KEEP_LAST_RESULTS, packed.droppedResults)
         assertTrue(packed.text.contains("earlier tool results were dropped to fit"))
+        // Phase 85 (Level 8, item 4): a dropped result is re-acquirable, so its path
+        // is now named in a pointer rather than being silently invisible.
+        assertTrue(packed.text.contains("re-read any on demand"))
+        assertTrue(packed.text.contains("src/file1.c"))
     }
 
     @Test

@@ -46,6 +46,14 @@ object AiAgentLimits {
     /** How many of the newest tool results are offered before older ones are dropped. */
     const val KEEP_LAST_RESULTS = 4
 
+    /**
+     * Phase 85 (Level 8, item 4) — the budget for the restorable-eviction pointer
+     * list. A dropped result is no longer just a count: each is named by path and
+     * range so the model can re-read it on demand. This caps that list so a long
+     * task cannot crowd out the results that did fit.
+     */
+    const val MAX_EVICTION_POINTER_CHARS = 1_200
+
     /** One line of the activity timeline shown to the user. */
     const val MAX_STEP_DETAIL_CHARS = 1_200
 
@@ -297,8 +305,11 @@ object AiAgentPolicy {
  *    model's knowledge — that is the whole point of Level 4);
  * 2. the newest [AiAgentLimits.KEEP_LAST_RESULTS] tool results are added,
  *    newest first, while [AiAgentLimits.MAX_REQUEST_CHARS] allows;
- * 3. anything dropped is **counted in the text** — `(N earlier tool results
- *    were dropped to fit)` — so the model knows what it cannot see.
+ * 3. anything dropped is **named, not just counted** (Phase 85, Level 8, item 4):
+ *    the text still says `(N earlier tool results were dropped to fit …)`, and
+ *    then lists one re-read pointer per dropped result — `path — lines a-b —
+ *    status` — so every evicted result is re-acquirable on demand instead of
+ *    silently gone. The list is capped at [AiAgentLimits.MAX_EVICTION_POINTER_CHARS].
  */
 object AiAgentPrompt {
 
@@ -320,16 +331,16 @@ object AiAgentPrompt {
             append(if (mapText.isBlank()) "(the project map could not be built)" else mapText).append('\n')
         }
         val kept = mutableListOf<AiAgentStep>()
-        var dropped = 0
+        val droppedSteps = mutableListOf<AiAgentStep>()
         var used = head.length
         for (step in results.asReversed()) {
             if (kept.size >= AiAgentLimits.KEEP_LAST_RESULTS) {
-                dropped++
+                droppedSteps += step
                 continue
             }
             val block = renderStep(step)
             if (used + block.length > budget) {
-                dropped++
+                droppedSteps += step
                 continue
             }
             kept += step
@@ -339,12 +350,51 @@ object AiAgentPrompt {
             "or answer normally when you have enough. Do not repeat a tool call whose result you already have."
         val text = buildString {
             append(head)
-            if (dropped > 0) append("\n(").append(dropped).append(" earlier tool result")
-                .append(if (dropped == 1) " was" else "s were").append(" dropped to fit)\n")
+            if (droppedSteps.isNotEmpty()) {
+                append("\n(").append(droppedSteps.size).append(" earlier tool result")
+                    .append(if (droppedSteps.size == 1) " was" else "s were")
+                    .append(" dropped to fit; re-read any on demand:)\n")
+                var shown = 0
+                var usedPtr = 0
+                for (step in droppedSteps) {
+                    val pointer = evictionPointer(step)
+                    if (usedPtr + pointer.length > AiAgentLimits.MAX_EVICTION_POINTER_CHARS) break
+                    append(pointer).append('\n')
+                    usedPtr += pointer.length + 1
+                    shown++
+                }
+                if (shown < droppedSteps.size) {
+                    append("- (+").append(droppedSteps.size - shown)
+                        .append(" more; re-issue the call to re-read)\n")
+                }
+            }
             for (step in kept.asReversed()) append('\n').append(renderStep(step))
             append(tail)
         }
-        return Packed(text = text, droppedResults = dropped, chars = text.length)
+        return Packed(text = text, droppedResults = droppedSteps.size, chars = text.length)
+    }
+
+    /**
+     * Phase 85 (Level 8, item 4) — one restorable-eviction pointer. A dropped read
+     * is named by `path — lines a-b — status` (parsed from its honest header) so the
+     * model can re-read exactly that range on demand; any other dropped result falls
+     * back to the call it came from, which is enough to re-issue it.
+     */
+    private fun evictionPointer(step: AiAgentStep): String {
+        val firstLine = step.modelResult.lineSequence().firstOrNull().orEmpty()
+        val header = Regex("""^FILE (.+?) — lines (\d+)-(\d+) of \d+""").find(firstLine)
+        val core = if (header != null) {
+            val status = when {
+                firstLine.contains("[refused") -> "refused"
+                firstLine.contains("[partial") -> "partial"
+                firstLine.contains("[complete]") -> "complete"
+                else -> "read"
+            }
+            "${header.groupValues[1]} — lines ${header.groupValues[2]}-${header.groupValues[3]} — $status"
+        } else {
+            step.title + if (step.ok) "" else " — refused"
+        }
+        return "- $core"
     }
 
     /** One result block exactly as it enters the request. */
