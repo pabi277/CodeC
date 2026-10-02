@@ -28,4 +28,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [79](chat-phase79/) | ✅ AI Level 3 — proposed edits, review, and undo |
 | [80](chat-phase80/) | ✅ AI Level 4 — whole-project map, bounded tools, approved run loop (merged) |
 | [81](chat-phase81/) | ✅ AI — Continue: get the rest of an answer that was cut off (merged) |
-| [82 / 82B](chat-phase82/) | 🚧 AI — rate-limit resilience, bigger answers + Level 5A NVIDIA dev/test BYOK (CI/device pending) |
+| [82 / 82B](chat-phase82/) | 🚧 AI — rate-limit resilience, bigger answers + Level 5A NVIDIA dev/test BYOK (push/CI auth-blocked; device pending) |

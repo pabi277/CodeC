@@ -1,6 +1,6 @@
 # CodeC Phase 82B / 82.3 — Level 5A provider seam + NVIDIA development/testing BYOK
 
-> **Status:** 🚧 IMPLEMENTED · CI/device pending · **Cost:** `[client-only / per-user BYOK]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · push/CI BLOCKED (GitHub connection); device pending · **Cost:** `[client-only / per-user BYOK]` · **Effort:** M
 > **Owner authorization:** ask_user option **authorize_82b**, selected 2026-10-02 before code.
 > This authorizes Level **5A only**. 5B second-model review and Levels 6+ are not started.
 
@@ -34,7 +34,7 @@ Request/SSE/error fixtures, independent credential-slot/persistence pins and no-
 
 ## Tests (implemented)
 
-AiProvidersTest **12**, AiProviderClientTest **4**, NvidiaRequestTest **7**, NvidiaResponseTest **8** (real Robolectric in CI), AiProviderWiringTest **9**, NvidiaRedactionTest **3**, AiKeyStoreSlotsTest **8**, plus shared transport fixtures. Local **461/461** green with host shims; existing AI and FeedbackDraft tests retained unchanged. Successful Keystore encryption/slot survival, consent UI, real SSE/model access and fixed-task comparison remain owner device rows, not claimed by source pins.
+AiProvidersTest **12**, AiProviderClientTest **4**, NvidiaRequestTest **7**, NvidiaResponseTest **8** (real Robolectric in CI), AiProviderWiringTest **9**, NvidiaRedactionTest **3**, AiKeyStoreSlotsTest **8**, plus shared transport fixtures. Local **462/462** green with host shims; existing AI and FeedbackDraft tests retained unchanged. Successful Keystore encryption/slot survival, consent UI, real SSE/model access and fixed-task comparison remain owner device rows, not claimed by source pins.
 
 ## Sources (record)
 
@@ -49,3 +49,7 @@ All fetched this chat 2026-10-02 unless noted:
 ## Deferred / rejected with reasons
 
 No second-model reviewer (5B), native provider tools, dynamic catalogue, custom OpenAI endpoint, shared key, server proxy, automatic fallback, offline model or multi-agent concurrency. No new orchestration/HTTP/JSON dependency: existing coroutines + HttpURLConnection + platform org.json suffice. Do not send an unsupported store field to NVIDIA or claim it overrides NVIDIA retention; stateless messages and the trial terms disclosure replace Google's provider-specific store:false setting.
+
+## Delivery gate — 2026-10-02
+
+Implementation is committed locally (initial code/docs **9285818**). Push failed on authentication; GitHub user API **401** confirmed the connection problem. **Reconnect GitHub in Arena**, then push this same session branch and run Build APK. No phase CI/APK, PR, merge or device acceptance exists yet. [Live ledger](README.md#ci--owner-handoff).

@@ -124,4 +124,19 @@ class AiRateLimitTest {
         assertNull(AiRateLimits.retrySeconds(f, 0, true))
         assertEquals(1, AiRateLimits.MAX_RETRIES)
     }
+    @Test fun `obsolete two-digit date never turns a long future minimum into an immediate retry`() {
+        val receiving = java.util.Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.US).apply {
+            clear(); set(2026, java.util.Calendar.OCTOBER, 2, 12, 0, 0)
+        }.timeInMillis
+        val format = SimpleDateFormat("EEEE, dd-MMM-yy HH:mm:ss zzz", Locale.US).apply { timeZone = TimeZone.getTimeZone("GMT") }
+        for ((year, month, day) in listOf(Triple(2047, 0, 1), Triple(2070, 0, 1), Triple(2076, 9, 2))) {
+            val future = java.util.Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.US).apply {
+                clear(); set(year, month, day, 12, 0, 0)
+            }.time
+            val wire = format.format(future)
+            val seconds = AiRateLimits.headerDelay(wire, receiving)!!
+            assertTrue("a long valid server minimum must not become zero: $wire", seconds > AiRateLimits.MAX_AUTO_WAIT_SECONDS)
+            assertNull(AiRateLimits.retrySeconds(AiErrors.forHttp(429, null, wire, receiving), 0, false))
+        }
+    }
 }

@@ -1,11 +1,11 @@
 # Phase 82 / 82B — device round 1
 
 > **Status: ⏳ NOT RUN.** Device acceptance is the owner's transcript, not host tests or CI.
-> Local prevalidation **461/461** green (38 classes, host shims); Build/run/APK details will be filled after Build APK is green. No PR or merge authorized yet.
+> Local prevalidation **462/462** green (38 classes, host shims); Build/run/APK details will be filled after Build APK is green. No PR or merge authorized yet.
 
 ## Build for this round
 
-CI/APK: **PENDING**. No artifact selected yet.
+CI/APK: **BLOCKED / NOT RUN**. Initial code/docs committed locally **9285818**; push failed on GitHub authentication (identity check HTTP 401). Owner must **reconnect GitHub in Arena**. No artifact exists for this round; wait for real Build APK green before installing/testing. No device acceptance claimed.
 
 Use a non-secret demo project and your own keys. NVIDIA is **internal testing/evaluation only, not production**. Never paste a key into a screenshot or chat. Do not deliberately drain daily quotas; 429 rows can be exercised when the provider naturally returns one. Report NOT EXERCISED honestly if no 429 occurs; deterministic fixtures cover server metadata in CI.
 

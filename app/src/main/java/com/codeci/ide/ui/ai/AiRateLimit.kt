@@ -4,6 +4,8 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.ParsePosition
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
@@ -27,6 +29,7 @@ object AiRateLimits {
     private val retryType = Regex("\"@type\"\\s*:\\s*\"type.googleapis.com/google[.]rpc[.]RetryInfo\"")
     private val retryDelay = Regex("\"retryDelay\"\\s*:\\s*\"([0-9]+(?:[.][0-9]{1,9})?)s\"")
     private val digits = Regex("[0-9]+")
+    private val legacyDate = Regex("([A-Za-z]+, [0-9]{2}-[A-Za-z]{3}-)([0-9]{2})( [0-9]{2}:[0-9]{2}:[0-9]{2} [A-Za-z0-9+:-]+)")
     private val dateFormats = listOf(
         "EEE, dd MMM yyyy HH:mm:ss zzz", // IMF-fixdate
         "EEEE, dd-MMM-yy HH:mm:ss zzz", // obsolete RFC 850 (HTTP recipients still accept it)
@@ -54,17 +57,41 @@ object AiRateLimits {
             return value.toLongOrNull() ?: Long.MAX_VALUE
         }
         for (format in dateFormats) {
-            val parser = SimpleDateFormat(format, Locale.US).apply {
-                timeZone = TimeZone.getTimeZone("GMT")
-                isLenient = false
-            }
-            val position = ParsePosition(0)
-            val date = parser.parse(value, position) ?: continue
-            if (position.index != value.length) continue
+            val date = if (format == dateFormats[1]) parseLegacyDate(value, nowMs) else parseDate(value, format)
+            if (date == null) continue
             val ms = (date.time - nowMs).coerceAtLeast(0)
             return ms / 1_000 + if (ms % 1_000 == 0L) 0 else 1
         }
         return null
+    }
+
+    private fun parseDate(value: String, format: String): Date? {
+        val parser = SimpleDateFormat(format, Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("GMT")
+            isLenient = false
+        }
+        val position = ParsePosition(0)
+        val date = parser.parse(value, position) ?: return null
+        return date.takeIf { position.index == value.length }
+    }
+
+    /** RFC 850's receiving-clock +50-year rule, without SimpleDateFormat's 80-year pivot. */
+    private fun parseLegacyDate(value: String, nowMs: Long): Date? {
+        val match = legacyDate.matchEntire(value) ?: return null
+        val horizon = Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.US).apply {
+            timeInMillis = nowMs
+            add(Calendar.YEAR, 50)
+        }
+        val year = match.groupValues[2].toInt()
+        val upperYear = horizon.get(Calendar.YEAR)
+        var fullYear = upperYear - (upperYear - year) % 100
+        val prefix = match.groupValues[1]
+        val suffix = match.groupValues[3]
+        // Resolve the century BEFORE checking weekday; otherwise the wrong century can reject
+        // a valid long minimum and fall back to 12s. Validate month/day/time strictly either way.
+        val candidate = parseDate(prefix.substringAfter(", ") + fullYear + suffix, "dd-MMM-yyyy HH:mm:ss zzz") ?: return null
+        if (candidate.time > horizon.timeInMillis) fullYear -= 100
+        return parseDate(prefix + fullYear + suffix, "EEEE, dd-MMM-yyyy HH:mm:ss zzz")
     }
 
     private fun durationSeconds(value: String): Long? = runCatching {

@@ -1,6 +1,6 @@
 # Phase 82 — CodeC AI: rate-limit resilience and a bigger answer budget
 
-> **Status:** 🚧 IMPLEMENTED · CI/device pending (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · push/CI BLOCKED (GitHub connection); device pending (2026-10-02) · **Cost:** `[client-only / BYOK]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 > Work only on `arena/01a0fbc2-codec`; baseline `main` @ `e089880` (PR #106).
 > No PR, merge, or push to `main` without the owner's explicit command (`rule.md` §3).
@@ -47,19 +47,20 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 - [x] State verified, required docs read, owner choices recorded before code.
 - [x] Phase 80/81 post-merge record carried forward.
 - [x] Pure policies and transport/provider fixtures implemented, existing safety pins unchanged.
-- [x] Local kotlinc/JRE prevalidation **461/461** across **38 classes**, compile exit 0 and no `error:` in transcript (a helper's "compiled" is not proof).
-- [ ] Code and living docs committed together; session branch pushed.
+- [x] Local kotlinc/JRE prevalidation **462/462** across **38 classes**, compile exit 0 and no `error:` in transcript (a helper's "compiled" is not proof).
+- [x] Code and living docs committed together: initial implementation **9285818**, with local date-parser follow-up recorded below.
+- [ ] Session branch pushed — **BLOCKED**: Git push authentication error; authenticated GitHub user request **HTTP 401**. Owner must reconnect GitHub in Arena.
 - [ ] Build APK CI green (executor of record: Gradle/JUnit/Robolectric/lint/APKs).
 - [ ] Device round handed to owner; no device acceptance claimed.
 - [ ] Stop at merge gate. No PR opened.
 
 ## Local prevalidation — 2026-10-02
 
-**106 new checks / 12 new test classes**, plus **355 unchanged existing checks**. Total: **461 passed / 0 failed**, 38 classes. Scratch JRE from `jdk4py` 25.0.2.1 and npm `kotlin-compiler` 2.4.20; **`-jvm-target 17`**, matching CI's target. `/tmp/codec-phase82/prevalidate.sh` compiles the actual AI core, VM/store and pure project/apply/undo dependencies; JUnit/Android/lifecycle/org.json have thin host shims, and relevant pure Git data/redactor fragments are extracted from their real source. JSON/Android behavior and Compose still require real CI; successful Keystore encryption/slot survival still require the device. Slot tests intentionally use corrupt blobs, not fake crypto success. Compile transcript inspected for **`error:`** (none), compiler exit **0**, fresh jar required before reflection runs. No local Gradle build or credentialed vendor request.
+**107 new checks / 12 new test classes**, plus **355 unchanged existing checks**. Total: **462 passed / 0 failed**, 38 classes. Scratch JRE from `jdk4py` 25.0.2.1 and npm `kotlin-compiler` 2.4.20; **`-jvm-target 17`**, matching CI's target. `/tmp/codec-phase82/prevalidate.sh` compiles the actual AI core, VM/store and pure project/apply/undo dependencies; JUnit/Android/lifecycle/org.json have thin host shims, and relevant pure Git data/redactor fragments are extracted from their real source. JSON/Android behavior and Compose still require real CI; successful Keystore encryption/slot survival still require the device. Slot tests intentionally use corrupt blobs, not fake crypto success. Compile transcript inspected for **`error:`** (none), compiler exit **0**, fresh jar required before reflection runs. No local Gradle build or credentialed vendor request.
 
 | New class | Checks | Covered |
 |---|---:|---|
-| AiRateLimitTest | 17 | Numeric/date/obsolete date, RetryInfo rounding, maximum minimum, bad/huge delays, minute/day/unknown, error precedence/privacy |
+| AiRateLimitTest | 18 | Numeric/date/obsolete date with receiving-clock century expansion, RetryInfo rounding, maximum minimum, bad/huge delays, minute/day/unknown, error precedence/privacy |
 | AiRetryTest | 11 | At most two attempts, ticks, zero delay, deadline, cancellation, initial/late partial output, same captured request |
 | AiHttpStreamTest | 13 | Real adapters + fake connections: Retry-After, identical bytes/headers, SSE/DONE, remaining cap, streamed error, bounded error body, disconnect-before-countdown, blocked-read cancellation, malformed/async/redirect/IO/model failures |
 | AiRateLimitWiringTest | 8 | Three original sites/private helper, Stop/reset, both countdown surfaces, deadline, no persistence, busy test/Send, no pending polling |
@@ -72,13 +73,17 @@ Implementation decisions (agent, not additional owner answers): known daily exha
 | AiKeyStoreSlotsTest | 8 | Actual metadata/deletion/decode-refusal code: separate consent/model slots, affected-slot-only deletion, shared undo/layout, cross-instance concurrent writers, failed atomic metadata update |
 | NvidiaRedactionTest | 3 | nvapi- shape, both stored literals, log/crash attachments |
 
-A separate supplementary compile/run also passes **13/13** unchanged privacy/backup checks: ManifestPermissionsTest **7**, BackupRulesTest **6**, compiler exit 0 and no `error:`. Both Android backup XMLs and the permission/dependency sets are unchanged. Thus local prevalidation covers **474 passing checks** across the core + supplementary batches, without treating host shims as a device pass.
+A separate supplementary compile/run also passes **13/13** unchanged privacy/backup checks: ManifestPermissionsTest **7**, BackupRulesTest **6**, compiler exit 0 and no `error:`. Both Android backup XMLs and the permission/dependency sets are unchanged. Thus local prevalidation covers **475 passing checks** across the core + supplementary batches, without treating host shims as a device pass.
 
 Existing AI helper/Level2/Level3/Level4/Continue/surface wiring pins are **unchanged**, including count=3; apply/undo/filter/tool/run, feedback, type and motion regressions are in the 355. During prevalidation the compiler found and fixed a duplicate trailing fragment in AiAgentLoop and an inferred coroutine return type; later checks caught one busy-Send source pin and a wrong new test's invalid-model expectation. None were hidden by the helper's "compiled" print. Final credential review also found that concurrent VM/layout/support store instances could race a read-modify-write of shared acceptance properties; one shared monitor and atomic minSdk-safe metadata replacement now preserve both provider slots, verified by actual metadata/deletion fixtures.
 
 ## CI / owner handoff
 
-**Build APK: NOT RUN yet.** The session branch will be pushed after code + living docs are committed together; Gradle/JUnit/Robolectric/Compose/release checks are the executor of record. **Device round: NOT RUN**; no real provider availability or coding-quality claim. HTTP 202 is a fixed **pending request** failure, with no polling; an empty NVIDIA test is not “NVIDIA answered”. Explicit manual selection only, one retry only. No PR opened or merge authorized.
+**Push / Build APK: BLOCKED, NOT RUN.** Code + living docs were committed together as **9285818**. `git push origin arena/01a0fbc2-codec` then failed with “could not read Username … terminal prompts disabled”; a safe authenticated identity request returned **HTTP 401 / Bad credentials**, confirming that the Arena GitHub connection needs attention. Owner has been asked to **reconnect GitHub in Arena**; no password/token was requested, no credential was put in chat, and no other branch/push/PR/merge was attempted. Local work is preserved. After reconnect: push this session branch, obtain green Build APK (real Gradle/JUnit/Robolectric/Compose/release checks), then hand the owner the device round. No CI run or APK exists for this phase yet.
+
+A final local date fixture found that SimpleDateFormat's default two-digit year window could ignore a valid long RFC-850 Retry-After and fall back to 12s. The follow-up expands the century against the injected receiving clock before weekday validation; **21/44/exactly-50-year** minima are refused as too long, never shortened. AiRateLimitTest is now **18**, full core **462/462**; supplementary permission/backup **13/13**. Successful cipher/real endpoint/device proof is still pending.
+
+**Device round: NOT RUN**; no live provider availability or quality claim. HTTP 202 is a fixed pending-request failure, no polling; an empty NVIDIA test is not “NVIDIA answered”. Exactly one retry and manual selection only. **No PR opened or merge authorized.**
 
 ## Risks / deliberate limits
 

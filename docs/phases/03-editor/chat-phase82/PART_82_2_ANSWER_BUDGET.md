@@ -1,6 +1,6 @@
 # CodeC Phase 82.2 — a larger answer, still bounded across Continue
 
-> **Status:** 🚧 IMPLEMENTED · CI/device pending · **Cost:** `[client-only / possible additional BYOK tokens]` · **Effort:** S
+> **Status:** 🚧 IMPLEMENTED · push/CI BLOCKED (GitHub connection); device pending · **Cost:** `[client-only / possible additional BYOK tokens]` · **Effort:** S
 > **Owner row (verbatim):** "Api rate limit"; dossier separates quota rejection from local answer truncation.
 
 ## First move: evidence, not code
@@ -28,7 +28,7 @@ Tests pin exact cap numbers, ceiling clamp, accumulator boundary, 48,000 + 16,00
 
 ## Tests (implemented)
 
-AiAnswerBudgetTest **6**, NvidiaRequestTest **7**, plus provider fixtures; AiContinuationTest/AiAnswerTest/GeminiRequestTest/AiContinueWiringTest re-run **unchanged**. Exact output/remaining caps pass in the **461/461** host suite; real CI and long-answer phone checks pending.
+AiAnswerBudgetTest **6**, NvidiaRequestTest **7**, plus provider fixtures; AiContinuationTest/AiAnswerTest/GeminiRequestTest/AiContinueWiringTest re-run **unchanged**. Exact output/remaining caps pass in the **462/462** host suite; real CI and long-answer phone checks pending.
 
 ## Sources (record)
 
@@ -39,3 +39,7 @@ AiAnswerBudgetTest **6**, NvidiaRequestTest **7**, plus provider fixtures; AiCon
 ## Deferred / rejected with reasons
 
 96,000 total rejected by the owner's chosen option (64,000 retained). Agent Continue, dynamic context expansion and unlimited output remain out of scope. A larger cap is not a claim of larger free-tier allowance or better model quality.
+
+## Delivery gate — 2026-10-02
+
+Implementation is committed locally (initial code/docs **9285818**). Push failed on authentication; GitHub user API **401** confirmed the connection problem. **Reconnect GitHub in Arena**, then push this same session branch and run Build APK. No phase CI/APK, PR, merge or device acceptance exists yet. [Live ledger](README.md#ci--owner-handoff).

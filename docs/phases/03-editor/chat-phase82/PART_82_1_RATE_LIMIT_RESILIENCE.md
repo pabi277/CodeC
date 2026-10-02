@@ -1,6 +1,6 @@
 # CodeC Phase 82.1 — one visible, cancelable rate-limit retry
 
-> **Status:** 🚧 IMPLEMENTED · CI/device pending · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED · push/CI BLOCKED (GitHub connection); device pending · **Cost:** `[client-only]` · **Effort:** M
 > **Owner row (verbatim):** "Api rate limit".
 
 ## First move: evidence, not code
@@ -27,7 +27,7 @@ Fixtures prove header/marker handling, one retry and unchanged payload, no retry
 
 ## Tests (implemented)
 
-AiRateLimitTest **17**, AiRetryTest **11**, AiRateLimitWiringTest **8**, AiHttpStreamTest **13**. Local total **461/461** across 38 classes; same-request bytes, disconnect-before-countdown, blocked read + Stop, partial-stream refusal and deadline fixtures pass. Real CI pending; UI timing/device rows not run.
+AiRateLimitTest **18**, AiRetryTest **11**, AiRateLimitWiringTest **8**, AiHttpStreamTest **13**. Local total **462/462** across 38 classes; same-request bytes, disconnect-before-countdown, blocked read + Stop, partial-stream refusal and deadline fixtures pass. Valid obsolete dates expand their century against the receiving clock (21/44/50-year fixture) rather than falling back to a short delay. Real CI blocked by GitHub auth (HTTP 401); UI timing/device rows not run.
 
 ## Sources (record)
 
@@ -39,3 +39,7 @@ AiRateLimitTest **17**, AiRetryTest **11**, AiRateLimitWiringTest **8**, AiHttpS
 ## Deferred / rejected with reasons
 
 No retry library/new dependency (one bounded policy fits the existing coroutine/HTTP seams); no unlimited exponential loop; no 5xx/offline automatic replay; no silent provider switch. Do not show provider messages to explain a quota. No daily timer persisted across process death.
+
+## Delivery gate — 2026-10-02
+
+Implementation is committed locally (initial code/docs **9285818**). Push failed on authentication; GitHub user API **401** confirmed the connection problem. **Reconnect GitHub in Arena**, then push this same session branch and run Build APK. No phase CI/APK, PR, merge or device acceptance exists yet. [Live ledger](README.md#ci--owner-handoff).

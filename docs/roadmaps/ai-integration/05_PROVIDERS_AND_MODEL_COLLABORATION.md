@@ -1,6 +1,6 @@
 # Level 5 — Multiple API providers and model collaboration
 
-**Status 2026-10-02: 5A owner-authorized and implemented as [Phase 82B](../../phases/03-editor/chat-phase82/README.md), local 461/461; CI/device pending. 5B remains proposed and unauthorized.**
+**Status 2026-10-02: 5A owner-authorized and implemented as [Phase 82B](../../phases/03-editor/chat-phase82/README.md), local 462/462; CI/device pending. 5B remains proposed and unauthorized.**
 
 Current 5A slice: Gemini native + NVIDIA Build fixed OpenAI-compatible HTTPS/SSE endpoints, manual provider/editable model, dated capability rows with unknowns preserved, Test connection, separate AES-GCM key/terms slots and no silent fallback. NVIDIA Trial Terms restrict this to **internal development/testing/evaluation, not production**; required checkbox, own key only. HTTP 202 is pending/fixed failure, no hidden polling. CodeC's bounded text tools and reviewed Apply/Run permissions do not depend on capability flags. Rate retry and budgets are Phase 82 policies shared by all three original VM stream sites. No custom endpoint, second reviewer, native provider tools or live catalog in this slice. Device/model quality is [NOT RUN](../../phases/03-editor/chat-phase82/DEVICE_ROUND.md).
 
@@ -44,3 +44,5 @@ Do not use a remote API proxy unless its operator, retention, credential handlin
 - The review provider and context are disclosed before a second call.
 - Keys remain private during configuration, requests, error handling, device backup, logs, and support export.
 - Compare model quality and tool-call correctness on a fixed CodeC task set, not only marketing benchmarks.
+
+> **Phase 82 delivery update (2026-10-02):** initial code/docs **9285818** committed locally; push blocked by GitHub auth (identity HTTP 401). Owner asked to reconnect GitHub in Arena. CI/APK not run/created, device NOT RUN, no PR/merge. Local core **462/462** + supplementary privacy/backup **13/13**; [ledger](../../phases/03-editor/chat-phase82/README.md).
