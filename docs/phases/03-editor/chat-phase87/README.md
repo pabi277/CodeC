@@ -268,6 +268,23 @@ changed, and both were strengthened rather than weakened:
   It now asserts the real invariant behaviourally: the reviewer's instruction contains none of the
   three protocol markers, and its reply is classified, never executed.
 
+### CI round 1 — red, two real compile errors, both fixed
+
+Build APK run [`37118225659`](https://github.com/pabi277/CodeC/actions/runs/37118225659) on
+`ef97bbf` **failed** at `:app:compileDebugKotlin`. Both errors were real and both were invisible to
+the host harness, for one reason: **the harness ran Kotlin 2.4.20 while the project builds with
+Kotlin 2.2.10** (`gradle/libs.versions.toml:14`).
+
+| Error | Cause | Fix |
+|---|---|---|
+| `AiViewModel.kt:407` *Unresolved reference 'copy'* | `dropLiveTaskMemory()` called `it.copy(memory = …)` on `AgentSession`, which is a plain `private class`, not a `data class` — it has no `copy`. | Assign the mutable field: `agent?.memory = AiTaskMemory.EMPTY`. Also more correct: copying would have discarded every other `var` the loop is mid-way through using. |
+| `AiOptionsPolicy.kt:145,148,150,152,154` *NewConstraintError … T == AiAnswerDetail? <!: Enum<T>* | `decodeEnum<T : Enum<T>>(raw) ?: AiAnswerDetail.NORMAL` — Kotlin 2.2.10 cannot fix `T` from the elvis right-hand side. 2.4 infers it fine. | Spell the type argument at all five call sites: `decodeEnum<AiAnswerDetail>(raw)`. |
+
+After the fixes, the whole harness was **rebuilt on `kotlin-compiler@2.2.10`** — the project's own
+version, installed via `npm install kotlin-compiler@2.2.10` — and re-run: **152/152 green on
+2.2.10**. The harness version mismatch is now recorded in `rule.md` §9 and `TROUBLESHOOTING.md`;
+a host harness that is not on the project's Kotlin version can pass code the app cannot build.
+
 ### Two real defects the pins caught while being written
 
 1. **`AiAgentPolicy.decide` was called without `caps`.** The gate inside `decide` would have kept
@@ -293,7 +310,7 @@ changed, and both were strengthened rather than weakened:
 - [ ] Settings export / feedback scrubbing still redacts every credential shape — **not re-run
       here**; Level 10 stores no secrets (the eight new keys are ints, enums and booleans in the
       existing non-secret property bag), but this was not re-verified on a device.
-- [ ] **Build APK on CI green** — the executor of record; pending at the time of writing.
+- [ ] **Build APK on CI green** — round 1 (`37118225659` on `ef97bbf`) **red** at `:app:compileDebugKotlin` for the two errors above; both fixed and re-verified on Kotlin 2.2.10, round 2 pending at the time of writing.
 - [ ] **Device acceptance** — POSTPONED to Level 12 by standing owner decision, not claimed here.
 
 ## Deferred / rejected with reasons

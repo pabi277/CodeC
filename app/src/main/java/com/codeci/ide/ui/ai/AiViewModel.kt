@@ -402,9 +402,15 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Drops the running task's derived memory; nothing on disk is touched here. */
+    /**
+     * Drops the running task's derived memory; nothing on disk is touched here.
+     *
+     * [AgentSession] is a plain class, not a data class, so this assigns the
+     * mutable field rather than copying the session — copying would also have
+     * discarded every other `var` the loop is mid-way through using.
+     */
     private fun dropLiveTaskMemory() {
-        agent = agent?.let { it.copy(memory = AiTaskMemory.EMPTY) }
+        agent?.memory = AiTaskMemory.EMPTY
     }
 
     /**

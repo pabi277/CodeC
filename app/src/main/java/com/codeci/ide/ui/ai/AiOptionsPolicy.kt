@@ -141,17 +141,25 @@ object AiOptionsPolicy {
     /** Mirrors `AiKeyStore.showBubble`: absent means **on**, because memory defaults on. */
     fun booleanOn(raw: String?): Boolean = raw?.trim() != "false"
 
+    // The type argument is spelled out at every call site on purpose. Kotlin
+    // 2.2.10 (the version this project builds with) cannot fix `T` from the
+    // right-hand side of the elvis and reports a NewConstraintError; 2.4 infers
+    // it fine. Naming it keeps the decode working on the compiler that ships
+    // the app, not just the one on the host harness.
     fun answerDetail(raw: String?): AiAnswerDetail =
-        decodeEnum(raw) ?: AiAnswerDetail.NORMAL
+        decodeEnum<AiAnswerDetail>(raw) ?: AiAnswerDetail.NORMAL
 
     fun activity(raw: String?): AiActivityDisplay =
-        decodeEnum(raw) ?: AiActivityDisplay.COLLAPSED
+        decodeEnum<AiActivityDisplay>(raw) ?: AiActivityDisplay.COLLAPSED
 
-    fun backup(raw: String?): AiBackupMode = decodeEnum(raw) ?: AiBackupMode.OFF
+    fun backup(raw: String?): AiBackupMode =
+        decodeEnum<AiBackupMode>(raw) ?: AiBackupMode.OFF
 
-    fun budgetOffer(raw: String?): AiBudgetOffer = decodeEnum(raw) ?: AiBudgetOffer.OFFER
+    fun budgetOffer(raw: String?): AiBudgetOffer =
+        decodeEnum<AiBudgetOffer>(raw) ?: AiBudgetOffer.OFFER
 
-    fun reviewer(raw: String?): AiReviewer = decodeEnum(raw) ?: AiReviewer.OFF
+    fun reviewer(raw: String?): AiReviewer =
+        decodeEnum<AiReviewer>(raw) ?: AiReviewer.OFF
 
     /** One read of every stored property; nothing here can throw. */
     fun decode(
