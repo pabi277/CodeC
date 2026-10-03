@@ -1,6 +1,6 @@
 # Phase 86 — AI Level 9: task memory and planning
 
-> **Status:** Source implementation is on `arena/01a1004c-codec`; latest local host pre-validation passed **72/72 selected methods across eight test classes**. Build APK run `37106180481` failed three existing Level 8 regression assertions; the refusal-copy and pointer-budget causes are fixed locally and the rerun is pending. No PR opened, no merge. Formal device acceptance remains **POSTPONED** to Level 12.
+> **Status:** Source implementation is on `arena/01a1004c-codec`; latest local host pre-validation passed **72/72 selected methods across eight test classes**. Build APK CI run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726) is **GREEN** on fix commit `ddb75d3`. Round 1 (`37106180481`) exposed three existing Level 8 regression assertions; the refusal-copy and pointer-budget causes are fixed. No PR opened, no merge. Formal device acceptance remains **POSTPONED** to Level 12.
 > **Owner authorization:** Level 9 started with the bounded D6 amendment recorded below (2026-10-03). Level 10's memory on/off UI is **not** part of this phase.
 > **Baseline:** `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461` (Phase 84+85 merged via PR #110; final-head Build APK run `37084800939` green). Level 9 spec: [`09_TASK_MEMORY_AND_PLANNING.md`](../../../roadmaps/ai-integration/09_TASK_MEMORY_AND_PLANNING.md); shared rules: [`00_AGENTIC_MAP_AND_SECURITY_RULES.md`](../../../roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 
@@ -68,7 +68,7 @@ methods across `AiTaskMemoryTest`, `AiTaskMemoryStoreTest`, `AiToolRunnerTest`,
 `AiLevel4WiringTest`, and `AiLevel9WiringTest` via a small JUnit-compatible
 host shim: **72 passed, 0 failed**. This is not the full Gradle
 suite and does not compile Android/Compose wiring (including `AiViewModel`); the
-Build APK workflow remains the executor of record. One over-restrictive source
+Build APK run `37106545726` is green on fix head `ddb75d3`; the workflow remains the executor of record. One over-restrictive source
 pin was corrected after it failed: the store must receive the project root for
 version reconciliation, while its durable writer must never target that root.
 
@@ -78,14 +78,19 @@ on code head `3716dd0` failed after 3,044 tests, with three Level 8 regressions.
 runner now preserves the established specific reasons while retaining the new
 path/admission checks. `AiLevel8ContextTest` caught a missing “more” marker when
 the pointer budget filled; the packer now reserves room for that marker. These
-fixes pass in the expanded 72/72 host harness. Round 2 is pending; no APK or
-Android/Compose pass is claimed.
+fixes pass in the expanded 72/72 host harness.
+
+**Build APK CI round 2:** run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726)
+passed on code fix head `ddb75d3`. The full Build APK job passed host unit/screenshot
+tests, debug and release assembly, and the release APK set checks. Artifacts: release
+APK **7,138,224 B**, debug APK **26,931,320 B**. This is CI/build validation, not
+formal device acceptance or a provider/device run.
 
 Measured repository inventory: **320 Kotlin test files / 3,044 `@Test`
 annotations / 39 AI test classes / 462 AI tests**. Counts describe source only,
 not passing results.
 
 - [x] Implementation, source pins, plan-tail regression and local pre-validation.
-- [ ] Build APK CI on the pushed final head; record the run ID here.
+- [x] Build APK CI run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726) passed on code fix head `ddb75d3`; artifacts recorded above.
 - [ ] Device acceptance — not part of this phase; formal round remains Level 12.
 - [ ] PR/merge — not authorized; stop at `rule.md` §3.

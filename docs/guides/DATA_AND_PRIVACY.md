@@ -141,8 +141,7 @@ adult/terms confirmation. There is no bundled/shared key or remote proxy.
 
 Phase 86 adds the owner-authorized, bounded task-memory exception described
 above. Source implementation is on the session branch; local host pre-validation
-passed 72/72 selected host methods across eight classes. Build APK run `37106180481` found three Level 8 regression assertions, now fixed; rerun is pending. This is
-not full Gradle/Android validation. Formal device acceptance remains **POSTPONED
+passed 72/72 selected host methods across eight classes. Build APK run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726) is green on fix commit `ddb75d3`; it followed and corrected the three regressions found by run `37106180481`. The focused host harness is not the full Gradle/Android suite. Formal device acceptance remains **POSTPONED
 until Level 12**, not passed. The existing
 [Phase 82/82B ledger](../phases/03-editor/chat-phase82/README.md) records its
 provider/optimization state; [Phase 86](../phases/03-editor/chat-phase86/README.md)
