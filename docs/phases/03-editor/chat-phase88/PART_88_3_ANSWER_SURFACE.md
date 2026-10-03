@@ -1,6 +1,6 @@
 # CodeC Phase 88.3 — The answer surface: formatted, selectable, inert
 
-> **Status:** ✅ IMPLEMENTED (2026-10-03, on the owner's *"Complete level 11"*; Build APK on CI pending — see the [README record](README.md#implementation-record-2026-10-03)) · **Cost:** `[client-only]` · **Effort:** L
+> **Status:** ✅ IMPLEMENTED (2026-10-03, on the owner's *"Complete level 11"*; CI-GREEN: Build APK `37132310296` on `88f0186` — see the [README record](README.md#implementation-record-2026-10-03)) · **Cost:** `[client-only]` · **Effort:** L
 > **Owner row (verbatim):** *"think I don't have much code knowledge."*
 > **Parent brief:** [Phase 88 README](README.md) · **depends on:** [88.1](PART_88_1_MARKDOWN_MODEL.md), [88.2](PART_88_2_LINK_POLICY.md)
 

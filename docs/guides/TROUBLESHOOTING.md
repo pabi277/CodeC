@@ -2258,7 +2258,7 @@ The screenshot observations and deterministic replay are kept separate in the [P
 
 ## 61. AI answers on the phone: "why is it plain text?" / "can I tap links?" / "where is the full result?" (Phase 88 / Level 11)
 
-- **Update 2026-10-03: Phase 88 is implemented** on the session branch `arena/01a101db-codec`, on the owner's *"Complete level 11"*. Build APK on CI is pending, and it is **not merged to `main` yet**. The answers below describe that build.
+- **Update 2026-10-03: Phase 88 is implemented** on the session branch `arena/01a101db-codec`, on the owner's *"Complete level 11"*. Its Build APK run (`37132310296`) is green, but it is **not merged to `main` yet**. The answers below describe that build.
 - **Are formatted answers in the app yet?** **In the Phase 88 build, yes.** Headings, lists, quotes, code blocks and tables are drawn as such, and raw `#`, `**` and backticks no longer show for them. Until Phase 88 is merged, `main` still shows raw Markdown (defect 9). *(This entry first read "No — planned only", when Phase 88 was a brief.)*
 - **Will links in an AI answer open?** Only `https` links, and only after you confirm. A tap shows a dialog with the site's name and the full address, and nothing opens until you press **Open**. `http`, `javascript:`, `data:` and every other kind never open; their address is shown as plain text, so you can still copy it.
 - **Will CodeC download pictures from an answer?** No. An image shows as its description only; nothing is fetched.

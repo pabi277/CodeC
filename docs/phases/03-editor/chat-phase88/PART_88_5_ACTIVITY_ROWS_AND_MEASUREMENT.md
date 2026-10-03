@@ -1,6 +1,6 @@
 # CodeC Phase 88.5 — Activity rows with the full result on tap, disclosure pins, measurement
 
-> **Status:** ✅ IMPLEMENTED (2026-10-03, on the owner's *"Complete level 11"*; Build APK on CI pending — see the [README record](README.md#implementation-record-2026-10-03)) · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** ✅ IMPLEMENTED (2026-10-03, on the owner's *"Complete level 11"*; CI-GREEN: Build APK `37132310296` on `88f0186` — see the [README record](README.md#implementation-record-2026-10-03)) · **Cost:** `[client-only]` · **Effort:** M
 > **Owner decisions (2026-10-03):** activity rows that show the full result on tap · request disclosure
 > stays collapsed, never removed.
 > **Level 11 spec:** *"Tool activity — expandable rows, collapsed by default, full result on tap."*
@@ -85,7 +85,9 @@ so a later presentation change cannot remove either.
 |---|---:|---:|---|
 | Level 6 (`main` @ `7419566`) | 7 117 444 B | 26 869 612 B | run `37047037300`, Phase 83 `BASELINE.md` §7 |
 | Current `main` (`c3771c5`) | 7 154 428 B | 26 988 060 B | run `37122702615`, *APK size* annotations |
-| Phase 88 implementation head | *to record from its Build APK run* | *to record* | the implementation commit's Build APK run (pending) |
+| Phase 88 implementation head (`88f0186`) | 7 177 184 B | 27 054 816 B | run `37132310296`, *APK size* annotations |
+
+**Result (2026-10-03):** release +22 756 B (+0.32 %) against `c3771c5`, the delta that isolates Level 11, and +59 740 B (+0.84 %) against Level 6. Debug grew +66 756 B and +185 204 B. Test inventory: 326 → 332 files and 3 120 → 3 204 `@Test`; AI tests went 538 → 622.
 
 Report both deltas. Only the second isolates Level 11; the first includes about 37 KB of release growth
 from Levels 7–10. Also record the test inventory delta against the README's baseline (326 files /

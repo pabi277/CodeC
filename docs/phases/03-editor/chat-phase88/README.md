@@ -1,11 +1,12 @@
 # Phase 88 — AI Level 11: agent phone presentation
 
-> **Status:** ✅ **IMPLEMENTED — Build APK on CI pending.** The owner commanded the implementation in chat
-> (*"Complete level 11"*, 2026-10-03). Parts 88.1–88.5 are in the tree on `arena/01a101db-codec`; see
-> [*Implementation record*](#implementation-record-2026-10-03). **1 878 host tests pass, 0 fail** on the
-> kotlinc 2.2.10 / JRE harness (`rule.md` §9), including the 80 new pure and wiring tests; the 4
-> Robolectric Compose link-dialog tests run on CI only. Build APK on CI is the executor of record and its
-> result is recorded below when it lands. **No PR and no merge** without a further explicit command.
+> **Status:** ✅ **IMPLEMENTED and CI-GREEN.** The owner commanded the implementation in chat
+> (*"Complete level 11"*, 2026-10-03). Parts 88.1–88.5 are in the tree on `arena/01a101db-codec` @ `88f0186`;
+> see [*Implementation record*](#implementation-record-2026-10-03). Build APK run [`37132310296`](https://github.com/pabi277/CodeC/actions/runs/37132310296) on `88f0186` is
+> **success on the first round**: host unit and screenshot tests, including the 4 Robolectric link-dialog
+> tests, plus debug and release assembly, APK checks and artifact uploads. The release APK is **7 177 184 B**,
+> +22 756 B (+0.32 %) against `c3771c5`. **1 878 host tests pass, 0 fail** on the kotlinc 2.2.10 / JRE
+> harness (`rule.md` §9). **No PR and no merge** without a further explicit command.
 > *Brief history:* the owner first authorized Level 11 in chat on 2026-10-03 **for a brief only**
 > (commit `0860ca3`, Build APK run `37128474253` green).
 > **Owner decisions (2026-10-03, answered in chat):** the **full Level 11 in one phase** — Markdown
@@ -266,12 +267,12 @@ the manifest, the three `client.stream(` sites and every budget constant.
 
 | File | `@Test` | Host harness | CI |
 |---|---:|---|---|
-| `AiMarkdownTest` | 27 | 27 / 27 pass | pending |
-| `AiLinkPolicyTest` | 17 | 17 / 17 pass | pending |
-| `AiProgressPolicyTest` | 14 | 14 / 14 pass | pending |
-| `AiResultRowPolicyTest` | 7 | 7 / 7 pass | pending |
-| `AiLevel11WiringTest` | 15 | 15 / 15 pass | pending |
-| `AiAnswerLinkDialogTest` (Robolectric Compose) | 4 | cannot run here | pending |
+| `AiMarkdownTest` | 27 | 27 / 27 pass | pass |
+| `AiLinkPolicyTest` | 17 | 17 / 17 pass | pass |
+| `AiProgressPolicyTest` | 14 | 14 / 14 pass | pass |
+| `AiResultRowPolicyTest` | 7 | 7 / 7 pass | pass |
+| `AiLevel11WiringTest` | 15 | 15 / 15 pass | pass |
+| `AiAnswerLinkDialogTest` (Robolectric Compose) | 4 | cannot run here | pass |
 
 **Harness run (kotlinc 2.2.10 on a JRE, `rule.md` §9):**
 - 151 production and 202 test files compile with **nothing dropped**: 199 classes, **1 878 tests, 0 failures**.
@@ -294,13 +295,36 @@ declarations into a harness-only stub, which is never committed. That brings `Ai
 | AI `@Test` | 538 | 622 | +84 |
 | Robolectric Compose test files | 4 | 5 | +1 |
 
-**APK:** recorded from the implementation commit's Build APK run, in the 88.5 measurement table, when
-that run lands.
+### CI record
+
+**Round 1, green:** Build APK run [`37132310296`](https://github.com/pabi277/CodeC/actions/runs/37132310296) on `88f0186` (job `111229685179`). Every step is a **success** on
+the first round: host unit and screenshot tests (`:app:testDebugUnitTest`), debug assembly, measure-only
+release, signed release, the APK-set check and the size report.
+- The test step runs the whole unit-test task, which has no test filter, and fails the job on any failing
+  test. Its success therefore covers every class, including the four Robolectric `AiAnswerLinkDialogTest`
+  cases, the two amended pins and every regression class.
+- The raw job log could not be downloaded from this sandbox (the log host answered `EOF` twice), so no
+  executed-test count is quoted for CI.
+
+### Measurement (88.5)
+
+Taken from the run's *APK size* annotations:
+
+| Build | Release APK | Debug APK |
+|---|---:|---:|
+| Level 6 baseline (`main` @ `7419566`, run `37047037300`) | 7 117 444 B | 26 869 612 B |
+| Current `main` (`c3771c5`, run `37122702615`) | 7 154 428 B | 26 988 060 B |
+| **Phase 88 implementation (`88f0186`, run `37132310296`)** | **7 177 184 B** | **27 054 816 B** |
+| Delta vs `c3771c5` (Level 11 alone) | **+22 756 B (+0.32 %)** | +66 756 B |
+| Delta vs Level 6 (Levels 7–11) | +59 740 B (+0.84 %) | +185 204 B |
+
+The R8 mapping file is 71 186 679 B, and the release manifest has no `android:debuggable` flag. No
+dependency was added: the growth is the new Kotlin code.
 
 ## Exit condition
 
-Ticked items are proven by the host harness or the wiring pins named. CI confirms them and runs the
-Robolectric dialog test. The visual checks go to the Level 12 device round, as the brief planned.
+Ticked items are proven by the host harness or the wiring pins named, and confirmed by Build APK
+`37132310296`, which also ran the Robolectric dialog test green. The visual checks go to the Level 12 device round, as the brief planned.
 
 - [x] Headings, lists, block quotes, inline code, fenced code and tables render; raw Markdown syntax is not shown for supported constructs. *(Model: `AiMarkdownTest`. Drawing: `AiMarkdownView`. Visual check: Level 12.)*
 - [x] A hostile answer containing `<script>`, `<img onerror=…>` and `javascript:` / `data:` / `http:` links renders as inert text. *(`AiMarkdownTest` hostile corpus; `AiLinkPolicyTest`; `AiAnswerLinkDialogTest` on CI.)*
@@ -317,7 +341,7 @@ Robolectric dialog test. The visual checks go to the Level 12 device round, as t
 - [x] A long beginner explanation renders in clear sections without truncation. *(By construction: headings and lists render, and there is no line or height cap. Device check: Level 12.)*
 - [x] Exactly three `client.stream(` sites; no ceiling moved; no new dependency, permission, endpoint, DataStore key or default-model change.
 - [x] minSdk 24 respected: `java.io` only; the URL check uses `java.net.URI`, never `android.net.Uri` (the core stays host-testable).
-- [ ] APK size delta recorded against both baselines (88.5). *(Pending the implementation commit's Build APK run.)*
+- [x] APK size delta recorded against both baselines (88.5): release +22 756 B against `c3771c5` and +59 740 B against Level 6 (run `37132310296`).
 
 ## Deferred / rejected with reasons
 
