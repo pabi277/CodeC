@@ -253,7 +253,7 @@ JUnit-shaped shim and an `org.json` stand-in — all in `/tmp`, never in the rep
 | Copy | `AiLevel10CopyTest` | 6 — what the new controls *say*: the counter follows the caps, the offer states what it does **not** add, the review request frames the answer as data | ⚠️ CI-only locally |
 | Regression | `AiAgentLoopTest` 19 · `AiLevel4WiringTest` 14 · `AiContextBuilderTest` 11 · `AiTaskMemoryTest` 9 · `AiToolRunnerTest` 14 · `AiLevel9WiringTest` 6 · `AiTaskMemoryStoreTest` 5 · `AiLevel8ContextTest` 4 | 82 — existing cases, unchanged | ✅ 82/82 |
 
-**Local total: 152 passed, 0 failed.**
+**Local total: 152 passed, 0 failed** across these classes. Widened afterwards to every Android-free test class in the repository: **179 classes, 1 594 cases, 0 failures** on Kotlin 2.2.10 (see *The harness lesson this round earned* below).
 
 `AiLevel10CopyTest` is the one file this sandbox cannot compile: `AiCopy.kt` transitively needs
 `AiEditApplier → GitDiscardEditors → GitDiscardPolicy → GitManager → ProjectsHub`, and that chain
@@ -285,6 +285,38 @@ version, installed via `npm install kotlin-compiler@2.2.10` — and re-run: **15
 2.2.10**. The harness version mismatch is now recorded in `rule.md` §9 and `TROUBLESHOOTING.md`;
 a host harness that is not on the project's Kotlin version can pass code the app cannot build.
 
+### CI round 2 — red on two pre-existing pins, both fixed; local coverage widened
+
+Build APK run [`37118776411`](https://github.com/pabi277/CodeC/actions/runs/37118776411) on
+`35d72b1` **compiled cleanly** and reached `:app:testDebugUnitTest` — **3 120 tests, 2 failed**, both
+in the pre-existing `AiLevel7WiringTest`:
+
+| Pin | Why it broke | Fix |
+|---|---|---|
+| `resumeAgentOrStop gates on the combined turn and tool budget` | asserted the literal `fun blockResume(nowMs: Long)`; 87.6 added the `caps` parameter. | Pins `fun blockResume(nowMs: Long, caps: AiAgentCaps = AiAgentCaps())` **and** adds `blockModelTurn(nowMs, caps) ?: blockTool(nowMs, caps)`, so the pin now also proves both gates are still consulted in order. |
+| `refusals are counted on a separate clamped counter` | asserted `coerceIn(0, AiAgentLimits.MAX_TOOL_CALLS)`; the clamp now reads the task's cap. | Pins `coerceIn(0, caps.toolCalls)` **and** asserts `AiAgentCaps().toolCalls == MAX_TOOL_CALLS`, so an unextended task is provably still clamped at 24. |
+
+Both were strengthened, not loosened: each now pins the defaulted signature *and* the guarantee the
+original pin was really about.
+
+### The harness lesson this round earned
+
+Two separate harness defects let broken code look green, and both are now guarded against:
+
+1. **Wrong compiler version** (round 1): the harness ran Kotlin 2.4.20; the project builds 2.2.10.
+   The harness is now `kotlin-compiler@2.2.10`.
+2. **Iterative file-dropping hides a broken file.** The harness compiles the Android-free set,
+   drops whatever fails, and repeats. When the `AiLevel7WiringTest` fix referenced
+   `AiAgentLimits` without qualifying it, the file was silently dropped in round 1 — it did not
+   fail, it *vanished*, and the run still reported zero failures. **After any sweep, check that
+   every file you edited is present in the compiled set.** That check is what caught this.
+
+Local coverage was then widened from 13 hand-picked classes to **every Android-free test class**:
+**179 classes, 1 594 cases, 0 failures** on Kotlin 2.2.10. One earlier failure in `RunArtifactsTest`
+turned out to be a defect in the harness's own `TemporaryFolder` stand-in (`newFolder()` with no
+arguments returned the root instead of a new subfolder); fixed in the shim, and CI had passed that
+test all along. `AiLevel10CopyTest` remains CI-only for the `AiCopy.kt` dependency reason above.
+
 ### Two real defects the pins caught while being written
 
 1. **`AiAgentPolicy.decide` was called without `caps`.** The gate inside `decide` would have kept
@@ -310,7 +342,7 @@ a host harness that is not on the project's Kotlin version can pass code the app
 - [ ] Settings export / feedback scrubbing still redacts every credential shape — **not re-run
       here**; Level 10 stores no secrets (the eight new keys are ints, enums and booleans in the
       existing non-secret property bag), but this was not re-verified on a device.
-- [ ] **Build APK on CI green** — round 1 (`37118225659` on `ef97bbf`) **red** at `:app:compileDebugKotlin` for the two errors above; both fixed and re-verified on Kotlin 2.2.10, round 2 pending at the time of writing.
+- [ ] **Build APK on CI green** — round 1 (`37118225659` on `ef97bbf`) **red** at `:app:compileDebugKotlin` for the two errors above; round 2 (`37118776411` on `35d72b1`) compiled cleanly and reached the tests — 3 120 tests, 2 failed, both pre-existing `AiLevel7WiringTest` pins broken by the signature changes, both fixed; round 3 pending at the time of writing.
 - [ ] **Device acceptance** — POSTPONED to Level 12 by standing owner decision, not claimed here.
 
 ## Deferred / rejected with reasons
