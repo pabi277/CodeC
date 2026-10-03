@@ -46,8 +46,41 @@ object AiAgentLimits {
     /** How many of the newest tool results are offered before older ones are dropped. */
     const val KEEP_LAST_RESULTS = 4
 
+    /**
+     * Phase 85 (Level 8, item 4) — the budget for the restorable-eviction pointer
+     * list. A dropped result is no longer just a count: each is named by path and
+     * range so the model can re-read it on demand. This caps that list so a long
+     * task cannot crowd out the results that did fit.
+     */
+    const val MAX_EVICTION_POINTER_CHARS = 1_200
+
+    /**
+     * Phase 85 (Level 8, S11) — how many times the model may issue the *same* call
+     * with no other call in between before the loop stops as no-progress. Duplicate
+     * reads are already served from the working set at zero execution cost; this is
+     * the backstop that ends a loop spinning on one unanswerable request.
+     */
+    const val MAX_IDENTICAL_REPEATS = 3
+
     /** One line of the activity timeline shown to the user. */
     const val MAX_STEP_DETAIL_CHARS = 1_200
+
+    /**
+     * Phase 84 (Level 7, fix 5 / **S2**) — clip a full tool result down to the
+     * on-screen [MAX_STEP_DETAIL_CHARS] preview **without losing the honest cut
+     * marker**. The old code did `full.take(MAX_STEP_DETAIL_CHARS)`, which threw
+     * away the runner's `CUT_NOTE` sitting at the end of a truncated result, so a
+     * fragment looked complete on the timeline. The full text still reaches the
+     * model untouched through [AiAgentStep.modelResult]; this only shapes what
+     * the user reads. When [full] carried [cutMarker], the clipped preview keeps
+     * it; when it did not, no marker is invented.
+     */
+    fun timelineDetail(full: String, cutMarker: String): String {
+        if (full.length <= MAX_STEP_DETAIL_CHARS) return full
+        val marker = if (cutMarker.isNotEmpty() && full.contains(cutMarker)) "\n" + cutMarker else ""
+        val room = (MAX_STEP_DETAIL_CHARS - marker.length).coerceAtLeast(0)
+        return full.substring(0, room.coerceAtMost(full.length)) + marker
+    }
 
     /** The user-facing sentence for each stop reason. */
     fun stopSentence(reason: AiAgentStopReason): String = when (reason) {
@@ -57,19 +90,38 @@ object AiAgentLimits {
         AiAgentStopReason.WALL_CLOCK -> "Stopped after ${MAX_WALL_CLOCK_MS / 60_000} minutes. Ask a narrower question to continue."
         AiAgentStopReason.USER_STOP -> "Stopped."
         AiAgentStopReason.PROVIDER_FAILURE -> "The AI could not finish. Nothing in your project was changed."
+        AiAgentStopReason.NO_PROGRESS ->
+            "Stopped: the AI repeated the same read $MAX_IDENTICAL_REPEATS times without making progress. " +
+                "Ask a narrower question to continue."
     }
 }
 
 /** Why the loop stopped. Every value is shown to the user, never swallowed. */
-enum class AiAgentStopReason { TURN_BUDGET, TOOL_BUDGET, RUN_BUDGET, WALL_CLOCK, USER_STOP, PROVIDER_FAILURE }
+enum class AiAgentStopReason {
+    TURN_BUDGET, TOOL_BUDGET, RUN_BUDGET, WALL_CLOCK, USER_STOP, PROVIDER_FAILURE,
+    /** Phase 85 (Level 8, S11): the model repeated one call with no progress in between. */
+    NO_PROGRESS
+}
 
 /** One row of the visible activity timeline. In memory only (D6). */
 data class AiAgentStep(
     val kind: AiAgentStepKind,
     /** Short label, e.g. `read_file src/main.c (lines 1-60)`. */
     val title: String,
-    /** The result text as the user should see it (already clipped). */
+    /**
+     * The result text as the user should see it — a short **preview**, already
+     * clipped to [AiAgentLimits.MAX_STEP_DETAIL_CHARS]. Phase 84 (**S1**): this
+     * is a UI string only and is **never** packed into a model request.
+     */
     val detail: String = "",
+    /**
+     * Phase 84 (Level 7, fix 1 / **S1**) — the full-fidelity result text that the
+     * **next model request** carries, clipped only to [AiAgentLimits.MAX_RESULT_CHARS]
+     * (the owner's 8 000-char per-result cap), never to the 1 200-char preview.
+     * [AiAgentPrompt.renderStep] reads this, not [detail]. Empty for steps that
+     * carry no model-facing payload (TASK/REQUEST/STOPPED).
+     */
+    val modelResult: String = "",
     /** False when the step was refused or failed. */
     val ok: Boolean = true,
     /** Phase 82B D4: REQUEST rows hold the exact two sent strings, never clipped. Memory only. */
@@ -112,7 +164,27 @@ enum class AiAgentStepKind {
  */
 data class AiAgentBudget(
     val turnsUsed: Int = 0,
+    /**
+     * Phase 84 (fix 3): tool calls that actually **executed**. This is the only
+     * counter that gates [AiAgentLimits.MAX_TOOL_CALLS]; refusals no longer
+     * inflate it (that inflation is what rendered "49 of 24 reads").
+     */
     val toolCallsUsed: Int = 0,
+    /**
+     * Phase 84 (fix 3): tool blocks that were **refused** — malformed, denied by
+     * policy, or over-budget. Counted and shown separately; it never gates the
+     * execution cap and never mixes into [toolCallsUsed].
+     */
+    val toolCallsRefused: Int = 0,
+    /**
+     * Phase 84 (fix 3) / Phase 85 (**S11**): duplicate reads served from the
+     * loop-local working set at zero execution cost. Populated by
+     * [AiViewModel.executeToolBatch] when an exact-duplicate read (same path, same
+     * range) is answered from [AiAgentWorkingSet] instead of touching the disk. It
+     * never gates [AiAgentLimits.MAX_TOOL_CALLS] and never mixes into
+     * [toolCallsUsed] — the three counts stay structurally separate.
+     */
+    val toolCallsReused: Int = 0,
     val runsUsed: Int = 0,
     val startedAtMs: Long = 0L
 ) {
@@ -130,6 +202,15 @@ data class AiAgentBudget(
         else -> null
     }
 
+    /**
+     * Phase 84 (fix 2): the reason the loop must stop on **any** resume path —
+     * the turn/wall-clock gate first, then the tool gate. `resumeAgentOrStop`
+     * consults this so the malformed-parse and denied-only paths can no longer
+     * walk past an exhausted tool budget the way `AiAgentPolicy.decide` alone
+     * could not stop them.
+     */
+    fun blockResume(nowMs: Long): AiAgentStopReason? = blockModelTurn(nowMs) ?: blockTool(nowMs)
+
     /** How many tool calls are still available, for the timeline and the packer. */
     fun toolCallsRemaining(): Int = (AiAgentLimits.MAX_TOOL_CALLS - toolCallsUsed).coerceAtLeast(0)
 
@@ -139,9 +220,58 @@ data class AiAgentBudget(
 
     fun withTurn() = copy(turnsUsed = turnsUsed + 1)
 
-    fun withToolCalls(n: Int) = copy(toolCallsUsed = toolCallsUsed + n)
+    /**
+     * Records [n] executed tool calls, **clamped** to the cap so the displayed
+     * count can never read past `MAX_TOOL_CALLS` (fix 3: "never exceed their
+     * caps").
+     */
+    fun withToolCalls(n: Int) =
+        copy(toolCallsUsed = (toolCallsUsed + n).coerceIn(0, AiAgentLimits.MAX_TOOL_CALLS))
+
+    /** Records [n] refused tool blocks (malformed/denied/over-budget), separately. */
+    fun withRefused(n: Int) =
+        copy(toolCallsRefused = (toolCallsRefused + n).coerceAtLeast(0))
+
+    /** Phase 85 (S11): records [n] duplicate reads served from the working set. */
+    fun withReused(n: Int) =
+        copy(toolCallsReused = (toolCallsReused + n).coerceAtLeast(0))
 
     fun withRun() = copy(runsUsed = runsUsed + 1)
+}
+
+/**
+ * Phase 85 (Level 8, **S11**) — the loop-local working set. The agent loop is
+ * read-only (S6/S7: `ui/ai` never writes the project), so within one task an
+ * exact-duplicate read — same path, same range — returns the same bytes. Serving it
+ * from here costs zero execution budget (counted as `toolCallsReused`, never
+ * `toolCallsUsed`), and watching for a run of identical, no-progress calls lets the
+ * loop stop instead of spinning. Loop-local by design: born with the task, gone when
+ * it ends — not a persistent cross-task cache.
+ */
+data class AiAgentWorkingSet(
+    /** Read identity (`path\u0000start-end`) to the result text already delivered. */
+    val results: Map<String, String> = emptyMap(),
+    val lastSignature: String? = null,
+    val repeats: Int = 0
+) {
+    /** The cached result for [key], or null when this exact read has not run yet. */
+    fun cached(key: String): String? = results[key]
+
+    fun record(key: String, result: String): AiAgentWorkingSet =
+        copy(results = results + (key to result))
+
+    /** Notes one issued call by [signature]; consecutive identical calls accumulate. */
+    fun note(signature: String): AiAgentWorkingSet =
+        if (signature == lastSignature) copy(repeats = repeats + 1)
+        else copy(lastSignature = signature, repeats = 1)
+
+    /** True when one call has repeated [AiAgentLimits.MAX_IDENTICAL_REPEATS] times with no progress between. */
+    fun stalled(): Boolean = repeats >= AiAgentLimits.MAX_IDENTICAL_REPEATS
+
+    companion object {
+        /** A read's identity in the working set: its path plus the exact range asked for. */
+        fun readKey(path: String, start: Int, end: Int): String = "$path\u0000$start-$end"
+    }
 }
 
 /**
@@ -232,8 +362,11 @@ object AiAgentPolicy {
  *    model's knowledge — that is the whole point of Level 4);
  * 2. the newest [AiAgentLimits.KEEP_LAST_RESULTS] tool results are added,
  *    newest first, while [AiAgentLimits.MAX_REQUEST_CHARS] allows;
- * 3. anything dropped is **counted in the text** — `(N earlier tool results
- *    were dropped to fit)` — so the model knows what it cannot see.
+ * 3. anything dropped is **named, not just counted** (Phase 85, Level 8, item 4):
+ *    the text still says `(N earlier tool results were dropped to fit …)`, and
+ *    then lists one re-read pointer per dropped result — `path — lines a-b —
+ *    status` — so every evicted result is re-acquirable on demand instead of
+ *    silently gone. The list is capped at [AiAgentLimits.MAX_EVICTION_POINTER_CHARS].
  */
 object AiAgentPrompt {
 
@@ -255,16 +388,16 @@ object AiAgentPrompt {
             append(if (mapText.isBlank()) "(the project map could not be built)" else mapText).append('\n')
         }
         val kept = mutableListOf<AiAgentStep>()
-        var dropped = 0
+        val droppedSteps = mutableListOf<AiAgentStep>()
         var used = head.length
         for (step in results.asReversed()) {
             if (kept.size >= AiAgentLimits.KEEP_LAST_RESULTS) {
-                dropped++
+                droppedSteps += step
                 continue
             }
             val block = renderStep(step)
             if (used + block.length > budget) {
-                dropped++
+                droppedSteps += step
                 continue
             }
             kept += step
@@ -274,18 +407,87 @@ object AiAgentPrompt {
             "or answer normally when you have enough. Do not repeat a tool call whose result you already have."
         val text = buildString {
             append(head)
-            if (dropped > 0) append("\n(").append(dropped).append(" earlier tool result")
-                .append(if (dropped == 1) " was" else "s were").append(" dropped to fit)\n")
+            if (droppedSteps.isNotEmpty()) {
+                append("\n(").append(droppedSteps.size).append(" earlier tool result")
+                    .append(if (droppedSteps.size == 1) " was" else "s were")
+                    .append(" dropped to fit; re-read any on demand:)\n")
+                var shown = 0
+                var usedPtr = 0
+                for (step in droppedSteps) {
+                    val pointer = evictionPointer(step)
+                    if (usedPtr + pointer.length > AiAgentLimits.MAX_EVICTION_POINTER_CHARS) break
+                    append(pointer).append('\n')
+                    usedPtr += pointer.length + 1
+                    shown++
+                }
+                if (shown < droppedSteps.size) {
+                    append("- (+").append(droppedSteps.size - shown)
+                        .append(" more; re-issue the call to re-read)\n")
+                }
+            }
             for (step in kept.asReversed()) append('\n').append(renderStep(step))
             append(tail)
         }
-        return Packed(text = text, droppedResults = dropped, chars = text.length)
+        return Packed(text = text, droppedResults = droppedSteps.size, chars = text.length)
+    }
+
+    /**
+     * Phase 85 (Level 8, item 4) — one restorable-eviction pointer. A dropped read
+     * is named by `path — lines a-b — status` (parsed from its honest header) so the
+     * model can re-read exactly that range on demand; any other dropped result falls
+     * back to the call it came from, which is enough to re-issue it.
+     */
+    private fun evictionPointer(step: AiAgentStep): String {
+        val firstLine = step.modelResult.lineSequence().firstOrNull().orEmpty()
+        val header = Regex("""^FILE (.+?) — lines (\d+)-(\d+) of \d+""").find(firstLine)
+        val core = if (header != null) {
+            val status = when {
+                firstLine.contains("[refused") -> "refused"
+                firstLine.contains("[partial") -> "partial"
+                firstLine.contains("[complete]") -> "complete"
+                else -> "read"
+            }
+            "${header.groupValues[1]} — lines ${header.groupValues[2]}-${header.groupValues[3]} — $status"
+        } else {
+            step.title + if (step.ok) "" else " — refused"
+        }
+        return "- $core"
     }
 
     /** One result block exactly as it enters the request. */
     fun renderStep(step: AiAgentStep): String = buildString {
         append("--- ").append(step.title).append(if (step.ok) "" else " [refused]").append('\n')
-        append(step.detail.take(AiAgentLimits.MAX_RESULT_CHARS))
+        // Phase 84 (S1): the model reads the full-fidelity result, never the
+        // 1 200-char on-screen preview. A wiring pin fails if this reads `detail`.
+        append(step.modelResult.take(AiAgentLimits.MAX_RESULT_CHARS))
         append('\n')
+    }
+
+    /**
+     * Phase 84 (Level 7, fix 4 / **S12**) — the reserved final-synthesis request.
+     * Tools are **masked, not removed** (Manus): the system instruction still
+     * defines them, so the provider's KV-cache and the tool schema stay intact,
+     * but this turn's user text tells the model that tool use is disabled and it
+     * must answer in prose from what is already above. This is what guarantees a
+     * readable answer on a budget stop instead of a raw `<<<CODEC_TOOL` block.
+     */
+    const val FINAL_SYNTHESIS_INSTRUCTION: String =
+        "Tool use is disabled for this final turn. Using only the task, the project map and " +
+            "the tool results above, write the final answer to the user in prose. Do not emit " +
+            "any <<<CODEC_TOOL block. If you could not finish, say plainly what is known and what is not."
+
+    /**
+     * Builds the final-synthesis request: the ordinary packed context plus the
+     * mask instruction. Bounded by the same [AiAgentLimits.MAX_REQUEST_CHARS].
+     */
+    fun finalSynthesis(
+        question: String,
+        mapText: String,
+        steps: List<AiAgentStep>,
+        budget: Int = AiAgentLimits.MAX_REQUEST_CHARS
+    ): Packed {
+        val base = pack(question, mapText, steps, budget)
+        val text = base.text + "\n\n" + FINAL_SYNTHESIS_INSTRUCTION
+        return Packed(text = text, droppedResults = base.droppedResults, chars = text.length)
     }
 }

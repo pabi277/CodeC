@@ -42,6 +42,7 @@ enum class AiToolName(val wire: String) {
     LIST_FILES("list_files"),
     SEARCH_PROJECT("search_project"),
     READ_FILE("read_file"),
+    READ_FILES("read_files"),
     REQUEST_RUN("request_run");
 
     companion object {
@@ -63,8 +64,17 @@ sealed class AiToolParse {
      * A block that could not be read (unclosed, no name, a line that is not
      * `key: value`). Nothing in it executes; the loop sends the reason back as
      * a tool result so the model can correct itself.
+     *
+     * Phase 84 (Level 7, fix 6): [calls] carries the blocks that **were** parsed
+     * successfully before the malformed one. The old parser did an early
+     * `return`, discarding them, so three good `read_file` blocks beside one
+     * broken block were all thrown away and the model re-read from scratch.
      */
-    data class Malformed(val prose: String, val reason: String) : AiToolParse()
+    data class Malformed(
+        val prose: String,
+        val reason: String,
+        val calls: List<AiToolRequest> = emptyList()
+    ) : AiToolParse()
 }
 
 object AiToolProtocol {
@@ -76,7 +86,9 @@ object AiToolProtocol {
     const val INSTRUCTIONS: String =
         "To inspect the project, answer with one or more tool blocks and nothing else:\n" +
             "<<<CODEC_TOOL name=\"read_file\">>>\npath: relative/path.ext\nstart: 1\nend: 60\n<<<END_CODEC_TOOL>>>\n" +
-            "Tools: list_files(path?, ext?), search_project(query, max?), read_file(path, start?, end?), request_run(target?).\n" +
+            "Tools: list_files(path?, ext?), search_project(query, max?), read_file(path, start?, end?), read_files(paths), request_run(target?).\n" +
+            "read_files reads several files in one round trip — paths: a.kt, b.kt:10-40, c.kt (comma-separated, each with an optional :start-end). " +
+            "Every path is checked on its own, so one refused path never blocks the others.\n" +
             "All paths are relative to the project root. When you have enough information, answer normally with no tool block."
 
     /**
@@ -98,11 +110,11 @@ object AiToolProtocol {
             prose.append(answer, at, open)
             val nameStart = open + OPEN.length
             val bodyStart = answer.indexOf(">>>", nameStart)
-            if (bodyStart < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block was never closed")
+            if (bodyStart < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block was never closed", calls.toList())
             val header = answer.substring(nameStart, bodyStart).trim()
             val name = nameValue(header)
             val end = answer.indexOf(CLOSE, bodyStart + 3)
-            if (end < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block is missing $CLOSE")
+            if (end < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block is missing $CLOSE", calls.toList())
             val body = answer.substring(bodyStart + 3, end)
             val args = LinkedHashMap<String, String>()
             for (raw in body.lines()) {
@@ -110,17 +122,28 @@ object AiToolProtocol {
                 if (line.isEmpty()) continue
                 val colon = line.indexOf(':')
                 if (colon <= 0) {
-                    return AiToolParse.Malformed(prose.toString().trim(), "a tool argument line has no name: $line")
+                    return AiToolParse.Malformed(prose.toString().trim(), "a tool argument line has no name: $line", calls.toList())
                 }
                 val key = line.substring(0, colon).trim().lowercase()
                 val value = line.substring(colon + 1).trim()
-                if (key in args) return AiToolParse.Malformed(prose.toString().trim(), "the argument $key was given twice")
+                if (key in args) return AiToolParse.Malformed(prose.toString().trim(), "the argument $key was given twice", calls.toList())
                 args[key] = value
             }
             calls += AiToolRequest(name ?: "", args)
             at = end + CLOSE.length
         }
         return AiToolParse.Calls(prose.toString().trim(), calls)
+    }
+
+    /**
+     * Phase 84 (fix 4 / **S12**) — the answer text with every tool block removed,
+     * so a stop never leaves a raw `<<<CODEC_TOOL …>>>` on screen as the answer.
+     * Complete blocks are dropped; text from an unclosed/malformed block onward is
+     * cut. Returns prose only (possibly blank).
+     */
+    fun proseOnly(answer: String): String = when (val parsed = parse(answer)) {
+        is AiToolParse.Calls -> parsed.prose
+        is AiToolParse.Malformed -> parsed.prose
     }
 
     /** `name="read_file"` (or bare `read_file`) from a block header. */
@@ -138,6 +161,7 @@ object AiToolProtocol {
     fun describeCall(call: AiToolCall): String = when (call.name) {
         AiToolName.READ_FILE -> "read_file ${call.path}" +
             (if (call.start != null && call.end != null) " (lines ${call.start}-${call.end})" else "")
+        AiToolName.READ_FILES -> "read_files " + (call.reads?.joinToString(", ") { it.path }.orEmpty())
         AiToolName.SEARCH_PROJECT -> "search_project \"${call.query}\""
         AiToolName.LIST_FILES -> "list_files" +
             (call.path?.let { " $it/" } ?: "") + (call.ext?.let { " *.$it" } ?: "")
@@ -153,6 +177,7 @@ object AiToolProtocol {
             val range = if (start != null || end != null) " (lines ${start ?: "1"}-${end ?: "?"})" else ""
             "read_file $path$range"
         }
+        AiToolName.READ_FILES -> "read_files " + request.args["paths"].orEmpty()
         AiToolName.SEARCH_PROJECT -> "search_project \"${request.args["query"].orEmpty()}\""
         AiToolName.LIST_FILES -> {
             val path = request.args["path"]
@@ -181,8 +206,17 @@ data class AiToolCall(
     val end: Int? = null,
     val query: String? = null,
     val max: Int? = null,
-    val ext: String? = null
+    val ext: String? = null,
+    /** Phase 85 (Level 8, item 3): the per-file specs of a `read_files` batch. */
+    val reads: List<ReadSpec>? = null
 )
+
+/**
+ * One file inside a `read_files` batch: a normalized path and the line range to
+ * deliver. Each spec is validated and read independently, so one refused path
+ * never blocks its siblings (**S5**).
+ */
+data class ReadSpec(val path: String, val start: Int, val end: Int)
 
 sealed class AiToolVerdict {
     data class Allowed(val call: AiToolCall) : AiToolVerdict()
@@ -198,6 +232,9 @@ sealed class AiToolVerdict {
 object AiToolLimits {
     /** Lines one `read_file` may return. */
     const val MAX_READ_LINES = 400
+
+    /** Files one `read_files` batch may name (bounded, parallel read-only IO). */
+    const val MAX_BATCH_READS = 8
 
     /** Characters one tool result may carry into the next request (owner cap). */
     const val MAX_RESULT_CHARS = 8_000
@@ -234,6 +271,7 @@ object AiToolPolicy {
             AiToolName.LIST_FILES -> setOf("path", "ext")
             AiToolName.SEARCH_PROJECT -> setOf("query", "max")
             AiToolName.READ_FILE -> setOf("path", "start", "end")
+            AiToolName.READ_FILES -> setOf("paths")
             AiToolName.REQUEST_RUN -> setOf("target")
         }
         val extra = request.args.keys - allowedKeys
@@ -242,10 +280,56 @@ object AiToolPolicy {
         }
         return when (name) {
             AiToolName.READ_FILE -> validateRead(request, view)
+            AiToolName.READ_FILES -> validateReadFiles(request)
             AiToolName.SEARCH_PROJECT -> validateSearch(request)
             AiToolName.LIST_FILES -> validateList(request, view)
             AiToolName.REQUEST_RUN -> validateRun(request, view)
         }
+    }
+
+    /**
+     * Phase 85 (Level 8, item 3) — validate a `read_files` batch. Only the
+     * STRUCTURE is checked here (a non-empty list within [AiToolLimits.MAX_BATCH_READS],
+     * each entry a path with an optional `:start-end`); per-path security and
+     * existence are re-applied to EVERY file at run time, so one refused path
+     * yields a per-file refusal while its siblings still read (**S5**). The model
+     * is told the format, never the permissions.
+     */
+    private fun validateReadFiles(request: AiToolRequest): AiToolVerdict {
+        val raw = request.args["paths"]?.takeIf { it.isNotBlank() }
+            ?: return AiToolVerdict.Denied(request, "read_files needs a paths list")
+        val entries = raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        if (entries.isEmpty()) return AiToolVerdict.Denied(request, "read_files needs at least one path")
+        if (entries.size > AiToolLimits.MAX_BATCH_READS) {
+            return AiToolVerdict.Denied(
+                request, "read_files may read at most ${AiToolLimits.MAX_BATCH_READS} files at once"
+            )
+        }
+        val specs = mutableListOf<ReadSpec>()
+        for (entry in entries) {
+            val ranged = Regex("^(.*?):(\\d+)-(\\d+)$").find(entry)
+            val pathPart: String
+            val start: Int
+            val end: Int
+            if (ranged != null) {
+                pathPart = ranged.groupValues[1].trim()
+                start = ranged.groupValues[2].toIntOrNull() ?: 1
+                end = ranged.groupValues[3].toIntOrNull() ?: start
+            } else {
+                pathPart = entry
+                start = 1
+                end = AiToolLimits.MAX_READ_LINES
+            }
+            if (pathPart.isEmpty()) return AiToolVerdict.Denied(request, "read_files has an empty path in \"$entry\"")
+            if (start < 1 || end < start) {
+                return AiToolVerdict.Denied(request, "read_files range for \"$pathPart\" must be start >= 1 and end >= start")
+            }
+            val cappedEnd = if (end - start + 1 > AiToolLimits.MAX_READ_LINES) start + AiToolLimits.MAX_READ_LINES - 1 else end
+            specs += ReadSpec(pathPart, start, cappedEnd)
+        }
+        return AiToolVerdict.Allowed(
+            AiToolCall(name = AiToolName.READ_FILES, rawName = request.rawName, reads = specs)
+        )
     }
 
     private fun validateRead(request: AiToolRequest, view: AiToolProjectView): AiToolVerdict {

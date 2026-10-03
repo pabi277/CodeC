@@ -564,7 +564,11 @@ private fun AgentActivityCard(state: AiUiState) {
         ) {
             Text(AiCopy.AGENT_ACTIVITY, style = MaterialTheme.typography.titleSmall)
             state.agentUsage?.let { usage ->
-                Muted(AiCopy.agentUsageLine(usage.turns, usage.toolCalls, usage.runs))
+                Muted(
+                    AiCopy.agentUsageLine(
+                        usage.turns, usage.toolCalls, usage.runs, usage.refused, usage.reused
+                    )
+                )
             }
             for (step in state.agentSteps) {
                 Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.XXS))) {

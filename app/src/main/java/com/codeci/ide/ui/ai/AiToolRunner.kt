@@ -68,7 +68,8 @@ object AiToolRunner {
         return when (call.name) {
             AiToolName.LIST_FILES -> listFiles(call, paths)
             AiToolName.SEARCH_PROJECT -> search(call, rootDir, paths, shouldStop)
-            AiToolName.READ_FILE -> read(call, rootDir, dirtyBuffers)
+            AiToolName.READ_FILE -> read(call, rootDir, dirtyBuffers, shouldStop)
+            AiToolName.READ_FILES -> readFiles(call, rootDir, paths, dirtyBuffers, shouldStop)
             // request_run is an approval request; it must never execute anything.
             AiToolName.REQUEST_RUN -> Outcome(false, "request_run is approved by the user, not executed as a tool.")
         }
@@ -181,45 +182,198 @@ object AiToolRunner {
 
     // ---- read_file --------------------------------------------------------
 
-    private fun read(call: AiToolCall, rootDir: File, dirtyBuffers: Map<String, String>): Outcome {
+    private fun read(
+        call: AiToolCall,
+        rootDir: File,
+        dirtyBuffers: Map<String, String>,
+        shouldStop: () -> Boolean = { false }
+    ): Outcome {
         val path = call.path ?: return Outcome(false, "read_file needs a path.")
         if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
             return Outcome(false, "$path is credential-shaped and is never read.")
         }
+        val requestedStart = (call.start ?: 1).coerceAtLeast(1)
+        val requestedEnd = (call.end ?: Int.MAX_VALUE).coerceAtLeast(requestedStart)
         val fromBuffer = dirtyBuffers.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
-        val text = if (fromBuffer != null) {
-            AiEditProposalParser.normalizeLf(fromBuffer)
+
+        // Phase 85 (Level 8): the dirty buffer is already whole in memory; the disk
+        // path streams the requested range so ANY line is reachable, not only the
+        // lines inside the first 24 000 characters.
+        val slice: List<String>
+        val start: Int
+        val end: Int
+        val total: Int
+        var charCapped = false
+        var stopped = false
+        if (fromBuffer != null) {
+            val text = AiEditProposalParser.normalizeLf(fromBuffer)
+            val lines = text.split('\n')
+            total = when {
+                text.isEmpty() -> 0
+                text.endsWith("\n") -> lines.size - 1
+                else -> lines.size
+            }
+            if (total == 0) return Outcome(true, "FILE $path is empty. [complete]")
+            start = requestedStart.coerceIn(1, total)
+            end = requestedEnd.coerceIn(start, total)
+            slice = lines.subList(start - 1, end)
         } else {
             val file = File(rootDir, path)
             if (!safeChild(file, rootDir)) return Outcome(false, "$path is outside the project.")
-            if (!file.isFile) return Outcome(false, "$path was not found.")
-            if (file.length() > AiProjectReader.MAX_FILE_BYTES) {
-                return Outcome(false, "$path is larger than ${AiProjectReader.MAX_FILE_BYTES / 1024} KB; read a range of another file instead.")
+            val range = AiProjectReader.readLineRange(
+                file, requestedStart, requestedEnd, AiToolLimits.MAX_RESULT_CHARS, shouldStop
+            )
+            if (!range.ok) return Outcome(false, "$path ${range.reason}.")
+            if (range.binary) return Outcome(false, "$path does not look like text.")
+            if (range.total == 0) return Outcome(true, "FILE $path is empty. [complete]")
+            if (range.slice.isEmpty()) {
+                return Outcome(
+                    false,
+                    "$path has ${range.total} line" + (if (range.total == 1) "" else "s") +
+                        "; the requested start $requestedStart is past the end. [refused: out of range]"
+                )
             }
-            val raw = AiProjectReader.readCapped(file) ?: return Outcome(false, "$path could not be read.")
-            if (AiProjectReader.looksBinary(raw)) return Outcome(false, "$path does not look like text.")
-            AiEditProposalParser.normalizeLf(raw)
+            slice = range.slice
+            start = range.start
+            end = range.end
+            total = range.total
+            charCapped = range.charCapped
+            stopped = range.stopped
         }
-        val lines = text.split('\n')
-        // A trailing newline is a line terminator, not an extra empty line.
-        val total = when {
-            text.isEmpty() -> 0
-            text.endsWith("\n") -> lines.size - 1
-            else -> lines.size
+
+        return Outcome(true, formatRange(path, slice, start, end, total, fromBuffer != null, charCapped, stopped),
+            truncated = end < total || charCapped || stopped)
+    }
+
+    // ---- read_files (batch) ----------------------------------------------
+
+    /**
+     * Phase 85 (Level 8, item 3) — read several files in one round trip. This is
+     * parallel read-only IO, NOT parallel agents (**S7**): one brain still writes.
+     * Each path is validated and read on its own, in the order asked, so a secret,
+     * escaping, binary, or missing path yields a per-file `[refused: …]` while its
+     * siblings still deliver (**S5**). [shouldStop] is checked between files, so
+     * Stop ends a batch promptly. The whole batch shares the one
+     * [AiToolLimits.MAX_RESULT_CHARS] result cap, divided across the files.
+     */
+    private fun readFiles(
+        call: AiToolCall,
+        rootDir: File,
+        paths: List<String>,
+        dirtyBuffers: Map<String, String>,
+        shouldStop: () -> Boolean = { false }
+    ): Outcome {
+        val specs = call.reads
+        if (specs.isNullOrEmpty()) return Outcome(false, "read_files needs a paths list.")
+        val admitted = paths.toSet()
+        // Divide the one result cap across the batch, leaving ~120 chars/file for
+        // the header and status line, so no file's block is clipped mid-delivery.
+        val perFile = ((AiToolLimits.MAX_RESULT_CHARS - specs.size * 120) / specs.size).coerceAtLeast(400)
+        val blocks = mutableListOf<String>()
+        var truncated = false
+        var stopped = false
+        for (spec in specs) {
+            if (!stopped && shouldStop()) stopped = true
+            if (stopped) {
+                blocks += "FILE ${spec.path} — [partial: stopped by the user]"
+                truncated = true
+                continue
+            }
+            val block = readBatchBlock(spec, rootDir, admitted, dirtyBuffers, perFile, shouldStop)
+            blocks += block.first
+            truncated = truncated || block.second
         }
-        if (total == 0) return Outcome(true, "FILE $path is empty.")
-        val start = (call.start ?: 1).coerceIn(1, total)
-        val end = (call.end ?: total).coerceIn(start, total)
-        val slice = lines.subList(start - 1, end)
-        val more = if (end < total) "; more lines follow — read ${end + 1}-${minOf(total, end + AiToolLimits.MAX_READ_LINES)} next" else ""
+        val body = blocks.joinToString("\n\n")
+        val clipped = clip(body)
+        return Outcome(true, clipped, truncated = truncated || clipped.length < body.length)
+    }
+
+    /** One file's block inside a batch: `(text, truncated)`. Per-path security is
+     *  re-applied here, never once for the whole batch. */
+    private fun readBatchBlock(
+        spec: ReadSpec,
+        rootDir: File,
+        admitted: Set<String>,
+        dirtyBuffers: Map<String, String>,
+        budget: Int,
+        shouldStop: () -> Boolean
+    ): Pair<String, Boolean> {
+        val path = spec.path
+        if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
+            return "FILE $path — [refused: credential-shaped]" to false
+        }
+        val fromBuffer = dirtyBuffers.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        if (fromBuffer == null && admitted.none { AiProjectFiles.samePath(it, path) }) {
+            return "FILE $path — [refused: not a code or text file in this project]" to false
+        }
+        val requestedStart = spec.start.coerceAtLeast(1)
+        val requestedEnd = spec.end.coerceAtLeast(requestedStart)
+        if (fromBuffer != null) {
+            val text = AiEditProposalParser.normalizeLf(fromBuffer)
+            val lines = text.split('\n')
+            val total = when {
+                text.isEmpty() -> 0
+                text.endsWith("\n") -> lines.size - 1
+                else -> lines.size
+            }
+            if (total == 0) return "FILE $path — empty [unsaved edits] [complete]" to false
+            val start = requestedStart.coerceIn(1, total)
+            val end = requestedEnd.coerceIn(start, total)
+            return formatRange(path, lines.subList(start - 1, end), start, end, total, true, false, false) to (end < total)
+        }
+        val file = File(rootDir, path)
+        if (!safeChild(file, rootDir)) return "FILE $path — [refused: outside the project]" to false
+        val range = AiProjectReader.readLineRange(file, requestedStart, requestedEnd, budget, shouldStop)
+        return when {
+            !range.ok -> "FILE $path — [refused: ${range.reason}]" to false
+            range.binary -> "FILE $path — [refused: not text]" to false
+            range.total == 0 -> "FILE $path — empty [complete]" to false
+            range.slice.isEmpty() ->
+                "FILE $path — [refused: start ${spec.start} is past the end of ${range.total} line" +
+                    (if (range.total == 1) "" else "s") + "]" to false
+            else -> formatRange(
+                path, range.slice, range.start, range.end, range.total, false, range.charCapped, range.stopped
+            ) to (range.end < range.total || range.charCapped || range.stopped)
+        }
+    }
+
+    /**
+     * Phase 85 (Level 8, S2) — one honest read block. The header states the lines
+     * ACTUALLY delivered and the file's true total, and an explicit coverage token
+     * distinguishes a whole-file read from a fragment:
+     * `[complete]` only when the delivery reached the last line, otherwise
+     * `[partial: <reason>]`. A fragment can never be mistaken for the whole file.
+     */
+    private fun formatRange(
+        path: String,
+        slice: List<String>,
+        start: Int,
+        end: Int,
+        total: Int,
+        fromBuffer: Boolean,
+        charCapped: Boolean,
+        stopped: Boolean
+    ): String {
+        val coverage = when {
+            stopped -> "[partial: stopped by the user]"
+            charCapped -> "[partial: result cut at ${AiToolLimits.MAX_RESULT_CHARS} chars]"
+            end >= total -> "[complete]"
+            else -> "[partial: more lines follow]"
+        }
+        val next = if (end < total) {
+            "; read ${end + 1}-${minOf(total, end + AiToolLimits.MAX_READ_LINES)} next"
+        } else ""
         val header = "FILE $path — lines $start-$end of $total" +
-            (if (fromBuffer != null) " [unsaved edits]" else "") + more
+            (if (fromBuffer) " [unsaved edits]" else "") + " $coverage" + next
         val body = buildString {
             append(header)
             for ((i, line) in slice.withIndex()) append('\n').append(start + i).append(": ").append(line)
+            // Keep the cut marker consistent with list_files / search_project: a
+            // partial read ends with CUT_NOTE, so the Phase 84 timeline clip still
+            // preserves an explicit "this was cut" signal alongside the header token.
+            if (charCapped || stopped) append('\n').append(CUT_NOTE)
         }
-        val clipped = clip(body)
-        return Outcome(true, clipped, clipped.length < body.length || end < total)
+        return clip(body)
     }
 
     // ---- shared -----------------------------------------------------------

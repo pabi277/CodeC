@@ -7,6 +7,7 @@ import com.codeci.ide.ui.ai.AiAgentPolicy
 import com.codeci.ide.ui.ai.AiAgentPrompt
 import com.codeci.ide.ui.ai.AiAgentStep
 import com.codeci.ide.ui.ai.AiAgentStepKind
+import com.codeci.ide.ui.ai.AiAgentStopReason
 import com.codeci.ide.ui.ai.AiCopy
 import com.codeci.ide.ui.ai.AiProjectFiles
 import com.codeci.ide.ui.ai.AiProjectReader
@@ -116,7 +117,12 @@ class AiLevel6BaselineTest {
     }
 
     @Test
-    fun `the existing tool result is cut again for the timeline before the next model request`() {
+    fun `phase 84 the full tool result now reaches the next request and the cut marker survives the timeline clip`() {
+        // Phase 83 recorded this as a defect: the 1 200-char timeline clip was the
+        // model's memory, so a 400-line read arrived as ~22 lines with CUT_NOTE cut
+        // away. Phase 84 (Level 7, fixes 1 & 5) splits the stores: the model reads
+        // `modelResult` (full, marker intact); the timeline reads a clipped `detail`
+        // that KEEPS the marker. This is the post-fix regression guard.
         for (project in projects()) {
             val scan = scan(project)
             val toolCall = readCall(
@@ -128,14 +134,19 @@ class AiLevel6BaselineTest {
             val outcome = AiToolRunner.execute(toolCall, project.root, scan.allTextPaths)
             assertTrue(outcome.ok)
             assertTrue(outcome.truncated)
-            assertTrue(outcome.text.startsWith("FILE ${project.normalPath} — lines 1-300 of 300"))
+            // Level 8: the header states the lines ACTUALLY delivered (bounded by the
+            // 8 000-char result cap) and the file's true total — not the old
+            // over-claimed "1-300 of 300" that the clip then silently truncated.
+            assertTrue(outcome.text.startsWith("FILE ${project.normalPath} — lines 1-"))
+            assertTrue(outcome.text.contains("of 300"))
+            assertTrue(outcome.text.contains("[partial: result cut"))
             assertTrue(outcome.text.contains(AiToolRunner.CUT_NOTE))
             assertTrue(outcome.text.length <= AiToolLimits.MAX_RESULT_CHARS)
 
-            // This is the exact production boundary in AiViewModel.executeToolBatch.
-            val timelineDetail = outcome.text.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS)
-            assertEquals(AiAgentLimits.MAX_STEP_DETAIL_CHARS, timelineDetail.length)
-            assertFalse("the UI clip drops the runner's honest cut marker", timelineDetail.contains(AiToolRunner.CUT_NOTE))
+            // The exact production boundary in AiViewModel.executeToolBatch (Phase 84).
+            val timelineDetail = AiAgentLimits.timelineDetail(outcome.text, AiToolRunner.CUT_NOTE)
+            assertTrue(timelineDetail.length <= AiAgentLimits.MAX_STEP_DETAIL_CHARS)
+            assertTrue("the timeline clip must keep the honest cut marker", timelineDetail.contains(AiToolRunner.CUT_NOTE))
             val packed = AiAgentPrompt.pack(
                 question = "Explain the full ${project.normalPath} line by line for a beginner.",
                 mapText = "PROJECT MAP — ${project.id} fixture; ${project.normalPath} (300 lines)",
@@ -143,15 +154,20 @@ class AiLevel6BaselineTest {
                     AiAgentStep(
                         kind = AiAgentStepKind.TOOL,
                         title = "read_file ${project.normalPath} (lines 1-${AiToolLimits.MAX_READ_LINES})",
-                        detail = timelineDetail
+                        detail = timelineDetail,
+                        modelResult = outcome.text
                     )
                 )
             )
+            // Fix 1: the whole (bounded) result rides along — a line the old ~22-line
+            // preview never reached, plus the cut marker (fix 5). Level 8 makes the
+            // header honest about the delivered range and names the next range, so the
+            // tail is now reachable with the follow-up read it points at.
             assertTrue(packed.text.contains("1: "))
-            assertFalse(packed.text.contains("L6_${project.id.uppercase()}_NORMAL_0300"))
-            assertFalse(packed.text.contains(AiToolRunner.CUT_NOTE))
+            assertTrue(packed.text.contains("L6_${project.id.uppercase()}_NORMAL_0100"))
+            assertTrue(packed.text.contains(AiToolRunner.CUT_NOTE))
             val deliveredLines = Regex("""(?m)^\d+: """).findAll(packed.text).count()
-            assertTrue("expected only a small prefix, got $deliveredLines lines for ${project.id}", deliveredLines in 15..30)
+            assertTrue("expected the full read, got only $deliveredLines lines for ${project.id}", deliveredLines > 100)
 
             // Measure the exact synthetic JSON body without sending it anywhere.
             val requestBody = NvidiaRequest.body(
@@ -171,34 +187,52 @@ class AiLevel6BaselineTest {
     }
 
     @Test
-    fun `the prefix-only reader cannot reach a generated file tail range`() {
+    fun `the offset reader reaches a generated file tail range and its last line`() {
         for (project in projects()) {
             val scan = scan(project)
-            val toolCall = readCall(
+            // Phase 83 recorded this as a defect: the prefix-only reader could not
+            // reach lines 1 900-2 000 of a 2 000-line file — it returned a prefix and
+            // declared a false "of 304". Level 8's offset reader streams, so the
+            // requested tail start is reached and the true total is reported.
+            val tail = readCall(
                 path = project.largePath,
                 start = 1_900,
                 end = 2_000,
                 existingPaths = scan.allTextPaths.toSet()
             )
-            val outcome = AiToolRunner.execute(toolCall, project.root, scan.allTextPaths)
+            val outcome = AiToolRunner.execute(tail, project.root, scan.allTextPaths)
             assertTrue(outcome.ok)
-            assertFalse(outcome.text.contains(project.largeEndMarker))
             val coverage = Regex("""lines (\d+)-(\d+) of (\d+)""").find(outcome.text)
                 ?: throw AssertionError("read result had no line header: ${outcome.text.take(160)}")
             val deliveredStart = coverage.groupValues[1].toInt()
-            val deliveredEnd = coverage.groupValues[2].toInt()
-            assertTrue("the reader returned a prefix range, not the requested tail", deliveredStart < 1_900)
-            assertEquals(deliveredStart, deliveredEnd)
+            val total = coverage.groupValues[3].toInt()
+            assertEquals("the reader must reach the requested tail start, not a prefix", 1_900, deliveredStart)
+            assertEquals("the header must state the file's true line count", 2_000, total)
+
+            // The acceptance check: the LAST line of a >24 000-char file is reachable.
+            val lastLine = readCall(
+                path = project.largePath,
+                start = 2_000,
+                end = 2_000,
+                existingPaths = scan.allTextPaths.toSet()
+            )
+            val lastOutcome = AiToolRunner.execute(lastLine, project.root, scan.allTextPaths)
+            assertTrue(lastOutcome.ok)
+            assertTrue(
+                "the last line (end marker) of a >24 000-char file must be reachable",
+                lastOutcome.text.contains(project.largeEndMarker)
+            )
+            assertTrue(lastOutcome.text.contains("[complete]"))
             println(
-                "AI_LEVEL6_BASELINE tail=${project.id} sourceLines=2000 requested=1900-2000 " +
-                    "declared=${deliveredStart}-${deliveredEnd} of ${coverage.groupValues[3]} " +
-                    "tailMarkerReached=${outcome.text.contains(project.largeEndMarker)}"
+                "AI_LEVEL8_TAIL tail=${project.id} sourceLines=2000 requested=1900-2000 " +
+                    "declared=${coverage.groupValues[1]}-${coverage.groupValues[2]} of $total " +
+                    "lastLineReached=${lastOutcome.text.contains(project.largeEndMarker)}"
             )
         }
     }
 
     @Test
-    fun `a 49-call repeated-read replay reaches 24 executions 25 refusals and the unclamped mixed counter`() {
+    fun `phase 84 a 49-call replay reaches 24 executions and 25 refusals counted separately and clamped`() {
         val project = projects().first { it.id == "javascript" }
         val scan = scan(project)
         val oneBlock = """<<<CODEC_TOOL name="read_file">>>
@@ -228,18 +262,28 @@ end: ${AiToolLimits.MAX_READ_LINES}
         assertEquals(23, executionDuplicates)
         assertEquals(48, requestDuplicates)
 
-        // The ViewModel adds executed and refused attempts without clamping.
-        val displayedCalls = AiAgentBudget().withToolCalls(decision.calls.size + decision.denied.size).toolCallsUsed
-        assertEquals(49, displayedCalls)
+        // Phase 84 (fix 3): executions and refusals are separate counters and the
+        // execution counter is clamped, so the old "49 of 24 reads" cannot render.
+        val budget = AiAgentBudget(startedAtMs = 1L)
+            .withToolCalls(decision.calls.size)
+            .withRefused(decision.denied.size)
+        assertEquals(24, budget.toolCallsUsed)
+        assertEquals(25, budget.toolCallsRefused)
+        // Clamped even if a caller over-adds.
+        assertEquals(AiAgentLimits.MAX_TOOL_CALLS, AiAgentBudget().withToolCalls(49).toolCallsUsed)
         assertEquals(
-            "9 of 12 steps · 49 of 24 reads · 0 of 2 runs",
-            AiCopy.agentUsageLine(turns = 9, toolCalls = displayedCalls, runs = 0)
+            "9 of 12 steps · 24 of 24 reads · 25 refused · 0 of 2 runs",
+            AiCopy.agentUsageLine(
+                turns = 9, toolCalls = budget.toolCallsUsed, runs = 0,
+                refused = budget.toolCallsRefused, reused = budget.toolCallsReused
+            )
         )
-        assertEquals(null, AiAgentBudget(toolCallsUsed = displayedCalls).blockModelTurn(2L))
+        // The exhausted execution budget now blocks the resume path (fix 2).
+        assertEquals(AiAgentStopReason.TOOL_BUDGET, budget.blockResume(2L))
         println(
             "AI_LEVEL6_BASELINE replay=requests:${parsed.calls.size},executed:${decision.calls.size}," +
                 "refused:${decision.denied.size},duplicateRequests:$requestDuplicates," +
-                "duplicateExecutions:$executionDuplicates,displayed:$displayedCalls/24"
+                "duplicateExecutions:$executionDuplicates,displayed:${budget.toolCallsUsed}/24+${budget.toolCallsRefused}refused"
         )
     }
 }

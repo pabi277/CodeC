@@ -1,6 +1,6 @@
 # Level 8 — Full context and honest reads
 
-**Status: PROPOSED. Not implemented. Not a phase start command. Depends on Level 7.**
+**Status: 🚧 IMPLEMENTED as Phase 85 on `arena/01a0fe36-codec` (2026-10-03), bounded-but-honest, all four items + S11; host pre-validation 360/360; not merged. See [`chat-phase85/`](../../phases/03-editor/chat-phase85/README.md). Depends on Level 7 (Phase 84, merged-pending).**
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 
 ## User value
