@@ -2243,6 +2243,8 @@ The screenshot observations and deterministic replay are kept separate in the [P
 
 ## 60. AI options: "where are the settings?" / "can the agent do more now?" (Phase 87 / Level 10)
 
+> **Update 2026-10-03:** Phase 87 has since been ✅ **MERGED** ([PR #112](https://github.com/pabi277/CodeC/pull/112) → `main` @ `c3771c5`). The nine controls **are now in the ✨ AI panel**. The first and last bullets below were written when Phase 87 was only a brief, and are superseded: the controls exist, and device acceptance is still POSTPONED to Level 12 because the owner postponed it, not because no code exists. The read-window default stays **400** by the owner's decision.
+
 - **Are the Level 10 controls in the app yet?** **No.** Phase 87 is **planned only** — a written brief, no production or test source, nothing run. If you cannot find an option, it does not exist yet.
 - **What will the nine controls be?** Read window (lines per read) · working-set depth · task memory on/off with *Clear now* · answer detail (brief/normal/thorough) · tool activity collapsed/expanded · request inspection (always on, **cannot be turned off**) · backup provider · read-only reviewer · budget extension at the cap.
 - **Where will they live?** In the **✨ AI panel** (`AiHome`), beside the existing *Show AI button* switch, provider picker and output row — **not** in the app Settings screen. That is the repository's existing home for non-secret AI options, and Phase 87 follows it rather than forking the pattern.
@@ -2253,3 +2255,16 @@ The screenshot observations and deterministic replay are kept separate in the [P
 - **Is Phase 87 device-accepted?** It cannot be — no code exists. Formal device acceptance for the AI work remains POSTPONED to Level 12.
 
 [Phase 87 brief](../phases/03-editor/chat-phase87/README.md) · [Level 10 spec](../roadmaps/ai-integration/10_AGENT_CONTROLS_AND_OPTIONS.md) · [security rules S1–S12](../roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).
+
+## 61. AI answers on the phone: "why is it plain text?" / "can I tap links?" / "where is the full result?" (Phase 88 / Level 11)
+
+- **Are formatted answers in the app yet?** **No.** Phase 88 is **planned only**: a written brief, no production or test source, nothing run. Today answers show raw `#`, `**` and backticks. That is defect 9, and it is what Phase 88 fixes.
+- **Will links in an AI answer open?** Only `https` links, and only after you confirm. A tap shows a dialog with the site's name and the full address, and nothing opens until you press **Open**. `http`, `javascript:`, `data:` and every other kind never open; their address is shown as plain text, so you can still copy it.
+- **Will CodeC download pictures from an answer?** No. An image shows as its description only; nothing is fetched.
+- **Can I put a code block straight into my file?** No, on purpose. Each code block gets a **Copy** button and you paste it yourself. An *insert* button would be a new way for the AI to write to your project (S6).
+- **Why do the activity numbers disagree?** Today two lines count different things with the same word: the activity card's "steps" are model turns, and the bottom bar's "steps done" are file reads. Phase 88 replaces both with **one** line that says what the agent is doing and counts turns as steps everywhere.
+- **Where is the full result of a read?** Today a row shows a 12-line preview. With Phase 88, each row is one line until you tap it, and then it shows the full result **as it first went to the model**. The request rows still show exactly what was sent, one tap away.
+- **Will a long explanation be cut off?** No. The renderer has no line limit, and long answers show in sections. Code and tables scroll sideways.
+- **Is any of this device-accepted?** It cannot be yet, because no code exists. Formal device acceptance for the AI work remains POSTPONED to Level 12.
+
+[Phase 88 brief](../phases/03-editor/chat-phase88/README.md) · [Level 11 spec](../roadmaps/ai-integration/11_AGENT_PHONE_PRESENTATION.md) · [security rules S1–S12](../roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).

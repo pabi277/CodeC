@@ -1,6 +1,8 @@
 # Level 11 — Agent phone presentation
 
-**Status: PROPOSED. Not implemented. Not a phase start command. Depends on Level 7; independent of 8–10.**
+**Status: ✅ AUTHORIZED 2026-10-03 for a brief only, and 📋 PLANNED as [Phase 88](../../phases/03-editor/chat-phase88/README.md). No production or test source written yet; implementation needs a further explicit owner command. Depends on Level 7 (merged); independent of 8–10.**
+**Owner decisions (2026-10-03, answered in chat):** the **full level in one phase**, in about 4–5 parts (Markdown answers, one truthful compact progress line, activity rows showing the full result on tap, request disclosure collapsed and **never removed**) · **links:** `https` links are tappable **only behind a confirm dialog that shows the full URL**; `javascript:`, `data:` and plain `http` stay inert · the Level 10 read-window default **stays 400**. Agent defaults the owner did not object to: a **Copy** button per fenced code block (copy only, never insert, **S6**) and **live, throttled** rendering while streaming.
+**Corrections found while briefing** (details in the Phase 88 README): the defect citation `AiChatSheet.kt:584` below predates Phase 87.5, which already collapsed REQUEST rows (`:624`, `:638-669`) · `MarkdownPreview`'s URL allowlist is a file-preview policy (it admits `http:`, `file:`, `mailto:` and relative paths), so Level 11 gets its own stricter link policy instead of reusing it · there are **no** existing Roborazzi goldens to update (zero captures, zero reference images) — see the Phase 88 README's *Open decision 1* · the APK delta is recorded against both the Level 6 baseline and current `main`, because Levels 7–10 already grew the APK.
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 
 ## User value

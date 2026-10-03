@@ -162,6 +162,10 @@ available for the owner to lower on the device), and this README records that th
 is available as a one-constant change if the owner asks for it. Changing it later is not a
 migration — it is a default.
 
+**✅ Closed 2026-10-03 by the owner.** Asked while scoping Level 11, the owner chose to keep the
+read-window default at **400** (`AiOptionsPolicy.kt:77`). This decision is now the owner's, not only the
+agent's. No code changes; see the [Phase 88 brief](../chat-phase88/README.md).
+
 ## Design shape
 
 One pure policy owns all nine; nothing else may re-decide them.
