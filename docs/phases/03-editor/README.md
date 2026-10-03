@@ -33,4 +33,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [84](chat-phase84/) | ✅ AI Level 7 — agent correctness (merged with Phase 85 via PR #110; Build APK CI 37084800939 green) |
 | [85](chat-phase85/) | ✅ AI Level 8 — bounded-but-honest reads, read_files, restorable eviction and S11 working set (merged with Phase 84 via PR #110) |
 | [86](chat-phase86/) | ✅ AI Level 9 — bounded task memory and planning (merged PR #111 to `main` @ `6838ea6`; post-merge Build APK `37109573383` green; device acceptance postponed to Level 12) |
-| [87](chat-phase87/) | 📋 AI Level 10 — agent controls and options (nine bounded controls in the AI panel; **PLANNED**, no code; S9 governs) |
+| [87](chat-phase87/) | ✅ AI Level 10 — agent controls and options (nine bounded controls in the AI panel; **IMPLEMENTED**, 152/152 host tests, S9 held; no PR/merge) |

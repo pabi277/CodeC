@@ -1,11 +1,14 @@
 # Phase 87 — AI Level 10: agent controls and options
 
-> **Status:** 📋 **PLANNED.** This is the brief. No production or test source has been
-> written for this phase. No PR, no merge.
+> **Status:** ✅ **IMPLEMENTED, host-verified, CI-pending at the time of writing.** All nine
+> controls are wired end to end (parts 87.1–87.8). **152 host tests pass** on the
+> kotlinc/JRE harness described in `rule.md` §9; Build APK on CI is the executor of record.
+> Committed and pushed to `arena/01a100ed-codec` only. **No PR, no merge, no push to `main`.**
 > **Owner authorization (2026-10-03):** the owner authorized Level 10 in chat by selecting
 > *"Authorize Level 10 (agent controls/options)"* and then answered four design questions:
 > **all nine** controls in Phase 87 · controls live in the **`AiHome` AI panel** · backup
 > provider is **manual offer only** · answer detail **defaults to `normal`** (today's wording).
+> Implementation was authorized by the owner's follow-up, *"Complete level 10"*.
 > **Baseline:** `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee` — Phase 86 / AI Level 9 merged
 > by authorized [PR #111](https://github.com/pabi277/CodeC/pull/111) on 2026-10-03; post-merge
 > Build APK run [`37109573383`](https://github.com/pabi277/CodeC/actions/runs/37109573383) is
@@ -213,32 +216,85 @@ default, never a crash and never a value outside the clamps. That mirrors
 Order matters: **87.1 first** (bounds before behaviour), then 87.2–87.5 in any order, then
 87.6–87.8, which each depend on the request-disclosure plumbing 87.3 establishes.
 
-## Tests (plan)
+### What actually landed, where it differs from the plan
 
-| Kind | File | Cases |
-|---|---|---|
-| Pure policy | `AiOptionsPolicyTest` | 16 — clamp at every bound and outside it, decode of absent/corrupt/out-of-range values, `detailSentence` for all three levels |
-| Ceiling pin | `AiLevel10CeilingTest` | 9 — one case per control asserting its declared ceiling, plus that no option touches `MAX_TURNS`/`MAX_TOOL_CALLS`/`MAX_BATCH_READS`/`MAX_READ_CHARS`/run count |
-| Wiring pin | `AiLevel10WiringTest` | 8 — source pins: `AiHome` renders every row; `AiContext`'s brevity line is gone from the constants; `AiTools`/`AiTaskMemory`/`AiToolRunner` read the same window value; `AiTaskMemoryStore` is still the only task-memory writer |
-| Permission pin | `AiLevel10PermissionTest` | 4 — no option path reaches a project write, a command, or a path outside the project |
-| Regression | `AiLevel8BatchTest`, `AiLevel8ContextTest`, `AiLevel9WiringTest`, `AiToolRunnerTest` | existing cases must stay green unchanged |
+- **`readWindowChoices()` / `workingSetChoices()` live in `AiOptionsPolicy`, not `AiCopy`.** The
+  offered value lists are a policy fact, not copy: a row can no longer present a value outside the
+  declared range, and the ceiling test reads the same list the UI does.
+- **87.6 needed a real cap object.** The gates read `AiAgentLimits.MAX_TURNS` directly, so
+  `AiAgentCaps` was introduced and threaded through `blockModelTurn` / `blockTool` / `blockResume`
+  / `toolCallsRemaining` / `withToolCalls` / `AiAgentPolicy.decide` — every parameter defaulting to
+  `AiAgentCaps()`, which equals the constants exactly, so no pre-Level-10 caller changed behaviour.
+  `runsRemaining()` deliberately takes **no** caps parameter: `AiAgentCaps.runs` is echoed back
+  unchanged by `extend()`, so the run cap cannot be threaded even by mistake.
+- **87.8 reuses the single-shot stream site rather than adding a fourth.** The reviewer is an
+  ordinary `AiSource.REVIEW` prompt with its own system instruction, so `AiLevel9WiringTest`'s
+  three-site pin holds untouched. Its text streams into `AiUiState.review`, never into `answer`,
+  and the answer under review is snapshotted to `reviewedAnswer` because every preview clears
+  `answer`.
+- **87.7 freezes provider readiness at Send** (`AiKeyStore.providerReadiness()`) so the offer can
+  be decided synchronously on the stop path, then **re-verifies with `store.isReady(next)`** before
+  switching. Accepting sets `phase = PREVIEW`; it does not stream.
+- **Options are frozen into `AgentSession` at Send**, so a mid-task settings change cannot make the
+  disclosed preview describe a different request than the one performed (D4).
 
-Counts are a plan, not a result. Nothing has been run for this phase.
+## Tests (results, not a plan)
+
+Run on the host harness (`rule.md` §9: `jdk4py` JRE + `npm install kotlin-compiler`, with a
+JUnit-shaped shim and an `org.json` stand-in — all in `/tmp`, never in the repository).
+
+| Kind | File | Cases | Result |
+|---|---|---|---|
+| Pure policy | `AiOptionsPolicyTest` | 16 — clamp at every bound and outside it, decode of absent/corrupt/out-of-range values, `detailSentence` for all three levels | ✅ 16/16 |
+| Pure policy | `AiLevel10PoliciesTest` | 18 — activity rows, backup-provider offer and consent, budget-extension offer and bounds, reviewer trigger and markup routing | ✅ 18/18 |
+| Ceiling pin | `AiLevel10CeilingTest` | 12 — one case per control at its declared ceiling, **plus** three behavioural cases proving the gates really consult `AiAgentCaps` and that `runs` never moves | ✅ 12/12 |
+| Wiring pin | `AiLevel10WiringTest` | 20 — source pins for 87.1–87.8: every `AiHome` row, the brevity line gone from the constants, the read window agreed at all three sites, three `client.stream(` sites, caps at every gate, the reviewer previewed and never an agent | ✅ 20/20 |
+| Permission pin | `AiLevel10PermissionTest` | 4 — no Level 10 file writes, runs, streams or holds a path; `ui/ai/` re-scanned whole after ten existing files were edited | ✅ 4/4 |
+| Copy | `AiLevel10CopyTest` | 6 — what the new controls *say*: the counter follows the caps, the offer states what it does **not** add, the review request frames the answer as data | ⚠️ CI-only locally |
+| Regression | `AiAgentLoopTest` 19 · `AiLevel4WiringTest` 14 · `AiContextBuilderTest` 11 · `AiTaskMemoryTest` 9 · `AiToolRunnerTest` 14 · `AiLevel9WiringTest` 6 · `AiTaskMemoryStoreTest` 5 · `AiLevel8ContextTest` 4 | 82 — existing cases, unchanged | ✅ 82/82 |
+
+**Local total: 152 passed, 0 failed.**
+
+`AiLevel10CopyTest` is the one file this sandbox cannot compile: `AiCopy.kt` transitively needs
+`AiEditApplier → GitDiscardEditors → GitDiscardPolicy → GitManager → ProjectsHub`, and that chain
+pulls in Compose-coupled sources. The test ships and runs in CI; it is marked here rather than
+counted as a pass. Two existing pins needed updating because the signatures they pinned genuinely
+changed, and both were strengthened rather than weakened:
+
+- `AiLevel4WiringTest` pinned `blockModelTurn(nowMs: Long)`; it now pins
+  `blockModelTurn(nowMs: Long, caps: AiAgentCaps = AiAgentCaps())`, which also pins the default.
+- `AiLevel10WiringTest`'s reviewer case originally asserted the ViewModel does **not** call
+  `AiReviewerPolicy.parse` — wrong from the start, since that function *is* the display router.
+  It now asserts the real invariant behaviourally: the reviewer's instruction contains none of the
+  three protocol markers, and its reply is classified, never executed.
+
+### Two real defects the pins caught while being written
+
+1. **`AiAgentPolicy.decide` was called without `caps`.** The gate inside `decide` would have kept
+   using the plain constants, so an accepted budget extension would have bought nothing at all —
+   the loop would still stop at 24 reads. Caught by the `caps = session.caps` pin.
+2. **`AiCopy.agentUsageLine` clamped against the constants.** After an extension it would have
+   rendered "24 of 24 reads" for 30 real reads — the Phase 84 defect-3 counter lie in a new
+   costume. Fixed by threading `turnCap`/`readCap` through `AiAgentUsage`.
 
 ## Exit condition
 
-- [ ] Every ceiling asserted by a host test at its declared bound (**S9**).
-- [ ] No option alters D1/D5 tool, write, run or path permissions.
-- [ ] The request-inspection row cannot be turned off.
-- [ ] The backup provider never switches without a fresh tap and a fresh preview (**S8**).
-- [ ] *Clear now* deletes the project's task memory and is reflected immediately (**S4/S5**).
-- [ ] Answer detail visibly changes the system instruction shown in the disclosed request.
-- [ ] Budget extension never increases the run count or grants an extra approval (**S12**).
-- [ ] Exactly three `client.stream(` call sites remain.
-- [ ] `ui/ai/` still has zero direct project writes and zero command execution (**S6**).
-- [ ] No new dependency, Android permission, endpoint or default-model change.
-- [ ] minSdk 24 respected: `java.io` only, `canonicalPath != absolutePath` for symlinks.
-- [ ] Settings export / feedback scrubbing still redacts every credential shape.
+- [x] Every ceiling asserted by a host test at its declared bound (**S9**).
+- [x] No option alters D1/D5 tool, write, run or path permissions (`AiLevel10PermissionTest`).
+- [x] The request-inspection row cannot be turned off (no `PROP_`, no setter; pinned).
+- [x] The backup provider never switches without a fresh tap and a fresh preview (**S8**).
+- [x] *Clear now* deletes the project's task memory and reports the store's real result.
+- [x] Answer detail visibly changes the system instruction shown in the disclosed request.
+- [x] Budget extension never increases the run count or grants an extra approval (**S12**).
+- [x] Exactly three `client.stream(` call sites remain (asserted three times over).
+- [x] `ui/ai/` still has zero direct project writes and zero command execution (**S6**).
+- [x] No new dependency, Android permission, endpoint or default-model change (manifest pinned at 14).
+- [x] minSdk 24 respected: `java.io` only, no `java.nio.file` in production sources.
+- [ ] Settings export / feedback scrubbing still redacts every credential shape — **not re-run
+      here**; Level 10 stores no secrets (the eight new keys are ints, enums and booleans in the
+      existing non-secret property bag), but this was not re-verified on a device.
+- [ ] **Build APK on CI green** — the executor of record; pending at the time of writing.
+- [ ] **Device acceptance** — POSTPONED to Level 12 by standing owner decision, not claimed here.
 
 ## Deferred / rejected with reasons
 

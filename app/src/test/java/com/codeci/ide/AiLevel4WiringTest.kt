@@ -114,8 +114,18 @@ class AiLevel4WiringTest {
         assertTrue(loop.contains("const val MAX_RUNS = 2"))
         assertTrue(loop.contains("const val MAX_RESULT_CHARS = AiToolLimits.MAX_RESULT_CHARS"))
         assertTrue(loop.contains("const val MAX_WALL_CLOCK_MS = 300_000L"))
-        assertTrue("the wall clock must be checked before a turn", loop.contains("blockModelTurn(nowMs: Long)"))
-        assertTrue("the wall clock must be checked before a tool", loop.contains("blockTool(nowMs: Long)"))
+        // Phase 87 (Level 10, 87.6): both gates take the task's caps now. The
+        // second parameter defaults to the plain constants, so an unextended
+        // task is gated by exactly the numbers asserted above — pinning the
+        // defaulted signature keeps that guarantee in the pin.
+        assertTrue(
+            "the wall clock must be checked before a turn",
+            loop.contains("blockModelTurn(nowMs: Long, caps: AiAgentCaps = AiAgentCaps())")
+        )
+        assertTrue(
+            "the wall clock must be checked before a tool",
+            loop.contains("blockTool(nowMs: Long, caps: AiAgentCaps = AiAgentCaps())")
+        )
         assertTrue("the policy decides, the view model executes", loop.contains("object AiAgentPolicy"))
     }
 

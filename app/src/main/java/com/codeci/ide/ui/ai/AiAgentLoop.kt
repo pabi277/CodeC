@@ -126,7 +126,15 @@ data class AiAgentStep(
     val ok: Boolean = true,
     /** Phase 82B D4: REQUEST rows hold the exact two sent strings, never clipped. Memory only. */
     val sentSystemInstruction: String? = null,
-    val sentUserText: String? = null
+    val sentUserText: String? = null,
+    /**
+     * Phase 87 (Level 10, **S8**): the recipient this row actually went to, frozen
+     * at Send. The collapsed activity row must name the real recipient, not
+     * whatever the provider picker shows now — a later manual switch must not
+     * rewrite history (**S8**: switching is never silent).
+     */
+    val sentProvider: AiProviderId? = null,
+    val sentModel: String? = null
 )
 
 enum class AiAgentStepKind {
@@ -188,16 +196,23 @@ data class AiAgentBudget(
     val runsUsed: Int = 0,
     val startedAtMs: Long = 0L
 ) {
-    /** The reason the loop may not take another model turn, or null when it may. */
-    fun blockModelTurn(nowMs: Long): AiAgentStopReason? = when {
-        turnsUsed >= AiAgentLimits.MAX_TURNS -> AiAgentStopReason.TURN_BUDGET
+    /**
+     * The reason the loop may not take another model turn, or null when it may.
+     *
+     * [caps] is the Level 10 (87.6) per-task cap set; it defaults to the plain
+     * constants, so every pre-Level-10 caller and test behaves identically.
+     * Nothing in [caps] is user-tunable: the only way it grows is one accepted
+     * budget extension of a fixed size (see `AiBudgetExtensionPolicy`).
+     */
+    fun blockModelTurn(nowMs: Long, caps: AiAgentCaps = AiAgentCaps()): AiAgentStopReason? = when {
+        turnsUsed >= caps.turns -> AiAgentStopReason.TURN_BUDGET
         elapsedMs(nowMs) > AiAgentLimits.MAX_WALL_CLOCK_MS -> AiAgentStopReason.WALL_CLOCK
         else -> null
     }
 
     /** The reason no further tool may run, or null when one may. */
-    fun blockTool(nowMs: Long): AiAgentStopReason? = when {
-        toolCallsUsed >= AiAgentLimits.MAX_TOOL_CALLS -> AiAgentStopReason.TOOL_BUDGET
+    fun blockTool(nowMs: Long, caps: AiAgentCaps = AiAgentCaps()): AiAgentStopReason? = when {
+        toolCallsUsed >= caps.toolCalls -> AiAgentStopReason.TOOL_BUDGET
         elapsedMs(nowMs) > AiAgentLimits.MAX_WALL_CLOCK_MS -> AiAgentStopReason.WALL_CLOCK
         else -> null
     }
@@ -209,11 +224,18 @@ data class AiAgentBudget(
      * walk past an exhausted tool budget the way `AiAgentPolicy.decide` alone
      * could not stop them.
      */
-    fun blockResume(nowMs: Long): AiAgentStopReason? = blockModelTurn(nowMs) ?: blockTool(nowMs)
+    fun blockResume(nowMs: Long, caps: AiAgentCaps = AiAgentCaps()): AiAgentStopReason? =
+        blockModelTurn(nowMs, caps) ?: blockTool(nowMs, caps)
 
     /** How many tool calls are still available, for the timeline and the packer. */
-    fun toolCallsRemaining(): Int = (AiAgentLimits.MAX_TOOL_CALLS - toolCallsUsed).coerceAtLeast(0)
+    fun toolCallsRemaining(caps: AiAgentCaps = AiAgentCaps()): Int =
+        (caps.toolCalls - toolCallsUsed).coerceAtLeast(0)
 
+    /**
+     * The run budget is **never** part of an extension: `AiAgentCaps.runs` is
+     * echoed back unchanged by `AiBudgetExtensionPolicy.extend`, so this stays
+     * pinned to `AiAgentLimits.MAX_RUNS` (**S9**) and takes no caps parameter.
+     */
     fun runsRemaining(): Int = (AiAgentLimits.MAX_RUNS - runsUsed).coerceAtLeast(0)
 
     fun elapsedMs(nowMs: Long): Long = if (startedAtMs <= 0L) 0L else (nowMs - startedAtMs).coerceAtLeast(0L)
@@ -225,8 +247,8 @@ data class AiAgentBudget(
      * count can never read past `MAX_TOOL_CALLS` (fix 3: "never exceed their
      * caps").
      */
-    fun withToolCalls(n: Int) =
-        copy(toolCallsUsed = (toolCallsUsed + n).coerceIn(0, AiAgentLimits.MAX_TOOL_CALLS))
+    fun withToolCalls(n: Int, caps: AiAgentCaps = AiAgentCaps()) =
+        copy(toolCallsUsed = (toolCallsUsed + n).coerceIn(0, caps.toolCalls))
 
     /** Records [n] refused tool blocks (malformed/denied/over-budget), separately. */
     fun withRefused(n: Int) =
@@ -327,12 +349,17 @@ object AiAgentPolicy {
         parsed: AiToolParse.Calls,
         budget: AiAgentBudget,
         nowMs: Long,
-        projectView: AiToolProjectView
+        projectView: AiToolProjectView,
+        readWindow: Int = AiToolLimits.MAX_READ_LINES,
+        caps: AiAgentCaps = AiAgentCaps()
     ): AiAgentDecision {
         if (parsed.calls.isEmpty()) return AiAgentDecision.Finish(parsed.prose)
-        budget.blockTool(nowMs)?.let { return AiAgentDecision.Stop(it) }
+        budget.blockTool(nowMs, caps)?.let { return AiAgentDecision.Stop(it) }
 
-        val checked = parsed.calls.map { it to AiToolPolicy.validate(it, projectView) }
+        // Level 10: the read window the user chose, clamped by the policy. It is
+        // the same value the runner and the memory identity receive, so the
+        // denial message, the delivered slice and the cache key cannot disagree.
+        val checked = parsed.calls.map { it to AiToolPolicy.validate(it, projectView, readWindow) }
         val denied = checked.mapNotNull { (_, v) -> v as? AiToolVerdict.Denied }
         val allowed = checked.mapNotNull { (_, v) -> (v as? AiToolVerdict.Allowed)?.call }
 
@@ -346,7 +373,7 @@ object AiAgentPolicy {
             )
         }
 
-        val room = budget.toolCallsRemaining()
+        val room = budget.toolCallsRemaining(caps)
         if (room <= 0) return AiAgentDecision.Stop(AiAgentStopReason.TOOL_BUDGET)
         val runnable = allowed.take(room)
         // Calls past the budget are answered with a refusal, so a model that
@@ -392,7 +419,8 @@ object AiAgentPrompt {
         budget: Int = AiAgentLimits.MAX_REQUEST_CHARS,
         memory: AiTaskMemory? = null,
         includePlanAtEnd: Boolean = true,
-        includeContinueTail: Boolean = true
+        includeContinueTail: Boolean = true,
+        keepLastResults: Int = AiAgentLimits.KEEP_LAST_RESULTS
     ): Packed {
         val results = steps.filter {
             it.kind == AiAgentStepKind.TOOL || it.kind == AiAgentStepKind.DENIED || it.kind == AiAgentStepKind.RUN_RESULT
@@ -422,10 +450,14 @@ object AiAgentPrompt {
             memoryHeader + memoryContext.take(memoryRoom)
         } else ""
 
+        // Level 10: the working-set depth option. Clamped here (**S9**) so a
+        // tampered stored value cannot crowd out the plan recitation, which
+        // stays the fixed suffix whatever the depth is.
+        val depth = AiOptionsPolicy.clampWorkingSetDepth(keepLastResults)
         val kept = mutableListOf<AiAgentStep>() // newest first while packing
         val dropped = mutableListOf<AiAgentStep>()
         for (step in results.asReversed()) {
-            if (kept.size >= AiAgentLimits.KEEP_LAST_RESULTS) dropped += step
+            if (kept.size >= depth) dropped += step
             else kept += step
         }
 

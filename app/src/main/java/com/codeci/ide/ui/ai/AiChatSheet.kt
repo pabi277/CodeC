@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -111,6 +112,14 @@ fun AiChatSheet(
     onSkipRun: () -> Unit = {},
     /** Phase 81 — ask for the rest of an answer that was cut short (preview first, D4). */
     onContinue: () -> Unit = {},
+    /** Phase 87 (Level 10, 87.6) — accept / decline the budget-extension offer. */
+    onAcceptBudget: () -> Unit = {},
+    onDeclineBudget: () -> Unit = {},
+    /** Phase 87 (Level 10, 87.7) — accept / decline the manual backup-provider offer. */
+    onAcceptBackup: () -> Unit = {},
+    onDeclineBackup: () -> Unit = {},
+    /** Phase 87 (Level 10, 87.8) — ask the read-only reviewer; it previews, never sends. */
+    onRequestReview: () -> Unit = {},
     /** The last command the editor ran, shown on the approval card when known. */
     lastRunCommand: String? = null,
     /** True while CodeC's own runner is busy, so the Run button cannot race it. */
@@ -186,7 +195,8 @@ fun AiChatSheet(
                 state, hasSelection, question, onCancelGather,
                 onProposeEdits, onToggleEditFile, onApplyEdits, onRejectProposal,
                 onUndoEdits, onDismissUndoConflict,
-                onApproveRun, onSkipRun, onContinue, lastRunCommand, runBusy,
+                onApproveRun, onSkipRun, onContinue, onAcceptBudget, onDeclineBudget,
+                onAcceptBackup, onDeclineBackup, onRequestReview, lastRunCommand, runBusy,
                 Modifier.weight(1f)
             )
             HorizontalDivider()
@@ -253,6 +263,11 @@ private fun Conversation(
     onApproveRun: () -> Unit,
     onSkipRun: () -> Unit,
     onContinue: () -> Unit,
+    onAcceptBudget: () -> Unit,
+    onDeclineBudget: () -> Unit,
+    onAcceptBackup: () -> Unit,
+    onDeclineBackup: () -> Unit,
+    onRequestReview: () -> Unit,
     lastRunCommand: String?,
     runBusy: Boolean,
     modifier: Modifier
@@ -277,7 +292,13 @@ private fun Conversation(
         // the reads it asked for, the refusals, the run it requested and the
         // run's own result. In memory and never persisted (D6).
         if (state.agentSteps.isNotEmpty()) {
-            AgentActivityCard(state)
+            AgentActivityCard(state, onAcceptBudget, onDeclineBudget)
+        }
+        // Phase 87 (Level 10, 87.7) — the manual backup-provider offer. It is a
+        // question, never an action: tapping switches the recipient and rebuilds
+        // the preview, and the user still taps Send (S8, D4).
+        state.backupOffer?.let { next ->
+            BackupProviderCard(next, onAcceptBackup, onDeclineBackup)
         }
         when (state.phase) {
             AiPhase.IDLE -> {
@@ -405,6 +426,24 @@ private fun Conversation(
                         else -> AiContinuation.limitNote(state.continuations, state.answer.length)
                             ?.let { Muted(it) }
                     }
+                }
+                // Phase 87 (Level 10, 87.8) — the read-only second opinion. The
+                // button is a request, not an action: it builds a preview of a
+                // request the user still has to Send (D4), and the reviewer has
+                // no tools, so its reply can never become a call.
+                if (state.review != null || state.reviewedAnswer != null) {
+                    ReviewCard(state.reviewedAnswer, state.review)
+                }
+                if (state.options.reviewer == AiReviewer.ON &&
+                    state.answer.isNotBlank() &&
+                    state.prompt?.source != AiSource.REVIEW
+                ) {
+                    Text(
+                        text = AiCopy.REVIEWER_ACTION,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.clickable(onClick = onRequestReview)
+                    )
                 }
                 state.notice?.let { Body(it) }
                 if (state.undoSummary != null && state.proposalResult !is AiProposalResult.Proposal) {
@@ -552,7 +591,11 @@ private fun UndoTaskCard(
  * persisted (D6); it disappears with the task.
  */
 @Composable
-private fun AgentActivityCard(state: AiUiState) {
+private fun AgentActivityCard(
+    state: AiUiState,
+    onAcceptBudget: () -> Unit = {},
+    onDeclineBudget: () -> Unit = {}
+) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -567,11 +610,19 @@ private fun AgentActivityCard(state: AiUiState) {
             state.agentUsage?.let { usage ->
                 Muted(
                     AiCopy.agentUsageLine(
-                        usage.turns, usage.toolCalls, usage.runs, usage.refused, usage.reused
+                        usage.turns, usage.toolCalls, usage.runs, usage.refused, usage.reused,
+                        usage.turnCap, usage.readCap
                     )
                 )
             }
-            for (step in state.agentSteps) {
+            // Phase 87 (Level 10, 87.5) — the *tool activity* control. It changes
+            // ONLY what is drawn here: the same disclosed strings are behind the
+            // row in both states, so the packed request text cannot depend on it
+            // (**S1**), and nothing is removed, only collapsed (**S8**). The
+            // pre-Send preview is a different composable and is never collapsible
+            // — D4 needs the exact text visible before Send.
+            val openRequests = remember { mutableStateListOf<Int>() }
+            for ((index, step) in state.agentSteps.withIndex()) {
                 Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.XXS))) {
                     Text(
                         text = step.title,
@@ -585,8 +636,37 @@ private fun AgentActivityCard(state: AiUiState) {
                         overflow = TextOverflow.Ellipsis
                     )
                     step.sentSystemInstruction?.let { instruction ->
-                        // D4: whole strings, not the timeline's ellipsised result preview.
-                        SentText(instruction + "\n\n" + step.sentUserText.orEmpty())
+                        val user = step.sentUserText.orEmpty()
+                        val collapsed = state.options.activity == AiActivityDisplay.COLLAPSED &&
+                            !openRequests.contains(index)
+                        if (collapsed) {
+                            // One line: recipient plus the sizes actually sent.
+                            // A tap reveals the identical full text.
+                            val row = AiActivityPolicy.row(
+                                step.sentProvider ?: state.provider,
+                                step.sentModel ?: state.model,
+                                instruction,
+                                user,
+                                AiActivityDisplay.COLLAPSED
+                            )
+                            Text(
+                                text = row.summary + "  ·  tap for the full text",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { openRequests.add(index) }
+                            )
+                        } else {
+                            // D4: whole strings, not the timeline's ellipsised result preview.
+                            SentText(instruction + "\n\n" + user)
+                            if (state.options.activity == AiActivityDisplay.COLLAPSED) {
+                                Text(
+                                    text = "collapse",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.clickable { openRequests.remove(index) }
+                                )
+                            }
+                        }
                     }
                     if (step.detail.isNotBlank()) {
                         Text(
@@ -598,6 +678,113 @@ private fun AgentActivityCard(state: AiUiState) {
                         )
                     }
                 }
+            }
+            // Phase 87 (Level 10, 87.6) — the budget-extension offer. It appears
+            // only after the task has stopped and its answer is prose, states
+            // exactly what it adds, and says out loud what it does NOT add: the
+            // run count and every approval are unchanged (**S9**). Declining is
+            // the default; nothing resumes without a tap.
+            state.budgetOffer?.let { offer ->
+                Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.XXS))) {
+                    Text(
+                        text = AiCopy.BUDGET_OFFER_LINE,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Muted(
+                        AiCopy.budgetOfferDetail(offer.extraTurns, offer.extraToolCalls)
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                        Text(
+                            text = AiCopy.BUDGET_OFFER_ACTION,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.clickable(onClick = onAcceptBudget)
+                        )
+                        Text(
+                            text = AiCopy.BUDGET_OFFER_DECLINE,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.clickable(onClick = onDeclineBudget)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Phase 87 (Level 10, 87.7) — the manual backup-provider offer.
+ *
+ * It names the provider it would switch to and says out loud that accepting
+ * sends nothing: the request goes back to the preview with the new recipient on
+ * it, and Send stays the only road (**S8**, D4). Consent is never replayed —
+ * only a provider whose own terms are current is ever offered.
+ */
+@Composable
+private fun BackupProviderCard(
+    next: AiProviderId,
+    onAccept: () -> Unit,
+    onDecline: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(CodecTokens.space(Space.M)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
+        ) {
+            Text(AiCopy.BACKUP_OFFER_PREFIX, style = MaterialTheme.typography.labelMedium)
+            Muted(AiCopy.backupSwitched(next))
+            Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                Text(
+                    text = AiCopy.backupOfferAction(next),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.clickable(onClick = onAccept)
+                )
+                Text(
+                    text = AiCopy.BACKUP_OFFER_DECLINE,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.clickable(onClick = onDecline)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Phase 87 (Level 10, 87.8) — the second opinion and the answer it reviewed.
+ *
+ * The reviewed answer stays on screen so the two can be read together. The
+ * review is **text**: if the reviewer emitted tool or edit markup, it is shown
+ * verbatim rather than parsed into a call, because the reviewer was given no
+ * tools and no route to one (**S3**, **S8**).
+ */
+@Composable
+private fun ReviewCard(reviewedAnswer: String?, review: AiReviewVerdict?) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(CodecTokens.space(Space.M)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
+        ) {
+            Text(AiCopy.REVIEWER_TITLE, style = MaterialTheme.typography.titleSmall)
+            reviewedAnswer?.takeIf { it.isNotBlank() }?.let {
+                Muted(it)
+            }
+            when (review) {
+                null -> Muted(AiCopy.REVIEWER_BUSY_NOTE)
+                is AiReviewVerdict.Text -> AiBubble { Answer(review.text) }
+                // Shown exactly as it arrived. It is never handed to a parser
+                // that could turn it into a tool call or an edit.
+                is AiReviewVerdict.MarkupShownAsText -> Answer(review.text)
             }
         }
     }

@@ -18,7 +18,8 @@
 > to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`**; post-merge Build APK run `37109573383`
 > is green on that commit. Exactly three `client.stream(` sites remain
 > (`AiViewModel.kt:905, 1281, 1508`). The owner has now authorized **Level 10** as
-> [Phase 87](../../phases/03-editor/chat-phase87/README.md) — 📋 PLANNED, no code written.
+> [Phase 87](../../phases/03-editor/chat-phase87/README.md) — ✅ IMPLEMENTED, all nine controls
+> wired; **S9 held** (no ceiling moved); host pre-validation 152/152 green.
 > Levels 11–14 remain unauthorized; formal device acceptance is postponed to Level 12.
 
 ---
@@ -29,7 +30,7 @@
 
 **Merged:** [9 — task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) as [Phase 86](../../phases/03-editor/chat-phase86/README.md) — merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit. Bounded D6 amendment; exactly three stream sites preserved.
 
-**Authorized and 📋 PLANNED (no code yet):** [10 — agent controls and options](10_AGENT_CONTROLS_AND_OPTIONS.md) as [Phase 87](../../phases/03-editor/chat-phase87/README.md). Owner decisions 2026-10-03: all nine controls, in the `AiHome` AI panel, backup provider manual-offer-only, answer detail defaulting to `normal`. **S9** governs the whole phase.
+**✅ IMPLEMENTED (Phase 87, 2026-10-03):** [10 — agent controls and options](10_AGENT_CONTROLS_AND_OPTIONS.md) as [Phase 87](../../phases/03-editor/chat-phase87/README.md) — nine bounded controls, no ceiling moved, three `client.stream(` sites intact. Owner decisions 2026-10-03: all nine controls, in the `AiHome` AI panel, backup provider manual-offer-only, answer detail defaulting to `normal`. **S9** governs the whole phase.
 
 **Proposed and unauthorized future levels, in dependency order:**
 
@@ -86,7 +87,7 @@ and honest stop reasons. The evidence column below is the pre-fix `4cb4151` stat
 > decisions and plan under the no-backup app directory, and recites the plan at the end of disclosed
 > requests. Raw conversation data remains ephemeral. See [Phase 86](../../phases/03-editor/chat-phase86/README.md).
 >
-> **Phase 87 / Level 10 update — 2026-10-03: 📋 PLANNED.** The owner authorized Level 10 in chat.
+> **Phase 87 / Level 10 update — 2026-10-03: ✅ IMPLEMENTED.** The owner authorized Level 10 in chat.
 > Defect **11 (blanket brevity)** is its headline target: `AiContext.kt:474` still ends
 > `AGENT_ASK_SYSTEM_INSTRUCTION` with *"Keep answers short: they are read on a phone."*, inherited
 > by `AGENT_EDIT_SYSTEM_INSTRUCTION` at `:482-483`. Defect **10 (disclosure floods the timeline)**
@@ -224,4 +225,4 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 **Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
 
-**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. **Level 9 (Phase 86) was merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit.** The owner has now authorized **Level 10**; [Phase 87](../../phases/03-editor/chat-phase87/README.md) is 📋 PLANNED with a written brief and **no production or test source**. Owner decisions for it: all nine controls, in the `AiHome` AI panel, manual-only backup provider, answer detail defaulting to `normal`. Levels 11–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.
+**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. **Level 9 (Phase 86) was merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit.** The owner authorized **Level 10** and then said *"Complete level 10"*; [Phase 87](../../phases/03-editor/chat-phase87/README.md) is now ✅ IMPLEMENTED on `arena/01a100ed-codec` — all nine controls wired end to end, **152/152 host tests green**, **S9 held** (no ceiling moved), three `client.stream(` sites intact, no PR and no merge. Owner decisions for it: all nine controls, in the `AiHome` AI panel, manual-only backup provider, answer detail defaulting to `normal`. Levels 11–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.

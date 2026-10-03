@@ -61,16 +61,20 @@ object AiToolRunner {
         paths: List<String>,
         dirtyBuffers: Map<String, String> = emptyMap(),
         shouldStop: () -> Boolean = { false },
-        cachedFiles: Map<String, String> = emptyMap()
+        cachedFiles: Map<String, String> = emptyMap(),
+        readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): Outcome {
         val rootDir = AiProjectReader.canonicalFileSafe(root)
             ?: return Outcome(false, "The project folder could not be read.")
         if (!rootDir.isDirectory) return Outcome(false, "The project folder was not found.")
+        // S9: clamped again here, so the follow-up hint can never name a window
+        // the validator would refuse.
+        val window = AiOptionsPolicy.clampReadWindow(readWindow).coerceAtMost(AiToolLimits.MAX_READ_LINES)
         return when (call.name) {
             AiToolName.LIST_FILES -> listFiles(call, paths)
             AiToolName.SEARCH_PROJECT -> search(call, rootDir, paths, shouldStop)
-            AiToolName.READ_FILE -> read(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles)
-            AiToolName.READ_FILES -> readFiles(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles)
+            AiToolName.READ_FILE -> read(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles, window)
+            AiToolName.READ_FILES -> readFiles(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles, window)
             // request_run is an approval request; it must never execute anything.
             AiToolName.REQUEST_RUN -> Outcome(false, "request_run is approved by the user, not executed as a tool.")
         }
@@ -189,7 +193,8 @@ object AiToolRunner {
         paths: List<String>,
         dirtyBuffers: Map<String, String>,
         shouldStop: () -> Boolean = { false },
-        cachedFiles: Map<String, String> = emptyMap()
+        cachedFiles: Map<String, String> = emptyMap(),
+        readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): Outcome {
         val path = call.path ?: return Outcome(false, "read_file needs a path.")
         if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
@@ -267,7 +272,10 @@ object AiToolRunner {
 
         return Outcome(
             true,
-            formatRange(path, slice, start, end, total, fromDirtyBuffer, charCapped, stopped, fromCachedMemory),
+            formatRange(
+                path, slice, start, end, total, fromDirtyBuffer, charCapped, stopped,
+                fromCachedMemory, readWindow
+            ),
             truncated = end < total || charCapped || stopped
         )
     }
@@ -289,7 +297,8 @@ object AiToolRunner {
         paths: List<String>,
         dirtyBuffers: Map<String, String>,
         shouldStop: () -> Boolean = { false },
-        cachedFiles: Map<String, String> = emptyMap()
+        cachedFiles: Map<String, String> = emptyMap(),
+        readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): Outcome {
         val specs = call.reads
         if (specs.isNullOrEmpty()) return Outcome(false, "read_files needs a paths list.")
@@ -307,7 +316,9 @@ object AiToolRunner {
                 truncated = true
                 continue
             }
-            val block = readBatchBlock(spec, rootDir, admitted, dirtyBuffers, cachedFiles, perFile, shouldStop)
+            val block = readBatchBlock(
+                spec, rootDir, admitted, dirtyBuffers, cachedFiles, perFile, shouldStop, readWindow
+            )
             blocks += block.first
             truncated = truncated || block.second
         }
@@ -325,7 +336,8 @@ object AiToolRunner {
         dirtyBuffers: Map<String, String>,
         cachedFiles: Map<String, String>,
         budget: Int,
-        shouldStop: () -> Boolean
+        shouldStop: () -> Boolean,
+        readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): Pair<String, Boolean> {
         val path = spec.path
         if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
@@ -369,7 +381,7 @@ object AiToolRunner {
             val end = requestedEnd.coerceAtMost(total)
             return formatRange(
                 path, lines.subList(start - 1, end), start, end, total,
-                fromDirtyBuffer, false, false, fromCachedMemory
+                fromDirtyBuffer, false, false, fromCachedMemory, readWindow
             ) to (end < total)
         }
 
@@ -383,7 +395,7 @@ object AiToolRunner {
                     (if (range.total == 1) "" else "s") + "]" to false
             else -> formatRange(
                 path, range.slice, range.start, range.end, range.total,
-                false, range.charCapped, range.stopped
+                false, range.charCapped, range.stopped, false, readWindow
             ) to (range.end < range.total || range.charCapped || range.stopped)
         }
     }
@@ -404,7 +416,8 @@ object AiToolRunner {
         fromBuffer: Boolean,
         charCapped: Boolean,
         stopped: Boolean,
-        fromCachedMemory: Boolean = false
+        fromCachedMemory: Boolean = false,
+        readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): String {
         val coverage = when {
             stopped -> "[partial: stopped by the user]"
@@ -412,8 +425,10 @@ object AiToolRunner {
             end >= total -> "[complete]"
             else -> "[partial: more lines follow]"
         }
+        // Level 10: the hint names the SAME window the validator enforces, so the
+        // model is never told to ask for a range that would then be refused.
         val next = if (end < total) {
-            "; read ${end + 1}-${minOf(total, end + AiToolLimits.MAX_READ_LINES)} next"
+            "; read ${end + 1}-${minOf(total, end + readWindow)} next"
         } else ""
         val header = "FILE $path — lines $start-$end of $total" +
             (if (fromBuffer) " [unsaved edits]" else if (fromCachedMemory) " [cached memory]" else "") +
