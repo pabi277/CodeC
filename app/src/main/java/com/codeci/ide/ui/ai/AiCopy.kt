@@ -217,7 +217,10 @@ object AiCopy {
         refused: Int = 0,
         reused: Int = 0,
         turnCap: Int = AiAgentLimits.MAX_TURNS,
-        readCap: Int = AiAgentLimits.MAX_TOOL_CALLS
+        readCap: Int = AiAgentLimits.MAX_TOOL_CALLS,
+        // Phase 88 (Level 11, 88.4): the progress line omits "0 of 2 runs" until a
+        // run has been requested or used. Every other caller keeps the full line.
+        showRuns: Boolean = true
     ): String {
         // Phase 87 (Level 10, 87.6): the caps are the task's caps, which an
         // accepted extension raises. Clamping the count against the constant
@@ -228,13 +231,50 @@ object AiCopy {
             if (refused > 0) append(" · ").append(refused).append(" refused")
             if (reused > 0) append(" · ").append(reused).append(" reused")
         }
-        return "$turns of $turnCap steps · $reads of $readCap reads" +
-            "$extra · $runs of ${AiAgentLimits.MAX_RUNS} runs"
+        return "$turns of $turnCap steps · $reads of $readCap reads" + extra +
+            (if (showRuns) " · $runs of ${AiAgentLimits.MAX_RUNS} runs" else "")
     }
 
-    /** The running label while the agent works. */
-    fun agentWorkingLine(steps: Int): String =
-        "Working on it" + (if (steps > 0) " — $steps steps done" else "") + "…"
+    // ---- Phase 88 (Level 11): agent phone presentation ----------------------
+
+    /**
+     * 88.4 — the stage words that open the one progress line
+     * ([AiProgressPolicy.line]). The counters that follow come from
+     * [agentUsageLine], where "steps" means model turns.
+     */
+    fun agentProgressStage(stage: AiProgressStage): String = when (stage) {
+        AiProgressStage.WAITING_FOR_MODEL -> "Waiting for the AI…"
+        AiProgressStage.MODEL_REPLYING -> "The AI is writing…"
+        AiProgressStage.READING_FILES -> "Reading project files…"
+        AiProgressStage.WAITING_FOR_RUN_DECISION -> "Waiting for you to tap Run or Skip"
+        AiProgressStage.RUNNING_COMMAND -> "Running the project…"
+        AiProgressStage.WAITING_TO_RETRY -> "Waiting to retry…"
+        AiProgressStage.DONE -> "Done"
+        AiProgressStage.STOPPED -> "Stopped"
+        AiProgressStage.FAILED -> "Did not finish"
+    }
+
+    const val PROGRESS_SEPARATOR = " · "
+
+    /** 88.3 — the confirm dialog every https link in an answer goes through. */
+    const val LINK_DIALOG_TITLE = "Open this link?"
+    const val LINK_DIALOG_NOTE = "Opens in your browser. CodeC does not check links."
+    const val LINK_OPEN = "Open"
+    const val LINK_COPY = "Copy link"
+    const val LINK_CANCEL = "Cancel"
+
+    /** 88.3 — a code block's header: its language label (or this word) and Copy. */
+    const val CODE_BLOCK_LABEL = "code"
+    const val CODE_COPY = "Copy"
+    const val CODE_COPY_DESCRIPTION = "Copy this code"
+
+    /** 88.3 — an image in an answer is never fetched; its alt text is shown instead. */
+    fun answerImage(alt: String): String = if (alt.isBlank()) "[image]" else "[image: $alt]"
+
+    /** 88.5 — an activity row that carries a full result. */
+    const val RESULT_TAP = "tap for the full result"
+    const val RESULT_COLLAPSE = "collapse"
+    fun resultCaption(chars: Int): String = "as it first entered a request · $chars characters"
 
     /** The run approval card. */
     const val AGENT_RUN_TITLE = "The AI wants to run the project"

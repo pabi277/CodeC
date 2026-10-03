@@ -25,9 +25,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlin.coroutines.coroutineContext
 
-/** Where one helper exchange stands. */
-enum class AiPhase { IDLE, PREVIEW, STREAMING, DONE, FAILED }
-
 /**
  * Everything the panel draws. Chat, prompts, answers and timeline stay in
  * memory (D6); Level 9's separate bounded derived task memory is not UI state.
@@ -130,24 +127,6 @@ data class AiUiState(
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
 data class AiAgentRunRequest(val target: String?)
-
-/** Phase 80 — a snapshot of the task's usage counters (in memory, display only). */
-data class AiAgentUsage(
-    val turns: Int,
-    val toolCalls: Int,
-    val runs: Int,
-    /** Phase 84 (fix 3): refused blocks, counted separately from executions. */
-    val refused: Int = 0,
-    /** Phase 84 (fix 3): duplicate reads served from a working set (0 until Level 9). */
-    val reused: Int = 0,
-    /**
-     * Phase 87 (Level 10, 87.6): the caps this task actually ran under. They
-     * equal the constants unless the user accepted one budget extension, and
-     * the counter must render against them, not against the constants.
-     */
-    val turnCap: Int = AiAgentLimits.MAX_TURNS,
-    val readCap: Int = AiAgentLimits.MAX_TOOL_CALLS
-)
 
 /**
  * Phase 76 — the AI panel's state holder. One request at a time; the answer

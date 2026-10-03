@@ -51,8 +51,24 @@ internal fun SentText(text: String) {
     }
 }
 
+/**
+ * Phase 88 (Level 11, 88.3) — model prose, rendered as Markdown by
+ * [AiMarkdownAnswer]: formatted, selectable, never truncated, links inert unless
+ * the link policy allows them and the user confirms. Pass [streaming] only for
+ * the live answer, which re-parses throttled and off the main thread.
+ */
 @Composable
-internal fun Answer(text: String) {
+internal fun Answer(text: String, streaming: Boolean = false) {
+    AiMarkdownAnswer(text, streaming)
+}
+
+/**
+ * Phase 88.3 — text shown exactly as it arrived, never parsed: a reviewer's
+ * `AiReviewVerdict.MarkupShownAsText` (tool or edit markup is displayed, never
+ * formatted and never turned into a call). This is the pre-Level-11 `Answer` body.
+ */
+@Composable
+internal fun VerbatimText(text: String) {
     SelectionContainer {
         Text(text, style = MaterialTheme.typography.bodyMedium)
     }

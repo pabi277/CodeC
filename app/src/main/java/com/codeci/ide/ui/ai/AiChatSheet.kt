@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -366,11 +367,16 @@ private fun Conversation(
             }
 
             AiPhase.STREAMING -> {
-                state.retryCountdown?.let { Body(AiRateLimits.countdownLine(it)) }
+                // Phase 88 (Level 11, 88.4): an agent task's countdown lives in its one
+                // progress line (the bottom bar); a single-shot ask keeps it here.
+                if (AiProgressPolicy.placement(state.phase, state.agentSteps.isNotEmpty()) == AiProgressPolicy.Placement.NONE) {
+                    state.retryCountdown?.let { Body(AiRateLimits.countdownLine(it)) }
+                }
                 if (state.answer.isEmpty()) {
                     CircularProgressIndicator(modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV)))
                 } else {
-                    AiBubble { Answer(state.answer) }
+                    // Phase 88.3: live Markdown, re-parsed throttled and off the main thread.
+                    AiBubble { Answer(state.answer, streaming = true) }
                 }
                 // Phase 80 — the loop is paused here: the AI asked to run the
                 // project and NOTHING runs until the user taps Run.
@@ -590,6 +596,16 @@ private fun UndoTaskCard(
  * the caps in use, and the detail the model actually received. Nothing here is
  * persisted (D6); it disappears with the task.
  */
+/** Phase 88 (Level 11, 88.4) — the progress stage's inputs, read from state that already exists. */
+private fun progressInput(state: AiUiState) = AiProgressInput(
+    phase = state.phase,
+    lastKind = state.agentSteps.lastOrNull()?.kind,
+    answerEmpty = state.answer.isEmpty(),
+    runPending = state.agentRun != null,
+    runRunning = state.agentRunRunning,
+    retrying = state.retryCountdown != null
+)
+
 @Composable
 private fun AgentActivityCard(
     state: AiUiState,
@@ -607,13 +623,12 @@ private fun AgentActivityCard(
             verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
         ) {
             Text(AiCopy.AGENT_ACTIVITY, style = MaterialTheme.typography.titleSmall)
-            state.agentUsage?.let { usage ->
-                Muted(
-                    AiCopy.agentUsageLine(
-                        usage.turns, usage.toolCalls, usage.runs, usage.refused, usage.reused,
-                        usage.turnCap, usage.readCap
-                    )
-                )
+            // Phase 88 (Level 11, 88.4): ONE progress line on screen. After the task
+            // (DONE / FAILED) it is this card's first line; while streaming it is in
+            // the bottom bar instead, so the two never both draw it. Counters render
+            // against the task's own caps inside the builder (87.6).
+            if (AiProgressPolicy.placement(state.phase, state.agentSteps.isNotEmpty()) == AiProgressPolicy.Placement.CARD) {
+                Muted(AiProgressPolicy.line(AiProgressPolicy.stage(progressInput(state)), state.agentUsage))
             }
             // Phase 87 (Level 10, 87.5) — the *tool activity* control. It changes
             // ONLY what is drawn here: the same disclosed strings are behind the
@@ -622,6 +637,10 @@ private fun AgentActivityCard(
             // pre-Send preview is a different composable and is never collapsible
             // — D4 needs the exact text visible before Send.
             val openRequests = remember { mutableStateListOf<Int>() }
+            // Phase 88 (Level 11, 88.5): per-row open/closed state for result rows,
+            // local to this composable like openRequests. It never reaches the
+            // ViewModel, the packer or renderStep (S1).
+            val openResults = remember { mutableStateMapOf<Int, Boolean>() }
             for ((index, step) in state.agentSteps.withIndex()) {
                 Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.XXS))) {
                     Text(
@@ -668,7 +687,43 @@ private fun AgentActivityCard(
                             }
                         }
                     }
-                    if (step.detail.isNotBlank()) {
+                    if (AiResultRowPolicy.hasFullResult(step)) {
+                        // Phase 88 (Level 11, 88.5): one line until tapped, then EXACTLY
+                        // the text packed for the model (renderStep's own expression),
+                        // raw and never Markdown: results are data (S3). Opening reads
+                        // modelResult and writes nothing (S1).
+                        val open = openResults[index] ?: AiResultRowPolicy.startsOpen(state.options.activity)
+                        if (open) {
+                            val full = AiResultRowPolicy.fullResult(step)
+                            SentText(full)
+                            Text(
+                                text = AiCopy.resultCaption(full.length) + "  ·  " + AiCopy.RESULT_COLLAPSE,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { openResults[index] = false }
+                            )
+                        } else {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { openResults[index] = true },
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
+                            ) {
+                                Text(
+                                    text = AiResultRowPolicy.teaser(step),
+                                    fontFamily = CodecType.codeFamily,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(AiCopy.RESULT_TAP, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    } else if (step.detail.isNotBlank()) {
+                        // Rows without a full result keep their drawing; they are short by nature.
                         Text(
                             text = step.detail,
                             fontFamily = CodecType.codeFamily,
@@ -784,7 +839,7 @@ private fun ReviewCard(reviewedAnswer: String?, review: AiReviewVerdict?) {
                 is AiReviewVerdict.Text -> AiBubble { Answer(review.text) }
                 // Shown exactly as it arrived. It is never handed to a parser
                 // that could turn it into a tool call or an edit.
-                is AiReviewVerdict.MarkupShownAsText -> Answer(review.text)
+                is AiReviewVerdict.MarkupShownAsText -> VerbatimText(review.text)
             }
         }
     }
@@ -964,9 +1019,19 @@ private fun BottomBar(
             }
 
             AiPhase.STREAMING -> {
-                state.retryCountdown?.let { Muted(AiRateLimits.countdownLine(it)) }
-                if (state.agentSteps.isNotEmpty()) {
-                    Muted(AiCopy.agentWorkingLine(state.agentSteps.count { it.kind == AiAgentStepKind.TOOL }))
+                // Phase 88 (Level 11, 88.4): an agent task's one progress line names the
+                // stage ("steps" = model turns); a rate-limit countdown replaces the stage
+                // words. A single-shot ask keeps just its countdown, as before.
+                if (AiProgressPolicy.placement(state.phase, state.agentSteps.isNotEmpty()) == AiProgressPolicy.Placement.BOTTOM_BAR) {
+                    Muted(
+                        AiProgressPolicy.line(
+                            AiProgressPolicy.stage(progressInput(state)),
+                            state.agentUsage,
+                            state.retryCountdown?.let { AiRateLimits.countdownLine(it) }
+                        )
+                    )
+                } else {
+                    state.retryCountdown?.let { Muted(AiRateLimits.countdownLine(it)) }
                 }
                 OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
             }

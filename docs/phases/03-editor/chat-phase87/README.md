@@ -1,10 +1,13 @@
 # Phase 87 — AI Level 10: agent controls and options
 
-> **Status:** ✅ **IMPLEMENTED and CI-GREEN.** Build APK run [`37119390730`](https://github.com/pabi277/CodeC/actions/runs/37119390730) on `27c23c1` is
+> **Status:** ✅ **MERGED.** The owner commanded the merge in chat (*"Ok merge it to main"*, 2026-10-03); [PR #112](https://github.com/pabi277/CodeC/pull/112) landed on `main` @ `c3771c58007f2f7ad4af6a26437dc19ef3819a3f`, and post-merge Build APK run [`37122702615`](https://github.com/pabi277/CodeC/actions/runs/37122702615) is **green** on that commit. That merge authorization was one-time and is complete.
+>
+> Prior to the merge this phase was ✅ IMPLEMENTED and CI-GREEN. Build APK run [`37119390730`](https://github.com/pabi277/CodeC/actions/runs/37119390730) on `27c23c1` is
 > **success** (host unit + screenshot tests, debug and release assembly, APK checks, artifact uploads). All nine
 > controls are wired end to end (parts 87.1–87.8). **152 host tests pass** on the
 > kotlinc/JRE harness described in `rule.md` §9; Build APK on CI is the executor of record.
-> Committed and pushed to `arena/01a100ed-codec` only. **No PR, no merge, no push to `main`.**
+> The work was built on `arena/01a100ed-codec` and stayed there until the owner's merge command;
+> no PR, merge or `main` push happened before it.
 > **Owner authorization (2026-10-03):** the owner authorized Level 10 in chat by selecting
 > *"Authorize Level 10 (agent controls/options)"* and then answered four design questions:
 > **all nine** controls in Phase 87 · controls live in the **`AiHome` AI panel** · backup
@@ -158,6 +161,10 @@ owner's:** Part 87.2 ships with the default at **400** (unchanged behaviour, ran
 available for the owner to lower on the device), and this README records that the spec's 150
 is available as a one-constant change if the owner asks for it. Changing it later is not a
 migration — it is a default.
+
+**✅ Closed 2026-10-03 by the owner.** Asked while scoping Level 11, the owner chose to keep the
+read-window default at **400** (`AiOptionsPolicy.kt:77`). This decision is now the owner's, not only the
+agent's. No code changes; see the [Phase 88 brief](../chat-phase88/README.md).
 
 ## Design shape
 
@@ -369,6 +376,11 @@ test all along. `AiLevel10CopyTest` remains CI-only for the `AiCopy.kt` dependen
 
 ## Gate
 
-**No PR, no merge, no push to `main` without the owner's explicit command** (`rule.md` §3).
-Level 10's authorization covers this phase; **Levels 11–14 remain unauthorized.** Formal device
-acceptance remains POSTPONED to Level 12 and is not claimed here.
+**Closed by the owner's explicit command in chat** (*"Ok merge it to main"*, 2026-10-03), as
+`rule.md` §3 requires. [PR #112](https://github.com/pabi277/CodeC/pull/112) was opened from `arena/01a100ed-codec`, its own `build` check
+passed, and it was merged to `main` @ `c3771c58007f2f7ad4af6a26437dc19ef3819a3f`. Post-merge Build APK run [`37122702615`](https://github.com/pabi277/CodeC/actions/runs/37122702615) is
+**green** on that commit. No APK byte count is recorded for the merge run: it was not re-measured.
+That authorization was one-time and is complete.
+
+**Levels 11–14 remain unauthorized.** Formal device acceptance remains POSTPONED to Level 12 and is
+not claimed here.

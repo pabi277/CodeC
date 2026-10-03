@@ -92,8 +92,15 @@ class AiLevel7WiringTest {
         val copy = aiRaw("AiCopy.kt")
         assertTrue(copy.contains("refused: Int = 0"))
         assertTrue(copy.contains("reused: Int = 0"))
+        // Phase 88 (Level 11, 88.4) moved the counter into the one progress-line
+        // builder, so this pin follows it: the sheet hands the task's usage to
+        // AiProgressPolicy.line, which passes the split counters separately.
         val sheet = ai("AiChatSheet.kt")
-        assertTrue("the sheet must pass the split counters", sheet.contains("usage.refused"))
+        assertTrue("the sheet must hand the usage to the one builder", sheet.contains("AiProgressPolicy.line("))
+        assertTrue("the sheet must hand the usage to the one builder", sheet.contains("state.agentUsage"))
+        val policies = ai("AiLevel11Policies.kt")
+        assertTrue("the builder must pass the split counters", policies.contains("refused = usage.refused"))
+        assertTrue("the builder must pass the split counters", policies.contains("reused = usage.reused"))
     }
 
     // ---- fix 4 (S12): reserved masked synthesis turn -----------------------
