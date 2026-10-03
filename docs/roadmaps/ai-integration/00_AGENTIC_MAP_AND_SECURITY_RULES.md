@@ -88,12 +88,17 @@ and honest stop reasons. The evidence column below is the pre-fix `4cb4151` stat
 > decisions and plan under the no-backup app directory, and recites the plan at the end of disclosed
 > requests. Raw conversation data remains ephemeral. See [Phase 86](../../phases/03-editor/chat-phase86/README.md).
 >
-> **Phase 87 / Level 10 update — 2026-10-03: ✅ IMPLEMENTED.** The owner authorized Level 10 in chat.
-> Defect **11 (blanket brevity)** is its headline target: `AiContext.kt:474` still ends
-> `AGENT_ASK_SYSTEM_INSTRUCTION` with *"Keep answers short: they are read on a phone."*, inherited
-> by `AGENT_EDIT_SYSTEM_INSTRUCTION` at `:482-483`. Defect **10 (disclosure floods the timeline)**
-> gets a collapsed-not-removed treatment in the same phase. All nine controls, in the `AiHome`
-> panel, with **S9** asserting every ceiling. No code written yet.
+> **Phase 87 / Level 10 update — 2026-10-03: ✅ merged.** The owner authorized Level 10 in chat;
+> [PR #112](https://github.com/pabi277/CodeC/pull/112) merged Phase 87 to `main` @ `c3771c5`, and
+> post-merge Build APK run `37122702615` is green on that commit. Defect **11 (blanket brevity)** was
+> its headline target: before Phase 87, `AiContext.kt:474` ended `AGENT_ASK_SYSTEM_INSTRUCTION` with
+> *"Keep answers short: they are read on a phone."*, inherited by `AGENT_EDIT_SYSTEM_INSTRUCTION`.
+> That sentence is now chosen by `AiOptionsPolicy.detailSentence(answerDetail)` — brief / normal /
+> thorough, default `normal` (today's wording, by owner decision) — and disclosed per request.
+> Defect **10 (disclosure floods the timeline)** got the collapsed-not-removed treatment: REQUEST
+> rows show a one-line recipient-and-size summary by default and reveal the identical full text on
+> tap. The four-surface split and Markdown answers (defect 9) remain Level 11 scope. All nine
+> controls live in the `AiHome` panel, with **S9** asserting every ceiling.
 > See [Phase 87](../../phases/03-editor/chat-phase87/README.md).
 
 | # | Defect | Evidence | Effect |
