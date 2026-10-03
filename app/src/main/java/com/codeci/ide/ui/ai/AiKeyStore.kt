@@ -74,8 +74,74 @@ class AiKeyStore(context: Context) {
         return@synchronized writeSettings(props)
     }
 
+    // ---- Phase 87 (Level 10): the nine bounded agent controls ---------------
+    // Non-secret tuning only. Eight properties for nine controls: *request
+    // inspection* is deliberately not stored, because a persisted "on" implies a
+    // persisted "off" and D4 says it is not user-removable. Nothing here can
+    // raise a permission (S9) — every value is clamped by AiOptionsPolicy.
+
+    fun options(): AiOptions {
+        val p = settings()
+        return AiOptionsPolicy.decode(
+            readWindow = p.getProperty(PROP_READ_WINDOW),
+            workingSet = p.getProperty(PROP_WORKING_SET),
+            taskMemory = p.getProperty(PROP_TASK_MEMORY),
+            answerDetail = p.getProperty(PROP_ANSWER_DETAIL),
+            activity = p.getProperty(PROP_TOOL_ACTIVITY),
+            backup = p.getProperty(PROP_BACKUP_MODE),
+            budgetOffer = p.getProperty(PROP_BUDGET_OFFER),
+            reviewer = p.getProperty(PROP_REVIEWER)
+        )
+    }
+
+    private fun setOption(key: String, value: String): Boolean = synchronized(STORE_LOCK) {
+        val props = settings()
+        props.setProperty(key, value)
+        return@synchronized writeSettings(props)
+    }
+
+    fun setReadWindow(lines: Int): Boolean =
+        setOption(PROP_READ_WINDOW, AiOptionsPolicy.clampReadWindow(lines).toString())
+
+    fun setWorkingSetDepth(depth: Int): Boolean =
+        setOption(PROP_WORKING_SET, AiOptionsPolicy.clampWorkingSetDepth(depth).toString())
+
+    /** Off means "forget", not "pause": the store clears the retained copy (Level 9). */
+    fun setTaskMemory(on: Boolean): Boolean = setOption(PROP_TASK_MEMORY, on.toString())
+
+    fun setAnswerDetail(detail: AiAnswerDetail): Boolean =
+        setOption(PROP_ANSWER_DETAIL, detail.name)
+
+    fun setActivity(display: AiActivityDisplay): Boolean =
+        setOption(PROP_TOOL_ACTIVITY, display.name)
+
+    fun setBackupMode(mode: AiBackupMode): Boolean = setOption(PROP_BACKUP_MODE, mode.name)
+
+    fun setBudgetOffer(offer: AiBudgetOffer): Boolean = setOption(PROP_BUDGET_OFFER, offer.name)
+
+    fun setReviewer(reviewer: AiReviewer): Boolean = setOption(PROP_REVIEWER, reviewer.name)
+
     fun acceptedTermsVersion(provider: AiProviderId = AiProviderId.GEMINI): Int? =
         settings().getProperty(termsProp(provider))?.toIntOrNull()
+
+    /**
+     * Level 10 (87.7): one IO pass over every provider, reporting which have a
+     * usable key and which have their **own** current terms accepted.
+     *
+     * The backup-provider offer is built from this, so it can never name a
+     * provider the user has not consented to for that provider. Consent is per
+     * provider and is never replayed (**S8**).
+     */
+    fun providerReadiness(): Map<AiProviderId, AiProviderReadiness> = synchronized(STORE_LOCK) {
+        AiProviderId.entries.associateWith { p ->
+            val configured = if (keyFile(p).isFile) {
+                if (acceptedTermsVersion(p) == AiProviders.termsVersion(p)) true else false
+            } else {
+                false
+            }
+            AiProviderReadiness(configured = configured, termsAccepted = configured)
+        }
+    }
 
     /** Consent checked here AND in VM/UI. No other provider's consent may authorize a new key. */
     fun saveKey(
@@ -195,5 +261,16 @@ class AiKeyStore(context: Context) {
         private const val PROP_BUBBLE_POS = "bubble_pos"
         private const val PROP_BUBBLE_SHOW = "bubble_show"
         private const val PROP_SHEET_OUTPUT = "sheet_with_output"
+
+        // Phase 87 (Level 10) — bounded agent controls. Non-secret, clamped by
+        // AiOptionsPolicy, and never able to raise a permission (S9).
+        private const val PROP_READ_WINDOW = "read_window_lines"
+        private const val PROP_WORKING_SET = "working_set_depth"
+        private const val PROP_TASK_MEMORY = "task_memory_on"
+        private const val PROP_ANSWER_DETAIL = "answer_detail"
+        private const val PROP_TOOL_ACTIVITY = "tool_activity"
+        private const val PROP_BACKUP_MODE = "backup_provider_mode"
+        private const val PROP_BUDGET_OFFER = "budget_extension_offer"
+        private const val PROP_REVIEWER = "readonly_reviewer"
     }
 }

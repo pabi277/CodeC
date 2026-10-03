@@ -54,7 +54,14 @@ class AiLevel7WiringTest {
         assertTrue("the resume path must consult blockResume", resume.contains("blockResume("))
         assertFalse("it must no longer gate on the turn budget alone", resume.contains("blockModelTurn("))
         val loop = ai("AiAgentLoop.kt")
-        assertTrue(loop.contains("fun blockResume(nowMs: Long)"))
+        // Phase 87 (Level 10, 87.6): blockResume takes the task's caps now. The
+        // second parameter defaults to AiAgentCaps(), which equals the constants,
+        // so pinning the defaulted signature keeps this fix's guarantee intact.
+        assertTrue(loop.contains("fun blockResume(nowMs: Long, caps: AiAgentCaps = AiAgentCaps())"))
+        assertTrue(
+            "it must still consult both gates, in order",
+            loop.contains("blockModelTurn(nowMs, caps) ?: blockTool(nowMs, caps)")
+        )
     }
 
     // ---- fix 3: split, clamped counters ------------------------------------
@@ -63,7 +70,17 @@ class AiLevel7WiringTest {
     fun `refusals are counted on a separate clamped counter`() {
         val loop = ai("AiAgentLoop.kt")
         assertTrue(loop.contains("fun withRefused(n: Int)"))
-        assertTrue("executions are clamped to the cap", loop.contains("coerceIn(0, AiAgentLimits.MAX_TOOL_CALLS)"))
+        // Phase 87 (Level 10, 87.6): executions are clamped to the *task's* cap
+        // rather than to the constant, because an accepted budget extension
+        // raises it. The clamp itself is the point of this fix and is unchanged;
+        // the assertion below pins that the default cap is still 24, so an
+        // unextended task clamps exactly where it always did.
+        assertTrue("executions are clamped to the cap", loop.contains("coerceIn(0, caps.toolCalls)"))
+        assertEquals(
+            "the default cap is still the constant",
+            com.codeci.ide.ui.ai.AiAgentLimits.MAX_TOOL_CALLS,
+            com.codeci.ide.ui.ai.AiAgentCaps().toolCalls
+        )
         val vm = ai("AiViewModel.kt")
         assertTrue("denied blocks increment the refused counter", vm.contains("withRefused(denied.size)"))
         assertTrue("a malformed block increments the refused counter", vm.contains("withRefused(1)"))

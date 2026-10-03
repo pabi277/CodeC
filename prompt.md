@@ -1,4 +1,4 @@
-> **Latest owner instruction — 2026-10-03 (AI Level 9 = Phase 86):** Level 9 is authorized with the narrow D6 amendment: only bounded, admitted non-secret file cache and structured findings/decisions/plan may persist at `noBackupFilesDir/ai/task/<project>/`; raw chat, prompts, answers, maps, tool results and timeline remain ephemeral. The user-facing on/off control is Level 10 and is not authorized here. Phase 86 source is implemented on `arena/01a1004c-codec`; local host pre-validation passed 72/72 selected methods across eight classes. Build APK run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726) is green on fix commit `ddb75d3`, after round 1 found three Level 8 regressions. This is not full Gradle/Android validation. No PR or merge is authorized. Baseline `main` is `32e4a5f` after PR #110; final-head Build APK `37084800939` was green. Test-source additions are 21; measured inventory is 320 test files / 3,044 annotations / 39 AI classes / 462 AI cases. Preserve D1–D6 plus amendments, S1–S12, exactly three `client.stream(` sites, no `java.nio.file`, `canonicalPath != absolutePath` symlink checks, `ui/ai/` zero direct project writes and zero command execution, and one-brain S7. Do not change the default model. Formal device acceptance remains POSTPONED to Level 12; Levels 10–14 remain unauthorized. See [Phase 86](docs/phases/03-editor/chat-phase86/README.md), [Level 9 spec](docs/roadmaps/ai-integration/09_TASK_MEMORY_AND_PLANNING.md), [rule.md §3/§9](rule.md), and `docs/getting-started/NEXT_STEPS.md`.
+> **Latest owner instruction — 2026-10-03 (AI Level 10 = Phase 87, ✅ IMPLEMENTED on the branch; Level 9 = Phase 86, ✅ MERGED):** Phase 86 / Level 9 was merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run [`37109573383`](https://github.com/pabi277/CodeC/actions/runs/37109573383) is green on that commit. That merge authorization was one-time and is complete. **The owner then authorized Level 10 and said *"Complete level 10"***; [Phase 87](docs/phases/03-editor/chat-phase87/README.md) is now implemented — all nine controls wired end to end, **152/152 host tests green** (widened to 1 594 cases across every Android-free test class) and **Build APK [`37119390730`](https://github.com/pabi277/CodeC/actions/runs/37119390730) green on `27c23c1`**, exactly three `client.stream(` sites intact, **S9** held (no ceiling moved), committed and pushed to `arena/01a100ed-codec` only, **no PR and no merge**. Original brief (README + parts 87.1–87.8) with **no production or test source and nothing run**. Owner decisions: **all nine** controls ship in Phase 87 · they live in the **`AiHome` AI panel** (not the app Settings screen) · the **backup provider is manual offer only** · **answer detail defaults to `normal`** (today's wording, so an untouched install does not change behaviour on upgrade). **S9** governs the whole phase: options tune within caps and never raise a permission — `MAX_TURNS` 12, `MAX_TOOL_CALLS` 24, `MAX_BATCH_READS` 8, `MAX_READ_CHARS` 24 000, `MAX_RESULT_CHARS` 8 000, runs 2 and `MAX_CONTEXT_CHARS` 12 000 must not move. Two corrections to the Level 10 spec came from reading the tree, not the plan: non-secret AI options live in `AiKeyStore`'s property bag and render in `AiHome`, **not** in `SettingsScreen.kt` (zero AI rows) or `SettingsManager.kt` (zero AI keys); and today's effective read window is **400** (`AiTools.kt:321,348`), not the spec's 150, so the default ships unchanged — flagged as *Open decision 1*, the agent's decision and not the owner's. Level 9's D6 amendment stays in force: only bounded, admitted non-secret file cache and structured findings/decisions/plan may persist at `noBackupFilesDir/ai/task/<project>/`; raw chat, prompts, answers, maps, tool results and timeline remain ephemeral. Preserve D1–D6 plus amendments, S1–S12, exactly three `client.stream(` sites (`AiViewModel.kt:905,1281,1508`), no `java.nio.file`, `canonicalPath != absolutePath` symlink checks, `ui/ai/` zero direct project writes and zero command execution, and one-brain S7. Do not change the default model. Formal device acceptance remains POSTPONED to Level 12; **Levels 11–14 remain unauthorized.** See [Phase 87](docs/phases/03-editor/chat-phase87/README.md), [Level 10 spec](docs/roadmaps/ai-integration/10_AGENT_CONTROLS_AND_OPTIONS.md), [rule.md §3/§9](rule.md), and `docs/getting-started/NEXT_STEPS.md`.
 > **Prior owner instruction — 2026-10-02 (Phase 82 / 82B; historical as of that date):** “What ever we discussed add a research note in the project … The device test is postponed, 1st i will make it optimized than device test … Last merge it”. **Record research and merge the current branch after final-head CI; formal device acceptance POSTPONED until after optimization, not passed.** Informal Nemotron screenshots show repeated reads, raw tool/prompt clutter and “49 of 24 reads”; known agent-core problems remain open. [Research note](docs/research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records full-file/batch reads, context/preview separation, progress/counter/final-answer fixes, native-tool evaluation, Markdown UX and multi-API tradeoffs as **proposals, not implementation authorization**. Current Phase 82 code: one visible Stop-cancelable rate retry; 32,768 tokens / 48,000 reply chars; Continue 64,000/8; manual encrypted NVIDIA dev/test-only BYOK (Level 5A). GLM-5.3 can be entered manually; the owner declined a default-model change. No further app/test changes in this documentation update. Code CI 36995145462 green on 7b2ecac; ledger head e0665cb also green (36996946243). Work only on `arena/01a0fbc2-codec`, baseline main e089880; carry 828be38 already done. Standing §3 still requires per-change authority: this message authorizes this merge only. No device pass, live-model entitlement/quality, native tools or production NVIDIA use inferred. **5B/6+ and optimization code remain unstarted**. Old PRs #42/#83 untouched. After the authorized merge, record PR/merge SHA, main CI and actual release APK bytes on this session branch; do not auto-start optimization.
 
 > **Latest owner instruction — 2026-10-01 (AI Level 1 = Phase 76 ✅ DEVICE-PASSED & MERGED via [PR #102](https://github.com/pabi277/CodeC/pull/102); Phase 77 📋 BRIEFED):**
@@ -67,17 +67,25 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-10-03 (Phase 86 / AI Level 9; host pre-validation passed 72/72 across eight classes; Build APK run 37106545726 green on ddb75d3).**
+**CURRENT HANDOFF — 2026-10-03 (Phase 86 / AI Level 9 ✅ MERGED via PR #111 → `main` @ `6838ea6`; Phase 87 / AI Level 10 ✅ IMPLEMENTED and CI-GREEN on `arena/01a100ed-codec` — Build APK [`37119390730`](https://github.com/pabi277/CodeC/actions/runs/37119390730) on `27c23c1`, no PR/merge).**
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
-`docs/phases/03-editor/chat-phase86/README.md`, `docs/roadmaps/ai-integration/09_TASK_MEMORY_AND_PLANNING.md`,
+`docs/phases/03-editor/chat-phase87/README.md` and parts 87.1–87.8,
+`docs/roadmaps/ai-integration/10_AGENT_CONTROLS_AND_OPTIONS.md`,
 `docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md` (D6 amendment), and the shared security map.
 
-*Status:* Work is on `arena/01a1004c-codec`, based on `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`.
-The source, JVM tests, and required docs have been edited. A Temurin 25.0.2 + kotlinc 2.4.20 host
-harness compiled the Android-free production core/store and Level 8 regression paths and ran 72 selected methods across eight test classes: **72 passed, 0 failed**.
-This is not the full Gradle suite or Android/Compose compilation. Build APK run `37106180481` failed three existing Level 8 assertions; the refusal-copy and pointer-budget causes were fixed, and run `37106545726` is green on code fix head `ddb75d3`. No
-PR/merge is authorized. Formal device acceptance is postponed until Level 12; no live provider request
-was made. Remain at the §3 merge gate.
+*Status:* Work is on `arena/01a100ed-codec`, based on `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`.
+Phase 86 / Level 9 was merged by the owner's explicit command in
+[PR #111](https://github.com/pabi277/CodeC/pull/111); post-merge Build APK run `37109573383` is
+green on that commit. No APK byte count is recorded for the merge run — it was not re-measured and
+the Actions log / artifact-blob endpoints were unreachable from the sandbox. That merge
+authorization was one-time and is complete.
+The owner then authorized **Level 10**, and Phase 87 is now a written brief — README plus parts
+87.1–87.8 — with **no production or test source and nothing run**. Owner decisions for it: all nine
+controls · in the `AiHome` AI panel · backup provider manual-offer-only · answer detail defaults to
+`normal`. **S9** governs: options tune within caps and never raise a permission. Formal device
+acceptance is postponed until Level 12; no live provider request was made. **Levels 11–14 remain
+unauthorized.** Remain at the §3 merge gate: no PR, no merge, no push to `main` without the owner's
+explicit command.
 
 *Owner D6 amendment:* only bounded, no-backup, non-secret admitted file snapshots plus structured
 findings/decisions/plan persist at `noBackupFilesDir/ai/task/<project>/`. Raw conversation, prompts,
@@ -93,8 +101,12 @@ work is read-only IO. Do not persist raw chat or prompts. The initial preview an
 and send the same memory/plan text verbatim; send-time reconciliation changes require a refreshed
 preview and another Send.
 
-*Next:* remain at the §3 merge gate. No PR or merge without the owner's explicit command; if a docs-only
-follow-up is pushed, verify that commit's Build APK check before stopping. Levels 10–14 remain unauthorized.
+*Next:* **Phase 87 / Level 10 is authorized and briefed; implementation has not started.** Work the parts
+in order — 87.1 (bounds and storage) first, because every later part depends on `AiOptionsPolicy`.
+Pre-validate with the kotlinc/JRE host harness before pushing; Build APK remains the executor of record.
+Remain at the §3 merge gate: no PR or merge without the owner's explicit command; if a docs-only
+follow-up is pushed, verify that commit's Build APK check before stopping. **Levels 11–14 remain
+unauthorized.**
 
 **PREVIOUS HANDOFF — 2026-10-01 (Phase 76 merged; Phase 77 AI UI for phones device-passed and merged).**
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),

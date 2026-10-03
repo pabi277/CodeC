@@ -58,6 +58,12 @@ data class AiUiState(
     val showBubble: Boolean = true,
     /** Phase 77 device round only (owner Q3): which Output-conflict variant is being tried. In memory. */
     val outputConflict: AiOutputConflict = AiSheetPolicy.DEFAULT_CONFLICT,
+    /**
+     * Phase 87 (Level 10) — the nine bounded agent controls. Loaded once at
+     * start beside the other saved AI preferences; **S9**: none of them can
+     * raise a permission, and each is clamped by [AiOptionsPolicy].
+     */
+    val options: AiOptions = AiOptionsPolicy.DEFAULT,
     /** Phase 78 — the project is being read on IO. Nothing has been sent (D4). */
     val gathering: Boolean = false,
     /** Phase 79 (Level 3) — parsed edit proposal from a PROPOSE_EDITS reply. */
@@ -91,7 +97,35 @@ data class AiUiState(
     /** Phase 80 — true between the user's Run tap and the run's result. */
     val agentRunRunning: Boolean = false,
     /** Phase 80 — the caps in use for the running task, for the sheet's counter. */
-    val agentUsage: AiAgentUsage? = null
+    val agentUsage: AiAgentUsage? = null,
+    /**
+     * Phase 87 (Level 10, 87.6) — non-null while a budget-extension offer stands
+     * on the sheet. The task has stopped and its answer is already prose; the
+     * offer only lets the user buy a little more **read-only** budget. In memory
+     * only (D6). `runs` is not part of this state and cannot be raised (**S9**).
+     */
+    val budgetOffer: AiBudgetOfferState? = null,
+    /**
+     * Phase 87 (Level 10, 87.7) — non-null while a **manual** backup-provider
+     * offer stands, after a failure the provider itself caused. Accepting
+     * switches the recipient and rebuilds the preview; it sends nothing (D4).
+     * In memory only.
+     */
+    val backupOffer: AiProviderId? = null,
+    /**
+     * Phase 87 (Level 10, 87.8) — the read-only second opinion, once it arrives.
+     * It is **displayed, never parsed into a call**: [AiReviewerPolicy.parse]
+     * decides whether the text merely looks like markup, and either way the same
+     * characters are shown. Kept apart from [answer] so asking for a review
+     * never overwrites the answer being reviewed. In memory only (D6).
+     */
+    val review: AiReviewVerdict? = null,
+    /**
+     * Phase 87 (Level 10, 87.8) — the answer the review was asked about, kept so
+     * that asking for a second opinion does not delete the first one. The review
+     * preview clears [answer] like every other preview does. In memory only (D6).
+     */
+    val reviewedAnswer: String? = null
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -105,7 +139,14 @@ data class AiAgentUsage(
     /** Phase 84 (fix 3): refused blocks, counted separately from executions. */
     val refused: Int = 0,
     /** Phase 84 (fix 3): duplicate reads served from a working set (0 until Level 9). */
-    val reused: Int = 0
+    val reused: Int = 0,
+    /**
+     * Phase 87 (Level 10, 87.6): the caps this task actually ran under. They
+     * equal the constants unless the user accepted one budget extension, and
+     * the counter must render against them, not against the constants.
+     */
+    val turnCap: Int = AiAgentLimits.MAX_TURNS,
+    val readCap: Int = AiAgentLimits.MAX_TOOL_CALLS
 )
 
 /**
@@ -163,7 +204,25 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
          * no-progress calls stops the loop. Born with the task, gone when it ends.
          */
         var workingSet: AiAgentWorkingSet = AiAgentWorkingSet(),
-        var memoryPersistenceFailed: Boolean = false
+        var memoryPersistenceFailed: Boolean = false,
+        /**
+         * Phase 87 (Level 10): the controls **frozen at Send**. A settings change
+         * mid-task must not alter the window, depth or detail of an in-flight
+         * request, because the disclosed preview would then describe a different
+         * request than the one performed (D4).
+         */
+        val options: AiOptions = AiOptionsPolicy.DEFAULT,
+        /** Level 10 (87.6): how many read-only budget extensions this task has used. */
+        var extensionsUsed: Int = 0,
+        /** Level 10 (87.6): the caps in force, raised only by an accepted extension. */
+        var caps: AiAgentCaps = AiAgentCaps(),
+        /**
+         * Level 10 (87.7): each provider's standing, read once at Send so the
+         * backup-provider offer can be decided without a disk read on the stop
+         * path. Accepting re-verifies on IO before switching — this snapshot
+         * only decides whether to *offer*, never whether to send.
+         */
+        val providerReadiness: Map<AiProviderId, AiProviderReadiness> = emptyMap()
     ) {
         val projectView: AiToolProjectView
             get() = AiToolProjectView(existingPaths = paths.toSet(), runsRemaining = budget.runsRemaining())
@@ -181,8 +240,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val bubble = withContext(Dispatchers.IO) { store.bubble() }
             val show = withContext(Dispatchers.IO) { store.showBubble() }
             val conflict = withContext(Dispatchers.IO) { store.outputConflict() }
+            val options = withContext(Dispatchers.IO) { store.options() }
             _state.update {
-                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict, configuring = false)
+                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict, options = options, configuring = false)
             }
         }
     }
@@ -223,6 +283,143 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     fun setShowBubble(show: Boolean) {
         _state.update { it.copy(showBubble = show) }
         viewModelScope.launch { withContext(Dispatchers.IO) { store.setShowBubble(show) } }
+    }
+
+    // ---- Phase 87 (Level 10): the nine bounded agent controls ---------------
+    // One setter per control, each clamped by AiOptionsPolicy before it is
+    // stored, so a tampered properties file cannot produce an out-of-range
+    // value either (**S9**). *Request inspection* deliberately has no setter:
+    // it is always on (D4).
+
+    fun setReadWindow(lines: Int) = updateOption(
+        { it.copy(readWindowLines = AiOptionsPolicy.clampReadWindow(lines)) },
+        { store.setReadWindow(lines) }
+    )
+
+    fun setWorkingSetDepth(depth: Int) = updateOption(
+        { it.copy(workingSetDepth = AiOptionsPolicy.clampWorkingSetDepth(depth)) },
+        { store.setWorkingSetDepth(depth) }
+    )
+
+    /**
+     * Off means **forget**, not pause: the store clears the retained copy
+     * (Level 9's own behaviour at `AiTaskMemoryStore`), and the live task drops
+     * its in-memory ledger so the UI reflects it immediately.
+     */
+    fun setTaskMemory(on: Boolean) = updateOption(
+        { it.copy(taskMemory = on) },
+        { store.setTaskMemory(on) }
+    ) {
+        if (!on) dropLiveTaskMemory()
+    }
+
+    fun setAnswerDetail(detail: AiAnswerDetail) = updateOption(
+        { it.copy(answerDetail = detail) },
+        { store.setAnswerDetail(detail) }
+    )
+
+    fun setActivity(display: AiActivityDisplay) = updateOption(
+        { it.copy(activity = display) },
+        { store.setActivity(display) }
+    )
+
+    fun setBackupMode(mode: AiBackupMode) = updateOption(
+        { it.copy(backup = mode) },
+        { store.setBackupMode(mode) }
+    )
+
+    fun setBudgetOffer(offer: AiBudgetOffer) = updateOption(
+        { it.copy(budgetOffer = offer) },
+        { store.setBudgetOffer(offer) }
+    )
+
+    fun setReviewer(reviewer: AiReviewer) = updateOption(
+        { it.copy(reviewer = reviewer) },
+        { store.setReviewer(reviewer) }
+    )
+
+    private fun updateOption(
+        change: (AiOptions) -> AiOptions,
+        persist: () -> Boolean,
+        after: () -> Unit = {}
+    ) {
+        _state.update { it.copy(options = change(it.options)) }
+        after()
+        viewModelScope.launch { withContext(Dispatchers.IO) { persist() } }
+    }
+
+    /**
+     * Applies a whole option set from the UI. Every field is clamped again here
+     * (**S9**), so neither the UI nor a tampered properties file can push a value
+     * outside its range, and a task-memory flip keeps its "off means forget"
+     * behaviour.
+     */
+    fun setOptions(next: AiOptions) {
+        val safe = next.copy(
+            readWindowLines = AiOptionsPolicy.clampReadWindow(next.readWindowLines),
+            workingSetDepth = AiOptionsPolicy.clampWorkingSetDepth(next.workingSetDepth)
+        )
+        val turnedMemoryOff = _state.value.options.taskMemory && !safe.taskMemory
+        _state.update { it.copy(options = safe) }
+        if (turnedMemoryOff) dropLiveTaskMemory()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                store.setReadWindow(safe.readWindowLines)
+                store.setWorkingSetDepth(safe.workingSetDepth)
+                store.setTaskMemory(safe.taskMemory)
+                store.setAnswerDetail(safe.answerDetail)
+                store.setActivity(safe.activity)
+                store.setBackupMode(safe.backup)
+                store.setBudgetOffer(safe.budgetOffer)
+                store.setReviewer(safe.reviewer)
+            }
+        }
+    }
+
+    /**
+     * *Clear now* — project-scoped, matching the memory's own directory layout.
+     * Reports the store's real result rather than pretending: [AiTaskMemoryStore.clearProject]
+     * returns whether anything was there to delete.
+     */
+    fun clearTaskMemoryNow(onResult: (Boolean) -> Unit = {}) {
+        val name = project
+        if (name == null) {
+            onResult(false)
+            return
+        }
+        // The visible effect must not wait for the disk: drop the live ledger now.
+        dropLiveTaskMemory()
+        viewModelScope.launch {
+            val cleared = withContext(Dispatchers.IO) {
+                runCatching {
+                    AiTaskMemoryStore.clearProject(
+                        getApplication<Application>().noBackupFilesDir,
+                        name
+                    )
+                }.getOrDefault(false)
+            }
+            onResult(cleared)
+        }
+    }
+
+    /**
+     * Drops the running task's derived memory; nothing on disk is touched here.
+     *
+     * [AgentSession] is a plain class, not a data class, so this assigns the
+     * mutable field rather than copying the session — copying would also have
+     * discarded every other `var` the loop is mid-way through using.
+     */
+    private fun dropLiveTaskMemory() {
+        agent?.memory = AiTaskMemory.EMPTY
+    }
+
+    /**
+     * Phase 87 — a one-line result the AI panel shows (e.g. whether *Clear now*
+     * actually found something to delete). Reports the real outcome rather than
+     * always claiming success.
+     */
+    fun notice(text: String) {
+        _state.update { it.copy(notice = text) }
     }
 
     /** D6: a different project never sees the previous project's exchange. */
@@ -669,7 +866,14 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             if (admittedOpenPath != null && openDirty && openText != null) {
                 liveBuffers[admittedOpenPath] = openText
             }
-            val memoryStore = AiTaskMemoryStore(getApplication<Application>().noBackupFilesDir, projectName)
+            // Level 10: the *task memory* control, frozen for this task. Off keeps
+            // working memory task-local and clears any retained copy (Level 9's
+            // own behaviour); the secret filter and the caps still apply either way.
+            val memoryStore = AiTaskMemoryStore(
+                getApplication<Application>().noBackupFilesDir,
+                projectName,
+                persistentEnabled = s.options.taskMemory
+            )
             val taskMemory = withContext(Dispatchers.IO) {
                 runCatching { memoryStore.load(root, scan.allTextPaths, liveBuffers) }
                     .getOrDefault(AiTaskMemory.EMPTY)
@@ -683,7 +887,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 skippedSecret = scan.skippedSecret,
                 skippedNotText = scan.skippedNotText,
                 hitEntryCap = scan.hitEntryCap,
-                taskMemory = taskMemory
+                taskMemory = taskMemory,
+                answerDetail = s.options.answerDetail
             )
             // Level 3's baseline snapshot still protects an agent edit: the
             // proposal is parsed against the project as it was when the preview
@@ -710,7 +915,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     dirtyBuffers = liveBuffers,
                     systemInstruction = prompt.prompt.systemInstruction,
                     provider = s.provider, model = s.model,
-                    budget = AiAgentBudget()
+                    budget = AiAgentBudget(),
+                    options = s.options,
+                    providerReadiness = withContext(Dispatchers.IO) { store.providerReadiness() }
                 )
             } else {
                 agent = null
@@ -810,7 +1017,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         // Phase 84 (fix 2): gate on the turn/wall-clock AND the tool budget, so the
         // malformed-parse, denied-only and post-run resume paths can no longer walk
         // past an exhausted tool cap the way `AiAgentPolicy.decide` alone could not.
-        val reason = session.budget.blockResume(System.currentTimeMillis())
+        val reason = session.budget.blockResume(System.currentTimeMillis(), session.caps)
         if (reason != null) {
             stopAgent(reason)
             return
@@ -877,7 +1084,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     question = session.question,
                     mapText = session.mapText,
                     steps = steps,
-                    memory = session.memory
+                    memory = session.memory,
+                    // Level 10: the working-set depth, frozen at Send.
+                    keepLastResults = session.options.workingSetDepth
                 )
             }
             // Captured once. Every retry of this turn has the identical recipient, strings and budget.
@@ -888,7 +1097,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 kind = AiAgentStepKind.REQUEST,
                 title = AiCopy.requestRecipient(session.provider, session.model),
                 sentSystemInstruction = session.systemInstruction,
-                sentUserText = packed.text
+                sentUserText = packed.text,
+                // Level 10 (S8): the collapsed row names this same frozen recipient.
+                sentProvider = session.provider,
+                sentModel = session.model
             ))
             val key = withContext(Dispatchers.IO) { store.loadKey(session.provider) }
             if (key == null) {
@@ -938,7 +1150,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             toolCalls = session.budget.toolCallsUsed,
             runs = session.budget.runsUsed,
             refused = session.budget.toolCallsRefused,
-            reused = session.budget.toolCallsReused
+            reused = session.budget.toolCallsReused,
+            turnCap = session.caps.turns,
+            readCap = session.caps.toolCalls
         )
 
     private suspend fun onAgentAnswer(session: AgentSession, text: String, cutShort: Boolean) {
@@ -1009,7 +1223,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             parsed = parsed,
             budget = session.budget,
             nowMs = System.currentTimeMillis(),
-            projectView = session.projectView
+            projectView = session.projectView,
+            // Level 10: the read window, frozen at Send and clamped by the policy.
+            readWindow = session.options.readWindowLines,
+            // Level 10 (87.6): the task's caps. Without this the tool gate
+            // inside `decide` would keep using the plain constants and an
+            // accepted extension would buy nothing at all.
+            caps = session.caps
         )) {
             is AiAgentDecision.Finish -> finishAgent(session, decision.answer, cutShort)
             is AiAgentDecision.Stop -> stopAgent(decision.reason)
@@ -1059,7 +1279,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 var dirtySnapshot = session.dirtyBuffers.toMap()
                 var readPlan = withContext(Dispatchers.IO) {
                     memoryBefore.prepareRead(
-                        call, session.root, session.paths, dirtySnapshot, System.currentTimeMillis()
+                        call, session.root, session.paths, dirtySnapshot, System.currentTimeMillis(),
+                        // Level 10: the SAME window the validator and runner use,
+                        // so the cache identity describes what was delivered.
+                        session.options.readWindowLines
                     )
                 }
                 // A keystroke/tab switch during snapshotting invalidates that
@@ -1069,7 +1292,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     dirtySnapshot = session.dirtyBuffers.toMap()
                     readPlan = withContext(Dispatchers.IO) {
                         memoryBefore.prepareRead(
-                            call, session.root, session.paths, dirtySnapshot, System.currentTimeMillis()
+                            call, session.root, session.paths, dirtySnapshot, System.currentTimeMillis(),
+                            session.options.readWindowLines
                         )
                     }
                 }
@@ -1093,13 +1317,15 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                             paths = session.paths,
                             dirtyBuffers = dirtySnapshot,
                             shouldStop = stop,
-                            cachedFiles = readPlan.cachedFiles
+                            cachedFiles = readPlan.cachedFiles,
+                            // Level 10: the follow-up hint names this same window.
+                            readWindow = session.options.readWindowLines
                         )
                     }
                     if (readPlan.resultCacheKey != null && outcome.ok) {
                         session.workingSet = session.workingSet.record(readPlan.resultCacheKey, outcome.text)
                     }
-                    session.budget = session.budget.withToolCalls(1)
+                    session.budget = session.budget.withToolCalls(1, session.caps)
                 }
                 if (session.memory != memoryBefore) persistTaskMemory(session)
                 val step = AiAgentStep(
@@ -1181,6 +1407,30 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         job = null
         val prose = (answerOverride ?: AiToolProtocol.proseOnly(_state.value.answer))
             .ifBlank { AiAgentLimits.stopSentence(reason) }
+        // Level 10 (87.6): a turn/tool-budget stop with the option left on gets a
+        // standing read-only extension offer — after the answer is prose, never
+        // instead of one (S12). The policy decides; this only asks it.
+        val offer = if (
+            session != null &&
+            AiBudgetExtensionPolicy.offerAt(session.options.budgetOffer, reason, session.extensionsUsed)
+        ) {
+            AiBudgetOfferState()
+        } else {
+            null
+        }
+        // Level 10 (87.7): a manual backup-provider offer, only on a failure the
+        // provider caused, only to a provider the user has configured AND
+        // consented to for itself. Off by default (S9: it is an option).
+        val backup: AiProviderId? = session?.let { s ->
+            val readiness = s.providerReadiness
+            val configured = readiness.filterValues { it.configured }.keys
+            val terms = readiness.filterValues { it.termsAccepted }.keys
+            (
+                AiBackupProviderPolicy.offer(
+                    s.options.backup, s.provider, reason, configured, terms
+                ) as? AiBackupOffer.Offer
+                )?.provider
+        }
         _state.update { s ->
             s.copy(
                 phase = if (message != null) AiPhase.FAILED else AiPhase.DONE,
@@ -1190,6 +1440,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 agentRun = null,
                 agentRunRunning = false,
                 notice = null,
+                budgetOffer = offer,
+                backupOffer = backup,
                 agentUsage = session?.let { usage(it) } ?: s.agentUsage,
                 agentSteps = s.agentSteps + AiAgentStep(
                     kind = AiAgentStepKind.STOPPED,
@@ -1275,8 +1527,15 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 return@launch
             }
+            // Level 10 (87.8): a review streams into its own field so asking for
+            // a second opinion never overwrites the answer being reviewed.
+            val reviewing = prompt.source == AiSource.REVIEW
             val outcome = streamWithRetry(onText = { text ->
-                _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = base + text) else s }
+                _state.update { s ->
+                    if (s.phase != AiPhase.STREAMING) s
+                    else if (reviewing) s.copy(review = AiReviewVerdict.Text(base + text))
+                    else s.copy(answer = base + text)
+                }
             }) { publish ->
                 client.stream(provider, key, model, body, AiContinuation.requestBudget(base.length), onText = publish)
             }
@@ -1284,18 +1543,30 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 if (s.phase != AiPhase.STREAMING) return@update s
                 when (outcome) {
                     is AiOutcome.Answer -> {
-                        val parsed = if (prompt.source == AiSource.PROPOSE_EDITS) {
-                            AiEditProposalParser.parse(outcome.text, pendingBaselines, pendingExistingPaths)
+                        if (reviewing) {
+                            // Level 10 (87.8): **displayed, never parsed into a
+                            // call**. The reviewer has no tools, so any markup it
+                            // emits stays text on screen (S3) and never reaches
+                            // AiEditApplier or a tool runner.
+                            s.copy(
+                                phase = AiPhase.DONE,
+                                review = AiReviewerPolicy.parse(outcome.text),
+                                cutShort = outcome.cutShort
+                            )
                         } else {
-                            null
+                            val parsed = if (prompt.source == AiSource.PROPOSE_EDITS) {
+                                AiEditProposalParser.parse(outcome.text, pendingBaselines, pendingExistingPaths)
+                            } else {
+                                null
+                            }
+                            s.copy(
+                                phase = AiPhase.DONE,
+                                answer = base + outcome.text,
+                                cutShort = outcome.cutShort,
+                                proposalResult = parsed,
+                                applyConflictPaths = emptyList()
+                            )
                         }
-                        s.copy(
-                            phase = AiPhase.DONE,
-                            answer = base + outcome.text,
-                            cutShort = outcome.cutShort,
-                            proposalResult = parsed,
-                            applyConflictPaths = emptyList()
-                        )
                     }
                     is AiOutcome.Failed -> s.copy(phase = AiPhase.FAILED, error = outcome.failure.message)
                 }
@@ -1318,7 +1589,17 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         }
         _state.update { s ->
             if (s.phase != AiPhase.STREAMING) s
-            else if (s.answer.isBlank() && s.agentSteps.none { it.kind == AiAgentStepKind.TOOL }) {
+            // Level 10 (87.8): stopping a review keeps whatever review text
+            // arrived, as text. It is never parsed into a call.
+            else if (s.prompt?.source == AiSource.REVIEW) {
+                val arrived = (s.review as? AiReviewVerdict.Text)?.text.orEmpty()
+                s.copy(
+                    phase = if (arrived.isBlank()) AiPhase.IDLE else AiPhase.DONE,
+                    prompt = if (arrived.isBlank()) null else s.prompt,
+                    review = if (arrived.isBlank()) null else AiReviewerPolicy.parse(arrived),
+                    cutShort = arrived.isNotBlank()
+                )
+            } else if (s.answer.isBlank() && s.agentSteps.none { it.kind == AiAgentStepKind.TOOL }) {
                 s.copy(phase = AiPhase.IDLE, prompt = null)
             } else {
                 val parsed = if (s.prompt?.source == AiSource.PROPOSE_EDITS) {
@@ -1360,6 +1641,139 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      * (its loop has ended) or for an edit proposal (its review card owns the
      * reply) — those get a plain sentence instead of a button.
      */
+    /**
+     * Level 10 (87.6) — the user accepted the standing budget-extension offer.
+     *
+     * What it buys: up to [AiBudgetExtensionPolicy.EXTRA_TURNS] more model turns
+     * and [AiBudgetExtensionPolicy.EXTRA_TOOL_CALLS] more tool calls, once per
+     * task. What it cannot buy: a run ([AiAgentCaps.runs] is echoed back
+     * unchanged), a waived approval, or a second extension (**S9**).
+     *
+     * [AgentSession.synthesisDone] is reset on purpose. Phase 84's rule is that
+     * a budget stop may not loop back into synthesis *on its own*; here the user
+     * has explicitly bought more work, the extension is capped at one per task,
+     * and the offer is cleared before resuming, so the cycle is bounded.
+     */
+    fun acceptBudgetExtension() {
+        val session = agent
+        val standing = _state.value.budgetOffer
+        if (session == null || standing == null || job?.isActive == true) return
+        if (session.extensionsUsed >= AiBudgetExtensionPolicy.MAX_EXTENSIONS_PER_TASK) {
+            _state.update { it.copy(budgetOffer = null, notice = AiCopy.BUDGET_OFFER_SPENT) }
+            return
+        }
+        session.extensionsUsed += 1
+        session.caps = AiBudgetExtensionPolicy.extend(session.caps)
+        session.synthesisDone = false
+        _state.update { s ->
+            s.copy(
+                budgetOffer = null,
+                phase = AiPhase.STREAMING,
+                notice = AiCopy.BUDGET_EXTENDED,
+                error = null,
+                agentUsage = usage(session),
+                agentSteps = s.agentSteps + AiAgentStep(
+                    kind = AiAgentStepKind.STOPPED,
+                    title = AiCopy.BUDGET_EXTENDED,
+                    ok = true
+                )
+            )
+        }
+        agentTurn(session)
+    }
+
+    /** Level 10 (87.6) — the user kept the answer as it is. Nothing resumes. */
+    fun declineBudgetExtension() {
+        if (_state.value.budgetOffer == null) return
+        _state.update { it.copy(budgetOffer = null) }
+    }
+
+    /**
+     * Level 10 (87.7) — the user accepted the manual backup-provider offer.
+     *
+     * This **sends nothing**. It re-checks on IO that the offered provider still
+     * has a usable key under its own current terms, switches the recipient, and
+     * rebuilds the ordinary D4 preview of the same question — so the user reads
+     * the new recipient on the preview and taps Send themselves (S8, D4). A
+     * provider whose key or consent disappeared since the offer gets a plain
+     * notice and no switch.
+     */
+    fun acceptBackupProvider() {
+        val next = _state.value.backupOffer ?: return
+        if (_state.value.prompt == null) {
+            _state.update { it.copy(backupOffer = null) }
+            return
+        }
+        _state.update { it.copy(backupOffer = null, configuring = true) }
+        viewModelScope.launch {
+            val ready = withContext(Dispatchers.IO) { store.isReady(next) }
+            val model = withContext(Dispatchers.IO) { store.model(next) }
+            if (!ready) {
+                _state.update {
+                    it.copy(configuring = false, notice = AiCopy.BACKUP_OFFER_UNAVAILABLE)
+                }
+                return@launch
+            }
+            _state.update { s ->
+                s.copy(
+                    provider = next,
+                    model = model,
+                    keySaved = true,
+                    configuring = false,
+                    // A fresh preview of the same question, naming the new
+                    // recipient. Send is still the only road (S8).
+                    phase = AiPhase.PREVIEW,
+                    error = null,
+                    answer = "",
+                    cutShort = false,
+                    notice = AiCopy.backupSwitched(next)
+                )
+            }
+        }
+    }
+
+    /** Level 10 (87.7) — the user kept the current provider. Nothing changes. */
+    fun declineBackupProvider() {
+        if (_state.value.backupOffer == null) return
+        _state.update { it.copy(backupOffer = null) }
+    }
+
+    /**
+     * Level 10 (87.8) — the user asked for a read-only second opinion.
+     *
+     * This sends nothing. It builds an ordinary [AiSource.REVIEW] prompt whose
+     * system instruction is [AiReviewerPolicy.instruction] — no tool protocol,
+     * no task-memory protocol, therefore no format in which the reviewer could
+     * ask for a read, an edit or a run — and routes it through the same preview
+     * and the same single-shot stream site as any other request, so the app
+     * still has exactly three `client.stream` call sites (**S8**). The user
+     * reads the full request, including the answer being reviewed, and taps
+     * Send (D4).
+     *
+     * [AiReviewerPolicy.mayTrigger] is the only gate: the option on, a user tap,
+     * and an idle surface.
+     */
+    fun requestReview() {
+        val s = _state.value
+        val prompt = s.prompt
+        if (prompt == null || s.answer.isBlank() || job?.isActive == true) return
+        if (!AiReviewerPolicy.mayTrigger(s.options.reviewer, userTapped = true, idle = s.phase == AiPhase.DONE)) {
+            _state.update { it.copy(notice = AiCopy.REVIEWER_UNAVAILABLE) }
+            return
+        }
+        val reviewed = s.answer
+        val review = prompt.copy(
+            source = AiSource.REVIEW,
+            // Never an agent task: the reviewer gets no tools and no further turns.
+            agent = false,
+            question = AiCopy.reviewerQuestion(reviewed),
+            continuation = null,
+            agentMemory = AiTaskMemory.EMPTY
+        )
+        _state.update { it.copy(reviewedAnswer = reviewed, review = null) }
+        preview(AiContextResult.Ready(review))
+    }
+
     fun continueAnswer() {
         val s = _state.value
         val prompt = s.prompt ?: return
@@ -1405,7 +1819,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 cutShort = false, continuations = 0, notice = null, testResult = null, testing = false, retryCountdown = null,
                 gathering = false, proposalResult = null, applyConflictPaths = emptyList(),
                 undoConflictPaths = emptyList(),
-                agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null
+                agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null,
+                // Level 10: offers and a review belong to the task being cleared.
+                budgetOffer = null, backupOffer = null, review = null, reviewedAnswer = null
             )
         }
     }

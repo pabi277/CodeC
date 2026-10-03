@@ -1,6 +1,17 @@
 # Phase 86 — AI Level 9: task memory and planning
 
-> **Status:** Source implementation is on `arena/01a1004c-codec`; latest local host pre-validation passed **72/72 selected methods across eight test classes**. Build APK CI run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726) is **GREEN** on fix commit `ddb75d3`. Round 1 (`37106180481`) exposed three existing Level 8 regression assertions; the refusal-copy and pointer-budget causes are fixed. No PR opened, no merge. Formal device acceptance remains **POSTPONED** to Level 12.
+> **Status:** ✅ **COMPLETE & MERGED.** Merged by the owner's explicit command in
+> [PR #111](https://github.com/pabi277/CodeC/pull/111) on 2026-10-03 to `main` @
+> `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`. Post-merge Build APK run
+> [`37109573383`](https://github.com/pabi277/CodeC/actions/runs/37109573383) is **GREEN** on that
+> commit (job `build`: success — host unit and screenshot tests, debug and release assembly, APK
+> checks, artifact uploads). No APK byte count is recorded for the merge run: it was not
+> re-measured, and the artifact/log endpoints were not reachable from the sandbox that wrote this
+> row. Latest local host pre-validation on the branch had passed **72/72 selected methods across
+> eight test classes**. Build APK CI run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726)
+> was **GREEN** on fix commit `ddb75d3`; round 1 (`37106180481`) had exposed three existing Level 8
+> regression assertions, and the refusal-copy and pointer-budget causes were fixed. Formal device
+> acceptance remains **POSTPONED** to Level 12 — it has not been performed or passed.
 > **Owner authorization:** Level 9 started with the bounded D6 amendment recorded below (2026-10-03). Level 10's memory on/off UI is **not** part of this phase.
 > **Baseline:** `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461` (Phase 84+85 merged via PR #110; final-head Build APK run `37084800939` green). Level 9 spec: [`09_TASK_MEMORY_AND_PLANNING.md`](../../../roadmaps/ai-integration/09_TASK_MEMORY_AND_PLANNING.md); shared rules: [`00_AGENTIC_MAP_AND_SECURITY_RULES.md`](../../../roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 
@@ -92,5 +103,5 @@ not passing results.
 
 - [x] Implementation, source pins, plan-tail regression and local pre-validation.
 - [x] Build APK CI run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726) passed on code fix head `ddb75d3`; artifacts recorded above.
+- [x] PR/merge — merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee` (2026-10-03). Post-merge Build APK run [`37109573383`](https://github.com/pabi277/CodeC/actions/runs/37109573383) is green on that commit. That authorization was one-time and is complete.
 - [ ] Device acceptance — not part of this phase; formal round remains Level 12.
-- [ ] PR/merge — not authorized; stop at `rule.md` §3.

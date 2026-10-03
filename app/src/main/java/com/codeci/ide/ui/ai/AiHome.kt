@@ -59,6 +59,9 @@ fun AiHome(
     onOutputConflictChange: (AiOutputConflict) -> Unit,
     onSelectProvider: (AiProviderId) -> Unit,
     onStop: () -> Unit,
+    /** Phase 87 (Level 10): the nine bounded agent controls. */
+    onOptionsChange: (AiOptions) -> Unit,
+    onClearTaskMemory: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -92,7 +95,8 @@ fun AiHome(
                 AiAvailability.NEEDS_KEY -> KeySetup(state, onSaveKey)
                 AiAvailability.READY -> Ready(
                     state, onSaveModel, onTest, onDeleteKey,
-                    onShowBubbleChange, onOpenChat, onOutputConflictChange, onStop
+                    onShowBubbleChange, onOpenChat, onOutputConflictChange, onStop,
+                    onOptionsChange, onClearTaskMemory
                 )
             }
         }
@@ -169,7 +173,9 @@ private fun Ready(
     onShowBubbleChange: (Boolean) -> Unit,
     onOpenChat: () -> Unit,
     onOutputConflictChange: (AiOutputConflict) -> Unit,
-    onStop: () -> Unit
+    onStop: () -> Unit,
+    onOptionsChange: (AiOptions) -> Unit,
+    onClearTaskMemory: (Boolean) -> Unit
 ) {
     var model by rememberSaveable(state.model) { mutableStateOf(state.model) }
     val busy = homeBusy(state)
@@ -227,6 +233,99 @@ private fun Ready(
         onOutputConflictChange(AiOutputConflict.OPEN_FULL)
     }
     Muted(AiCopy.VARIANT_NOTE)
+
+    // ---- Phase 87 (Level 10): the nine bounded agent controls ----------------
+    // S9: every row tunes within a cap. Request inspection has no control at all —
+    // it is rendered as a fixed "Always on" line so it is visible that it cannot
+    // be switched off (D4).
+    HorizontalDivider()
+    Text(AiCopy.OPTIONS_TITLE, style = MaterialTheme.typography.titleSmall)
+    Muted(AiCopy.OPTIONS_NOTE)
+
+    val o = state.options
+
+    Text(AiCopy.READ_WINDOW, style = MaterialTheme.typography.bodyLarge)
+    ChoiceRow(AiOptionsPolicy.readWindowChoices().map { "$it lines" }, AiOptionsPolicy.readWindowChoices().indexOf(o.readWindowLines)) {
+        onOptionsChange(o.copy(readWindowLines = AiOptionsPolicy.readWindowChoices()[it]))
+    }
+    Muted(AiCopy.readWindowNote(o.readWindowLines))
+
+    Text(AiCopy.WORKING_SET, style = MaterialTheme.typography.bodyLarge)
+    ChoiceRow(AiOptionsPolicy.workingSetChoices().map { "$it results" }, AiOptionsPolicy.workingSetChoices().indexOf(o.workingSetDepth)) {
+        onOptionsChange(o.copy(workingSetDepth = AiOptionsPolicy.workingSetChoices()[it]))
+    }
+    Muted(AiCopy.workingSetNote(o.workingSetDepth))
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(AiCopy.TASK_MEMORY, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = o.taskMemory, onCheckedChange = { onOptionsChange(o.copy(taskMemory = it)) })
+    }
+    Muted(AiCopy.TASK_MEMORY_NOTE)
+    OutlinedButton(onClick = { onClearTaskMemory(true) }, enabled = !busy) { Text(AiCopy.TASK_MEMORY_CLEAR) }
+    Muted(AiCopy.TASK_MEMORY_CLEAR_NOTE)
+
+    Text(AiCopy.ANSWER_DETAIL, style = MaterialTheme.typography.bodyLarge)
+    ChoiceRow(
+        listOf(AiCopy.ANSWER_DETAIL_BRIEF, AiCopy.ANSWER_DETAIL_NORMAL, AiCopy.ANSWER_DETAIL_THOROUGH),
+        AiAnswerDetail.entries.indexOf(o.answerDetail)
+    ) { onOptionsChange(o.copy(answerDetail = AiAnswerDetail.entries[it])) }
+    Muted(AiCopy.ANSWER_DETAIL_NOTE)
+
+    Text(AiCopy.TOOL_ACTIVITY, style = MaterialTheme.typography.bodyLarge)
+    ChoiceRow(
+        listOf(AiCopy.TOOL_ACTIVITY_COLLAPSED, AiCopy.TOOL_ACTIVITY_EXPANDED),
+        AiActivityDisplay.entries.indexOf(o.activity)
+    ) { onOptionsChange(o.copy(activity = AiActivityDisplay.entries[it])) }
+    Muted(AiCopy.TOOL_ACTIVITY_NOTE)
+
+    // Not a control: D4 says request inspection is not user-removable.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(AiCopy.REQUEST_INSPECTION, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(AiCopy.REQUEST_INSPECTION_VALUE, style = MaterialTheme.typography.bodyMedium)
+    }
+    Muted(AiOptionsPolicy.REQUEST_INSPECTION_NOTE)
+
+    Text(AiCopy.BACKUP_MODE, style = MaterialTheme.typography.bodyLarge)
+    ChoiceRow(
+        listOf(AiCopy.BACKUP_MODE_OFF, AiCopy.BACKUP_MODE_MANUAL),
+        AiBackupMode.entries.indexOf(o.backup)
+    ) { onOptionsChange(o.copy(backup = AiBackupMode.entries[it])) }
+    Muted(AiCopy.BACKUP_MODE_NOTE)
+
+    Text(AiCopy.BUDGET_OFFER, style = MaterialTheme.typography.bodyLarge)
+    ChoiceRow(
+        listOf(AiCopy.BUDGET_OFFER_OFF, AiCopy.BUDGET_OFFER_ON),
+        if (o.budgetOffer == AiBudgetOffer.NO_OFFER) 0 else 1
+    ) { onOptionsChange(o.copy(budgetOffer = if (it == 0) AiBudgetOffer.NO_OFFER else AiBudgetOffer.OFFER)) }
+    Muted(AiCopy.BUDGET_OFFER_NOTE)
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(AiCopy.REVIEWER, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(
+            checked = o.reviewer == AiReviewer.ON,
+            onCheckedChange = { onOptionsChange(o.copy(reviewer = if (it) AiReviewer.ON else AiReviewer.OFF)) }
+        )
+    }
+    Muted(AiCopy.REVIEWER_NOTE)
+}
+
+/**
+ * Phase 87 — one bounded choice. The index comes from the policy's own value
+ * list, so a row can never offer a value outside the declared range (**S9**).
+ */
+@Composable
+private fun ChoiceRow(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    Column {
+        for ((i, label) in labels.withIndex()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { onSelect(i) }
+            ) {
+                RadioButton(selected = i == selectedIndex, onClick = { onSelect(i) })
+                Text(label, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
 }
 
 @Composable

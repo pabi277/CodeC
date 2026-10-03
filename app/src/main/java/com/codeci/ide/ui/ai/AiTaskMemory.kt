@@ -142,12 +142,17 @@ data class AiTaskMemory(
         root: File,
         admittedPaths: Collection<String>,
         dirtyBuffers: Map<String, String>,
-        nowMs: Long
+        nowMs: Long,
+        readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): AiTaskMemoryReadPlan {
+        // Level 10: the identity's default end must use the SAME window the runner
+        // will deliver, or the version key would describe a range that was never
+        // read and a stale snapshot could be served. Clamped again here (**S9**).
+        val window = AiOptionsPolicy.clampReadWindow(readWindow).coerceAtMost(AiToolLimits.MAX_READ_LINES)
         val specs = when (call.name) {
             AiToolName.READ_FILE -> call.path?.let {
                 val start = call.start ?: 1
-                val end = call.end ?: start + AiToolLimits.MAX_READ_LINES - 1
+                val end = call.end ?: start + window - 1
                 listOf(ReadSpec(it, start, end))
             } ?: emptyList()
             AiToolName.READ_FILES -> call.reads.orEmpty()

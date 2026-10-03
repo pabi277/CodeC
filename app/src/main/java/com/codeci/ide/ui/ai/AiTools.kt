@@ -262,7 +262,19 @@ object AiToolPolicy {
      * checked against [view], which the caller built from the same walk the
      * map came from.
      */
-    fun validate(request: AiToolRequest, view: AiToolProjectView): AiToolVerdict {
+    /**
+     * [readWindow] is the Level 10 *read window* option: how many lines one read
+     * may return. It is clamped here and can never exceed
+     * [AiToolLimits.MAX_READ_LINES], so **S9** holds even if a stored value is
+     * tampered with. The same value must reach [AiToolRunner.execute] and
+     * [AiTaskMemory.prepareRead], or the runner would refuse what the model was
+     * told it could ask for.
+     */
+    fun validate(
+        request: AiToolRequest,
+        view: AiToolProjectView,
+        readWindow: Int = AiToolLimits.MAX_READ_LINES
+    ): AiToolVerdict {
         val name = request.name ?: return AiToolVerdict.Denied(
             request, "unknown tool \"${request.rawName}\"; the tools are " +
                 AiToolName.entries.joinToString(", ") { it.wire }
@@ -278,9 +290,11 @@ object AiToolPolicy {
         if (extra.isNotEmpty()) {
             return AiToolVerdict.Denied(request, "${name.wire} does not take ${extra.sorted().joinToString(", ")}")
         }
+        // S9: clamp once, here, and pass the same value to both readers.
+        val window = AiOptionsPolicy.clampReadWindow(readWindow).coerceAtMost(AiToolLimits.MAX_READ_LINES)
         return when (name) {
-            AiToolName.READ_FILE -> validateRead(request, view)
-            AiToolName.READ_FILES -> validateReadFiles(request)
+            AiToolName.READ_FILE -> validateRead(request, view, window)
+            AiToolName.READ_FILES -> validateReadFiles(request, window)
             AiToolName.SEARCH_PROJECT -> validateSearch(request)
             AiToolName.LIST_FILES -> validateList(request, view)
             AiToolName.REQUEST_RUN -> validateRun(request, view)
@@ -295,7 +309,7 @@ object AiToolPolicy {
      * yields a per-file refusal while its siblings still read (**S5**). The model
      * is told the format, never the permissions.
      */
-    private fun validateReadFiles(request: AiToolRequest): AiToolVerdict {
+    private fun validateReadFiles(request: AiToolRequest, window: Int): AiToolVerdict {
         val raw = request.args["paths"]?.takeIf { it.isNotBlank() }
             ?: return AiToolVerdict.Denied(request, "read_files needs a paths list")
         val entries = raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
@@ -318,13 +332,13 @@ object AiToolPolicy {
             } else {
                 pathPart = entry
                 start = 1
-                end = AiToolLimits.MAX_READ_LINES
+                end = window
             }
             if (pathPart.isEmpty()) return AiToolVerdict.Denied(request, "read_files has an empty path in \"$entry\"")
             if (start < 1 || end < start) {
                 return AiToolVerdict.Denied(request, "read_files range for \"$pathPart\" must be start >= 1 and end >= start")
             }
-            val cappedEnd = if (end - start + 1 > AiToolLimits.MAX_READ_LINES) start + AiToolLimits.MAX_READ_LINES - 1 else end
+            val cappedEnd = if (end - start + 1 > window) start + window - 1 else end
             specs += ReadSpec(pathPart, start, cappedEnd)
         }
         return AiToolVerdict.Allowed(
@@ -332,7 +346,7 @@ object AiToolPolicy {
         )
     }
 
-    private fun validateRead(request: AiToolRequest, view: AiToolProjectView): AiToolVerdict {
+    private fun validateRead(request: AiToolRequest, view: AiToolProjectView, window: Int): AiToolVerdict {
         val raw = request.args["path"]?.takeIf { it.isNotBlank() }
             ?: return AiToolVerdict.Denied(request, "read_file needs a path")
         val path = AiEditProposalParser.validateTargetPath(raw)
@@ -345,10 +359,10 @@ object AiToolPolicy {
         } else 1
         val end = numberOrNull(request.args["end"]) ?: if (request.args.containsKey("end")) {
             return AiToolVerdict.Denied(request, "read_file end must be a whole number")
-        } else start + AiToolLimits.MAX_READ_LINES - 1
+        } else start + window - 1
         if (start < 1 || end < start) return AiToolVerdict.Denied(request, "read_file range must be start >= 1 and end >= start")
-        if (end - start + 1 > AiToolLimits.MAX_READ_LINES) {
-            return AiToolVerdict.Denied(request, "read_file may read at most ${AiToolLimits.MAX_READ_LINES} lines at once")
+        if (end - start + 1 > window) {
+            return AiToolVerdict.Denied(request, "read_file may read at most $window lines at once")
         }
         return AiToolVerdict.Allowed(
             AiToolCall(name = AiToolName.READ_FILE, rawName = request.rawName, path = path, start = start, end = end)

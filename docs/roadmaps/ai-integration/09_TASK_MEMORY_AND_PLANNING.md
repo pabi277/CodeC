@@ -1,6 +1,6 @@
 # Level 9 — Task memory and planning
 
-**Status: IMPLEMENTED on `arena/01a1004c-codec`; latest local host pre-validation passed 72/72 selected methods across eight classes (Temurin 25.0.2 + kotlinc 2.4.20). Build APK run `37106545726` is green on fix head `ddb75d3`, after round 1 (`37106180481`) exposed three existing Level 8 regressions that were fixed. Not merged; no PR. Depends on merged Level 8.**
+**Status: ✅ MERGED 2026-10-03 as Phase 86.** Merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit. On the branch, local host pre-validation had passed 72/72 selected methods across eight classes (Temurin 25.0.2 + kotlinc 2.4.20), and Build APK run `37106545726` was green on fix head `ddb75d3` after round 1 (`37106180481`) exposed three existing Level 8 regressions that were fixed. Formal device acceptance remains POSTPONED to Level 12 — not performed, not passed. **Next: Level 10, authorized and briefed as [Phase 87](../../phases/03-editor/chat-phase87/README.md).**
 **Owner authorization (2026-10-03): Level 9 is started with the bounded D6 amendment recorded below. Level 10's persistent-memory UI remains out of scope.**
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 

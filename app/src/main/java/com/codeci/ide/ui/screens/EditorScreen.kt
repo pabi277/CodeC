@@ -1262,6 +1262,17 @@ fun EditorScreen(
             onApproveRun = aiApproveRun,
             onSkipRun = aiSkipRun,
             onContinue = aiViewModel::continueAnswer,
+            // Phase 87 (Level 10, 87.6) — the read-only budget extension. Both
+            // routes go through the policy; declining changes nothing at all.
+            onAcceptBudget = aiViewModel::acceptBudgetExtension,
+            onDeclineBudget = aiViewModel::declineBudgetExtension,
+            // Phase 87 (Level 10, 87.7) — the manual backup-provider offer. It
+            // switches the recipient and re-previews; it never sends (S8, D4).
+            onAcceptBackup = aiViewModel::acceptBackupProvider,
+            onDeclineBackup = aiViewModel::declineBackupProvider,
+            // Phase 87 (Level 10, 87.8) — the read-only reviewer. It builds a
+            // preview of a tool-less request; Send still performs it (D4).
+            onRequestReview = aiViewModel::requestReview,
             lastRunCommand = outputState.lastTerminalCommand,
             runBusy = outputState.busy,
             modifier = sheetModifier
@@ -1737,7 +1748,19 @@ fun EditorScreen(
                             },
                             onOutputConflictChange = aiViewModel::setOutputConflict,
                             onSelectProvider = aiViewModel::selectProvider,
-                            onStop = aiViewModel::stop
+                            onStop = aiViewModel::stop,
+                            // Phase 87 (Level 10): the nine bounded agent controls.
+                            // Each is clamped by AiOptionsPolicy before it is stored
+                            // (S9), and *Clear now* reports the store's real result.
+                            onOptionsChange = aiViewModel::setOptions,
+                            onClearTaskMemory = {
+                                aiViewModel.clearTaskMemoryNow { cleared ->
+                                    aiViewModel.notice(
+                                        if (cleared) AiCopy.TASK_MEMORY_CLEARED
+                                        else AiCopy.TASK_MEMORY_CLEAR_EMPTY
+                                    )
+                                }
+                            }
                         )
                     },
                     files = {
