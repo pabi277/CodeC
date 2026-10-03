@@ -1,12 +1,20 @@
 # Phase 88 — AI Level 11: agent phone presentation
 
-> **Status:** ✅ **IMPLEMENTED and CI-GREEN.** The owner commanded the implementation in chat
+> **Status:** ✅ **MERGED.** The owner commanded the merge in chat (*"Ok merge to main"*, 2026-10-03);
+> [PR #113](https://github.com/pabi277/CodeC/pull/113) was opened from `arena/01a101db-codec` and merged to `main` once its own
+> `build` check passed on the final head. This status was written on the branch just **before** the merge,
+> so that it lands on `main` with it. That is why it names neither the merge commit nor the post-merge
+> Build APK run; see [*Merge record*](#merge-record-2026-10-03). That merge authorization was one-time and
+> is complete.
+>
+> Prior to the merge this phase was ✅ **IMPLEMENTED and CI-GREEN.** The owner commanded the implementation in chat
 > (*"Complete level 11"*, 2026-10-03). Parts 88.1–88.5 are in the tree on `arena/01a101db-codec` @ `88f0186`;
 > see [*Implementation record*](#implementation-record-2026-10-03). Build APK run [`37132310296`](https://github.com/pabi277/CodeC/actions/runs/37132310296) on `88f0186` is
 > **success on the first round**: host unit and screenshot tests, including the 4 Robolectric link-dialog
 > tests, plus debug and release assembly, APK checks and artifact uploads. The release APK is **7 177 184 B**,
 > +22 756 B (+0.32 %) against `c3771c5`. **1 878 host tests pass, 0 fail** on the kotlinc 2.2.10 / JRE
-> harness (`rule.md` §9). **No PR and no merge** without a further explicit command.
+> harness (`rule.md` §9). The work stayed on `arena/01a101db-codec` until the owner's merge command; no PR,
+> merge or `main` push happened before it.
 > *Brief history:* the owner first authorized Level 11 in chat on 2026-10-03 **for a brief only**
 > (commit `0860ca3`, Build APK run `37128474253` green).
 > **Owner decisions (2026-10-03, answered in chat):** the **full Level 11 in one phase** — Markdown
@@ -306,6 +314,10 @@ release, signed release, the APK-set check and the size report.
 - The raw job log could not be downloaded from this sandbox (the log host answered `EOF` twice), so no
   executed-test count is quoted for CI.
 
+**Docs-only follow-up, green:** Build APK run [`37133300436`](https://github.com/pabi277/CodeC/actions/runs/37133300436) on `1ab64ce`, the commit that recorded round 1
+here. No code changed, so its APK bytes (within a few bytes of round 1's, which is build-to-build noise)
+are not used as a measurement.
+
 ### Measurement (88.5)
 
 Taken from the run's *APK size* annotations:
@@ -320,6 +332,25 @@ Taken from the run's *APK size* annotations:
 
 The R8 mapping file is 71 186 679 B, and the release manifest has no `android:debuggable` flag. No
 dependency was added: the growth is the new Kotlin code.
+
+### Merge record (2026-10-03)
+
+- **Command.** After asking what Level 12 would do (a discussion only; nothing was authorized), the owner
+  said *"Ok merge to main"* in chat. That is the explicit command `rule.md` §3 requires.
+- **PR.** [PR #113](https://github.com/pabi277/CodeC/pull/113) was opened from `arena/01a101db-codec` to `main`. Its body lists what
+  landed, the security pins, the verification and the six deviations above.
+- **What it carries.** Six commits on top of `main` @ `c3771c5`: the carried Phase 87 merge record
+  (`7b71ec5`), the stale-doc fixes (`8062f0c`), the brief (`0860ca3`), the implementation (`88f0186`), the
+  CI record (`1ab64ce`) and this merge record. `main` had not moved since PR #112, so there was nothing to
+  rebase and no conflict.
+- **Checks before the merge.** Build APK was green on the implementation (`37132310296`) and on the docs
+  follow-up (`37133300436`). The merge waited for the PR's own `build` check on the final head.
+- **Method.** A merge commit, like PRs #109–#112. The session branch is kept, not deleted.
+- **Why this record cannot name the merge commit or the post-merge run.** It was written and pushed before
+  the merge, so it reaches `main` inside the merge. The Phase 87 record was written after its merge and
+  stayed stranded on the old branch until the next session carried it (`7b71ec5`). The merge commit is
+  PR #113's merge commit on `main`, and its first parent is `c3771c5`. Read its sha from
+  `git log origin/main` and the post-merge Build APK run from the Actions tab; the next change records both.
 
 ## Exit condition
 
@@ -404,6 +435,11 @@ Ticked items are proven by the host harness or the wiring pins named, and confir
 
 ## Gate
 
-The owner commanded the implementation (*"Complete level 11"*, 2026-10-03). **No PR, no merge and no push
-to `main` without a further explicit command** (`rule.md` §3). **Levels 12–14 remain unauthorized.** Formal
-device acceptance remains **POSTPONED** to Level 12 and is not claimed here.
+**Closed by the owner's explicit command in chat** (*"Ok merge to main"*, 2026-10-03), as `rule.md` §3
+requires. [PR #113](https://github.com/pabi277/CodeC/pull/113) was opened from `arena/01a101db-codec` and merged to `main` after its
+own `build` check passed on the final head; see [*Merge record*](#merge-record-2026-10-03). That
+authorization was one-time and is complete. The implementation itself was commanded earlier
+(*"Complete level 11"*, 2026-10-03).
+
+**Levels 12–14 remain unauthorized.** Formal device acceptance remains **POSTPONED** to Level 12 and is
+not claimed here.
