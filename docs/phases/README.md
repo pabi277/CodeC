@@ -91,7 +91,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 85 | [✅ AI Level 8 — bounded-but-honest reads, read_files, restorable eviction and S11 working set (merged PR #110)](03-editor/chat-phase85/) | 03-editor |
 | 86 | [✅ AI Level 9 — bounded task memory and planning (merged PR #111 to `main` @ `6838ea6`; post-merge Build APK `37109573383` green; device acceptance postponed to Level 12)](03-editor/chat-phase86/) | 03-editor |
 | 87 | [✅ AI Level 10 — agent controls and options (nine bounded controls in the AI panel; MERGED via PR #112, 1 594 host cases, S9 held)](03-editor/chat-phase87/) | 03-editor |
-| 88 | [📋 AI Level 11 — agent phone presentation (Markdown answers, https links behind a confirm, one truthful progress line, full result on tap; PLANNED, brief only, no code)](03-editor/chat-phase88/) | 03-editor |
+| 88 | [✅ AI Level 11 — agent phone presentation (Markdown answers, https links behind a confirm, one truthful progress line, full result on tap; IMPLEMENTED 2026-10-03, Build APK on CI pending, not merged)](03-editor/chat-phase88/) | 03-editor |
 
 ## By category
 

@@ -1,6 +1,6 @@
 # CodeC Phase 88.2 — Link policy: https only, behind a confirm
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+> **Status:** ✅ IMPLEMENTED (2026-10-03, on the owner's *"Complete level 11"*; Build APK on CI pending — see the [README record](README.md#implementation-record-2026-10-03)) · **Cost:** `[client-only]` · **Effort:** S
 > **Owner decision (2026-10-03, verbatim choice):** `https` links tappable behind a confirm dialog that
 > shows the full URL; `javascript:`, `data:` and plain `http` stay inert.
 > **Parent brief:** [Phase 88 README](README.md)

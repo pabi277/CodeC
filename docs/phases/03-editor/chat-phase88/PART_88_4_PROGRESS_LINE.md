@@ -1,6 +1,6 @@
 # CodeC Phase 88.4 — One truthful progress line
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S
+> **Status:** ✅ IMPLEMENTED (2026-10-03, on the owner's *"Complete level 11"*; Build APK on CI pending — see the [README record](README.md#implementation-record-2026-10-03)) · **Cost:** `[client-only]` · **Effort:** S
 > **Owner decision (2026-10-03):** one truthful compact-progress line.
 > **Level 11 spec:** *"Compact progress — one truthful line: what stage, how many reads, what is left."*
 > **Parent brief:** [Phase 88 README](README.md)

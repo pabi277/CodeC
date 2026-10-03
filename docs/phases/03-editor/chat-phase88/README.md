@@ -1,8 +1,13 @@
 # Phase 88 — AI Level 11: agent phone presentation
 
-> **Status:** 📋 **PLANNED — brief only.** No production or test source has been written and nothing
-> has been run for this phase. The owner authorized Level 11 in chat on 2026-10-03 **for a brief
-> only**; implementation needs a further explicit command in chat (for example *"Complete level 11"*).
+> **Status:** ✅ **IMPLEMENTED — Build APK on CI pending.** The owner commanded the implementation in chat
+> (*"Complete level 11"*, 2026-10-03). Parts 88.1–88.5 are in the tree on `arena/01a101db-codec`; see
+> [*Implementation record*](#implementation-record-2026-10-03). **1 878 host tests pass, 0 fail** on the
+> kotlinc 2.2.10 / JRE harness (`rule.md` §9), including the 80 new pure and wiring tests; the 4
+> Robolectric Compose link-dialog tests run on CI only. Build APK on CI is the executor of record and its
+> result is recorded below when it lands. **No PR and no merge** without a further explicit command.
+> *Brief history:* the owner first authorized Level 11 in chat on 2026-10-03 **for a brief only**
+> (commit `0860ca3`, Build APK run `37128474253` green).
 > **Owner decisions (2026-10-03, answered in chat):** the **full Level 11 in one phase** — Markdown
 > answers, one truthful compact progress line, activity rows that show the full result on tap, request
 > disclosure kept collapsed and **never removed** — in about 4–5 parts · **links:** `https` links are
@@ -210,24 +215,109 @@ goldens"*; that needs a one-off record run outside the current workflow.
 classes plus `AiLevel6FixtureSupport`) / 538 AI `@Test`; 4 Robolectric Compose test files. Counts are a
 plan, not a result. Nothing has been run for this phase.
 
+## Implementation record (2026-10-03)
+
+Built on `arena/01a101db-codec` from the brief commit `0860ca3` after the owner's *"Complete level 11"*.
+Every `file:line` above is the brief's reading of the pre-implementation tree; the record below names
+files, not lines, because the edits moved them.
+
+### What landed
+
+| Part | Files | What |
+|---|---|---|
+| 88.1 | `ui/ai/AiMarkdown.kt` (new, pure) | `AiMarkdown.parse` / `inlines` / `visibleText` / `inlineText`: the block and inline model as designed. No regex at all, no Android or Compose import. |
+| 88.2 | `ui/ai/AiLevel11Policies.kt` (new, pure) | `AiLinkPolicy.classify` → `AiLink.Openable(url, host)` / `AiLink.Inert(AiLinkRefusal)`, `java.net.URI` only. |
+| 88.3 | `ui/ai/AiMarkdownView.kt` (new), `AiParts.kt`, `AiChatSheet.kt` | `AiMarkdownAnswer`: throttled off-main-thread parse while streaming (`snapshotFlow` → `conflate` → `Dispatchers.Default` → `delay(STREAM_REPARSE_MS)`), `remember(text)` at DONE; code box with **Copy** inside `DisableSelection`; monospace tables; the link confirm dialog (the second `openUri`). `Answer(text, streaming = false)` delegates to it; `VerbatimText` is the old `Answer` body and draws `MarkupShownAsText`. |
+| 88.4 | `AiLevel11Policies.kt`, `AiCopy.kt`, `AiChatSheet.kt`, `ui/ai/AiAgentState.kt` (new) | `AiProgressPolicy.stage` / `placement` / `line`; `agentWorkingLine` deleted; the card and the bar both consult `placement`, so exactly one line is drawn. |
+| 88.5 | `AiLevel11Policies.kt`, `AiChatSheet.kt` | `AiResultRowPolicy`; `openResults` beside `openRequests`; a row with a full result is one line until tapped, then `SentText(AiResultRowPolicy.fullResult(step))`. |
+
+Untouched: `AiAgentLoop.kt` (so `renderStep` is byte-identical), `MarkdownPreview.kt`, every build file,
+the manifest, the three `client.stream(` sites and every budget constant.
+
+### Deviations from the brief (each deliberate)
+
+1. **Two existing pins amended, intent kept.** The brief planned `AiLevel10WiringTest` and
+   `AiLevel7WiringTest` to stay unchanged. One assertion in each pinned the literal call of the *old* card
+   counter: `usage.turnCap, usage.readCap` (Phase 87.6) and `usage.refused` (Phase 84). 88.4 moves that
+   counter into the one builder, so each assertion now follows it. The sheet hands `state.agentUsage` to
+   `AiProgressPolicy.line(`, and the builder passes `turnCap = usage.turnCap`, `readCap = usage.readCap`,
+   `refused = usage.refused` and `reused = usage.reused`. `AiProgressPolicyTest` also asserts the
+   behaviour (extended caps; refused and reused kept apart). No other assertion in either file changed.
+2. **A third `AiChatSheet` touch for 88.4.** The streaming conversation's own countdown line is now drawn
+   only for a single-shot ask. An agent task's countdown lives in its one progress line, as 88.4 says
+   (*"the countdown does not need a line of its own"*).
+3. **`agentUsageLine(…, showRuns: Boolean = true)`.** 88.4 shows *U of 2 runs* only once a run was
+   requested or used. The default keeps every other caller, and every existing pin, byte-identical.
+4. **`AiPhase` and `AiAgentUsage` moved, unchanged,** from `AiViewModel.kt` to the new pure
+   `AiAgentState.kt`, so the progress policy and its test compile on the host harness.
+5. **Parser choices the brief left open:**
+   - A `__word__` whose whole content is one identifier stays text. CommonMark would bold it; the brief
+     promises *"`__init__`-style identifiers stay text"*. `__two words__` is still Strong.
+   - A setext underline needs three or more `=` or `-`.
+   - List nesting tolerates the two-space indent models write under `1.`.
+   - A bare URL is recognized only after the start of a line, whitespace, `*`, `_`, `~` or `(` (GFM), so
+     `src="https://…"` inside raw HTML stays text.
+   - Empty link text shows the target, so a link is never invisible.
+6. **Link-check order nuance.** An empty authority (`https://`, `https:///path`, `https:x`) is `NO_HOST`
+   before `java.net.URI` is consulted. `URI("https://")` throws, and the brief's own examples name those
+   cases `NO_HOST`, not `MALFORMED`.
+
+### Tests (result)
+
+| File | `@Test` | Host harness | CI |
+|---|---:|---|---|
+| `AiMarkdownTest` | 27 | 27 / 27 pass | pending |
+| `AiLinkPolicyTest` | 17 | 17 / 17 pass | pending |
+| `AiProgressPolicyTest` | 14 | 14 / 14 pass | pending |
+| `AiResultRowPolicyTest` | 7 | 7 / 7 pass | pending |
+| `AiLevel11WiringTest` | 15 | 15 / 15 pass | pending |
+| `AiAnswerLinkDialogTest` (Robolectric Compose) | 4 | cannot run here | pending |
+
+**Harness run (kotlinc 2.2.10 on a JRE, `rule.md` §9):**
+- 151 production and 202 test files compile with **nothing dropped**: 199 classes, **1 878 tests, 0 failures**.
+- The same harness on an untouched snapshot of `0860ca3` gives 1 798 / 0. The +80 are the five new
+  pure and wiring classes; every regression test listed in the plan is green.
+
+**Harness reach widened.** `AiCopy.kt` had never compiled on the harness. Its `AiUndoSummary` import
+chains through `AiEditApplier` → `GitDiscardEditors` → `GitDiscardPolicy` → `GitFileChange`, which sits in
+the JGit-bound `GitManager.kt`. The harness now copies the exact `GitFileChange` and `GitFileState`
+declarations into a harness-only stub, which is never committed. That brings `AiCopy`, `AiLevel10CopyTest`,
+`AiLevel7CorrectnessTest` and `AiPolicyTest` onto the harness.
+
+**Inventory delta (against this README's baseline):**
+
+| | Baseline | Now | Delta |
+|---|---:|---:|---:|
+| Kotlin test files | 326 | 332 | +6 |
+| `@Test` | 3 120 | 3 204 | +84 |
+| `Ai*.kt` test files | 46 | 52 | +6 |
+| AI `@Test` | 538 | 622 | +84 |
+| Robolectric Compose test files | 4 | 5 | +1 |
+
+**APK:** recorded from the implementation commit's Build APK run, in the 88.5 measurement table, when
+that run lands.
+
 ## Exit condition
 
-- [ ] Headings, lists, block quotes, inline code, fenced code and tables render; raw Markdown syntax is not shown for supported constructs.
-- [ ] A hostile answer containing `<script>`, `<img onerror=…>` and `javascript:` / `data:` / `http:` links renders as inert text.
-- [ ] No network effect without two taps: an `https` link opens a dialog showing the full URL and host, and only **Open** calls `openUri`. `ui/ai/` has exactly **two** `openUri(` sites.
-- [ ] No remote image is ever fetched; images render as their alt text.
-- [ ] The answer is selectable and scrolls with the sheet; code blocks scroll horizontally; the answer is never truncated (no `maxLines` in the renderer).
-- [ ] Code-block **Copy** goes through the existing `copyAnswer`; there is no insert, apply or run path from an answer (**S6**).
-- [ ] Streaming re-parses at most once per interval, off the main thread, and the final text is parsed exactly once at DONE.
-- [ ] `MarkupShownAsText` (`:787`) stays verbatim.
-- [ ] Exactly one progress line is on screen; it names the stage; "steps" means model turns everywhere; counts never exceed the task's caps.
-- [ ] Rows with a full result collapse to one line and open to exactly `modelResult.take(MAX_RESULT_CHARS)`, the same text `renderStep` packs.
-- [ ] Request disclosure is still one tap away and still shows the exact two strings sent (**S8/D4**); the pre-Send preview is whole.
-- [ ] Collapsing or expanding any row does not alter the packed request (**S1**).
-- [ ] A long beginner explanation renders in clear sections without truncation.
-- [ ] Exactly three `client.stream(` sites; no ceiling moved; no new dependency, permission, endpoint, DataStore key or default-model change.
-- [ ] minSdk 24 respected: `java.io` only; the URL check uses `java.net.URI`, never `android.net.Uri` (the core stays host-testable).
-- [ ] APK size delta recorded against both baselines (88.5).
+Ticked items are proven by the host harness or the wiring pins named. CI confirms them and runs the
+Robolectric dialog test. The visual checks go to the Level 12 device round, as the brief planned.
+
+- [x] Headings, lists, block quotes, inline code, fenced code and tables render; raw Markdown syntax is not shown for supported constructs. *(Model: `AiMarkdownTest`. Drawing: `AiMarkdownView`. Visual check: Level 12.)*
+- [x] A hostile answer containing `<script>`, `<img onerror=…>` and `javascript:` / `data:` / `http:` links renders as inert text. *(`AiMarkdownTest` hostile corpus; `AiLinkPolicyTest`; `AiAnswerLinkDialogTest` on CI.)*
+- [x] No network effect without two taps: an `https` link opens a dialog showing the full URL and host, and only **Open** calls `openUri`. `ui/ai/` has exactly **two** `openUri(` sites. *(Wiring pins; the dialog behaviour runs on CI in `AiAnswerLinkDialogTest`.)*
+- [x] No remote image is ever fetched; images render as their alt text. *(`ImageAlt` keeps no target; no image loader in `ui/ai/`.)*
+- [x] The answer is selectable and scrolls with the sheet; code blocks scroll horizontally; the answer is never truncated (no `maxLines` in the renderer).
+- [x] Code-block **Copy** goes through the existing `copyAnswer`; there is no insert, apply or run path from an answer (**S6**).
+- [x] Streaming re-parses at most once per interval, off the main thread, and the final text is parsed exactly once at DONE.
+- [x] `MarkupShownAsText` stays verbatim (`VerbatimText`).
+- [x] Exactly one progress line is on screen; it names the stage; "steps" means model turns everywhere; counts never exceed the task's caps.
+- [x] Rows with a full result collapse to one line and open to exactly `modelResult.take(MAX_RESULT_CHARS)`, the same text `renderStep` packs.
+- [x] Request disclosure is still one tap away and still shows the exact two strings sent (**S8/D4**); the pre-Send preview is whole.
+- [x] Collapsing or expanding any row does not alter the packed request (**S1**).
+- [x] A long beginner explanation renders in clear sections without truncation. *(By construction: headings and lists render, and there is no line or height cap. Device check: Level 12.)*
+- [x] Exactly three `client.stream(` sites; no ceiling moved; no new dependency, permission, endpoint, DataStore key or default-model change.
+- [x] minSdk 24 respected: `java.io` only; the URL check uses `java.net.URI`, never `android.net.Uri` (the core stays host-testable).
+- [ ] APK size delta recorded against both baselines (88.5). *(Pending the implementation commit's Build APK run.)*
 
 ## Deferred / rejected with reasons
 
@@ -290,6 +380,6 @@ plan, not a result. Nothing has been run for this phase.
 
 ## Gate
 
-**No implementation, no PR, no merge and no push to `main` without the owner's explicit command**
-(`rule.md` §3). This brief is the whole of the current authorization. **Levels 12–14 remain
-unauthorized.** Formal device acceptance remains **POSTPONED** to Level 12 and is not claimed here.
+The owner commanded the implementation (*"Complete level 11"*, 2026-10-03). **No PR, no merge and no push
+to `main` without a further explicit command** (`rule.md` §3). **Levels 12–14 remain unauthorized.** Formal
+device acceptance remains **POSTPONED** to Level 12 and is not claimed here.

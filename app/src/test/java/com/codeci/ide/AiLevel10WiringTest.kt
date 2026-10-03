@@ -265,7 +265,13 @@ class AiLevel10WiringTest {
         assertTrue(vm.contains("fun acceptBudgetExtension()"))
         assertEquals(3, Regex("client\\.stream\\(").findAll(vm).count())
         // The counter renders the caps in force, so it cannot under-report.
-        assertTrue(ai("AiChatSheet.kt").contains("usage.turnCap, usage.readCap"))
+        // Phase 88 (Level 11, 88.4) moved the counter into the one progress-line
+        // builder, so this pin follows it: the sheet hands the task's usage to
+        // AiProgressPolicy.line, which renders against usage.turnCap / usage.readCap.
+        assertTrue(ai("AiChatSheet.kt").contains("AiProgressPolicy.line("))
+        assertTrue(ai("AiChatSheet.kt").contains("state.agentUsage"))
+        assertTrue(ai("AiLevel11Policies.kt").contains("turnCap = usage.turnCap"))
+        assertTrue(ai("AiLevel11Policies.kt").contains("readCap = usage.readCap"))
     }
 
     // ---- 87.7 backup provider ---------------------------------------------
