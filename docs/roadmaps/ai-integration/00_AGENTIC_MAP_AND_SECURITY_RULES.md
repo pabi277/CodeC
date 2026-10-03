@@ -15,7 +15,7 @@
 > `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; final-head Build APK run `37084800939` is green.
 > The owner then authorized Level 9 and its bounded D6 task-memory amendment. [Phase 86](../../phases/03-editor/chat-phase86/README.md)
 > implements only bounded, no-backup task memory on `arena/01a1004c-codec`; local host pre-validation
-> passed 56/56 selected methods, Build APK CI is pending, no PR/merge is authorized, and exactly three
+> passed 72/72 selected methods across eight classes; Build APK run `37106180481` found three existing Level 8 regressions, now fixed locally with rerun pending; no PR/merge is authorized, and exactly three
 > `client.stream(` sites remain.
 > Level 10–14 remain unauthorized; formal device acceptance is postponed to Level 12.
 
@@ -25,7 +25,7 @@
 
 **Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md) · [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md) (PR #109) · [7 — agent correctness](07_AGENT_CORRECTNESS.md) and [8 — full context/honest reads](08_FULL_CONTEXT_AND_HONEST_READS.md) as Phases 84+85 (PR #110, `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` green).
 
-**Implemented on the active session branch; local host pre-validation 56/56 selected methods; Build APK CI pending; no PR/merge:** [9 — task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) as [Phase 86](../../phases/03-editor/chat-phase86/README.md); bounded D6 amendment, exactly three stream sites preserved.
+**Implemented on the active session branch; local host pre-validation 72/72 across eight classes; Build APK run `37106180481` red, fixes local, rerun pending; no PR/merge:** [9 — task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) as [Phase 86](../../phases/03-editor/chat-phase86/README.md); bounded D6 amendment, exactly three stream sites preserved.
 
 **Proposed and unauthorized future levels, in dependency order:**
 
@@ -73,8 +73,8 @@ and honest stop reasons. The evidence column below is the pre-fix `4cb4151` stat
 > [Phase 85](../../phases/03-editor/chat-phase85/README.md).
 >
 > **Phase 86 / Level 9 update — 2026-10-03:** defect **8 (no bounded task memory)** now has an
-> implementation on `arena/01a1004c-codec`; local host pre-validation passed 56/56 selected methods,
-> Build APK CI is pending, and no PR/merge is authorized.
+> implementation on `arena/01a1004c-codec`; local host pre-validation passed 72/72 selected methods across eight classes.
+> Build APK run `37106180481` found three Level 8 regressions, fixed locally; rerun pending, and no PR/merge is authorized.
 > The owner approved the narrow D6 amendment. `AiTaskMemory` versions the admitted file cache by canonical
 > path, effective range and content version, reconciles dirty/disk changes, stores filtered findings,
 > decisions and plan under the no-backup app directory, and recites the plan at the end of disclosed
@@ -89,7 +89,7 @@ and honest stop reasons. The evidence column below is the pre-fix `4cb4151` stat
 | 5 | Parser discards valid calls | `AiToolProtocol.parse` returns `Malformed` early, dropping accumulated `calls` | Three good reads beside one malformed block are all lost. Direct cause of re-reads. |
 | 6 | Context eviction is total | `KEEP_LAST_RESULTS = 4`; notice `(N earlier tool results were dropped to fit)` — no path, no range | Not restorable (contra Manus). Model re-reads what it had. |
 | 7 | Prefix-only reader | `AiProjectReader.readCapped` has no offset; stops at `MAX_READ_CHARS` (24 000) | Lines past the first 24 000 chars unreachable at any `end`. |
-| 8 | No bounded task memory | Baseline `AgentSession` held no cross-request cache, plan, or findings | Phase 86 adds a version-checked bounded cache + structured ledger/plan; local host pre-validation passed 56/56 selected methods, Build APK CI pending. |
+| 8 | No bounded task memory | Baseline `AgentSession` held no cross-request cache, plan, or findings | Phase 86 adds a version-checked bounded cache + structured ledger/plan; local host pre-validation passed 72/72 across eight classes. Build APK run `37106180481` found three Level 8 refusal/pointer regressions, fixed locally; rerun pending. |
 | 9 | Plain answer rendering | `AiParts.kt:55-58` `Answer` = `SelectionContainer { Text(text, bodyMedium) }` | No Markdown, though `ui/utils/MarkdownPreview.kt` already exists. |
 | 10 | Disclosure floods the timeline | `AiChatSheet.kt:584` renders system instruction + full user text per REQUEST row | Up to 12 copies of system text + 6 000-char map inline. |
 | 11 | Blanket brevity | `AiContext.AGENT_ASK_SYSTEM_INSTRUCTION` ends *"Keep answers short: they are read on a phone."* | Overrides an explicit "explain line by line". |
@@ -210,4 +210,4 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 **Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
 
-**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. The owner authorized Level 9; Phase 86 implements the bounded D6 exception on `arena/01a1004c-codec`, with local host pre-validation 56/56 selected methods passed, final-head Build APK CI pending, and no PR/merge authorization. Level 10–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.
+**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. The owner authorized Level 9; Phase 86 implements the bounded D6 exception on `arena/01a1004c-codec`, with local host pre-validation 72/72 across eight selected classes; Build APK run `37106180481` exposed three existing Level 8 regressions, now fixed locally; rerun pending, and no PR/merge authorization. Level 10–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.

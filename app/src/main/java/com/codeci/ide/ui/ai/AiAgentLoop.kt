@@ -454,17 +454,21 @@ object AiAgentPrompt {
         val header = "\n(${steps.size} earlier tool result" +
             (if (steps.size == 1) " was" else "s were") +
             " dropped to fit; re-read any on demand:)\n"
+        fun moreLine(remaining: Int) = "- (+$remaining more; re-issue the call to re-read)\n"
         val out = StringBuilder()
-        if (header.length <= maxChars) out.append(header) else return header.take(maxChars)
+        if (header.length > maxChars) return header.take(maxChars)
+        out.append(header)
         var shown = 0
         for (step in steps) {
             val pointer = evictionPointer(step) + "\n"
-            if (out.length + pointer.length > maxChars) break
+            val remainingAfterThis = steps.size - shown - 1
+            val reserveForRemainder = if (remainingAfterThis > 0) moreLine(remainingAfterThis).length else 0
+            if (out.length + pointer.length + reserveForRemainder > maxChars) break
             out.append(pointer)
             shown++
         }
         if (shown < steps.size) {
-            val more = "- (+${steps.size - shown} more; re-issue the call to re-read)\n"
+            val more = moreLine(steps.size - shown)
             if (out.length + more.length <= maxChars) out.append(more)
         }
         return out.toString()

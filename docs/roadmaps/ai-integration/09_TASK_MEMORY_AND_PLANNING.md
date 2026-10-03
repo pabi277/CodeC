@@ -1,6 +1,6 @@
 # Level 9 — Task memory and planning
 
-**Status: IMPLEMENTED on `arena/01a1004c-codec`; local host pre-validation passed 56/56 selected methods (Temurin 25.0.2 + kotlinc 2.4.20). Build APK CI is pending; not merged; no PR. Depends on merged Level 8.**
+**Status: IMPLEMENTED on `arena/01a1004c-codec`; latest local host pre-validation passed 72/72 selected methods across eight classes (Temurin 25.0.2 + kotlinc 2.4.20). Build APK round 1 (`37106180481`) exposed three existing Level 8 regressions, fixed locally; rerun pending. Not merged; no PR. Depends on merged Level 8.**
 **Owner authorization (2026-10-03): Level 9 is started with the bounded D6 amendment recorded below. Level 10's persistent-memory UI remains out of scope.**
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 
@@ -100,9 +100,11 @@ user-text suffix.
 
 ## Acceptance checks
 
-Implementation and local host pre-validation are complete: **56/56 selected test
-methods passed** against the Android-free production core/store and source-pin
-suite. This is not the full Gradle suite or Android/Compose compilation; the
+Implementation and local host pre-validation are complete: **72/72 selected test
+methods passed across eight classes** against the Android-free production
+core/store, two Level 8 regression classes, and source-pin suite. Build APK run
+`37106180481` was red on three existing Level 8 refusal/pointer assertions; the
+root causes were fixed and the rerun is pending. This is not the full Gradle suite or Android/Compose compilation; the
 Build APK workflow remains pending and is the executor of record. See the
 [Phase 86 ledger](../../phases/03-editor/chat-phase86/README.md).
 

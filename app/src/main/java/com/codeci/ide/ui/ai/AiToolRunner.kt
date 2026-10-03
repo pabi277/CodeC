@@ -192,11 +192,14 @@ object AiToolRunner {
         cachedFiles: Map<String, String> = emptyMap()
     ): Outcome {
         val path = call.path ?: return Outcome(false, "read_file needs a path.")
-        if (AiTaskMemoryPolicy.safeRelativePath(path) == null ||
-            AiProjectFiles.isSecretLike(path.substringAfterLast('/'))
-        ) return Outcome(false, "$path is not an admitted code/text path or is credential-shaped.")
+        if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
+            return Outcome(false, "$path is credential-shaped and is never read.")
+        }
         if (paths.none { AiProjectFiles.samePath(it, path) }) {
             return Outcome(false, "$path is not a code or text file in this project.")
+        }
+        if (AiTaskMemoryPolicy.safeRelativePath(path) == null) {
+            return Outcome(false, "$path is not an admitted code/text path.")
         }
         val file = File(rootDir, path)
         if (!safeChild(file, rootDir)) return Outcome(false, "$path is outside the project.")
@@ -325,11 +328,14 @@ object AiToolRunner {
         shouldStop: () -> Boolean
     ): Pair<String, Boolean> {
         val path = spec.path
-        if (AiTaskMemoryPolicy.safeRelativePath(path) == null ||
-            AiProjectFiles.isSecretLike(path.substringAfterLast('/'))
-        ) return "FILE $path — [refused: credential-shaped or unsafe path]" to false
+        if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
+            return "FILE $path — [refused: credential-shaped]" to false
+        }
         if (admitted.none { AiProjectFiles.samePath(it, path) }) {
             return "FILE $path — [refused: not a code or text file in this project]" to false
+        }
+        if (AiTaskMemoryPolicy.safeRelativePath(path) == null) {
+            return "FILE $path — [refused: unsafe or non-text path]" to false
         }
         val file = File(rootDir, path)
         if (!safeChild(file, rootDir)) return "FILE $path — [refused: outside the project]" to false
