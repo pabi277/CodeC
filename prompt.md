@@ -1,5 +1,4 @@
-> **Latest owner instruction — 2026-10-03 (AI Level 6 = Phase 83):** *“Start level 6.”* This explicitly starts **Level 6 only**. Phase 83 adds synthetic C/Python/JavaScript/HTML fixtures, an offline test-only replay, and baseline documentation; there are **zero production-source or behavior changes**. `AiLevel6BaselineTest` has five new cases; the temporary Kotlin/JDK host-shim smoke passed **5/5**, but several Android/app-edge dependencies and JUnit were stubbed; real Build APK CI **37051539267 is GREEN** on code/test head `cf3f1be`. Work only on `arena/01a0fded-codec`, based on `main` @ `7419566` (PR #107 Phase 82 code and PR #108 docs merged; main Build APK `37047037300` green). No provider request, device run, PR or merge occurred; formal device acceptance remains **POSTPONED until after optimization**, not passed. The task-test inventory is now **312 Kotlin test files / 2,973 `@Test` annotations** and **31 AI test classes / 391 AI tests** (pre-Level-6 310 / 2,968 and 30 / 386). [Phase 83 ledger](docs/phases/03-editor/chat-phase83/README.md) · [baseline](docs/phases/03-editor/chat-phase83/BASELINE.md) · [Level 6 acceptance spec](docs/roadmaps/ai-integration/06_AGENT_BASELINE_AND_MEASUREMENT.md). Preserve D1–D6, S1–S12 and all existing security boundaries; `ui/ai/` still has zero direct project writes and zero command execution, Send is the only network road with exactly three `client.stream(` sites, no new `ai_settings.properties` index/key, no `ProjectSearch.isSearchable` reuse, minSdk-24-safe symlink checks, single-writer S7 and caps/permissions unchanged. Level 8 still needs the owner's bounded-but-honest-read decision; Level 9 still needs its separate D6 task-memory amendment. **Do not start Level 7 or any later level. No PR or merge is authorized.** Read [`rule.md` §3/§7/§9](rule.md) and the phase ledger before continuing.
-
+> **Latest owner instruction — 2026-10-03 (AI Level 9 = Phase 86):** Level 9 is authorized with the narrow D6 amendment: only bounded, admitted non-secret file cache and structured findings/decisions/plan may persist at `noBackupFilesDir/ai/task/<project>/`; raw chat, prompts, answers, maps, tool results and timeline remain ephemeral. The user-facing on/off control is Level 10 and is not authorized here. Phase 86 source is implemented on `arena/01a1004c-codec`; local host pre-validation passed 72/72 selected methods across eight classes. Build APK run [`37106545726`](https://github.com/pabi277/CodeC/actions/runs/37106545726) is green on fix commit `ddb75d3`, after round 1 found three Level 8 regressions. This is not full Gradle/Android validation. No PR or merge is authorized. Baseline `main` is `32e4a5f` after PR #110; final-head Build APK `37084800939` was green. Test-source additions are 21; measured inventory is 320 test files / 3,044 annotations / 39 AI classes / 462 AI cases. Preserve D1–D6 plus amendments, S1–S12, exactly three `client.stream(` sites, no `java.nio.file`, `canonicalPath != absolutePath` symlink checks, `ui/ai/` zero direct project writes and zero command execution, and one-brain S7. Do not change the default model. Formal device acceptance remains POSTPONED to Level 12; Levels 10–14 remain unauthorized. See [Phase 86](docs/phases/03-editor/chat-phase86/README.md), [Level 9 spec](docs/roadmaps/ai-integration/09_TASK_MEMORY_AND_PLANNING.md), [rule.md §3/§9](rule.md), and `docs/getting-started/NEXT_STEPS.md`.
 > **Prior owner instruction — 2026-10-02 (Phase 82 / 82B; historical as of that date):** “What ever we discussed add a research note in the project … The device test is postponed, 1st i will make it optimized than device test … Last merge it”. **Record research and merge the current branch after final-head CI; formal device acceptance POSTPONED until after optimization, not passed.** Informal Nemotron screenshots show repeated reads, raw tool/prompt clutter and “49 of 24 reads”; known agent-core problems remain open. [Research note](docs/research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md) records full-file/batch reads, context/preview separation, progress/counter/final-answer fixes, native-tool evaluation, Markdown UX and multi-API tradeoffs as **proposals, not implementation authorization**. Current Phase 82 code: one visible Stop-cancelable rate retry; 32,768 tokens / 48,000 reply chars; Continue 64,000/8; manual encrypted NVIDIA dev/test-only BYOK (Level 5A). GLM-5.3 can be entered manually; the owner declined a default-model change. No further app/test changes in this documentation update. Code CI 36995145462 green on 7b2ecac; ledger head e0665cb also green (36996946243). Work only on `arena/01a0fbc2-codec`, baseline main e089880; carry 828be38 already done. Standing §3 still requires per-change authority: this message authorizes this merge only. No device pass, live-model entitlement/quality, native tools or production NVIDIA use inferred. **5B/6+ and optimization code remain unstarted**. Old PRs #42/#83 untouched. After the authorized merge, record PR/merge SHA, main CI and actual release APK bytes on this session branch; do not auto-start optimization.
 
 > **Latest owner instruction — 2026-10-01 (AI Level 1 = Phase 76 ✅ DEVICE-PASSED & MERGED via [PR #102](https://github.com/pabi277/CodeC/pull/102); Phase 77 📋 BRIEFED):**
@@ -68,7 +67,36 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-10-01 (Phase 78, AI Level 2, implemented; device round owed; at the merge gate).**
+**CURRENT HANDOFF — 2026-10-03 (Phase 86 / AI Level 9; host pre-validation passed 72/72 across eight classes; Build APK run 37106545726 green on ddb75d3).**
+Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
+`docs/phases/03-editor/chat-phase86/README.md`, `docs/roadmaps/ai-integration/09_TASK_MEMORY_AND_PLANNING.md`,
+`docs/roadmaps/ai-integration/00_LEVEL0_DECISION_RECORD.md` (D6 amendment), and the shared security map.
+
+*Status:* Work is on `arena/01a1004c-codec`, based on `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`.
+The source, JVM tests, and required docs have been edited. A Temurin 25.0.2 + kotlinc 2.4.20 host
+harness compiled the Android-free production core/store and Level 8 regression paths and ran 72 selected methods across eight test classes: **72 passed, 0 failed**.
+This is not the full Gradle suite or Android/Compose compilation. Build APK run `37106180481` failed three existing Level 8 assertions; the refusal-copy and pointer-budget causes were fixed, and run `37106545726` is green on code fix head `ddb75d3`. No
+PR/merge is authorized. Formal device acceptance is postponed until Level 12; no live provider request
+was made. Remain at the §3 merge gate.
+
+*Owner D6 amendment:* only bounded, no-backup, non-secret admitted file snapshots plus structured
+findings/decisions/plan persist at `noBackupFilesDir/ai/task/<project>/`. Raw conversation, prompts,
+answers, maps, tool results and timeline remain ephemeral. Hard caps, pre-write secret filtering,
+project/key deletion cleanup, and an internal persistent-off path are included. Do **not** add the
+Level 10 on/off UI; no new model default, dependency, permission, DataStore key or endpoint.
+
+*Laws that must not break:* Send remains the only network road with exactly **three** `client.stream(`
+sites. `ui/ai/` has zero direct project writes and zero command execution. Use `java.io`; no
+`java.nio.file`; minSdk-24 symlink test is `canonicalPath != absolutePath`. Reapply AI-specific secret
+and admitted-path filtering; never reuse `ProjectSearch.isSearchable`. One brain writes (S7), parallel
+work is read-only IO. Do not persist raw chat or prompts. The initial preview and first Send must show
+and send the same memory/plan text verbatim; send-time reconciliation changes require a refreshed
+preview and another Send.
+
+*Next:* remain at the §3 merge gate. No PR or merge without the owner's explicit command; if a docs-only
+follow-up is pushed, verify that commit's Build APK check before stopping. Levels 10–14 remain unauthorized.
+
+**PREVIOUS HANDOFF — 2026-10-01 (Phase 76 merged; Phase 77 AI UI for phones device-passed and merged).**
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
 `docs/phases/03-editor/chat-phase78/README.md` + its three part docs + `DEVICE_ROUND.md`,
 `docs/roadmaps/ai-integration/02_WHOLE_PROJECT_CONTEXT.md` and `00_LEVEL0_DECISION_RECORD.md` (binding AI laws D1–D6, O1–O3).

@@ -133,7 +133,10 @@ class AiKeyStore(context: Context) {
         keyFile(provider).delete()
         runCatching { keyStore().deleteEntry(alias(provider)) }
         runCatching {
-            dir.parentFile?.let { com.codeci.ide.ui.projects.AiEditApplier.clearAllJournals(it) }
+            dir.parentFile?.let {
+                com.codeci.ide.ui.projects.AiEditApplier.clearAllJournals(it)
+                com.codeci.ide.ui.projects.AiTaskMemoryStore.clearAll(it)
+            }
         }
         val p = settings()
         p.remove(termsProp(provider))

@@ -16,7 +16,7 @@ Repository baseline for every claim here: `main` @ `1785b92` (PR #101). App sour
 | D3 | API key storage on the phone | **Encrypted with Android Keystore** | Yes |
 | D4 | Confirmation before code is sent | **Preview and confirm every request** | Yes |
 | D5 | Which files the AI may use | **Only the open CodeC project** under `files/CodeC/projects/`. No AI in single-file mode; no folders picked from shared storage. | Yes |
-| D6 | Are AI conversations saved? | **Not saved.** The chat is gone when closed; nothing new is persisted. | Yes |
+| D6 | Are AI conversations saved? | **Not saved.** Raw conversation history is not persisted. Later owner amendments allow only the one-task undo journal and bounded Level 9 task memory; neither stores the transcript or prompt. | Yes |
 
 These answers settle questions 1, 2 (partly), 3 and 4 of [`00_PRODUCT_AND_FOUNDATIONS.md`](00_PRODUCT_AND_FOUNDATIONS.md#decisions-needed-before-implementation). Question 2's "custom OpenAI-compatible endpoints" part, question 5 (rollback scope) and question 6 (on-device targets) belong to Levels 3, 5 and 6 and are **deferred, not decided** (§5).
 
@@ -57,8 +57,14 @@ Verified in Google's primary docs, 2026-09-30:
 - For Level 2 later, the context builder must add an **AI-specific deny list**. The existing `ProjectSearch.isSearchable` deliberately includes `.env`, `.env.*` and `.npmrc` through `ProjectFilesPolicy.usefulConfig` (`ui/editor/ProjectSearch.kt:159-172`, `ui/editor/ProjectFilesPolicy.kt`). Reusing the engine as it is would expose secrets.
 
 ### D6 — Nothing saved
-- The chat lives in memory only (for example in a ViewModel) and is cleared when the panel closes, the project changes, or the process dies. There is no history file, no DataStore entry for messages, and nothing in `.codec/`.
+- Raw chat, prompts, answers, maps, tool results and timeline live in memory only (for example in a ViewModel); no transcript/history file, message DataStore entry, or `.codec/` history is created. The existing owner amendments are narrow: a one-task edit-undo journal (2026-10-01) and the bounded Level 9 derived task-memory exception (2026-10-03), recorded below.
 - Server side: `store=false` (see D2). Google's own abuse-monitoring logs and free-tier product use still apply. The UI must not claim "nothing is kept anywhere".
+
+### Update 2026-10-03 — D6 amendment for Level 9 task memory
+
+Owner-authorized: permit only bounded task memory under `noBackupFilesDir/ai/task/<project>/`, excluded from Auto Backup and outside the project tree: admitted non-secret file cache plus structured findings, decisions and plan. Raw chat transcript, prompts, answers, maps, tool results and timeline remain ephemeral. Filter secrets before writes; enforce hard caps; delete memory on project deletion and key deletion. All other D6 limits remain unchanged. The persistent-off path keeps task-local in-memory behavior and clears retained copies. The user-facing on/off control belongs to Level 10 and is not implemented by Level 9.
+
+Implementation ledger: [Phase 86](../../phases/03-editor/chat-phase86/README.md) and [Level 9 spec](09_TASK_MEMORY_AND_PLANNING.md).
 
 ## 3. Level 1 constraints now fixed by Level 0
 

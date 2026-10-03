@@ -14,7 +14,7 @@ import org.junit.Test
 /**
  * Phase 80 (AI Level 4) — wiring and source-scan pins for the bounded agent:
  * read-only tools, one preview per task, a run only through CodeC's own RUN
- * action, and nothing new persisted.
+ * action, and the D6 limit that permits only Level 9's separate bounded task memory.
  *
  * Executed through [RepoFiles.codeOnly], so a comment or a string literal can
  * neither satisfy nor trip a structural pin (the Phase 45 lesson: *pin the
@@ -215,21 +215,23 @@ class AiLevel4WiringTest {
         assertTrue("and it must not apply itself", !finish.contains("AiEditApplier"))
     }
 
-    // ---- D6: nothing new persisted ---------------------------------------
+    // ---- D6: chat state stays ephemeral; task memory is the narrow amendment ----
 
     @Test
-    fun `the timeline lives in memory and the store learns no new key`() {
+    fun `the timeline stays in memory and bounded task memory adds no settings key`() {
         val vm = ai("AiViewModel.kt")
         for (banned in listOf("rememberSaveable", "SavedStateHandle", "Properties", "SharedPreferences")) {
-            assertFalse("AiViewModel must not persist the agent state ($banned)", vm.contains(banned))
+            assertFalse("AiViewModel must not persist chat or timeline state ($banned)", vm.contains(banned))
         }
+        assertTrue("only the separate Level 9 task-memory store is wired", vm.contains("AiTaskMemoryStore"))
         // The keys are string literals, so this half reads the RAW source: the
-        // question is what the store can persist, not what the code calls it.
+        // settings store must not become a transcript or task-memory database.
         val store = aiRaw("AiKeyStore.kt")
         for (key in listOf("bubble_pos", "bubble_show", "sheet_with_output", "model")) {
             assertTrue("the AI settings keys stay the Phase 76-79 set ($key)", store.contains(key))
         }
-        assertFalse("no new agent key may be stored", store.contains("agent_"))
+        assertFalse("no agent chat or task-memory key may be added to properties", store.contains("agent_"))
+        assertTrue("task memory is cleared on key deletion", store.contains("AiTaskMemoryStore.clearAll"))
     }
 
     // ---- the surface: the timeline, the approval card, the Stop -----------

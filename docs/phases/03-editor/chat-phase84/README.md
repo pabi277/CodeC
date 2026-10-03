@@ -1,6 +1,6 @@
 # Phase 84 — AI Level 7: agent correctness
 
-> **Status:** 🚧 IMPLEMENTED on `arena/01a0fe36-codec` · host-shim pre-validation **337/337** (24 pre-existing AI classes + 2 new) · **not merged**, no PR opened.
+> **Status:** IMPLEMENTED on `arena/01a0fe36-codec` · host-shim pre-validation **337/337** · merged with Phase 85 via authorized PR #110 to `main` @ `32e4a5f`; final-head Build APK **37084800939 ✅ GREEN**. Formal device acceptance remains POSTPONED (Level 12).
 > **Owner command (verbatim):** “Start level 7” (2026-10-03).
 > **Baseline:** `main` @ `392a614573137a56db112764a57409773b9fe962` (PR #109 merge). Level 7 spec: [`07_AGENT_CORRECTNESS.md`](../../../roadmaps/ai-integration/07_AGENT_CORRECTNESS.md); shared foundation: [`00_AGENTIC_MAP_AND_SECURITY_RULES.md`](../../../roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 > **Device acceptance:** not part of this phase. The formal device round remains **POSTPONED** (Level 12), not passed.
@@ -81,6 +81,6 @@ rendered “49 of 24 reads”. Those measurements are the recorded “before”.
 - [x] Six fixes implemented as pure policy + thin wiring; three stream sites preserved.
 - [x] 27 new tests; 4 pinned cases updated to the corrected contract; 337/337 host pre-validation.
 - [x] Level 6 baseline re-run shows the full result now reaches the request and counters stay within caps.
-- [ ] Build APK CI on the pushed head (run id in the report).
+- [x] Final-head Build APK CI for the combined Phase 84+85 PR: **37084800939 ✅ GREEN**.
+- [x] PR #110 merged to `main` at `32e4a5f87a9f73874a4de17967187445c49a2461` on the owner's authorization.
 - [ ] Device pass: **not requested** — the formal round stays with Level 12.
-- [ ] PR/merge: **not authorized**; stop at `rule.md` §3.

@@ -7,6 +7,7 @@ import com.codeci.ide.ui.projects.AiApplyOutcome
 import com.codeci.ide.ui.projects.AiEditApplier
 import com.codeci.ide.ui.projects.AiUndoOutcome
 import com.codeci.ide.ui.projects.AiUndoSummary
+import com.codeci.ide.ui.projects.AiTaskMemoryStore
 import com.codeci.ide.ui.projects.ProjectManager
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -28,8 +29,9 @@ import kotlin.coroutines.coroutineContext
 enum class AiPhase { IDLE, PREVIEW, STREAMING, DONE, FAILED }
 
 /**
- * Everything the panel draws. **In memory only** (D6): no field here is ever
- * written to disk, and the API key is never part of it.
+ * Everything the panel draws. Chat, prompts, answers and timeline stay in
+ * memory (D6); Level 9's separate bounded derived task memory is not UI state.
+ * The API key is never part of this object.
  */
 data class AiUiState(
     val keySaved: Boolean = false,
@@ -127,20 +129,21 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     private var pendingExistingPaths: Set<String> = emptySet()
 
     /**
-     * Phase 80 (Level 4) — the running agent task, or null. Everything here is
-     * per-task and in memory (D6): the project root, the map that was sent, the
-     * walk's admitted paths, the caps in use, and the pack of tool results the
-     * next request carries. A project switch, [clear] or process death throws
-     * it away.
+     * Phase 80/86 — the running agent task, or null. Chat, requests, answers,
+     * timeline and exact-result cache are in memory only. The separate bounded
+     * [AiTaskMemory] contains only admitted file snapshots and structured notes;
+     * it is revalidated before use and never contains raw prompts/transcripts.
      */
     private class AgentSession(
         val question: String,
         val source: AiSource,
         val root: File,
         val mapText: String,
+        val memoryStore: AiTaskMemoryStore,
+        var memory: AiTaskMemory,
         /** The Level 2 walk's admitted code/text paths — the tool surface's whole world. */
         val paths: List<String>,
-        val dirtyBuffers: Map<String, String>,
+        var dirtyBuffers: Map<String, String>,
         val systemInstruction: String,
         val provider: AiProviderId,
         val model: String,
@@ -159,7 +162,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
          * are served from it at zero execution cost, and a run of identical
          * no-progress calls stops the loop. Born with the task, gone when it ends.
          */
-        var workingSet: AiAgentWorkingSet = AiAgentWorkingSet()
+        var workingSet: AiAgentWorkingSet = AiAgentWorkingSet(),
+        var memoryPersistenceFailed: Boolean = false
     ) {
         val projectView: AiToolProjectView
             get() = AiToolProjectView(existingPaths = paths.toSet(), runsRemaining = budget.runsRemaining())
@@ -578,8 +582,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      * Reads the project, builds the map, and lands on the same preview gate as
      * every other source; nothing leaves the phone until Send.
      */
-    fun agentAsk(question: String, openPath: String?, openText: String?, openDirty: Boolean) =
-        startAgent(AiSource.PROJECT, question, openPath, openText, openDirty)
+    fun agentAsk(
+        question: String,
+        openPath: String?,
+        openText: String?,
+        openDirty: Boolean,
+        dirtyBuffers: Map<String, String> = emptyMap()
+    ) = startAgent(AiSource.PROJECT, question, openPath, openText, openDirty, dirtyBuffers)
 
     /**
      * Phase 80 — start an **agent edit task** (the *Propose edits* chip). Same
@@ -587,15 +596,21 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      * `<<<CODEC_EDIT …>>>` blocks go through the Level 3 parser and diff
      * review — so an agent edit is reviewed exactly like a Level 3 one.
      */
-    fun agentPropose(question: String, openPath: String?, openText: String?, openDirty: Boolean) =
-        startAgent(AiSource.PROPOSE_EDITS, question, openPath, openText, openDirty)
+    fun agentPropose(
+        question: String,
+        openPath: String?,
+        openText: String?,
+        openDirty: Boolean,
+        dirtyBuffers: Map<String, String> = emptyMap()
+    ) = startAgent(AiSource.PROPOSE_EDITS, question, openPath, openText, openDirty, dirtyBuffers)
 
     private fun startAgent(
         source: AiSource,
         question: String,
         openPath: String?,
         openText: String?,
-        openDirty: Boolean
+        openDirty: Boolean,
+        dirtyBuffers: Map<String, String>
     ) {
         val s = _state.value
         if (s.phase == AiPhase.STREAMING || s.gathering || s.applying) return
@@ -639,17 +654,25 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val listed = infos.map { it.path }.toSet()
             val rest = scan.allTextPaths.filter { path -> listed.none { AiProjectFiles.samePath(it, path) } }
             val map = AiRepoMap.build(infos + rest.map { AiRepoMap.FileInfo(it, 0, null) })
-            // The live buffer is offered to the tools only under a path the
-            // walk admitted and addressed relatively — never an absolute device
-            // path, and never a file the AI filter never accepted.
-            val openRelative = openPath?.trim()?.takeIf { it.isNotEmpty() }
-                ?.replace('\\', '/')?.removePrefix("./")?.trimStart('/')
-            val dirty = if (openRelative != null && openDirty && openText != null &&
-                scan.allTextPaths.any { AiProjectFiles.samePath(it, openRelative) }
-            ) {
-                mapOf(openRelative to openText)
-            } else {
-                emptyMap()
+            // Every dirty open tab is admitted under its project-relative path;
+            // the active buffer is refreshed from the explicit snapshot as well.
+            val liveBuffers = LinkedHashMap<String, String>()
+            for ((rawPath, text) in dirtyBuffers) {
+                val safePath = AiTaskMemoryPolicy.safeRelativePath(rawPath) ?: continue
+                val admittedPath = scan.allTextPaths.firstOrNull { AiProjectFiles.samePath(it, safePath) } ?: continue
+                liveBuffers[admittedPath] = text
+            }
+            val safeOpenPath = openPath?.let(AiTaskMemoryPolicy::safeRelativePath)
+            val admittedOpenPath = safeOpenPath?.let { safe ->
+                scan.allTextPaths.firstOrNull { AiProjectFiles.samePath(it, safe) }
+            }
+            if (admittedOpenPath != null && openDirty && openText != null) {
+                liveBuffers[admittedOpenPath] = openText
+            }
+            val memoryStore = AiTaskMemoryStore(getApplication<Application>().noBackupFilesDir, projectName)
+            val taskMemory = withContext(Dispatchers.IO) {
+                runCatching { memoryStore.load(root, scan.allTextPaths, liveBuffers) }
+                    .getOrDefault(AiTaskMemory.EMPTY)
             }
             val prompt = AiContextBuilder.fromAgent(
                 source = source,
@@ -659,7 +682,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 scannedFiles = scan.filesSeen,
                 skippedSecret = scan.skippedSecret,
                 skippedNotText = scan.skippedNotText,
-                hitEntryCap = scan.hitEntryCap
+                hitEntryCap = scan.hitEntryCap,
+                taskMemory = taskMemory
             )
             // Level 3's baseline snapshot still protects an agent edit: the
             // proposal is parsed against the project as it was when the preview
@@ -680,8 +704,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     source = source,
                     root = root,
                     mapText = map.text,
+                    memoryStore = memoryStore,
+                    memory = taskMemory,
                     paths = scan.allTextPaths,
-                    dirtyBuffers = dirty,
+                    dirtyBuffers = liveBuffers,
                     systemInstruction = prompt.prompt.systemInstruction,
                     provider = s.provider, model = s.model,
                     budget = AiAgentBudget()
@@ -692,6 +718,18 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             _state.update { it.copy(gathering = false) }
             preview(prompt)
         }
+    }
+
+    /** Level 9 — keep cache validation aligned with every currently dirty project tab. */
+    fun updateAgentDirtyBuffers(dirtyBuffers: Map<String, String>) {
+        val session = agent ?: return
+        val current = LinkedHashMap<String, String>()
+        for ((rawPath, text) in dirtyBuffers) {
+            val safePath = AiTaskMemoryPolicy.safeRelativePath(rawPath) ?: continue
+            val admittedPath = session.paths.firstOrNull { AiProjectFiles.samePath(it, safePath) } ?: continue
+            current[admittedPath] = text
+        }
+        session.dirtyBuffers = current
     }
 
     /** Phase 80 — the user approved the run: the sheet calls the editor's RUN. */
@@ -801,32 +839,57 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     private fun agentTurn(
         session: AgentSession,
         finalSynthesis: Boolean = false,
-        stopReason: AiAgentStopReason? = null
+        stopReason: AiAgentStopReason? = null,
+        refreshMemory: Boolean = true
     ) {
-        val packed = if (finalSynthesis) {
-            AiAgentPrompt.finalSynthesis(
-                question = session.question,
-                mapText = session.mapText,
-                steps = _state.value.agentSteps
-            )
-        } else {
-            AiAgentPrompt.pack(
-                question = session.question,
-                mapText = session.mapText,
-                steps = _state.value.agentSteps
-            )
-        }
-        // Captured once. Every retry of this turn has the identical recipient, strings and budget.
-        val body = AiProviderRequests.body(session.provider, session.model, session.systemInstruction, packed.text)
-        if (!finalSynthesis) session.budget = session.budget.withTurn()
-        _state.update { it.copy(phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false, agentUsage = usage(session)) }
-        appendAgentStep(AiAgentStep(
-            kind = AiAgentStepKind.REQUEST,
-            title = AiCopy.requestRecipient(session.provider, session.model),
-            sentSystemInstruction = session.systemInstruction,
-            sentUserText = packed.text
-        ))
         job = viewModelScope.launch {
+            if (refreshMemory) {
+                val before = session.memory
+                var reconciled: AiTaskMemory? = null
+                var attemptsRemaining = 3
+                while (reconciled == null && attemptsRemaining > 0) {
+                    attemptsRemaining--
+                    val dirtySnapshot = session.dirtyBuffers.toMap()
+                    val candidate = withContext(Dispatchers.IO) {
+                        session.memoryStore.reconcile(before, session.root, session.paths, dirtySnapshot)
+                    }
+                    if (session.dirtyBuffers == dirtySnapshot) reconciled = candidate
+                }
+                // If editing never settles during three disk checks, fail closed:
+                // omit file-backed memory for this request instead of sending stale
+                // cached notes. The next request can restore it from a stable snapshot.
+                session.memory = reconciled ?: withContext(Dispatchers.IO) {
+                    session.memoryStore.reconcile(before, session.root, emptyList(), emptyMap())
+                }
+                if (session.memory != before) persistTaskMemory(session)
+            }
+            if (!isActive || agent !== session) return@launch
+            val steps = _state.value.agentSteps
+            val packed = if (finalSynthesis) {
+                AiAgentPrompt.finalSynthesis(
+                    question = session.question,
+                    mapText = session.mapText,
+                    steps = steps,
+                    memory = session.memory
+                )
+            } else {
+                AiAgentPrompt.pack(
+                    question = session.question,
+                    mapText = session.mapText,
+                    steps = steps,
+                    memory = session.memory
+                )
+            }
+            // Captured once. Every retry of this turn has the identical recipient, strings and budget.
+            val body = AiProviderRequests.body(session.provider, session.model, session.systemInstruction, packed.text)
+            if (!finalSynthesis) session.budget = session.budget.withTurn()
+            _state.update { it.copy(phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false, agentUsage = usage(session)) }
+            appendAgentStep(AiAgentStep(
+                kind = AiAgentStepKind.REQUEST,
+                title = AiCopy.requestRecipient(session.provider, session.model),
+                sentSystemInstruction = session.systemInstruction,
+                sentUserText = packed.text
+            ))
             val key = withContext(Dispatchers.IO) { store.loadKey(session.provider) }
             if (key == null) {
                 _state.update { it.copy(keySaved = false) }
@@ -838,6 +901,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 streamWithRetry(session = session, onText = { text ->
                     _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = text) else s }
                 }) { publish ->
+                    // The agent loop's sole request road; always reached after Send.
                     client.stream(session.provider, key, session.model, body, onText = publish)
                 }
             } catch (_: AgentDeadlineReached) {
@@ -852,9 +916,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             when (outcome) {
                 is AiOutcome.Answer ->
                     if (finalSynthesis) {
+                        val visible = extractAndPersistTaskMemory(session, outcome.text)
                         // Tools are masked: whatever came back is the user's answer.
                         // Any stray block is stripped so the answer is always prose (S12).
-                        val prose = AiToolProtocol.proseOnly(outcome.text)
+                        val prose = AiToolProtocol.proseOnly(visible)
                             .ifBlank { AiAgentLimits.stopSentence(stopReason ?: AiAgentStopReason.PROVIDER_FAILURE) }
                         finalizeStop(session, stopReason ?: AiAgentStopReason.PROVIDER_FAILURE, null, prose)
                     } else {
@@ -876,21 +941,21 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             reused = session.budget.toolCallsReused
         )
 
-    private fun onAgentAnswer(session: AgentSession, text: String, cutShort: Boolean) {
+    private suspend fun onAgentAnswer(session: AgentSession, text: String, cutShort: Boolean) {
+        val visibleText = extractAndPersistTaskMemory(session, text)
         _state.update { it.copy(agentUsage = usage(session)) }
         val step = AiAgentStep(
             kind = AiAgentStepKind.ANSWER,
             title = AiCopy.agentStepAnswer(session.budget.turnsUsed),
-            detail = text.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS),
-            modelResult = text
+            detail = visibleText.take(AiAgentLimits.MAX_STEP_DETAIL_CHARS),
+            modelResult = visibleText
         )
         appendAgentStep(step)
-        when (val parsed = AiToolProtocol.parse(text)) {
+        when (val parsed = AiToolProtocol.parse(visibleText)) {
             is AiToolParse.Malformed -> {
                 // Phase 84 (fix 6): a block CodeC cannot read is refused, but the
-                // blocks that DID parse are kept and run — the old code threw them
-                // all away and the model re-read from scratch. The refusal is
-                // counted separately (fix 3); it never inflates the execution cap.
+                // blocks that DID parse are kept and run; the memory protocol block
+                // was removed before this tool parser ever sees the answer.
                 session.budget = session.budget.withRefused(1)
                 appendAgentStep(
                     AiAgentStep(
@@ -910,6 +975,32 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }
             is AiToolParse.Calls -> handleParsedCalls(session, parsed, cutShort)
         }
+    }
+
+    private suspend fun extractAndPersistTaskMemory(session: AgentSession, text: String): String {
+        val extracted = AiTaskMemoryProtocol.extract(text)
+        val update = extracted.update ?: return extracted.visibleText
+        val next = session.memory.applyUpdate(update, session.paths, session.question)
+        if (next != session.memory) {
+            session.memory = next
+            persistTaskMemory(session)
+        }
+        return extracted.visibleText
+    }
+
+    private suspend fun persistTaskMemory(session: AgentSession): Boolean {
+        val saved = withContext(Dispatchers.IO) {
+            session.memoryStore.save(session.memory, session.paths)
+        }
+        if (!saved) {
+            session.memoryPersistenceFailed = true
+            _state.update { state ->
+                if (state.notice == null || state.notice == AiCopy.TASK_MEMORY_SAVE_FAILED) {
+                    state.copy(notice = AiCopy.TASK_MEMORY_SAVE_FAILED)
+                } else state
+            }
+        }
+        return saved
     }
 
     /** Routes one parsed answer's calls through the policy and executes the decision. */
@@ -964,36 +1055,58 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         job = viewModelScope.launch {
             val stop = { !isActive }
             for (call in calls) {
-                // S11: note every issued call so a run of identical, no-progress
-                // calls can be detected across the whole loop.
-                session.workingSet = session.workingSet.note(AiToolProtocol.describeCall(call))
-                // S11: an exact-duplicate read (same path, same range) is served from
-                // the loop-local working set at zero execution cost — counted as
-                // reused, never as an execution against MAX_TOOL_CALLS.
-                val readKey = if (call.name == AiToolName.READ_FILE && call.path != null) {
-                    AiAgentWorkingSet.readKey(
-                        call.path, call.start ?: 1, call.end ?: AiToolLimits.MAX_READ_LINES
+                val memoryBefore = session.memory
+                var dirtySnapshot = session.dirtyBuffers.toMap()
+                var readPlan = withContext(Dispatchers.IO) {
+                    memoryBefore.prepareRead(
+                        call, session.root, session.paths, dirtySnapshot, System.currentTimeMillis()
                     )
-                } else null
-                val cached = readKey?.let { session.workingSet.cached(it) }
+                }
+                // A keystroke/tab switch during snapshotting invalidates that
+                // candidate before it can serve a cached result. Re-plan once
+                // from the newest live buffer map; the runner uses this same map.
+                if (session.dirtyBuffers != dirtySnapshot) {
+                    dirtySnapshot = session.dirtyBuffers.toMap()
+                    readPlan = withContext(Dispatchers.IO) {
+                        memoryBefore.prepareRead(
+                            call, session.root, session.paths, dirtySnapshot, System.currentTimeMillis()
+                        )
+                    }
+                }
+                if (session.dirtyBuffers != dirtySnapshot) {
+                    // Continuous editing: use no cache for this call. The tool
+                    // still receives one stable buffer snapshot; next read rekeys it.
+                    readPlan = readPlan.copy(cachedFiles = emptyMap(), resultCacheKey = null)
+                }
+                session.memory = readPlan.memory
+                session.workingSet = session.workingSet.note(readPlan.progressSignature)
+                val cached = readPlan.resultCacheKey?.let { session.workingSet.cached(it) }
                 val outcome: AiToolRunner.Outcome
                 if (cached != null) {
                     outcome = AiToolRunner.Outcome(true, cached)
                     session.budget = session.budget.withReused(1)
                 } else {
                     outcome = withContext(Dispatchers.IO) {
-                        AiToolRunner.execute(call, session.root, session.paths, session.dirtyBuffers, stop)
+                        AiToolRunner.execute(
+                            call = call,
+                            root = session.root,
+                            paths = session.paths,
+                            dirtyBuffers = dirtySnapshot,
+                            shouldStop = stop,
+                            cachedFiles = readPlan.cachedFiles
+                        )
                     }
-                    if (readKey != null && outcome.ok) {
-                        session.workingSet = session.workingSet.record(readKey, outcome.text)
+                    if (readPlan.resultCacheKey != null && outcome.ok) {
+                        session.workingSet = session.workingSet.record(readPlan.resultCacheKey, outcome.text)
                     }
                     session.budget = session.budget.withToolCalls(1)
                 }
+                if (session.memory != memoryBefore) persistTaskMemory(session)
                 val step = AiAgentStep(
                     kind = AiAgentStepKind.TOOL,
                     title = AiToolProtocol.describeCall(call) + if (cached != null) " (reused)" else "",
-                    // Phase 84 (S1/S2): the model gets the full result (cut marker
-                    // intact); the timeline gets a short preview that keeps the marker.
+                    // The model gets the full result (cut marker intact); the
+                    // timeline gets a short preview that keeps the marker.
                     detail = AiAgentLimits.timelineDetail(outcome.text, AiToolRunner.CUT_NOTE),
                     modelResult = outcome.text,
                     ok = outcome.ok
@@ -1097,16 +1210,48 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(notice = AiCopy.NO_PROJECT_FILES) }
                 return
             }
-            session.budget = AiAgentBudget(startedAtMs = System.currentTimeMillis())
-            _state.update {
-                it.copy(
-                    phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false,
-                    proposalResult = null, applyConflictPaths = emptyList(), undoConflictPaths = emptyList(),
-                    agentSteps = listOf(AiAgentStep(AiAgentStepKind.TASK, session.question)),
-                    agentRun = null, agentRunRunning = false, agentUsage = usage(session)
-                )
+            // D4: revalidate task memory after the user has seen the preview. If
+            // any cached file/derived note changed, refresh the exact preview and
+            // require another Send rather than silently changing its contents.
+            job = viewModelScope.launch {
+                var dirtySnapshot = session.dirtyBuffers.toMap()
+                var currentMemory = withContext(Dispatchers.IO) {
+                    session.memoryStore.reconcile(session.memory, session.root, session.paths, dirtySnapshot)
+                }
+                if (session.dirtyBuffers != dirtySnapshot) {
+                    dirtySnapshot = session.dirtyBuffers.toMap()
+                    currentMemory = withContext(Dispatchers.IO) {
+                        session.memoryStore.reconcile(currentMemory, session.root, session.paths, dirtySnapshot)
+                    }
+                }
+                if (agent !== session || _state.value.phase != AiPhase.PREVIEW) {
+                    job = null
+                    return@launch
+                }
+                session.memory = currentMemory
+                if (currentMemory != prompt.agentMemory || session.dirtyBuffers != dirtySnapshot) {
+                    _state.update { state ->
+                        if (state.phase == AiPhase.PREVIEW && state.prompt?.agent == true) {
+                            state.copy(
+                                prompt = state.prompt.copy(agentMemory = currentMemory),
+                                notice = AiCopy.TASK_MEMORY_CHANGED
+                            )
+                        } else state
+                    }
+                    job = null
+                    return@launch
+                }
+                session.budget = AiAgentBudget(startedAtMs = System.currentTimeMillis())
+                _state.update {
+                    it.copy(
+                        phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false,
+                        proposalResult = null, applyConflictPaths = emptyList(), undoConflictPaths = emptyList(),
+                        agentSteps = listOf(AiAgentStep(AiAgentStepKind.TASK, session.question)),
+                        agentRun = null, agentRunRunning = false, agentUsage = usage(session), notice = null
+                    )
+                }
+                agentTurn(session, refreshMemory = false)
             }
-            agentTurn(session)
             return
         }
         val model = prompt.model

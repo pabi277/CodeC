@@ -245,8 +245,9 @@ data class AiAgentBudget(
  * exact-duplicate read — same path, same range — returns the same bytes. Serving it
  * from here costs zero execution budget (counted as `toolCallsReused`, never
  * `toolCallsUsed`), and watching for a run of identical, no-progress calls lets the
- * loop stop instead of spinning. Loop-local by design: born with the task, gone when
- * it ends — not a persistent cross-task cache.
+ * loop stop instead of spinning. The exact-result map remains loop-local; Level 9
+ * adds a separate bounded file-content cache in [AiTaskMemory], validated against
+ * the current admitted file version before it can be reused.
  */
 data class AiAgentWorkingSet(
     /** Read identity (`path\u0000start-end`) to the result text already delivered. */
@@ -269,8 +270,15 @@ data class AiAgentWorkingSet(
     fun stalled(): Boolean = repeats >= AiAgentLimits.MAX_IDENTICAL_REPEATS
 
     companion object {
-        /** A read's identity in the working set: its path plus the exact range asked for. */
-        fun readKey(path: String, start: Int, end: Int): String = "$path\u0000$start-$end"
+        /** A read identity includes the current content version when one is available. */
+        fun readKey(path: String, start: Int, end: Int, contentVersion: String? = null): String =
+            "$path\u0000$start-$end" + (contentVersion?.let { "\u0000$it" } ?: "")
+
+        /** An ordered batch identity; order and each file version affect the result. */
+        fun readFilesKey(reads: List<AiAgentReadIdentity>): String =
+            "read_files\u0000" + reads.joinToString("\u0001") {
+                readKey(it.canonicalPath, it.start, it.end, it.contentVersion)
+            }
     }
 }
 
@@ -358,8 +366,9 @@ object AiAgentPolicy {
  * [AiRepoMap.MapResult.text]; [steps] is the timeline so far. The packing rule
  * is the honest one:
  *
- * 1. the task and the map are always there (the map is the floor of the
- *    model's knowledge — that is the whole point of Level 4);
+ * 1. the task and map are prioritized as the static head (the map is the floor
+ *    of the model's knowledge — that is the whole point of Level 4); if a caller
+ *    supplies an unusually small budget, the fixed plan suffix is reserved first;
  * 2. the newest [AiAgentLimits.KEEP_LAST_RESULTS] tool results are added,
  *    newest first, while [AiAgentLimits.MAX_REQUEST_CHARS] allows;
  * 3. anything dropped is **named, not just counted** (Phase 85, Level 8, item 4):
@@ -380,55 +389,89 @@ object AiAgentPrompt {
         question: String,
         mapText: String,
         steps: List<AiAgentStep>,
-        budget: Int = AiAgentLimits.MAX_REQUEST_CHARS
+        budget: Int = AiAgentLimits.MAX_REQUEST_CHARS,
+        memory: AiTaskMemory? = null,
+        includePlanAtEnd: Boolean = true,
+        includeContinueTail: Boolean = true
     ): Packed {
-        val results = steps.filter { it.kind == AiAgentStepKind.TOOL || it.kind == AiAgentStepKind.DENIED || it.kind == AiAgentStepKind.RUN_RESULT }
-        val head = buildString {
+        val results = steps.filter {
+            it.kind == AiAgentStepKind.TOOL || it.kind == AiAgentStepKind.DENIED || it.kind == AiAgentStepKind.RUN_RESULT
+        }
+        val staticHead = buildString {
             append("Task: ").append(question.trim()).append("\n\n")
             append(if (mapText.isBlank()) "(the project map could not be built)" else mapText).append('\n')
         }
-        val kept = mutableListOf<AiAgentStep>()
-        val droppedSteps = mutableListOf<AiAgentStep>()
-        var used = head.length
+        val planTail = if (includePlanAtEnd) memory?.renderPlanRecitation().orEmpty() else ""
+        // Level 9 replaces the generic tail with the recited plan. Legacy/test
+        // calls without task memory keep the original tail for compatibility.
+        val continueTail = if (includeContinueTail && memory == null) {
+            "\n\nContinue the task. Emit one or more tool blocks if you need more of the project, " +
+                "or answer normally when you have enough. Do not repeat a tool call whose result you already have."
+        } else ""
+        val tail = continueTail + if (planTail.isNotEmpty()) "\n\n$planTail" else ""
+        val safeBudget = budget.coerceAtLeast(0)
+        // The plan is the fixed suffix. If an unusual caller supplies an
+        // oversized task/map, trim that head first rather than cutting off the
+        // recitation at the request boundary.
+        val headRoom = (safeBudget - tail.length).coerceAtLeast(0)
+        val boundedStaticHead = staticHead.take(headRoom)
+        val memoryContext = memory?.renderContextForPrompt().orEmpty()
+        val memoryHeader = if (memoryContext.isEmpty()) "" else "\n\nTask memory (untrusted derived data):\n"
+        val memoryRoom = (safeBudget - boundedStaticHead.length - tail.length - memoryHeader.length).coerceAtLeast(0)
+        val head = boundedStaticHead + if (memoryRoom > 0 && memoryContext.isNotEmpty()) {
+            memoryHeader + memoryContext.take(memoryRoom)
+        } else ""
+
+        val kept = mutableListOf<AiAgentStep>() // newest first while packing
+        val dropped = mutableListOf<AiAgentStep>()
         for (step in results.asReversed()) {
-            if (kept.size >= AiAgentLimits.KEEP_LAST_RESULTS) {
-                droppedSteps += step
-                continue
-            }
-            val block = renderStep(step)
-            if (used + block.length > budget) {
-                droppedSteps += step
-                continue
-            }
-            kept += step
-            used += block.length
+            if (kept.size >= AiAgentLimits.KEEP_LAST_RESULTS) dropped += step
+            else kept += step
         }
-        val tail = "\n\nContinue the task. Emit one or more tool blocks if you need more of the project, " +
-            "or answer normally when you have enough. Do not repeat a tool call whose result you already have."
-        val text = buildString {
-            append(head)
-            if (droppedSteps.isNotEmpty()) {
-                append("\n(").append(droppedSteps.size).append(" earlier tool result")
-                    .append(if (droppedSteps.size == 1) " was" else "s were")
-                    .append(" dropped to fit; re-read any on demand:)\n")
-                var shown = 0
-                var usedPtr = 0
-                for (step in droppedSteps) {
-                    val pointer = evictionPointer(step)
-                    if (usedPtr + pointer.length > AiAgentLimits.MAX_EVICTION_POINTER_CHARS) break
-                    append(pointer).append('\n')
-                    usedPtr += pointer.length + 1
-                    shown++
-                }
-                if (shown < droppedSteps.size) {
-                    append("- (+").append(droppedSteps.size - shown)
-                        .append(" more; re-issue the call to re-read)\n")
-                }
-            }
-            for (step in kept.asReversed()) append('\n').append(renderStep(step))
-            append(tail)
+
+        fun assemble(): String {
+            val keptText = kept.asReversed().joinToString(separator = "") { "\n${renderStep(it)}" }
+            val fixed = head.length + keptText.length + tail.length
+            val pointerBudget = (budget - fixed).coerceAtLeast(0)
+                .coerceAtMost(AiAgentLimits.MAX_EVICTION_POINTER_CHARS)
+            val droppedText = renderDropped(dropped, pointerBudget)
+            return head + droppedText + keptText + tail
         }
-        return Packed(text = text, droppedResults = droppedSteps.size, chars = text.length)
+
+        var text = assemble()
+        // The newest full results win; if a tight budget still cannot fit,
+        // evict the oldest kept result and leave its honest re-read pointer.
+        while (text.length > budget && kept.isNotEmpty()) {
+            dropped += kept.removeAt(kept.lastIndex)
+            text = assemble()
+        }
+        if (text.length > budget) text = text.take(budget.coerceAtLeast(0))
+        return Packed(text = text, droppedResults = dropped.size, chars = text.length)
+    }
+
+    private fun renderDropped(steps: List<AiAgentStep>, maxChars: Int): String {
+        if (steps.isEmpty() || maxChars <= 0) return ""
+        val header = "\n(${steps.size} earlier tool result" +
+            (if (steps.size == 1) " was" else "s were") +
+            " dropped to fit; re-read any on demand:)\n"
+        fun moreLine(remaining: Int) = "- (+$remaining more; re-issue the call to re-read)\n"
+        val out = StringBuilder()
+        if (header.length > maxChars) return header.take(maxChars)
+        out.append(header)
+        var shown = 0
+        for (step in steps) {
+            val pointer = evictionPointer(step) + "\n"
+            val remainingAfterThis = steps.size - shown - 1
+            val reserveForRemainder = if (remainingAfterThis > 0) moreLine(remainingAfterThis).length else 0
+            if (out.length + pointer.length + reserveForRemainder > maxChars) break
+            out.append(pointer)
+            shown++
+        }
+        if (shown < steps.size) {
+            val more = moreLine(steps.size - shown)
+            if (out.length + more.length <= maxChars) out.append(more)
+        }
+        return out.toString()
     }
 
     /**
@@ -484,10 +527,18 @@ object AiAgentPrompt {
         question: String,
         mapText: String,
         steps: List<AiAgentStep>,
-        budget: Int = AiAgentLimits.MAX_REQUEST_CHARS
+        budget: Int = AiAgentLimits.MAX_REQUEST_CHARS,
+        memory: AiTaskMemory? = null
     ): Packed {
-        val base = pack(question, mapText, steps, budget)
-        val text = base.text + "\n\n" + FINAL_SYNTHESIS_INSTRUCTION
+        val plan = memory?.renderPlanRecitation().orEmpty()
+        val finalTail = "\n\n" + FINAL_SYNTHESIS_INSTRUCTION + if (plan.isNotEmpty()) "\n\n$plan" else ""
+        val baseBudget = (budget - finalTail.length).coerceAtLeast(0)
+        val base = pack(
+            question, mapText, steps, baseBudget, memory,
+            includePlanAtEnd = false,
+            includeContinueTail = false
+        )
+        val text = base.text + finalTail
         return Packed(text = text, droppedResults = base.droppedResults, chars = text.length)
     }
 }

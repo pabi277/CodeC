@@ -60,7 +60,8 @@ object AiToolRunner {
         root: File,
         paths: List<String>,
         dirtyBuffers: Map<String, String> = emptyMap(),
-        shouldStop: () -> Boolean = { false }
+        shouldStop: () -> Boolean = { false },
+        cachedFiles: Map<String, String> = emptyMap()
     ): Outcome {
         val rootDir = AiProjectReader.canonicalFileSafe(root)
             ?: return Outcome(false, "The project folder could not be read.")
@@ -68,8 +69,8 @@ object AiToolRunner {
         return when (call.name) {
             AiToolName.LIST_FILES -> listFiles(call, paths)
             AiToolName.SEARCH_PROJECT -> search(call, rootDir, paths, shouldStop)
-            AiToolName.READ_FILE -> read(call, rootDir, dirtyBuffers, shouldStop)
-            AiToolName.READ_FILES -> readFiles(call, rootDir, paths, dirtyBuffers, shouldStop)
+            AiToolName.READ_FILE -> read(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles)
+            AiToolName.READ_FILES -> readFiles(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles)
             // request_run is an approval request; it must never execute anything.
             AiToolName.REQUEST_RUN -> Outcome(false, "request_run is approved by the user, not executed as a tool.")
         }
@@ -185,41 +186,64 @@ object AiToolRunner {
     private fun read(
         call: AiToolCall,
         rootDir: File,
+        paths: List<String>,
         dirtyBuffers: Map<String, String>,
-        shouldStop: () -> Boolean = { false }
+        shouldStop: () -> Boolean = { false },
+        cachedFiles: Map<String, String> = emptyMap()
     ): Outcome {
         val path = call.path ?: return Outcome(false, "read_file needs a path.")
         if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
             return Outcome(false, "$path is credential-shaped and is never read.")
         }
+        if (paths.none { AiProjectFiles.samePath(it, path) }) {
+            return Outcome(false, "$path is not a code or text file in this project.")
+        }
+        if (AiTaskMemoryPolicy.safeRelativePath(path) == null) {
+            return Outcome(false, "$path is not an admitted code/text path.")
+        }
+        val file = File(rootDir, path)
+        if (!safeChild(file, rootDir)) return Outcome(false, "$path is outside the project.")
         val requestedStart = (call.start ?: 1).coerceAtLeast(1)
         val requestedEnd = (call.end ?: Int.MAX_VALUE).coerceAtLeast(requestedStart)
         val fromBuffer = dirtyBuffers.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        val fromMemory = if (fromBuffer == null) {
+            cachedFiles.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        } else null
+        val fromText = fromBuffer ?: fromMemory
+        val fromDirtyBuffer = fromBuffer != null
+        val fromCachedMemory = fromMemory != null
 
-        // Phase 85 (Level 8): the dirty buffer is already whole in memory; the disk
-        // path streams the requested range so ANY line is reachable, not only the
-        // lines inside the first 24 000 characters.
+        // Level 9 reuses only a persisted snapshot whose version was rechecked
+        // immediately before this call. A live editor buffer always wins.
         val slice: List<String>
         val start: Int
         val end: Int
         val total: Int
         var charCapped = false
         var stopped = false
-        if (fromBuffer != null) {
-            val text = AiEditProposalParser.normalizeLf(fromBuffer)
+        if (fromText != null) {
+            val text = AiEditProposalParser.normalizeLf(fromText)
             val lines = text.split('\n')
             total = when {
                 text.isEmpty() -> 0
                 text.endsWith("\n") -> lines.size - 1
                 else -> lines.size
             }
-            if (total == 0) return Outcome(true, "FILE $path is empty. [complete]")
-            start = requestedStart.coerceIn(1, total)
-            end = requestedEnd.coerceIn(start, total)
+            if (total == 0) {
+                val source = if (fromDirtyBuffer) " [unsaved edits]" else if (fromCachedMemory) " [cached memory]" else ""
+                return Outcome(true, "FILE $path is empty$source [complete]")
+            }
+            if (requestedStart > total) {
+                return Outcome(
+                    false,
+                    "$path has $total line" + (if (total == 1) "" else "s") +
+                        "; the requested start $requestedStart is past the end. [refused: out of range]"
+                )
+            }
+            start = requestedStart
+            end = requestedEnd.coerceAtMost(total)
             slice = lines.subList(start - 1, end)
         } else {
-            val file = File(rootDir, path)
-            if (!safeChild(file, rootDir)) return Outcome(false, "$path is outside the project.")
             val range = AiProjectReader.readLineRange(
                 file, requestedStart, requestedEnd, AiToolLimits.MAX_RESULT_CHARS, shouldStop
             )
@@ -241,8 +265,11 @@ object AiToolRunner {
             stopped = range.stopped
         }
 
-        return Outcome(true, formatRange(path, slice, start, end, total, fromBuffer != null, charCapped, stopped),
-            truncated = end < total || charCapped || stopped)
+        return Outcome(
+            true,
+            formatRange(path, slice, start, end, total, fromDirtyBuffer, charCapped, stopped, fromCachedMemory),
+            truncated = end < total || charCapped || stopped
+        )
     }
 
     // ---- read_files (batch) ----------------------------------------------
@@ -261,7 +288,8 @@ object AiToolRunner {
         rootDir: File,
         paths: List<String>,
         dirtyBuffers: Map<String, String>,
-        shouldStop: () -> Boolean = { false }
+        shouldStop: () -> Boolean = { false },
+        cachedFiles: Map<String, String> = emptyMap()
     ): Outcome {
         val specs = call.reads
         if (specs.isNullOrEmpty()) return Outcome(false, "read_files needs a paths list.")
@@ -279,7 +307,7 @@ object AiToolRunner {
                 truncated = true
                 continue
             }
-            val block = readBatchBlock(spec, rootDir, admitted, dirtyBuffers, perFile, shouldStop)
+            val block = readBatchBlock(spec, rootDir, admitted, dirtyBuffers, cachedFiles, perFile, shouldStop)
             blocks += block.first
             truncated = truncated || block.second
         }
@@ -295,6 +323,7 @@ object AiToolRunner {
         rootDir: File,
         admitted: Set<String>,
         dirtyBuffers: Map<String, String>,
+        cachedFiles: Map<String, String>,
         budget: Int,
         shouldStop: () -> Boolean
     ): Pair<String, Boolean> {
@@ -302,27 +331,48 @@ object AiToolRunner {
         if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
             return "FILE $path — [refused: credential-shaped]" to false
         }
-        val fromBuffer = dirtyBuffers.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
-        if (fromBuffer == null && admitted.none { AiProjectFiles.samePath(it, path) }) {
+        if (admitted.none { AiProjectFiles.samePath(it, path) }) {
             return "FILE $path — [refused: not a code or text file in this project]" to false
         }
+        if (AiTaskMemoryPolicy.safeRelativePath(path) == null) {
+            return "FILE $path — [refused: unsafe or non-text path]" to false
+        }
+        val file = File(rootDir, path)
+        if (!safeChild(file, rootDir)) return "FILE $path — [refused: outside the project]" to false
+        val fromBuffer = dirtyBuffers.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        val fromMemory = if (fromBuffer == null) {
+            cachedFiles.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        } else null
+        val fromText = fromBuffer ?: fromMemory
+        val fromDirtyBuffer = fromBuffer != null
+        val fromCachedMemory = fromMemory != null
         val requestedStart = spec.start.coerceAtLeast(1)
         val requestedEnd = spec.end.coerceAtLeast(requestedStart)
-        if (fromBuffer != null) {
-            val text = AiEditProposalParser.normalizeLf(fromBuffer)
+
+        if (fromText != null) {
+            val text = AiEditProposalParser.normalizeLf(fromText)
             val lines = text.split('\n')
             val total = when {
                 text.isEmpty() -> 0
                 text.endsWith("\n") -> lines.size - 1
                 else -> lines.size
             }
-            if (total == 0) return "FILE $path — empty [unsaved edits] [complete]" to false
-            val start = requestedStart.coerceIn(1, total)
-            val end = requestedEnd.coerceIn(start, total)
-            return formatRange(path, lines.subList(start - 1, end), start, end, total, true, false, false) to (end < total)
+            if (total == 0) {
+                val source = if (fromDirtyBuffer) " [unsaved edits]" else if (fromCachedMemory) " [cached memory]" else ""
+                return "FILE $path — empty$source [complete]" to false
+            }
+            if (requestedStart > total) {
+                return "FILE $path — [refused: start ${spec.start} is past the end of $total line" +
+                    (if (total == 1) "" else "s") + "]" to false
+            }
+            val start = requestedStart
+            val end = requestedEnd.coerceAtMost(total)
+            return formatRange(
+                path, lines.subList(start - 1, end), start, end, total,
+                fromDirtyBuffer, false, false, fromCachedMemory
+            ) to (end < total)
         }
-        val file = File(rootDir, path)
-        if (!safeChild(file, rootDir)) return "FILE $path — [refused: outside the project]" to false
+
         val range = AiProjectReader.readLineRange(file, requestedStart, requestedEnd, budget, shouldStop)
         return when {
             !range.ok -> "FILE $path — [refused: ${range.reason}]" to false
@@ -332,7 +382,8 @@ object AiToolRunner {
                 "FILE $path — [refused: start ${spec.start} is past the end of ${range.total} line" +
                     (if (range.total == 1) "" else "s") + "]" to false
             else -> formatRange(
-                path, range.slice, range.start, range.end, range.total, false, range.charCapped, range.stopped
+                path, range.slice, range.start, range.end, range.total,
+                false, range.charCapped, range.stopped
             ) to (range.end < range.total || range.charCapped || range.stopped)
         }
     }
@@ -352,7 +403,8 @@ object AiToolRunner {
         total: Int,
         fromBuffer: Boolean,
         charCapped: Boolean,
-        stopped: Boolean
+        stopped: Boolean,
+        fromCachedMemory: Boolean = false
     ): String {
         val coverage = when {
             stopped -> "[partial: stopped by the user]"
@@ -364,7 +416,8 @@ object AiToolRunner {
             "; read ${end + 1}-${minOf(total, end + AiToolLimits.MAX_READ_LINES)} next"
         } else ""
         val header = "FILE $path — lines $start-$end of $total" +
-            (if (fromBuffer) " [unsaved edits]" else "") + " $coverage" + next
+            (if (fromBuffer) " [unsaved edits]" else if (fromCachedMemory) " [cached memory]" else "") +
+            " $coverage" + next
         val body = buildString {
             append(header)
             for ((i, line) in slice.withIndex()) append('\n').append(start + i).append(": ").append(line)

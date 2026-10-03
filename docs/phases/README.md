@@ -86,8 +86,10 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 80 | [✅ AI Level 4 — whole-project map, bounded tools, approved run loop (device-passed, merged)](03-editor/chat-phase80/) | 03-editor |
 | 81 | [✅ AI — Continue: get the rest of an answer that was cut off (device-passed, merged)](03-editor/chat-phase81/) | 03-editor |
 | 82 / 82B | [🚧 AI — rate-limit resilience, bigger answers + Level 5A NVIDIA dev/test BYOK (merged; device acceptance postponed)](03-editor/chat-phase82/) | 03-editor |
-| 83 | [🚧 AI Level 6 — synthetic fixtures, offline baseline/replay (test-only; Build APK CI 37051539267 green)](03-editor/chat-phase83/) | 03-editor |
-| 84 | [🚧 AI Level 7 — agent correctness: the six defects fixed (host pre-validation 337/337; not merged)](03-editor/chat-phase84/) | 03-editor |
+| 83 | [✅ AI Level 6 — synthetic fixtures, offline baseline/replay (test-only; merged PR #109; Build APK CI 37051539267 green)](03-editor/chat-phase83/) | 03-editor |
+| 84 | [✅ AI Level 7 — agent correctness (merged with Phase 85 via PR #110; Build APK CI 37084800939 green)](03-editor/chat-phase84/) | 03-editor |
+| 85 | [✅ AI Level 8 — bounded-but-honest reads, read_files, restorable eviction and S11 working set (merged PR #110)](03-editor/chat-phase85/) | 03-editor |
+| 86 | [🚧 AI Level 9 — bounded task memory and planning (72/72 selected host methods; Build APK `37106545726` green; no PR/merge; device acceptance postponed to Level 12)](03-editor/chat-phase86/) | 03-editor |
 
 ## By category
 
@@ -95,7 +97,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 |---|---|---|
 | [01-terminal-userland](01-terminal-userland/) | Terminal & Linux userland | 6 |
 | [02-packages-toolchains](02-packages-toolchains/) | Packages & toolchains | 5 |
-| [03-editor](03-editor/) | Editor & languages | 20 |
+| [03-editor](03-editor/) | Editor & languages | 25 |
 | [04-projects-files](04-projects-files/) | Projects & files | 3 |
 | [05-run-output-preview](05-run-output-preview/) | Run, output & preview | 5 |
 | [06-git-github](06-git-github/) | Git & GitHub | 3 |

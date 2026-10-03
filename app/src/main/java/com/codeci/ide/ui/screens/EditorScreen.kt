@@ -426,6 +426,11 @@ fun EditorScreen(
     LaunchedEffect(currentProject, openMode) {
         aiViewModel.onProjectChanged(if (openMode == EditorOpenMode.PROJECT) currentProject else null)
     }
+    // Level 9: re-key agent file reuse when the active buffer or any stashed
+    // dirty project tab changes; snapshots are always taken from this live map.
+    LaunchedEffect(currentProject, openMode, activeTabPath, codeText.text, isDirty, openTabs, aiState.phase) {
+        aiViewModel.updateAgentDirtyBuffers(viewModel.dirtyProjectBuffers())
+    }
     // The peek's real path for the status bar — null outside SINGLE_FILE, so
     // PROJECT/SCRATCH rendering is byte-identical to today. Project lookup is
     // remembered (it touches disk), keyed on the triple that can change it.
@@ -1154,7 +1159,8 @@ fun EditorScreen(
             question = question,
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
-            openDirty = viewModel.isDirty.value
+            openDirty = viewModel.isDirty.value,
+            dirtyBuffers = viewModel.dirtyProjectBuffers()
         )
     }
     // Phase 79 → 80 — propose reviewable multi-file edits. The agent reads what
@@ -1167,7 +1173,8 @@ fun EditorScreen(
             question = question,
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
-            openDirty = viewModel.isDirty.value
+            openDirty = viewModel.isDirty.value,
+            dirtyBuffers = viewModel.dirtyProjectBuffers()
         )
     }
     // Phase 80 — the AI asked to run the project. The tap dispatches CodeC's

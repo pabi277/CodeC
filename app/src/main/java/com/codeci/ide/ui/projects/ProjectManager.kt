@@ -67,7 +67,10 @@ class ProjectManager(context: Context) {
         val deleted = info.root.deleteRecursively()
         if (deleted) {
             runCatching {
-                appContext.noBackupFilesDir?.let { AiEditApplier.clearProjectJournal(it, info.name) }
+                appContext.noBackupFilesDir?.let {
+                    AiEditApplier.clearProjectJournal(it, info.name)
+                    AiTaskMemoryStore.clearProject(it, info.name)
+                }
             }
         }
         return deleted
