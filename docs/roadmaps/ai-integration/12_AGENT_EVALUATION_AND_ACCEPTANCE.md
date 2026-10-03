@@ -1,7 +1,9 @@
 # Level 12 — Evaluation and acceptance
 
-**Status: PROPOSED. Not implemented. Not a phase start command. Runs after Levels 7–11; then repeats.**
+**Status: 📋 PLANNED as [Phase 89](../../phases/03-editor/chat-phase89/README.md) — a written brief only, authorized by the owner on 2026-10-04; no production or test source and nothing run; implementation needs a further explicit command. Runs after Levels 7–11; then repeats.**
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
+**Owner decisions (2026-10-04):** latency/tokens/memory by a **small in-memory numbers-only readout** (must respect **D6**) · pass bar **3 runs per task per model, needing 3/3** · models **`gemini-3-flash-preview`** and **`nvidia/nemotron-3-super-120b-a12b`** (GLM-5.3 not run) · **one phase** — host proof first, then the owner's device round as a checklist inside it · **a failed row becomes its own fix phase**, after which Level 12 repeats.
+**Corrections found while briefing** (evidence in the [Phase 89 README](../../phases/03-editor/chat-phase89/README.md)): the *Status today* column below predates Level 7 — **13 of the 14 regression rows are already covered** by nine Level 7–10 classes (103 cases) and only **S10** is genuinely missing · the post-Level-6 inventory figure below (391 `@Test` / 31 AI classes) is stale — measured on `0fc2bfd` it is **332 test files / 3 204 `@Test`, of which 52 `Ai*.kt` / 622 `@Test`** · the app still records **no** latency, tokens or memory (`usageMetadata` never parsed; the NVIDIA decoder drops the usage-only event at `NvidiaResponse.kt:21-22`) · the device round to refresh is Phase 82's `DEVICE_ROUND.md` (21 R/B/P/S rows + the 5-task P5 comparison, all `⏳`, P8 unticked), plus the eight visual checks Phase 88 handed forward.
 
 ## User value
 
@@ -13,7 +15,12 @@ code CI was green while the agent remained unusable on a phone.
 
 ## Host-JVM regression suite
 
-Extends the post-Level-6 baseline of **391 `@Test` cases across 31 AI test classes**. Phase 83 adds five cases to the pre-Level-6 inventory of 386 cases across 30 classes; later counts must be measured from the checkout rather than copied forward.
+Extends the post-Level-6 baseline of **391 `@Test` cases across 31 AI test classes**. Phase 83 adds five cases to the pre-Level-6 inventory of 386 cases across 30 classes; later counts must be measured from the checkout rather than copied forward. **Measured 2026-10-04 on `0fc2bfd`: 332 test files / 3 204 `@Test`, of which 52 `Ai*.kt` / 622 `@Test`.**
+**Status correction (2026-10-04):** the table below is the pre-Level-7 snapshot kept as history. On today's tree,
+13 of its 14 rows already have tests — `AiLevel7CorrectnessTest`, `AiLevel6BaselineTest`, `AiLevel8BatchTest`,
+`AiLevel8ReuseTest`, `AiAgentLoopTest` (every stop reason has a sentence), `AiLevel10PoliciesTest`,
+`AiTaskMemoryTest`, `AiTaskMemoryStoreTest` and `AiLevel10CeilingTest`, 103 cases between them. Only **S10**
+(injection text in a project file cannot reach a write or a run) is missing, and Phase 89.1 is its test.
 
 | Test | Status today |
 |---|---|

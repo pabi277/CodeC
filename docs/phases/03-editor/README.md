@@ -35,3 +35,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [86](chat-phase86/) | ✅ AI Level 9 — bounded task memory and planning (merged PR #111 to `main` @ `6838ea6`; post-merge Build APK `37109573383` green; device acceptance postponed to Level 12) |
 | [87](chat-phase87/) | ✅ AI Level 10 — agent controls and options (nine bounded controls in the AI panel; **MERGED** via PR #112, 1 594 host cases, S9 held) |
 | [88](chat-phase88/) | ✅ AI Level 11 — agent phone presentation (Markdown answers, https links behind a confirm, one truthful progress line, full result on tap; **MERGED** via PR #113 as `0fc2bfd` 2026-10-03; post-merge Build APK `37136523881` green; device acceptance postponed to Level 12) |
+| [89](chat-phase89/) | 📋 AI Level 12 — evaluation and acceptance (**BRIEF ONLY**, no code: S10 injection proof, numbers readout, 10-task × 2-model × 3-run matrix at 3/3, refreshed device round; authorized for a brief 2026-10-04) |
