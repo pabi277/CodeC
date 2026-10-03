@@ -1,6 +1,7 @@
 # Phase 87 — AI Level 10: agent controls and options
 
-> **Status:** ✅ **IMPLEMENTED, host-verified, CI-pending at the time of writing.** All nine
+> **Status:** ✅ **IMPLEMENTED and CI-GREEN.** Build APK run [`37119390730`](https://github.com/pabi277/CodeC/actions/runs/37119390730) on `27c23c1` is
+> **success** (host unit + screenshot tests, debug and release assembly, APK checks, artifact uploads). All nine
 > controls are wired end to end (parts 87.1–87.8). **152 host tests pass** on the
 > kotlinc/JRE harness described in `rule.md` §9; Build APK on CI is the executor of record.
 > Committed and pushed to `arena/01a100ed-codec` only. **No PR, no merge, no push to `main`.**
@@ -342,7 +343,7 @@ test all along. `AiLevel10CopyTest` remains CI-only for the `AiCopy.kt` dependen
 - [ ] Settings export / feedback scrubbing still redacts every credential shape — **not re-run
       here**; Level 10 stores no secrets (the eight new keys are ints, enums and booleans in the
       existing non-secret property bag), but this was not re-verified on a device.
-- [ ] **Build APK on CI green** — round 1 (`37118225659` on `ef97bbf`) **red** at `:app:compileDebugKotlin` for the two errors above; round 2 (`37118776411` on `35d72b1`) compiled cleanly and reached the tests — 3 120 tests, 2 failed, both pre-existing `AiLevel7WiringTest` pins broken by the signature changes, both fixed; round 3 pending at the time of writing.
+- [x] **Build APK on CI green** — round 3 [`37119390730`](https://github.com/pabi277/CodeC/actions/runs/37119390730) on `27c23c1` is **success**. Round 1 (`37118225659` on `ef97bbf`) was red at `:app:compileDebugKotlin`; round 2 (`37118776411` on `35d72b1`) compiled cleanly and reached the tests with 2 pre-existing `AiLevel7WiringTest` pins failing; both rounds' causes are recorded above.
 - [ ] **Device acceptance** — POSTPONED to Level 12 by standing owner decision, not claimed here.
 
 ## Deferred / rejected with reasons
