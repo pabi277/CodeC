@@ -13,11 +13,13 @@
 > **Current delivery update — 2026-10-03:** Level 6 was merged to `main` @ `392a614` (PR #109).
 > Levels 7 and 8 were delivered together as Phases 84+85 and merged by authorized PR #110 to
 > `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; final-head Build APK run `37084800939` is green.
-> The owner then authorized Level 9 and its bounded D6 task-memory amendment. [Phase 86](../../phases/03-editor/chat-phase86/README.md)
-> implements only bounded, no-backup task memory on `arena/01a1004c-codec`; local host pre-validation
-> passed 72/72 selected methods across eight classes; Build APK run `37106545726` is green on fix head `ddb75d3` after the three Level 8 regressions found by `37106180481` were fixed; no PR/merge is authorized, and exactly three
-> `client.stream(` sites remain.
-> Level 10–14 remain unauthorized; formal device acceptance is postponed to Level 12.
+> Level 9 and its bounded D6 task-memory amendment shipped as [Phase 86](../../phases/03-editor/chat-phase86/README.md),
+> **merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111)
+> to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`**; post-merge Build APK run `37109573383`
+> is green on that commit. Exactly three `client.stream(` sites remain
+> (`AiViewModel.kt:905, 1281, 1508`). The owner has now authorized **Level 10** as
+> [Phase 87](../../phases/03-editor/chat-phase87/README.md) — 📋 PLANNED, no code written.
+> Levels 11–14 remain unauthorized; formal device acceptance is postponed to Level 12.
 
 ---
 
@@ -25,13 +27,14 @@
 
 **Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md) · [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md) (PR #109) · [7 — agent correctness](07_AGENT_CORRECTNESS.md) and [8 — full context/honest reads](08_FULL_CONTEXT_AND_HONEST_READS.md) as Phases 84+85 (PR #110, `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` green).
 
-**Implemented on the active session branch; local host pre-validation 72/72 across eight classes; Build APK run `37106545726` green on `ddb75d3` after the three regressions found in `37106180481` were fixed; no PR/merge:** [9 — task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) as [Phase 86](../../phases/03-editor/chat-phase86/README.md); bounded D6 amendment, exactly three stream sites preserved.
+**Merged:** [9 — task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) as [Phase 86](../../phases/03-editor/chat-phase86/README.md) — merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit. Bounded D6 amendment; exactly three stream sites preserved.
+
+**Authorized and 📋 PLANNED (no code yet):** [10 — agent controls and options](10_AGENT_CONTROLS_AND_OPTIONS.md) as [Phase 87](../../phases/03-editor/chat-phase87/README.md). Owner decisions 2026-10-03: all nine controls, in the `AiHome` AI panel, backup provider manual-offer-only, answer detail defaulting to `normal`. **S9** governs the whole phase.
 
 **Proposed and unauthorized future levels, in dependency order:**
 
 | Level | Doc | Fixes | Gate |
 |---|---|---|---|
-| **10** | [Agent controls and options](10_AGENT_CONTROLS_AND_OPTIONS.md) | defect 11 | **S9** |
 | **11** | [Agent phone presentation](11_AGENT_PHONE_PRESENTATION.md) | defects 9, 10 | S8 |
 | **12** | [Evaluation and acceptance](12_AGENT_EVALUATION_AND_ACCEPTANCE.md) | proof, not features | S10, S12 |
 
@@ -72,13 +75,24 @@ and honest stop reasons. The evidence column below is the pre-fix `4cb4151` stat
 > See [Phase 84](../../phases/03-editor/chat-phase84/README.md) and
 > [Phase 85](../../phases/03-editor/chat-phase85/README.md).
 >
-> **Phase 86 / Level 9 update — 2026-10-03:** defect **8 (no bounded task memory)** now has an
-> implementation on `arena/01a1004c-codec`; local host pre-validation passed 72/72 selected methods across eight classes.
-> Build APK run `37106180481` found three Level 8 regressions; they were fixed and run `37106545726` is green on `ddb75d3`; no PR/merge is authorized.
+> **Phase 86 / Level 9 update — 2026-10-03: ✅ merged.** Defect **8 (no bounded task memory)** is
+> fixed on `main`: [PR #111](https://github.com/pabi277/CodeC/pull/111) merged Phase 86 to
+> `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`, and post-merge Build APK run `37109573383`
+> is green on that commit. On the branch, local host pre-validation had passed 72/72 selected
+> methods across eight classes, and run `37106180481` had found three Level 8 regressions that
+> were fixed before run `37106545726` went green on `ddb75d3`.
 > The owner approved the narrow D6 amendment. `AiTaskMemory` versions the admitted file cache by canonical
 > path, effective range and content version, reconciles dirty/disk changes, stores filtered findings,
 > decisions and plan under the no-backup app directory, and recites the plan at the end of disclosed
 > requests. Raw conversation data remains ephemeral. See [Phase 86](../../phases/03-editor/chat-phase86/README.md).
+>
+> **Phase 87 / Level 10 update — 2026-10-03: 📋 PLANNED.** The owner authorized Level 10 in chat.
+> Defect **11 (blanket brevity)** is its headline target: `AiContext.kt:474` still ends
+> `AGENT_ASK_SYSTEM_INSTRUCTION` with *"Keep answers short: they are read on a phone."*, inherited
+> by `AGENT_EDIT_SYSTEM_INSTRUCTION` at `:482-483`. Defect **10 (disclosure floods the timeline)**
+> gets a collapsed-not-removed treatment in the same phase. All nine controls, in the `AiHome`
+> panel, with **S9** asserting every ceiling. No code written yet.
+> See [Phase 87](../../phases/03-editor/chat-phase87/README.md).
 
 | # | Defect | Evidence | Effect |
 |---|---|---|---|
@@ -162,8 +176,8 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 1. **Level 9 D6 task-memory amendment:** authorized 2026-10-03, bounded to `noBackupFilesDir/ai/task/<project>/`; raw conversation data remains ephemeral. See [Level 0 D6 amendment](00_LEVEL0_DECISION_RECORD.md) and [Level 9](09_TASK_MEMORY_AND_PLANNING.md).
 2. **Level 8 bounded-but-honest reads:** selected by the owner; Phase 85 is merged in PR #110.
-3. **Backup provider routing and bounded option set:** Level 10; not authorized.
-4. **Levels 10–14:** remain unauthorized; proceed only on a separate owner command.
+3. **Backup provider routing and bounded option set:** Level 10 — **authorized 2026-10-03**, briefed as [Phase 87](../../phases/03-editor/chat-phase87/README.md). The owner chose **manual offer only**: CodeC offers, the user taps, and a fresh preview discloses the new recipient. Automatic fallback is rejected (S8/D4).
+4. **Levels 11–14:** remain unauthorized; proceed only on a separate owner command.
 5. **NVIDIA:** Phase 82's approved internal testing/evaluation-only limit remains; no production entitlement is implied.
 6. **GLM-5.3:** existing editable model field accepts `z-ai/glm-5.3`; **no default-model change is proposed or needed.**
 
@@ -210,4 +224,4 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 **Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
 
-**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. The owner authorized Level 9; Phase 86 implements the bounded D6 exception on `arena/01a1004c-codec`, with local host pre-validation 72/72 across eight selected classes; Build APK run `37106545726` is green on fix head `ddb75d3`, after run `37106180481` exposed three existing Level 8 regressions; no PR/merge authorization. Level 10–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.
+**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. **Level 9 (Phase 86) was merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit.** The owner has now authorized **Level 10**; [Phase 87](../../phases/03-editor/chat-phase87/README.md) is 📋 PLANNED with a written brief and **no production or test source**. Owner decisions for it: all nine controls, in the `AiHome` AI panel, manual-only backup provider, answer detail defaulting to `normal`. Levels 11–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.
