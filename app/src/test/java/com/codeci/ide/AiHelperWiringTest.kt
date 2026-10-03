@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * Phase 76 — the AI helper's safety laws, asked of the source (house style of
  * `SidePanelWiringTest`): read-only (D1), key storage (D3), preview before
- * send (D4), projects only (D5), nothing saved (D6), no logging of secrets.
+ * send (D4), projects only (D5), ephemeral chat plus Level 9's bounded task-memory exception (D6), no secret logging.
  */
 class AiHelperWiringTest {
 

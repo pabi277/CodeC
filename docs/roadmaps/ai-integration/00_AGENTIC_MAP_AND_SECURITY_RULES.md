@@ -10,29 +10,27 @@
 > on: the verified defect register, security rules S1–S12, the architecture, and the sources. The
 > step-by-step work itself lives in the numbered level docs below.
 >
-> **Current delivery update — 2026-10-03:** Level 6 (baseline/measurement) was delivered as
-> [Phase 83](../../phases/03-editor/chat-phase83/README.md) and merged to `main` @ `392a614` (PR #109).
-> The owner then explicitly started **Level 7 only**, delivered as
-> [Phase 84](../../phases/03-editor/chat-phase84/README.md) on `arena/01a0fe36-codec`: the six
-> agent-correctness defects (1–5) fixed as pure policy + thin wiring, defects 6/7 (Level 8) untouched,
-> host pre-validation 337/337, three `client.stream(` sites preserved, no PR/merge authorized.
-> Level 8 and later remain proposed/unauthorized; Level 8's bounded-but-honest
-> reads and Level 9's D6 task-memory amendment still require their separate owner decisions.
+> **Current delivery update — 2026-10-03:** Level 6 was merged to `main` @ `392a614` (PR #109).
+> Levels 7 and 8 were delivered together as Phases 84+85 and merged by authorized PR #110 to
+> `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; final-head Build APK run `37084800939` is green.
+> The owner then authorized Level 9 and its bounded D6 task-memory amendment. [Phase 86](../../phases/03-editor/chat-phase86/README.md)
+> implements only bounded, no-backup task memory on `arena/01a1004c-codec`; local host pre-validation
+> passed 56/56 selected methods, Build APK CI is pending, no PR/merge is authorized, and exactly three
+> `client.stream(` sites remain.
+> Level 10–14 remain unauthorized; formal device acceptance is postponed to Level 12.
 
 ---
 
 ## Level index
 
-**Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md) · [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md) (merged, `main` @ `392a614`, PR #109)
+**Done / merged:** [0](00_PRODUCT_AND_FOUNDATIONS.md) · [1](01_READ_ONLY_API_HELPER.md) · [2](02_WHOLE_PROJECT_CONTEXT.md) · [3](03_EDIT_REVIEW_AND_UNDO.md) · [4](04_AGENT_TOOLS_AND_RUN_LOOP.md) · [5A](05_PROVIDERS_AND_MODEL_COLLABORATION.md) · [6 — baseline and measurement](06_AGENT_BASELINE_AND_MEASUREMENT.md) as [Phase 83](../../phases/03-editor/chat-phase83/README.md) (PR #109) · [7 — agent correctness](07_AGENT_CORRECTNESS.md) and [8 — full context/honest reads](08_FULL_CONTEXT_AND_HONEST_READS.md) as Phases 84+85 (PR #110, `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` green).
 
-**Implemented on the active session branch, not merged:** [7 — agent correctness](07_AGENT_CORRECTNESS.md) as [Phase 84](../../phases/03-editor/chat-phase84/README.md); defects 1–5 fixed, host pre-validation 337/337, three `client.stream(` sites preserved.
+**Implemented on the active session branch; local host pre-validation 56/56 selected methods; Build APK CI pending; no PR/merge:** [9 — task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) as [Phase 86](../../phases/03-editor/chat-phase86/README.md); bounded D6 amendment, exactly three stream sites preserved.
 
-**Proposed and unauthorized next — the agentic optimization, in dependency order:**
+**Proposed and unauthorized future levels, in dependency order:**
 
 | Level | Doc | Fixes | Gate |
 |---|---|---|---|
-| **8** | [Full context and honest reads](08_FULL_CONTEXT_AND_HONEST_READS.md) | defects 6, 7 | S1, S2, S7, S11 |
-| **9** | [Task memory and planning](09_TASK_MEMORY_AND_PLANNING.md) | defect 8 — **the agentic step** | S3–S6, S11 |
 | **10** | [Agent controls and options](10_AGENT_CONTROLS_AND_OPTIONS.md) | defect 11 | **S9** |
 | **11** | [Agent phone presentation](11_AGENT_PHONE_PRESENTATION.md) | defects 9, 10 | S8 |
 | **12** | [Evaluation and acceptance](12_AGENT_EVALUATION_AND_ACCEPTANCE.md) | proof, not features | S10, S12 |
@@ -66,26 +64,21 @@ vs a 100-line window 18.0 % on SWE-bench Lite).
 
 ## Verified defect register at `4cb4151`
 
-The loop **shape** is sound — sequential ReAct (the pattern 7 of 13 surveyed coding agents use), fail-closed
-validation, hard caps, per-run approval, honest stop reasons. What is missing is Anthropic's third
-augmentation: **retrieval ✅ + tools ✅ + memory ❌**.
+The loop **shape** is sound — sequential ReAct, fail-closed validation, hard caps, per-run approval,
+and honest stop reasons. The evidence column below is the pre-fix `4cb4151` state, retained as history.
 
-> **Update 2026-10-03 (Phase 84 / Level 7):** defects **1–5 are FIXED** on `arena/01a0fe36-codec`
-> (host pre-validation 337/337, not merged). The evidence column below is the pre-fix `4cb4151` state,
-> kept as the historical record. Defects **6, 7** (prefix-only reader, total eviction) are **Level 8**
-> and remain open; **8** (memory) is Level 9; **9–12** are Levels 10–12. See
-> [Phase 84](../../phases/03-editor/chat-phase84/README.md).
-
-> **Update 2026-10-03 (Phase 85 / Level 8):** defects **6 and 7 are FIXED** and **S11 is IMPLEMENTED**
-> on `arena/01a0fe36-codec` (host pre-validation 360/360, not merged), bounded-but-honest by the owner's
-> choice. **6** (prefix-only reader) — `AiProjectReader.readLineRange` streams any line range, so the
-> last line of a >24 000-char file is reachable. **7** (total eviction) — `AiAgentPrompt.pack` now leaves
-> a per-item re-read pointer (`path — lines a-b — status`) instead of a bare count. **S2** — every read
-> states `[complete]`/`[partial: reason]`/`[refused]`. **S5/S7** — the new `read_files` batch re-applies
-> per-path security per file (a secret is refused beside succeeding siblings) as parallel read-only IO.
-> **S11** — `AiAgentWorkingSet` serves exact-duplicate reads at zero execution cost (`toolCallsReused`
-> populated) and stops N identical no-progress calls (`NO_PROGRESS`). Retrieval ✅ + tools ✅ + memory ❌
-> is unchanged (memory stays Level 9). See [Phase 85](../../phases/03-editor/chat-phase85/README.md).
+> **Merged updates — 2026-10-03:** Phases 84+85 (Levels 7+8; defects 1–7 and S11) were merged by PR #110
+> to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; final-head Build APK `37084800939` is green.
+> See [Phase 84](../../phases/03-editor/chat-phase84/README.md) and
+> [Phase 85](../../phases/03-editor/chat-phase85/README.md).
+>
+> **Phase 86 / Level 9 update — 2026-10-03:** defect **8 (no bounded task memory)** now has an
+> implementation on `arena/01a1004c-codec`; local host pre-validation passed 56/56 selected methods,
+> Build APK CI is pending, and no PR/merge is authorized.
+> The owner approved the narrow D6 amendment. `AiTaskMemory` versions the admitted file cache by canonical
+> path, effective range and content version, reconciles dirty/disk changes, stores filtered findings,
+> decisions and plan under the no-backup app directory, and recites the plan at the end of disclosed
+> requests. Raw conversation data remains ephemeral. See [Phase 86](../../phases/03-editor/chat-phase86/README.md).
 
 | # | Defect | Evidence | Effect |
 |---|---|---|---|
@@ -96,7 +89,7 @@ augmentation: **retrieval ✅ + tools ✅ + memory ❌**.
 | 5 | Parser discards valid calls | `AiToolProtocol.parse` returns `Malformed` early, dropping accumulated `calls` | Three good reads beside one malformed block are all lost. Direct cause of re-reads. |
 | 6 | Context eviction is total | `KEEP_LAST_RESULTS = 4`; notice `(N earlier tool results were dropped to fit)` — no path, no range | Not restorable (contra Manus). Model re-reads what it had. |
 | 7 | Prefix-only reader | `AiProjectReader.readCapped` has no offset; stops at `MAX_READ_CHARS` (24 000) | Lines past the first 24 000 chars unreachable at any `end`. |
-| 8 | No memory | `AgentSession` holds no cache, working set, plan, or findings | Nothing survives eviction. |
+| 8 | No bounded task memory | Baseline `AgentSession` held no cross-request cache, plan, or findings | Phase 86 adds a version-checked bounded cache + structured ledger/plan; local host pre-validation passed 56/56 selected methods, Build APK CI pending. |
 | 9 | Plain answer rendering | `AiParts.kt:55-58` `Answer` = `SelectionContainer { Text(text, bodyMedium) }` | No Markdown, though `ui/utils/MarkdownPreview.kt` already exists. |
 | 10 | Disclosure floods the timeline | `AiChatSheet.kt:584` renders system instruction + full user text per REQUEST row | Up to 12 copies of system text + 6 000-char map inline. |
 | 11 | Blanket brevity | `AiContext.AGENT_ASK_SYSTEM_INSTRUCTION` ends *"Keep answers short: they are read on a phone."* | Overrides an explicit "explain line by line". |
@@ -165,20 +158,14 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 ---
 
-## Decisions the owner must make
+## Owner decisions and remaining gates
 
-1. **Approve writing task memory to `noBackupFilesDir/ai/task/`?** Widens D6 (*"conversation text and
-   prompts remain in memory only"*). Precedent exists (`nobackup_one_task_journal`), but it is a real
-   amendment and needs recording. → Level 9.
-2. **Accept "bounded but honest" instead of "whole file"?** Changes the earlier brief's wording. → Level 8.
-3. **Backup provider: manual tap only, or automatic?** Automatic breaks *"no silent provider switching."*
-   Recommendation: CodeC offers, the owner taps. → Level 10.
-4. **Approve the bounded option set and their ceilings.** → Level 10.
-5. **Start order.** Recommendation: 6 → 7 → 8 → 9, then measure, then 10–11, then 12.
-6. **NVIDIA stays dev/test-only?** Its model card states: *"Use of this trial service is governed by the
-   NVIDIA API Trial Terms of Service."*
-7. **GLM-5.3** already works through the existing editable model field — `AiProviders.isValidModel`
-   accepts `z-ai/glm-5.3` today. **No default-model change is proposed or needed.**
+1. **Level 9 D6 task-memory amendment:** authorized 2026-10-03, bounded to `noBackupFilesDir/ai/task/<project>/`; raw conversation data remains ephemeral. See [Level 0 D6 amendment](00_LEVEL0_DECISION_RECORD.md) and [Level 9](09_TASK_MEMORY_AND_PLANNING.md).
+2. **Level 8 bounded-but-honest reads:** selected by the owner; Phase 85 is merged in PR #110.
+3. **Backup provider routing and bounded option set:** Level 10; not authorized.
+4. **Levels 10–14:** remain unauthorized; proceed only on a separate owner command.
+5. **NVIDIA:** Phase 82's approved internal testing/evaluation-only limit remains; no production entitlement is implied.
+6. **GLM-5.3:** existing editable model field accepts `z-ai/glm-5.3`; **no default-model change is proposed or needed.**
 
 ---
 
@@ -192,7 +179,7 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
   credentialed call settles it — not run.
 - Whether symmetric delimiters measurably reduce malformed blocks versus the asymmetric
   `<<<CODEC_TOOL …>>> … <<<END_CODEC_TOOL>>>`. Plausible, **not measured**.
-- The working-set byte ceiling appropriate for a phone. Needs an owner/device number.
+- Phase 86 starts with explicit conservative task-memory caps (five files, 160 KiB cached file content, 256 KiB store); whether those limits feel sufficient on a phone remains for the formal Level 12 device/acceptance round.
 - The owner's actual account entitlement and rate limit on either provider.
 
 ---
@@ -223,4 +210,4 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 **Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
 
-**Current status — 2026-10-03:** the owner started Level 6 (Phase 83, test-only baseline), then Level 7 (Phase 84, agent correctness — defects 1–5 fixed), then Level 8 (Phase 85, full context and honest reads — defects 6–7 fixed and S11 implemented, bounded-but-honest). All three are on `arena/01a0fe36-codec`/`arena/01a0fded-codec`, host-pre-validated, **not merged**; no PR/merge is authorized and this map starts nothing. The next unused phase number is 86. **Level 9+ remain proposed and unauthorized** — Level 9 (task memory) needs a separate owner command and the D6 task-memory amendment for `noBackupFilesDir/ai/task/<project>/`.
+**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. The owner authorized Level 9; Phase 86 implements the bounded D6 exception on `arena/01a1004c-codec`, with local host pre-validation 56/56 selected methods passed, final-head Build APK CI pending, and no PR/merge authorization. Level 10–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.

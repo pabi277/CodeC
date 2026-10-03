@@ -3,6 +3,7 @@ package com.codeci.ide
 import com.codeci.ide.ui.ai.AiToolCall
 import com.codeci.ide.ui.ai.AiToolLimits
 import com.codeci.ide.ui.ai.AiToolName
+import com.codeci.ide.ui.ai.ReadSpec
 import com.codeci.ide.ui.ai.AiToolRunner
 import java.io.File
 import java.nio.file.Files
@@ -162,6 +163,45 @@ class AiToolRunnerTest {
         assertTrue(out.text.contains("[unsaved edits]"))
         assertTrue(out.text.contains("/* edited */"))
         assertFalse(out.text.contains("printf"))
+    }
+
+    @Test
+    fun `cached and dirty file paths preserve out-of-range refusal semantics`() {
+        tree()
+        val outOfRange = call(AiToolName.READ_FILE, path = "src/main.c", start = 20, end = 24)
+        val disk = AiToolRunner.execute(outOfRange, root, admitted)
+        val cached = AiToolRunner.execute(
+            outOfRange,
+            root,
+            admitted,
+            cachedFiles = mapOf("src/main.c" to File(root, "src/main.c").readText())
+        )
+        val dirty = AiToolRunner.execute(
+            outOfRange,
+            root,
+            admitted,
+            dirtyBuffers = mapOf("src/main.c" to File(root, "src/main.c").readText())
+        )
+        assertFalse(disk.ok)
+        assertFalse(cached.ok)
+        assertFalse(dirty.ok)
+        assertEquals(disk.text, cached.text)
+        assertEquals(disk.text, dirty.text)
+
+        val batch = AiToolCall(
+            name = AiToolName.READ_FILES,
+            rawName = "read_files",
+            reads = listOf(ReadSpec("src/main.c", 20, 24))
+        )
+        val diskBatch = AiToolRunner.execute(batch, root, admitted)
+        val cachedBatch = AiToolRunner.execute(
+            batch,
+            root,
+            admitted,
+            cachedFiles = mapOf("src/main.c" to File(root, "src/main.c").readText())
+        )
+        assertEquals(diskBatch.text, cachedBatch.text)
+        assertTrue(diskBatch.text.contains("[refused: start 20 is past the end"))
     }
 
     @Test

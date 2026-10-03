@@ -1,6 +1,6 @@
 # Phase 83 — AI Level 6: baseline and measurement
 
-> **Status:** IMPLEMENTED test-only · temporary host-shim smoke **5/5** · Build APK CI ✅ GREEN on code/test head `cf3f1be` ([run 37051539267](https://github.com/pabi277/CodeC/actions/runs/37051539267)) · **zero production-source/behavior changes** · **not merged**.
+> **Status:** IMPLEMENTED test-only · temporary host-shim smoke **5/5** · Build APK CI ✅ GREEN on code/test head `cf3f1be` ([run 37051539267](https://github.com/pabi277/CodeC/actions/runs/37051539267)) · **zero production-source/behavior changes** · merged via PR #109 to `main` @ `392a614`.
 > **Owner command:** “Start level 6” (2026-10-03).
 > **Work branch:** `arena/01a0fded-codec`; baseline `main` @ `741956647933562dd5056972e71473581dd21233` (PR #108).
 > **Device acceptance:** not part of this measurement-only phase. The separate formal device round remains **POSTPONED until after optimization**, not passed.
@@ -41,7 +41,7 @@ Pre-Level-6 inventory on this checkout: **310 Kotlin test files / 2,968 `@Test` 
 - No dependency, permission, endpoint, API call, DataStore key, persisted memory, telemetry, Settings control, or provider-default change.
 - No fixture contains real credentials or user project content; the `.env` value is explicitly fake.
 - No app behavior or answer quality is improved/claimed by this phase.
-- Levels 7–14 remain separate, proposed work; each needs its own explicit start. Level 8 still needs the owner’s “bounded but honest” decision; Level 9 still needs a D6 amendment.
+- Subsequent work was separately authorized: Levels 7+8 merged via PR #110; Level 9 is implemented as Phase 86 under the bounded D6 amendment. Levels 10–14 remain unauthorized.
 
 ## Exit / verification ledger
 
@@ -54,4 +54,4 @@ Pre-Level-6 inventory on this checkout: **310 Kotlin test files / 2,968 `@Test` 
 - [x] Build APK CI **37051539267** green on code/test head `cf3f1be` (real Gradle/JUnit/Robolectric/screenshot tests, debug/lint, signed release/APK checks and artifacts).
 - [x] Production source delta: **0 files**.
 - [x] No device pass requested or claimed; postponed formal device acceptance stays with Level 12.
-- [ ] PR/merge: not authorized or opened. Stop at `rule.md` §3.
+- [x] PR #109 merged to `main` @ `392a614` after the owner authorized the then-current delivery; Build APK CI `37051539267` green.

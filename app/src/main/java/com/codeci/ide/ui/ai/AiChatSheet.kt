@@ -340,6 +340,7 @@ private fun Conversation(
                 it.continuation?.let { c -> Muted(AiCopy.continuePreviewNote(c.index)) }
                 if (it.unsaved && summary == null) Muted(AiCopy.UNSAVED_NOTE)
                 Body(AiCopy.providerDataNote(it.provider))
+                state.notice?.let { notice -> ErrorLine(notice) }
                 SentText(it.systemInstruction + "\n\n" + it.userText)
             }
 

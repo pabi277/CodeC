@@ -61,7 +61,14 @@ object AiCopy {
     const val NEW_QUESTION = "New question"
     const val TRY_AGAIN = "Try again"
     const val WRONG_NOTE = "AI answers can be wrong. Nothing in your project was changed."
-    const val NOT_SAVED_NOTE = "This conversation is not saved. It disappears when you close it or switch projects."
+    const val NOT_SAVED_NOTE =
+        "Chat, prompts, answers and the activity timeline are not saved. Agent tasks may keep a small, bounded " +
+            "working memory on this phone (non-secret file snapshots, findings, decisions and plan), outside your project " +
+            "and backups. Deleting the project or an AI key clears task memory."
+    const val TASK_MEMORY_CHANGED =
+        "Task memory or a cached file changed since this preview. Review the refreshed request, then tap Send again."
+    const val TASK_MEMORY_SAVE_FAILED =
+        "New task memory could not be saved on this device. This task can continue in memory, but the update may not carry to the next task."
 
     fun previewHeader(model: String, chars: Int): String =
         "Will be sent to Google Gemini ($model) · $chars characters. Only the text below leaves your phone."
@@ -175,6 +182,11 @@ object AiCopy {
         "After you tap Send, the AI may read this project — list_files, search_project and read_file — " +
             "one step at a time, shown below as it happens (up to ${AiAgentLimits.MAX_TOOL_CALLS} reads). " +
             "It may ask to run the project (up to ${AiAgentLimits.MAX_RUNS} times); nothing runs until you tap Run. " +
+            "A bounded local task memory may keep up to ${AiTaskMemoryLimits.MAX_FILES} non-secret file snapshots " +
+            "(${AiTaskMemoryLimits.MAX_FILE_BYTES / 1024} KB each, ${AiTaskMemoryLimits.MAX_TOTAL_FILE_BYTES / 1024} KB total) " +
+            "plus structured findings, decisions and plan outside " +
+            "your project and backups; it stores no raw prompt or transcript and is cleared when this project or an AI key is deleted. " +
+            "The exact memory included in each request is disclosed below or in the activity timeline. " +
             "Nothing in your project is changed without the diff review, and Stop is always available."
 
     /**

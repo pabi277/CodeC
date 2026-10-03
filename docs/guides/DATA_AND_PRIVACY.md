@@ -56,7 +56,7 @@ not blocked. **Settings → About → Replay the CodeC introduction** shows the 
 again on the next launch. The full permission table and
 the implementation behind every claim remain below.
 
-## CodeC AI (Phases 76–82 / 82B) — what it sends, where, and what it keeps
+## CodeC AI (Phases 76–86 / 82B) — what it sends, where, and what it keeps
 
 AI is optional, set up in ✨ home and used in the floating button's chat sheet.
 **Your own** provider key is required. Gemini is the default; NVIDIA Build is an
@@ -120,6 +120,15 @@ adult/terms confirmation. There is no bundled/shared key or remote proxy.
   excluded from backups. Deleted on undo/replacement/project deletion or any
   provider key deletion; user-edit conflicts still prevent overwrite. Undo
   reverses AI file changes, not runs/network/package/Git side effects.
+- **Level 9 task memory — narrow D6 exception:** a bounded device-local cache of
+  admitted non-secret file snapshots plus structured findings, decisions and
+  plan may persist at `no_backup/ai/task/<project>/task-memory.bin`. Android's
+  no-backup directory excludes it from Auto Backup; it is outside the project
+  tree, secret-filtered before writes, and capped at five files / 160 KiB of file
+  content / 256 KiB total. Dirty-buffer text is never persisted. Project deletion
+  and any provider-key deletion clear it. No raw chat, prompt, answer, map,
+  tool result or timeline is stored. The persistent-off path keeps only the
+  current task's in-memory state; the user-facing switch is reserved for Level 10.
 - **Not kept:** questions, replies, maps, timeline, tool/run results, countdowns
   and active provider selection are memory-only. Clear/New question/project
   switch/app death discard them; reopening defaults selection to Gemini, never
@@ -130,18 +139,16 @@ adult/terms confirmation. There is no bundled/shared key or remote proxy.
   is placed in AiUiState, URLs, prompts, project files or app logs. Reports still
   leave only when you choose to share them; inspect before sharing.
 
-Phase 82/82B implementation has local policy/source/transport-fixture proof and
-real Build APK **36995145462 green** on **7b2ecac** (unit/screenshot tests, lint,
-Android/Compose compilation and signed APK guards). The first CI fixture compile
-signature error was corrected without changing privacy behavior. Owner device,
-successful Keystore/live vendor/model-quality acceptance remains **POSTPONED**
-until after optimization at the owner's direction; not passed. Informal phone
-screenshots expose known agent-core issues documented in
-[research](../research/AI_AGENT_CORE_OPTIMIZATION_RESEARCH_20261002.md). This documentation/current-merge authorization
-adds no routing/reviewer, persisted task memory, native-tool permission or
-new data recipient. The
-[phase record](../phases/03-editor/chat-phase82/README.md) is the verification
-ledger, not a claim of production NVIDIA entitlement.
+Phase 86 adds the owner-authorized, bounded task-memory exception described
+above. Source implementation is on the session branch; local host pre-validation
+passed 56/56 selected methods, while final-head Build APK CI is pending. This is
+not full Gradle/Android validation. Formal device acceptance remains **POSTPONED
+until Level 12**, not passed. The existing
+[Phase 82/82B ledger](../phases/03-editor/chat-phase82/README.md) records its
+provider/optimization state; [Phase 86](../phases/03-editor/chat-phase86/README.md)
+is the task-memory implementation and verification ledger. This does not claim
+successful Keystore/live-vendor/device acceptance or production NVIDIA
+entitlement.
 
 ## Permissions — every one, why, and the code that uses it
 

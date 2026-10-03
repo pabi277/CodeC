@@ -1,6 +1,6 @@
 # Phase 85 — AI Level 8: full context and honest reads
 
-> **Status:** 🚧 IMPLEMENTED on `arena/01a0fe36-codec` · host-shim pre-validation **360/360** (24 pre-existing AI classes + 3 new) · **not merged**, no PR opened.
+> **Status:** IMPLEMENTED on `arena/01a0fe36-codec` · host-shim pre-validation **360/360** · merged with Phase 84 via authorized PR #110 to `main` @ `32e4a5f`; final-head Build APK **37084800939 ✅ GREEN**. Formal device acceptance remains POSTPONED (Level 12).
 > **Owner command (verbatim):** “Start Level 8” → chose **bounded but honest** and **Full Level 8 (all four items)** (2026-10-03).
 > **Baseline:** `main` @ `392a614573137a56db112764a57409773b9fe962` (PR #109 merge), branch head before this phase `a1af105` (Phase 84). Level 8 spec: [`08_FULL_CONTEXT_AND_HONEST_READS.md`](../../../roadmaps/ai-integration/08_FULL_CONTEXT_AND_HONEST_READS.md); shared foundation: [`00_AGENTIC_MAP_AND_SECURITY_RULES.md`](../../../roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).
 > **Device acceptance:** not part of this phase. The formal device round remains **POSTPONED** (Level 12), not passed.
@@ -86,6 +86,6 @@ last-5 ablation). Honesty — not a bigger window — is the fix.
 - [x] Items 1–4 + S11 implemented; three stream sites preserved; no `java.nio.file`.
 - [x] 23 new tests; 4 pinned cases updated to the corrected contract; 360/360 host pre-validation.
 - [x] Level 8 acceptance: last line of a >24 000-char file reachable; every read states coverage; secret refused beside siblings; escaping symlink contributes nothing; every eviction re-acquirable by path and range; duplicate read costs zero execution.
-- [ ] Build APK CI on the pushed head (run id in the report).
+- [x] Final-head Build APK CI for the combined Phase 84+85 PR: **37084800939 ✅ GREEN**.
+- [x] PR #110 merged to `main` at `32e4a5f87a9f73874a4de17967187445c49a2461` on the owner's authorization.
 - [ ] Device pass: **not requested** — the formal round stays with Level 12.
-- [ ] PR/merge: **not authorized**; stop at `rule.md` §3.
