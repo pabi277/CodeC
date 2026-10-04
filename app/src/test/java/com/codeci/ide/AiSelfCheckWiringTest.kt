@@ -118,6 +118,28 @@ class AiSelfCheckWiringTest {
     }
 
     @Test
+    fun `every AiCopy name the AI surface uses is declared`() {
+        // The SELF_CHECK_TITLE lesson: a missing constant is invisible to a
+        // single-file syntax check and to every string pin, and cost a CI round.
+        // This pins the whole surface at once -- strings blanked, comments
+        // stripped, so only real references are seen.
+        val decl = RepoFiles.codeOnly(
+            RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/ai/AiCopy.kt").readText()
+        )
+        val declared = Regex("""\b(?:val|fun|object|class|interface)\s+([A-Za-z0-9_]+)""")
+            .findAll(decl).map { it.groupValues[1] }.toSet()
+        val users = RepoFiles.mainKotlinSources().filter {
+            it.path.contains("/ui/ai/") || it.name == "EditorScreen.kt" || it.name == "OutputPanelView.kt"
+        }
+        val dangling = users.flatMap { file ->
+            Regex("""\bAiCopy\.([A-Za-z0-9_]+)""")
+                .findAll(RepoFiles.codeOnly(file.readText()))
+                .map { it.groupValues[1] + " (" + file.name + ")" }
+        }.filter { it.substringBefore(' ') !in declared }
+        assertTrue("unresolved AiCopy references: $dangling", dangling.isEmpty())
+    }
+
+    @Test
     fun `the run is memory-only, and a new conversation means a new check`() {
         assertTrue("it lives in the state", vm.contains("val selfCheck: AiSelfCheck.Run? = null = null") ||
             vm.contains("val selfCheck: AiSelfCheck.Run? = null"))

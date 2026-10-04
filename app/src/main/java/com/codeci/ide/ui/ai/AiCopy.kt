@@ -74,6 +74,7 @@ object AiCopy {
     // ---- Phase 92 — the self-check (the owner: "give some command and I will run it") ----
 
     /** The one command: five scripted checks and a report, instead of judging rows by eye. */
+    const val SELF_CHECK_TITLE = "Self-check"
     const val SELF_CHECK_START = "Self-check"
     const val SELF_CHECK_NEXT = "Next check"
     const val SELF_CHECK_STOP = "Stop check"

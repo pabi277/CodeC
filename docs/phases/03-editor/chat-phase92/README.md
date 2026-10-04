@@ -103,11 +103,17 @@ report (*"in light mode visible"*). A future edit that walks the block back into
 | File | Cases | What it pins |
 |---|---|---|
 | `AiSelfCheckTest` | **19** | the script, the doors, both sides of every verdict, `PENDING` never guessed, the code word tolerance, and the report's counts and redaction |
-| `AiSelfCheckWiringTest` | **9** | no Send in the check, three stream sites, the ordinary doors, the settle hook's place and idempotence, the snapshot's field list, the clipboard road, read-only permissions, the card in both faces, memory-only + resets |
+| `AiSelfCheckWiringTest` | **10** | no Send in the check, three stream sites, the ordinary doors, the settle hook's place and idempotence, the snapshot's field list, the clipboard road, read-only permissions, the card in both faces, memory-only + resets, and **every `AiCopy` name the AI surface uses is declared** (the missing-constant sweep) |
 | `AiCodeBlockContrastTest` | **5** | the contrast numbers above, the roles the sheet actually draws, and the old colours pinned as *not* in the code |
 
-**74 passed / 0 failed** across the host suites in the sandbox harness — Phase 90/91's 41 (`AiChatSessionTest` 14,
-`AiChatSessionWiringTest` 10, `Phase90DeviceTest` 7, `Phase91SimpleChatTest` 10) plus this phase's 33.
+**75 passed / 0 failed** across the host suites in the sandbox harness — Phase 90/91's 41 (`AiChatSessionTest` 14,
+`AiChatSessionWiringTest` 10, `Phase90DeviceTest` 7, `Phase91SimpleChatTest` 10) plus this phase's **34**.
+
+> **The 34th case is a lesson.** `SELF_CHECK_TITLE` was referenced by the card and never declared; a single-file
+> syntax check and every string pin passed it, and **CI** is what found it (run `37220392801`,
+> `AiChatSheet.kt:1171/1173 Unresolved reference`). The sweep now walks every main source the AI surface owns,
+> blanks strings and strips comments, and fails if any `AiCopy.<name>` has no declaration — the whole class of
+> "constant that does not exist" is a host failure from now on, not a CI round.
 
 ## Exit conditions
 
