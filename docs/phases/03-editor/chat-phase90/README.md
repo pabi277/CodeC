@@ -113,6 +113,11 @@ The owner said ***"Go"*** and all three code parts landed in one commit on `aren
   confirm, the follow-up disclosure, `AiBubble`'s label), `AiCopy.kt` (the new strings), `AiMarkdownView.kt` (the
   block frame, header strip, divider and drawn cap), `EditorScreen.kt` (`onNewChat`).
 - **Tests:** the three files above — 30 cases, all host-runnable, **30/0 green** in the sandbox harness.
+- **One existing pin moved, deliberately:** `AiLevel11WiringTest` censuses the surfaces that draw a body through
+  the Markdown model (six, plus the one verbatim reviewer body). Each earlier turn is a seventh Markdown surface
+  (`Answer(turn.text)`), so the census is **6 → 7** with the new surface named in the test; the verbatim exception
+  is still exactly one. `AiProviderWiringTest`'s immutable `provider`/`model` pin is untouched — the preview
+  freezes them first and the session rides along on a second `copy`, so the pinned literal stands as written.
 
 **Deviations from the brief, all deliberate** (also noted in the parts): the block is a `render()` string the two
 `userText` branches place themselves, rather than a `pack(question)` that would have duplicated the new message;

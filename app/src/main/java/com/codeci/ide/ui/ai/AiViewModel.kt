@@ -489,9 +489,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update {
                     it.copy(
                         phase = AiPhase.PREVIEW,
-                        prompt = result.prompt.copy(
-                            provider = it.provider, model = it.model, session = session
-                        ), notice = null,
+                        // provider/model are frozen from the live selection (the
+                        // pinned immutable-fields rule); session then rides along.
+                        prompt = result.prompt.copy(provider = it.provider, model = it.model).copy(session = session),
+                        notice = null,
                         retryCountdown = null,
                         answer = "", error = null, cutShort = false, continuations = 0,
                         proposalResult = null, applyConflictPaths = emptyList(),
