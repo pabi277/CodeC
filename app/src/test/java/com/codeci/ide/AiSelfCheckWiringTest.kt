@@ -190,6 +190,18 @@ class AiSelfCheckWiringTest {
         assertTrue("after a beat, so the line can be read", card.contains("delay(AUTO_ADVANCE_MS)"))
         assertTrue("through the ordinary Next (which previews, never sends)", card.contains("onNext()"))
         assertTrue("and the constant is a real one", sheet.contains("private const val AUTO_ADVANCE_MS = "))
+        // The CI lesson of 57bd267: the const was inserted between a @Composable
+        // and its function, so the annotation landed on a property and the debug
+        // Kotlin compile failed. The card must stay annotated and the const must
+        // stay above the doc comment.
+        assertTrue(
+            "the card stays @Composable",
+            sheet.contains("@Composable\nprivate fun SelfCheckCard(")
+        )
+        assertFalse(
+            "and no annotation lands on a property",
+            Regex("@Composable\\n\\s*(private |internal |public )?(const val|val|var)").containsMatchIn(sheet)
+        )
         assertTrue(
             "and a finished run is never advanced",
             card.contains("if (live != null && !AiSelfCheck.isFinished(run)) {")

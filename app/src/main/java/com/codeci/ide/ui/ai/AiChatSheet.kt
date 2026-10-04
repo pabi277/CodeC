@@ -1143,6 +1143,9 @@ private fun Composer(
     }
 }
 
+/** How long a verdict stays on the card by itself before the next question is built. */
+private const val AUTO_ADVANCE_MS = 900L
+
 /**
  * Phase 92 — the self-check card (the owner: *"I am tired of testing — give some
  * command and I will run and share what is wrong"*).
@@ -1151,11 +1154,12 @@ private fun Composer(
  * result or a permission, never an opinion — the next check to run, and the
  * report to paste back. The report is redacted by construction: no prompt, no
  * answer, no key (**D6**).
+ *
+ * Phase 92.1 (his round: *"Not all test run"*): the button below is drawn for
+ * **every** step that is left — a step still waiting for its Send must have a way
+ * on too — and the card carries itself from verdict to verdict.
  */
 @Composable
-/** How long a verdict stays on the card by itself before the next question is built. */
-private const val AUTO_ADVANCE_MS = 900L
-
 private fun SelfCheckCard(
     run: AiSelfCheck.Run,
     live: AiSelfCheckVerdict?,
