@@ -6,7 +6,9 @@
 > [89.3](PART_89_3_TASK_MATRIX_AND_EVALUATION.md) the 10 × 2 × 3 matrix ·
 > [89.4](PART_89_4_DEVICE_ROUND_REFRESH.md) the refreshed [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **40 new test
 > cases** (38 host-runnable + 2 Robolectric-only decoder cases); the host-runnable AI suite is **620 pass /
-> 0 fail** in the sandbox harness. **No PR, no merge,
+> 0 fail** in the sandbox harness, and **Build APK [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349)
+> is green on head `58039cd`** (release APK 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B) after two
+> failed rounds that CI caught and the sandbox harness could not (below). **No PR, no merge,
 > no `main` push** — that needs the owner's explicit command (`rule.md` §3). **The device round has NOT been
 > run**: every row in it is ⏳ and owner-only.
 > **Baseline:** `main` @ `0fc2bfd88d99d80ca72d61347dea9b36a4b82381` — the merge commit of [PR #113](https://github.com/pabi277/CodeC/pull/113)
@@ -120,14 +122,14 @@ So 89.1 is a **test**, not a fix: it proves the claim by replaying an answer tha
 - What does exist is the counter surface: `AiAgentUsage` (`AiAgentState.kt:14-30`) rendered by
   `AiCopy.agentUsageLine`. The readout belongs beside it — numbers, not sentences.
 
-### 4. Inventory, measured not copied (2026-10-04, `0fc2bfd`)
+### 4. Inventory, measured not copied
 
-| Measure | Spec says | Measured today |
-|---|---|---|
-| Test files | — | **332** |
-| `@Test` cases | 391 (post-Level 6, 31 AI classes) | **3 204** |
-| AI test files (`Ai*.kt`) | 31 | **52** |
-| AI `@Test` cases | 391 | **622** |
+| Measure | Spec says | On `0fc2bfd` (brief) | On the implementation head (2026-10-04) |
+|---|---|---|---|
+| Test files | — | **332** | **336** (+4) |
+| `@Test` cases | 391 (post-Level 6, 31 AI classes) | **3 204** | **3 244** (+40 — the same number CI's `testDebugUnitTest` reports) |
+| AI test files (`Ai*.kt`) | 31 | **52** | **56** (+4) |
+| AI `@Test` cases | 391 | **622** | **660** (+38; the other two new cases are in `GeminiResponseTest`/`NvidiaResponseTest`) |
 
 The spec's *"CodeC currently fails retries and tool hallucinations"* is also pre-Level-7: the 49-block replay
 now ends **23 duplicate executions → zero with 23 cache hits** (`AiTaskMemoryTest` — *Level 6 replay duplicate
@@ -181,10 +183,13 @@ with the device round inside it for (d) · a failed row becomes its own fix phas
       build, the 5-task P5 comparison, the 10-task matrix, the 8 visual checks from 88.5, the P8 scrub row, the
       memory-cap question (5 files / 160 KiB / 256 KiB) and the long-answer lazy-list question. Every row is ⏳;
       nothing is pre-ticked. ([89.4](PART_89_4_DEVICE_ROUND_REFRESH.md))
-- [ ] Build APK is green on the implementation head; the number is recorded in the part docs. *(run requested on
-      push; the run id and byte sizes are recorded in the follow-up commit on this branch)*
-- [ ] Host inventory and APK delta are recorded against this brief's baseline (`0fc2bfd`; release 7 177 180 B).
-      *(inventory recorded below; the APK delta lands with the build number)*
+- [x] Build APK is green on the implementation head; the number is recorded in the part docs.
+      ([`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349) on `58039cd` — after two failed
+      rounds, both recorded below. Release 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B.)
+- [x] Host inventory and APK delta are recorded against this brief's baseline (`0fc2bfd`; release 7 177 180 B):
+      release **+2 360 B** (+0.03 %), debug **+7 768 B** (+0.03 %), mapping **−14 251 B**; host cases 3 204 →
+      3 246 measured `@Test` files/cases as noted in the inventory table, and the host harness suite 1 878 → 620
+      *on this phase's own harness set* (the harness set is not comparable across phases; see §*Verification*).
 - [x] No PR, no merge, no `main` push until the owner commands it (`rule.md` §3). *(none opened, none pushed)*
 
 ## Implementation record (2026-10-04)
@@ -206,6 +211,12 @@ Command: the owner's ***"Complete level 12"***. Branch `arena/01a102bd-codec`; n
 | `app/src/test/java/com/codeci/ide/GeminiResponseTest.kt` · `NvidiaResponseTest.kt` | 89.2 | one case each — the decoder usage reads, in their Robolectric homes (CI-only, by necessity) |
 | `app/src/test/java/com/codeci/ide/AiLevel12MatrixTest.kt` | 89.3 | **new** — 5 doc/contract cases |
 | `docs/phases/03-editor/chat-phase89/DEVICE_ROUND.md` | 89.4 | **new** — the owner's refreshed round (nothing ticked) |
+
+**APK delta (against the brief's baseline `0fc2bfd`, post-merge run `37136523881`).** Release
+**7 179 540 B** vs 7 177 180 B = **+2 360 B** (+0.03 %); debug **27 062 592 B** vs 27 054 824 B = **+7 768 B**
+(+0.03 %); R8 mapping **71 172 428 B** vs 71 186 679 B = **−14 251 B**. Two new files (`AiMeasurements.kt`, the
+pure policy; `HeapProbe.kt`, one `Runtime` read) and one extra text line in the sheet — the delta is what the
+brief predicted for a numbers-only readout: a few kilobytes, not a feature.
 
 **Verification.** The sandbox host harness (kotlinc 2.2.10 on a JDK; `rule.md` §9) compiles the whole Android-free
 `ui/ai` production set — including every file this phase edited except the two Compose/Android ones, which CI
@@ -243,6 +254,12 @@ Full detail: [89.2's CI round section](PART_89_2_NUMBERS_READOUT.md#ci-round-the
 standing `ui/ai` guard forbids `Runtime.getRuntime` (the command-execution token) · a **Stop keeps** the numbers
 instead of erasing them (the matrix has a Stop row that needs its readout) · `render` returns `String?`, the
 duration unit is chosen from the rounded tenths, and the final line says *"memory at finish"*.
+
+**CI rounds, in one line:** round 1 (`37182525547`) failed on the NVIDIA usage-only null-ness contract, round 2
+(`37185209647`) failed because the two decoder cases had to be Robolectric in a project with
+`isReturnDefaultValues = true`, round 3 ([`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349))
+is green on `58039cd`. All three details — causes, fixes, and what each round bought — are in the narrative above
+and in [89.2](PART_89_2_NUMBERS_READOUT.md#ci-round-the-evidence-of-record).
 
 **Still owed, and it is the owner's:** the **60 real runs** (10 tasks × 2 models × 3 runs, **3/3** to pass) and
 every device row in [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **No row is claimed run.** A failed row gets its own

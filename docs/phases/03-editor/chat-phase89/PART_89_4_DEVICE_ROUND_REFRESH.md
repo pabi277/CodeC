@@ -61,9 +61,9 @@ None. This part writes a checklist; the app under test is whatever Phase 89's im
       comparison, V1–V8 and Q1/Q2.)
 - [x] Every row has an expectation and an empty result cell; nothing is pre-ticked. (`AiLevel12MatrixTest` pins
       the P8 row as unticked and the two questions as asked.)
-- [ ] The build line names the real sha and run id, and the byte counts come from check-run annotations, not memory.
-      *(the file carries the placeholders; the sha/run id/bytes are filled from CI on the implementation head —
-      see the follow-up commit on this branch)*
+- [x] The build line names the real sha and run id, and the byte counts come from check-run annotations, not memory.
+      (head `58039cd`, Build APK [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349) green,
+      release 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B.)
 - [x] The file states plainly: **only the owner runs it**, and formal acceptance is his report.
 
 ## Tests (plan)
@@ -92,6 +92,6 @@ so a future refactor cannot quietly drop a required row.
 
 [`DEVICE_ROUND.md`](DEVICE_ROUND.md) is written on `arena/01a102bd-codec`. Its header is ⏳ **OWED, owner-only**;
 every one of its rows is ⏳ with an empty result cell, and the completion bars are empty. Nothing in it was
-filled from a run, because none has been run. The build line names the branch head and takes the byte counts
-from the `build` check-run annotations once the push has produced them (the run request is made by pushing;
-the numbers land in the follow-up commit on this branch).
+filled from a run, because none has been run. The build line names the branch head — `58039cd` — and takes its byte counts
+from the `build` check-run annotations of the green run [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349)
+(release 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B), never from memory.

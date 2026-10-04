@@ -86,7 +86,7 @@ four parts are written ([README + parts 89.1–89.4](docs/phases/03-editor/chat-
 implementation record) and the owner-only [DEVICE_ROUND.md](docs/phases/03-editor/chat-phase89/DEVICE_ROUND.md)
 is refreshed: 21 legacy rows + the 10-task × 2-model × 3-run matrix (60 real runs, 3/3 to pass) + the 8 visual
 checks + P8 + Q1/Q2 — **every row ⏳, nothing pre-ticked**. **S10 is no longer missing** (11 cases); 40 new cases
-in total (**38 host-runnable + 2 Robolectric-only**); **620/620 host cases green** in the sandbox harness. **Not merged; no PR.** The **60 real runs and the
+in total (**38 host-runnable + 2 Robolectric-only**); **620/620 host cases green** in the sandbox harness. **Build APK [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349) is green on head `58039cd`** (release APK 7 179 540 B, debug 27 062 592 B, R8 mapping 71 172 428 B). **Not merged; no PR.** The **60 real runs and the
 whole device round are the owner's and none has been run**. **Levels 13–14 remain unauthorized; formal device
 acceptance stays postponed until the owner's Level 12 round.**
 `main` is the merge commit of [PR #113](https://github.com/pabi277/CodeC/pull/113) (Phase 88 / Level 11), merged on the

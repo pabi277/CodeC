@@ -31,7 +31,7 @@
 > (`AiLevel12InjectionTest`, 11 cases; the fixture driven through the loop), the numbers readout is in
 > `AiMeasurements`/`AiMeasurePolicy` plus the `ui/performance/HeapProbe.kt` boundary sample (15 + 7 host cases + 2 Robolectric decoder cases), the
 > 60-run matrix is in `DEVICE_ROUND.md` (5 contract cases) and the device round is refreshed but **not run**
-> (every row ⏳, owner-only). **40 new cases (38 host-runnable + 2 Robolectric-only); 620/620 host cases green** in the sandbox harness; **no PR, no merge.**
+> (every row ⏳, owner-only). **40 new cases (38 host-runnable + 2 Robolectric-only); 620/620 host cases green** in the sandbox harness; **Build APK `37185580349` green on `58039cd`** (release 7 179 540 B); **no PR, no merge.**
 > Owner's Level 12 answers: in-memory numbers-only readout
 > (**D6**) · 3/3 pass bar · `gemini-3-flash-preview` + `nvidia/nemotron-3-super-120b-a12b` · one phase ·
 > a failed row becomes its own fix phase and Level 12 repeats. Levels 13–14 remain unauthorized; formal device

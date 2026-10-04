@@ -2,9 +2,11 @@
 
 > **Status: ⏳ OWED. Not run, not passed.** **Only the owner can run this** — his phone, his keys, and every
 > Send is his tap (**D4**). The agent never fills in a result cell and never marks a row passed.
-> **Build for this round:** head `_______` · Build APK run `_______` · release APK `_______ B` · debug `_______ B`
-> *(the agent fills these three lines when the implementation head is green, from the run's own annotations —
-> not from memory).*
+> **Build for this round:** head `58039cd` · Build APK run [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349)
+> — **✅ green** (2026-10-04 07:22–07:35 UTC) · release APK **7 179 540 B** · debug APK **27 062 592 B** ·
+> R8 mapping **71 172 428 B** · release manifest: no `android:debuggable` flag.
+> *(filled from the run's own check-run annotations, never from memory. The head is on `arena/01a102bd-codec`;
+> nothing is merged to `main`, so this build is the branch build.)*
 > **Models:** `gemini-3-flash-preview` and `nvidia/nemotron-3-super-120b-a12b`. GLM-5.3 is **not** part of this
 > round (owner's decision, 2026-10-04).
 > **One law above the whole round:** *CI green is not device acceptance.* A green build only means the app

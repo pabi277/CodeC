@@ -225,8 +225,11 @@ sandbox harness supplies its own working `org.json` shim and therefore could nev
 10). Fix: the two cases moved into their decoders' existing Robolectric classes with the same assertions plus
 a half-reported (Gemini) and a content-event (NVIDIA) case.
 
-**Round 3** — on the fix head, recorded with its run id and byte counts in the
-[Phase 89 README](README.md#implementation-record-2026-10-04) and in [`DEVICE_ROUND.md`](DEVICE_ROUND.md).
+**Round 3 — Build APK `37185580349` on head `58039cd` — ✅ green** (2026-10-04 07:22–07:35 UTC). Release APK
+**7 179 540 B** (+2 360 B against `0fc2bfd`), debug **27 062 592 B**, R8 mapping **71 172 428 B**; the same
+3 244-test set that round 2 reported now passes. Recorded in the
+[Phase 89 README](README.md#implementation-record-2026-10-04) and in the build line of
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md).
 
 **What the two rounds cost and bought:** two failed Build APK runs on an unchanged feature. In exchange, the
 phase carries (a) the Level 5 NVIDIA null-ness contract restored and pinned host-side, (b) the decoder reads
