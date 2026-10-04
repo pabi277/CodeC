@@ -1,6 +1,6 @@
 # CodeC Phase 89.2 — The numbers readout (latency, tokens, memory)
 
-> **Status:** ✅ **IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec`** — the readout is written: `AiMeasurements.kt` + `AiLevel12MeasureTest` (**15 cases**) + `AiLevel12WiringTest` (**7 cases**), all green · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** ✅ **IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec`** — the readout is written: `AiMeasurements.kt` + `AiLevel12MeasureTest` (**15 cases**) + `AiLevel12WiringTest` (**7 cases**), all green, plus one Robolectric decoder case in each of `GeminiResponseTest`/`NvidiaResponseTest` (CI-only) · **Cost:** `[client-only]` · **Effort:** M
 > **Owner authorization (2026-10-04):** asked how latency, tokens and memory should be measured, the owner chose
 > **"a small in-memory numbers-only readout"** — new app code that **must respect D6**.
 > **Laws that bind this part:** **D6** (never persist raw chat, prompts, answers or the timeline — and here, no
@@ -145,8 +145,9 @@ is measured, and the numbers still die with the next task.
 
 ## Implementation (2026-10-04)
 
-Written on `arena/01a102bd-codec`; **24 cases** (17 measure + 7 wiring), all green in the sandbox host harness
-and on CI.
+Written on `arena/01a102bd-codec`; **22 host-runnable cases** (15 measure + 7 wiring), all green in the sandbox
+host harness, plus **two Robolectric decoder cases** (`GeminiResponseTest` +1, `NvidiaResponseTest` +1) that only
+CI can run.
 
 | File | Change |
 |---|---|
@@ -157,7 +158,8 @@ and on CI.
 | `app/src/main/java/com/codeci/ide/ui/ai/AiAnswer.kt` | `AiOutcome.Answer.usage` + the `reportedUsage` accumulator (recorded before the failure/cap early exits) |
 | `app/src/main/java/com/codeci/ide/ui/ai/AiViewModel.kt` | `AiUiState.measurements`, one clock field, four private helpers, wired into `clear()`, both Send paths, both `onText` callbacks, both outcome paths, `stopAgent` and `finishAgent` |
 | `app/src/main/java/com/codeci/ide/ui/ai/AiChatSheet.kt` | `MeasurementsLine(state)` — one helper, drawn under the progress line in the activity card (live for an agent task) and in the terminal area whenever the card is not on screen, so every finished task reports numbers exactly once |
-| `app/src/test/java/com/codeci/ide/AiLevel12MeasureTest.kt` · `AiLevel12WiringTest.kt` | the 24 cases above |
+| `app/src/test/java/com/codeci/ide/AiLevel12MeasureTest.kt` · `AiLevel12WiringTest.kt` | the 22 host-runnable cases above |
+| `app/src/test/java/com/codeci/ide/GeminiResponseTest.kt` · `NvidiaResponseTest.kt` | one Robolectric case each — the decoder usage reads (present / absent / half-reported / total-only) |
 
 Deviations from the plan above (all intent-preserving; 3–5 are the ones a reviewer should read):
 
@@ -180,6 +182,13 @@ Deviations from the plan above (all intent-preserving; 3–5 are the ones a revi
    rounded tenths so a hair under a minute reads `59.9 s` and 59.95 s reads `1 m 0 s` (never `60.0 s`).
 7. **The reset-on-project-switch claim is `clear()`.** Reading the ViewModel showed project switching goes
    through `onProjectChanged(...)` → `clear()`, so there is no second path to pin.
+10. **The two decoder cases live in the Robolectric classes, and CI taught us that.** They were first written in
+    `AiLevel12MeasureTest`, and round 2 failed on them: this project sets `isReturnDefaultValues = true`
+    (`app/build.gradle.kts:156`), so in a plain-JVM unit test every `org.json` method returns `null` — no
+    Robolectric shadow, no exception — and the decoders duly read nothing. The sandbox harness could not see
+    this because it supplies its own working `org.json` shim. Both cases moved into
+    `GeminiResponseTest`/`NvidiaResponseTest` (Robolectric, where `org.json` is real) with the same and two
+    extra assertions; no production code changed and nothing was asserted less strongly.
 9. **The NVIDIA usage-only event keeps its null-ness contract exactly.** The first cut returned
    `null` from such an event when its `usage` object named no usable `prompt_tokens` / `completion_tokens`
    pair (e.g. a `total_tokens`-only report). CI round 1 caught it (`NvidiaResponseTest` — *DONE and
@@ -204,10 +213,23 @@ FAILED` (`java.lang.NullPointerException at NvidiaResponseTest.kt:56`). Cause: t
 usage read returned `null` for a usage-bearing event whose `usage` object named no `prompt_tokens` /
 `completion_tokens` pair, which broke the Level 5 contract (an event with a `usage` object is a chunk with
 empty text). **No production contract was rewritten to make a test pass**: the presence of the `usage` object
-again decides whether the event is a chunk, and an unnameable pair stays *"not reported"*. Two host cases
-were added in the same change to pin the contract, because the test that caught it is Robolectric-only and
-could not have caught it in the sandbox harness.
+again decides whether the event is a chunk, and an unnameable pair stays *"not reported"*. Fix head `0929ef5`.
 
-**Round 2** — on the fix head, recorded with its run id and byte counts in the
-[Phase 89 README](README.md#implementation-record-2026-10-04) and in
-[`DEVICE_ROUND.md`](DEVICE_ROUND.md).
+**Round 2 — Build APK `37185209647` on head `0929ef5` — ❌ failed, and it caught a test-placement error.**
+`3 244 tests completed, 2 failed`: `AiLevel12MeasureTest > the Gemini report is read when present and stays
+null when absent` (`org.junit.ComparisonFailure` at `:113`) and `AiLevel12MeasureTest > the NVIDIA usage-only
+event keeps its no-text contract and its counts` (`NullPointerException` at `:125`). Cause: **neither decoder
+is broken** — the two new cases were plain-JVM cases, and this project sets `isReturnDefaultValues = true`
+(`app/build.gradle.kts:156`), so every `org.json` method returns `null` in a non-Robolectric unit test. The
+sandbox harness supplies its own working `org.json` shim and therefore could never reproduce it (deviation
+10). Fix: the two cases moved into their decoders' existing Robolectric classes with the same assertions plus
+a half-reported (Gemini) and a content-event (NVIDIA) case.
+
+**Round 3** — on the fix head, recorded with its run id and byte counts in the
+[Phase 89 README](README.md#implementation-record-2026-10-04) and in [`DEVICE_ROUND.md`](DEVICE_ROUND.md).
+
+**What the two rounds cost and bought:** two failed Build APK runs on an unchanged feature. In exchange, the
+phase carries (a) the Level 5 NVIDIA null-ness contract restored and pinned host-side, (b) the decoder reads
+pinned in the only environment where `org.json` is real, and (c) two recorded facts about this sandbox's
+harness that a future session should not have to rediscover: a shimmed framework class can hide a
+`returnDefaultValues` trap, and CI is where that class of error surfaces.
