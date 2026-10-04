@@ -218,6 +218,15 @@ object AiSelfCheck {
     }
 
     /**
+     * The owner moved past this step without sending it (Phase 92.1 — his round:
+     * *"not all test run"*, the card had no way on). It is recorded as **not
+     * run**, never as a pass, and the report counts it that way: a check nobody
+     * ran must never read as a check that worked.
+     */
+    fun skipped(step: AiSelfCheckStep): AiSelfCheckVerdict =
+        verdict(step, AiSelfCheckOutcome.PENDING, "skipped, not run")
+
+    /**
      * The verdict of the step being run, if the task on screen has already
      * settled it. Null while the run is over.
      */

@@ -1,8 +1,14 @@
 # Phase 92 — the self-check (one command instead of twenty rows)
 
-> **Status: ✅ IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec`.** The owner: *"I am tired of testing — give some
-> command and I will run and share what is wrong."* This is that command: **Self-check** in the AI sheet, five checks
-> the app judges itself, and a redacted report to paste back.
+> **Status: ✅ IMPLEMENTED (2026-10-04), fixed after the owner's first round (2026-10-05).** The owner: *"I am tired
+> of testing — give some command and I will run and share what is wrong."* This is that command: **Self-check** in
+> the AI sheet, five checks the app judges itself, and a redacted report to paste back.
+>
+> **His first round found the hole: "Not all test run."** The card drew `Next check` only *after* a step had worked,
+> so a step still waiting for its Send had no way forward at all, and a door that refused (an answer still arriving)
+> said nothing. **Fixed in [Phase 92.1](PART_92_1_NOT_ALL_TEST_RUN.md)**: the button is never hidden (its label is
+> the truth — *Next check* or *Skip check*), a skipped step is recorded as **not run** and never as a pass, the run
+> now carries itself from verdict to verdict, and a refusal is printed instead of swallowed.
 >
 > **Authorization:** his message, the same day. **No PR, no merge, no `main` push** (`rule.md` §3). Level 12 stays
 > **not accepted**; Levels 13–14 stay unauthorized.
@@ -13,12 +19,20 @@
 2. The card appears. The first line is already judged — **File access**, which needs no request.
 3. For each of the next checks the sheet builds an **ordinary preview**; tap **Send** when you are ready.
    **Four Sends** in total, and the app judges each answer itself — nothing is asked of you but the tap.
-4. Tap **Next check** after each verdict, and **Copy report** at any point (it is complete when the card says
-   *all checks run*).
+4. The check **carries itself**: the moment a verdict lands it builds the next question on its own. **Copy report**
+   works at any point, and is complete when the card says *finished — Copy report*.
+   If a step cannot be sent, **Skip check** moves past it — the report then says *not run*, never *passed*.
 5. Paste the report in the chat.
 
 **Nothing is sent by the self-check.** Every request is an ordinary preview the owner approves (**D4**), and the
 check adds **no** fourth `client.stream(` site — pinned.
+
+## Round 1 — the owner, 2026-10-05
+
+His screenshot: the card on **Check 3 of 5**, checks 1–2 green (`all-files access granted (API 36)`,
+`answered (2 chars, 3329 sent)`), checks 3–5 *not run*, and **nothing on the card to press but Copy report and
+Stop**. **"Not all test run."** The full diagnosis is in [PART_92_1](PART_92_1_NOT_ALL_TEST_RUN.md); the fix makes
+the way on unconditional, records a skipped check as *not run*, and says out loud when a door refuses.
 
 ## The five checks, and who judges them
 
@@ -102,12 +116,13 @@ report (*"in light mode visible"*). A future edit that walks the block back into
 
 | File | Cases | What it pins |
 |---|---|---|
-| `AiSelfCheckTest` | **19** | the script, the doors, both sides of every verdict, `PENDING` never guessed, the code word tolerance, and the report's counts and redaction |
-| `AiSelfCheckWiringTest` | **10** | no Send in the check, three stream sites, the ordinary doors, the settle hook's place and idempotence, the snapshot's field list, the clipboard road, read-only permissions, the card in both faces, memory-only + resets, and **every `AiCopy` name the AI surface uses is declared** (the missing-constant sweep) |
+| `AiSelfCheckTest` | **20** | the script, the doors, both sides of every verdict, `PENDING` never guessed, the code word tolerance, and the report's counts and redaction |
+| `AiSelfCheckWiringTest` | **14** | no Send in the check, three stream sites, the ordinary doors, the settle hook's place and idempotence, the snapshot's field list, the clipboard road, read-only permissions, the card in both faces, memory-only + resets, and **every `AiCopy` name the AI surface uses is declared** (the missing-constant sweep) |
 | `AiCodeBlockContrastTest` | **5** | the contrast numbers above, the roles the sheet actually draws, and the old colours pinned as *not* in the code |
 
-**75 passed / 0 failed** across the host suites in the sandbox harness — Phase 90/91's 41 (`AiChatSessionTest` 14,
-`AiChatSessionWiringTest` 10, `Phase90DeviceTest` 7, `Phase91SimpleChatTest` 10) plus this phase's **34**.
+**80 passed / 0 failed** across the host suites in the sandbox harness — Phase 90/91's 41 (`AiChatSessionTest` 14,
+`AiChatSessionWiringTest` 10, `Phase90DeviceTest` 7, `Phase91SimpleChatTest` 10) plus this phase's **39**
+(20 + 14 + 5).
 
 > **The 34th case is a lesson.** `SELF_CHECK_TITLE` was referenced by the card and never declared; a single-file
 > syntax check and every string pin passed it, and **CI** is what found it (run `37220392801`,
@@ -123,4 +138,5 @@ report (*"in light mode visible"*). A future edit that walks the block back into
       on `090af93`: release `CodeC-IDE-1.3.17-universal.apk` = **7 191 772 B**, debug = **27 106 392 B**,
       `mapping.txt` = 71 597 427 B, release manifest with **no `android:debuggable` flag**. (The first head,
       `407cf4d`, failed this job on the missing `SELF_CHECK_TITLE` — the lesson above.)
-- [ ] **The owner runs it once and pastes the report** — the whole point of the phase.
+- [ ] **The owner runs it once and pastes the report** — the whole point of the phase. First attempt
+      (2026-10-05): *"Not all test run"* → [92.1](PART_92_1_NOT_ALL_TEST_RUN.md) fixed the dead end.

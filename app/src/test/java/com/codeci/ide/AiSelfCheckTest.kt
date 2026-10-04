@@ -269,6 +269,24 @@ class AiSelfCheckTest {
     }
 
     @Test
+    fun `a skipped check is PENDING and the report counts it as not run`() {
+        val step = step("recall")
+        val v = AiSelfCheck.skipped(step)
+        assertEquals("the step's own id", "recall", v.stepId)
+        assertEquals("never a pass, never a failure", AiSelfCheckOutcome.PENDING, v.outcome)
+        assertTrue("and the line says why", v.detail.contains("skipped"))
+        assertFalse("the word 'pass' never appears", v.detail.contains("pass"))
+        val run = AiSelfCheck.Run(stepIndex = 3, verdicts = listOf(AiSelfCheck.skipped(step)))
+        val report = AiSelfCheck.report("1.3.17", observed(), run)
+        assertTrue("the report counts it out loud", report.contains("0 passed, 0 failed, 5 not run."))
+        assertTrue("and its own line is not a PASS", report.contains("[3/5] Follow-up uses it"))
+        assertFalse(
+            "no PASS mark anywhere in a run that never ran",
+            report.lines().any { it.startsWith("[") && it.contains("PASS") }
+        )
+    }
+
+    @Test
     fun `checks that were never reached are counted as not run`() {
         val run = AiSelfCheck.Run(
             stepIndex = 1,

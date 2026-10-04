@@ -77,6 +77,10 @@ object AiCopy {
     const val SELF_CHECK_TITLE = "Self-check"
     const val SELF_CHECK_START = "Self-check"
     const val SELF_CHECK_NEXT = "Next check"
+    /** The way on that does not need the step to be sent (Phase 92.1). */
+    const val SELF_CHECK_SKIP = "Skip check"
+    /** The card's own word for the last state, so a skipped step never reads as "all run". */
+    const val SELF_CHECK_DONE = "finished — Copy report"
     const val SELF_CHECK_STOP = "Stop check"
     const val SELF_CHECK_REPORT = "Copy report"
     const val SELF_CHECK_COPIED = "Report copied"
@@ -86,8 +90,12 @@ object AiCopy {
      * Send he approves (D4), and the report is redacted by construction (D6).
      */
     const val SELF_CHECK_NOTE =
-        "Five checks. Each one is an ordinary Send you approve first. The report has no prompts, no answers and no keys — sizes and results only."
-    const val SELF_CHECK_SEND_HINT = "Send this check in the bar below when you are ready."
+        "Five checks, one at a time. Each one is an ordinary Send you approve first; Skip check moves past one " +
+            "without sending it (it is reported as not run, never as passed). The report has no prompts, no " +
+            "answers and no keys — sizes and results only."
+    const val SELF_CHECK_SEND_HINT = "Send this check in the bar below when you are ready — or tap Skip check."
+    /** Shown when the button cannot build the next preview yet (Phase 92.1). */
+    const val SELF_CHECK_BUSY = "The previous answer is still coming in — tap again in a moment."
     const val SELF_CHECK_HINT = "Five checks the app judges itself, then a report to share."
 
     /** Simple mode: the answer is still arriving and there is nothing to show yet. */

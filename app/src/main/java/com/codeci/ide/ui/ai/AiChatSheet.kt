@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.theme.CodecType
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
@@ -107,6 +108,8 @@ fun AiChatSheet(
     /** Phase 92 — the self-check: five scripted checks, judged by the app, reported as text. */
     onSelfCheckStart: () -> Unit = {},
     onSelfCheckNext: () -> Unit = {},
+    /** Phase 92.1 — moves past the step that is waiting for its Send, as *not run*. */
+    onSelfCheckSkip: () -> Unit = {},
     onSelfCheckStop: () -> Unit = {},
     /** The report text, built where the Android reads live (never in a composable). */
     onSelfCheckReport: () -> String = { "" },
@@ -341,6 +344,7 @@ private fun Conversation(
     runBusy: Boolean,
     /** Phase 92 — the self-check's own controls (see [SelfCheckCard]). */
     onSelfCheckNext: () -> Unit = {},
+    onSelfCheckSkip: () -> Unit = {},
     onSelfCheckStop: () -> Unit = {},
     onSelfCheckReport: () -> String = { "" },
     onSelfCheckLive: () -> AiSelfCheckVerdict? = { null },
@@ -409,6 +413,7 @@ private fun Conversation(
                 run = run,
                 live = onSelfCheckLive(),
                 onNext = onSelfCheckNext,
+                onSkip = onSelfCheckSkip,
                 onStop = onSelfCheckStop,
                 onReport = onSelfCheckReport
             )
@@ -1148,10 +1153,14 @@ private fun Composer(
  * answer, no key (**D6**).
  */
 @Composable
+/** How long a verdict stays on the card by itself before the next question is built. */
+private const val AUTO_ADVANCE_MS = 900L
+
 private fun SelfCheckCard(
     run: AiSelfCheck.Run,
     live: AiSelfCheckVerdict?,
     onNext: () -> Unit,
+    onSkip: () -> Unit,
     onStop: () -> Unit,
     onReport: () -> String
 ) {
@@ -1168,7 +1177,7 @@ private fun SelfCheckCard(
         ) {
             Text(
                 text = if (AiSelfCheck.isFinished(run)) {
-                    AiCopy.SELF_CHECK_TITLE + " — all checks run"
+                    AiCopy.SELF_CHECK_TITLE + " — " + AiCopy.SELF_CHECK_DONE
                 } else {
                     AiCopy.SELF_CHECK_TITLE + " — " + AiSelfCheck.progressLabel(run)
                 },
@@ -1195,10 +1204,24 @@ private fun SelfCheckCard(
                 )
             }
             val current = AiSelfCheck.stepAt(run)
-            if (current?.door != null && live == null) Muted(AiCopy.SELF_CHECK_SEND_HINT)
+            val waiting = current != null && current.door != null && live == null
+            if (waiting) Muted(AiCopy.SELF_CHECK_SEND_HINT)
+            // Phase 92.1 — the check carries itself to the next question the moment
+            // a verdict lands (the owner's round: *"not all test run"*), so the only
+            // tap left in the whole run is the Send of a preview (**D4**). The
+            // button below is still there, and it is never hidden: waiting for a
+            // Send used to leave the card with nothing to press at all.
+            LaunchedEffect(run.stepIndex, live?.detail) {
+                if (live != null && !AiSelfCheck.isFinished(run)) {
+                    delay(AUTO_ADVANCE_MS)
+                    onNext()
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
-                if (current != null && (current.door == null || live != null)) {
-                    OutlinedButton(onClick = onNext) { Text(AiCopy.SELF_CHECK_NEXT) }
+                if (current != null) {
+                    OutlinedButton(onClick = if (waiting) onSkip else onNext) {
+                        Text(if (waiting) AiCopy.SELF_CHECK_SKIP else AiCopy.SELF_CHECK_NEXT)
+                    }
                 }
                 TextButton(onClick = { copyAnswer(context, onReport()) }) { Text(AiCopy.SELF_CHECK_REPORT) }
                 TextButton(onClick = onStop) { Text(AiCopy.SELF_CHECK_STOP) }

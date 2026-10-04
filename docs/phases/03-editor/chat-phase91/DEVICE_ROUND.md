@@ -14,6 +14,9 @@
 > **Tired of judging rows?** [Phase 92](../chat-phase92/README.md) is the shortcut: tap **Self-check** in the sheet,
 > Send the four previews it builds, and paste the report — the app judges the file-access, follow-up, edit-proposal
 > and run-request rows itself. The visual rows (R7, P3, V1–V8) still need your eyes.
+> **Round 1 of that shortcut (2026-10-05) found a hole in it — *"Not all test run"***: a step waiting for its Send
+> had no way on. Fixed in [92.1](../chat-phase92/PART_92_1_NOT_ALL_TEST_RUN.md): *Next check* / *Skip check* is
+> always drawn, a skipped check is reported as **not run**, and the run carries itself.
 
 ## Part 1 — the simple chat (R1–R8)
 

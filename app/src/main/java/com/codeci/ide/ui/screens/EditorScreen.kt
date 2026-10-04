@@ -1255,6 +1255,7 @@ fun EditorScreen(
             // Phase 92 — the self-check (the owner: "give some command and I will run").
             onSelfCheckStart = aiViewModel::startSelfCheck,
             onSelfCheckNext = aiViewModel::selfCheckNext,
+            onSelfCheckSkip = aiViewModel::selfCheckSkip,
             onSelfCheckStop = aiViewModel::stopSelfCheck,
             onSelfCheckReport = aiViewModel::selfCheckReport,
             onSelfCheckLive = aiViewModel::selfCheckLive,

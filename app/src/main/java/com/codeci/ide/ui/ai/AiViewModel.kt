@@ -562,13 +562,71 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * The card's button. It settles the step the owner just ran (if it can be
-     * settled) and previews the next check's question — or walks past a step
-     * that needs no request. It never sends.
+     * The card's **Next check**. It records the step the owner just ran (if its
+     * own task is on screen and finished) and previews the next check's question
+     * — walking past a step that needs no request. It never sends (**D4**).
+     *
+     * Phase 92.1: it can no longer be a dead end. A door refuses while an answer
+     * is still arriving or a walk is running, and the old code returned in
+     * silence — the card sat on "waiting for Send" with nothing to press (the
+     * owner's round: *"not all test run"*). Now that refusal is said out loud in
+     * the notice line, and **Skip check** always moves the run on.
      */
     fun selfCheckNext() {
-        var run = _state.value.selfCheck ?: return
+        val s = _state.value
+        val run = s.selfCheck ?: return
         if (AiSelfCheck.isFinished(run)) return
+        if (selfCheckBusy(s)) {
+            _state.update { it.copy(notice = AiCopy.SELF_CHECK_BUSY) }
+            return
+        }
+        _state.update { it.copy(notice = null) }
+        settleSelfCheckStep()
+        previewSelfCheckStep()
+    }
+
+    /**
+     * The card's **Skip check**: the owner moves past the step that is waiting
+     * for its Send. It is recorded as **not run** and the report says so — a
+     * skipped check must never read as a check that passed.
+     */
+    fun selfCheckSkip() {
+        val s = _state.value
+        val run = s.selfCheck ?: return
+        if (AiSelfCheck.isFinished(run)) return
+        if (selfCheckBusy(s)) {
+            _state.update { it.copy(notice = AiCopy.SELF_CHECK_BUSY) }
+            return
+        }
+        val step = AiSelfCheck.stepAt(run) ?: return
+        if (step.door == null) {
+            // A step with no request of its own is judged, not skipped.
+            selfCheckNext()
+            return
+        }
+        _state.update {
+            it.copy(
+                notice = null,
+                selfCheck = run.copy(
+                    stepIndex = run.stepIndex + 1,
+                    verdicts = run.verdicts + AiSelfCheck.skipped(step)
+                )
+            )
+        }
+        previewSelfCheckStep()
+    }
+
+    /** An answer arriving, a project walk running or an apply in flight. */
+    private fun selfCheckBusy(s: AiUiState): Boolean =
+        s.phase == AiPhase.STREAMING || s.gathering || s.applying
+
+    /**
+     * Previews the current step's own question through the ordinary doors —
+     * it is a preview, so the Send that follows is the owner's tap (**D4**).
+     * Steps that need no request are judged on the spot and walked past.
+     */
+    private fun previewSelfCheckStep() {
+        var run = _state.value.selfCheck ?: return
         while (!AiSelfCheck.isFinished(run) && AiSelfCheck.stepAt(run)?.door == null) {
             val step = AiSelfCheck.stepAt(run) ?: break
             run = run.copy(
@@ -577,10 +635,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
         _state.update { state -> if (state.selfCheck == null) state else state.copy(selfCheck = run) }
+        if (AiSelfCheck.isFinished(run)) return
         val step = AiSelfCheck.stepAt(run) ?: return
         val question = step.prompt ?: return
         when (step.door) {
-            // The ordinary doors: preview, then the owner's Send (D4).
             AiSelfCheckDoor.ASK -> agentAsk(question, null, null, false, emptyMap())
             AiSelfCheckDoor.PROPOSE -> agentPropose(question, null, null, false, emptyMap())
             null -> Unit

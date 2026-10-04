@@ -27,6 +27,9 @@ class AiSelfCheckWiringTest {
     /** The self-check block of the view model, from its start to the report. */
     private val block = vm.substringAfter("fun startSelfCheck()").substringBefore("private fun settleSelfCheckStep()")
 
+    /** Phase 92.1 — the card itself, so a "never does X" check is scoped to it. */
+    private val card = sheet.substringAfter("private fun SelfCheckCard(").substringBefore("private fun TurnCopy(")
+
     @Test
     fun `the self-check never sends anything by itself`() {
         assertFalse("no Send call in the block", block.contains("send()"))
@@ -78,7 +81,6 @@ class AiSelfCheckWiringTest {
         assertTrue("the sheet asks the view model for it", sheet.contains("onReport = onSelfCheckReport"))
         // S6: a report leaves through the clipboard, like every other copy in ui/ai.
         assertTrue("the report copies", sheet.contains("copyAnswer(context, onReport())"))
-        val card = sheet.substringAfter("private fun SelfCheckCard(").substringBefore("private fun TurnCopy(")
         assertFalse("and never through a share sheet", card.contains("Intent("))
         assertFalse("never through a file", card.contains("File("))
     }
@@ -114,7 +116,13 @@ class AiSelfCheckWiringTest {
         assertTrue("it is wired in the screen", RepoFiles.codeOnly(
             RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt").readText()
         ).contains("onSelfCheckStart = aiViewModel::startSelfCheck"))
-        assertTrue("and so are its three controls", sheet.contains("onSelfCheckNext") && sheet.contains("onSelfCheckStop"))
+        assertTrue(
+            "and so are its controls",
+            sheet.contains("onSelfCheckNext") && sheet.contains("onSelfCheckSkip") && sheet.contains("onSelfCheckStop")
+        )
+        assertTrue("skip is wired in the screen too", RepoFiles.codeOnly(
+            RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/screens/EditorScreen.kt").readText()
+        ).contains("onSelfCheckSkip = aiViewModel::selfCheckSkip"))
     }
 
     @Test
@@ -137,6 +145,71 @@ class AiSelfCheckWiringTest {
                 .map { it.groupValues[1] + " (" + file.name + ")" }
         }.filter { it.substringBefore(' ') !in declared }
         assertTrue("unresolved AiCopy references: $dangling", dangling.isEmpty())
+    }
+
+    @Test
+    fun `a check waiting for its Send can always be skipped, and the card says so`() {
+        // The owner's own round on 2026-10-05: "Not all test run" -- the card sat
+        // on "waiting for Send" with no control on it at all. The way on is now
+        // unconditional: one button, labelled for what it will actually do.
+        assertTrue("the skip label exists", sheet.contains("AiCopy.SELF_CHECK_SKIP"))
+        assertTrue(
+            "the button is shown for every step that is left, not only a settled one",
+            card.contains("if (current != null) {") && card.contains("OutlinedButton(onClick = if (waiting) onSkip else onNext)")
+        )
+        assertTrue(
+            "and what it does is what it says",
+            card.contains("val waiting = current != null && current.door != null && live == null") &&
+                card.contains("Text(if (waiting) AiCopy.SELF_CHECK_SKIP else AiCopy.SELF_CHECK_NEXT)")
+        )
+        assertTrue("the hint offers it", raw("AiCopy.kt").contains("or tap Skip check"))
+    }
+
+    @Test
+    fun `a skipped check is recorded as not run, never as a pass`() {
+        val pure = src("AiSelfCheck.kt")
+        assertTrue("the pure model has a skip verdict", pure.contains("fun skipped(step: AiSelfCheckStep): AiSelfCheckVerdict"))
+        assertTrue(
+            "and it is PENDING, which the report counts as not run",
+            pure.substringAfter("fun skipped(").substringBefore("/**").contains("AiSelfCheckOutcome.PENDING")
+        )
+        assertTrue("the view model records it", vm.contains("verdicts = run.verdicts + AiSelfCheck.skipped(step)"))
+        assertTrue("the card never calls a finished run all-run", sheet.contains("AiCopy.SELF_CHECK_DONE"))
+        assertTrue(
+            "and the label itself promises nothing",
+            raw("AiCopy.kt").contains("const val SELF_CHECK_DONE = \"finished")
+        )
+    }
+
+    @Test
+    fun `the run moves itself to the next question, so the only tap left is the Send`() {
+        assertTrue(
+            "the card advances when a verdict lands",
+            card.contains("LaunchedEffect(run.stepIndex, live?.detail)")
+        )
+        assertTrue("after a beat, so the line can be read", card.contains("delay(AUTO_ADVANCE_MS)"))
+        assertTrue("through the ordinary Next (which previews, never sends)", card.contains("onNext()"))
+        assertTrue("and the constant is a real one", sheet.contains("private const val AUTO_ADVANCE_MS = "))
+        assertTrue(
+            "and a finished run is never advanced",
+            card.contains("if (live != null && !AiSelfCheck.isFinished(run)) {")
+        )
+    }
+
+    @Test
+    fun `a door that refuses says so instead of going silent`() {
+        // The other half of the owner's round: the preview of a step could be
+        // refused (an answer still arriving) and the tap vanished without a word.
+        assertTrue("busy has a name", vm.contains("private fun selfCheckBusy(s: AiUiState): Boolean ="))
+        assertTrue(
+            "it is the three states that refuse a door",
+            vm.contains("s.phase == AiPhase.STREAMING || s.gathering || s.applying")
+        )
+        assertTrue(
+            "Next and Skip both say it instead of returning in silence",
+            Regex("AiCopy[.]SELF_CHECK_BUSY").findAll(vm).count() == 2
+        )
+        assertTrue("the sentence exists", raw("AiCopy.kt").contains("const val SELF_CHECK_BUSY = "))
     }
 
     @Test
