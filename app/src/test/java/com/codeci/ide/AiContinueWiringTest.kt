@@ -107,7 +107,11 @@ class AiContinueWiringTest {
         assertTrue(sheet.contains("onContinue: () -> Unit = {}"))
         assertTrue(sheet.contains("onContinue: () -> Unit,"))
         // The handler is passed straight to the button: no send inside the sheet.
-        val bar = sheet.substringAfter("AiPhase.DONE -> Row(").substringBefore("AiPhase.FAILED ->")
+        // Phase 91: the DONE branch is a block now (Copy + Continue, then the
+        // composer), so the slice anchors on the branch's own Copy button — the
+        // one line that cannot be confused with the conversation's turn copies.
+        val bar = sheet.substringAfter("Button(onClick = { copyAnswer(context, state.answer) })")
+            .substringBefore("AiPhase.FAILED ->")
         assertTrue(bar.contains("OutlinedButton(onClick = onContinue)"))
         assertFalse("the sheet must not send", bar.contains("onSend"))
     }
