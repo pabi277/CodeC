@@ -63,6 +63,17 @@ this phase: *every step of the check has a way out, and a way out is recorded, n
 
 **Host harness: 80 passed / 0 failed** (Phase 90/91's 41 + this phase's 39).
 
+## Build facts
+
+**Build APK green on `e06d3a5`** — run [`37231109942`](https://github.com/pabi277/CodeC/actions/runs/37231109942):
+release `CodeC-IDE-1.3.17-universal.apk` = **7 192 032 B**, debug = **27 108 868 B**,
+`mapping.txt` = 71 635 235 B, release manifest with **no `android:debuggable` flag**. The first head of this
+increment (`57bd267`) failed the debug Kotlin compile because the new constant was inserted between the card's
+`@Composable` and its function — the annotation landed on the property. Fixed in `e06d3a5`, with the shape now
+pinned in `AiSelfCheckWiringTest` (the card stays `@Composable private fun SelfCheckCard(`, and no `@Composable`
+may land on a `val`/`var`/`const val` in the sheet): a single-file syntax check cannot see that class of mistake,
+and the host harness has no Compose compiler, so CI is what found it.
+
 ## Still open with the owner
 
 - **Run it again.** Tap **Self-check**, then the four Sends; the card now walks itself and *Copy report* is the
