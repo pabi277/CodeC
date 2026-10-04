@@ -1,6 +1,6 @@
 # Phase 90.3 — The real-assistant look
 
-> **Status: 📋 BRIEFED (2026-10-04). No code.** Touches `AiMarkdownView.kt`, `AiMarkdown.kt` (model only if a
+> **Status: ✅ IMPLEMENTED (2026-10-04).** Touches `AiMarkdownView.kt`, `AiMarkdown.kt` (model only if a
 > block shape is genuinely missing), `AiChatSheet.kt` (bubble chrome), `AiParts.kt`, `AiCopy.kt`,
 > `CodecTokens`/theme usage. **No new dependency, no HTML, no WebView** — the answer stays the hand-written
 > Markdown model drawn with Compose primitives.
@@ -20,7 +20,7 @@ text". The upgrade:
 | **Header strip** | One row: language label (or `Code`) · **Copy** on the right, with a divider under it — the header is part of the block, not floating text |
 | **Code surface** | A hair darker/lighter than the bubble (a token, not a hardcoded colour), monospace, `softWrap = false`, horizontal scroll, `Space.S` padding, and a visible start-of-scroll affordance when the line is wider than the screen |
 | **Unlabelled fence** | Keeps `Code` as the label instead of an empty row |
-| **Long blocks** | No vertical cap by default (the answer scrolls); if a fence is pathological (> 200 lines), show the first 200 with a one-line `[block continues]` note — honest, and cheap to draw |
+| **Long blocks** | ✅ As built: a fence over **200 lines** draws its first 200 with `AiCopy.CODE_BLOCK_TRIMMED`; **Copy always copies the whole block** |
 
 ## B. "Other stuff like a real ai" (the general ask)
 
@@ -33,7 +33,7 @@ text". The upgrade:
 | **Rules / tables** | present | tables keep their grid; add row separators that read in dark theme |
 | **Bubbles** | `YOU` / `AI` label rows (`AiChatSheet.kt:914`, `:931`) | per-turn label moves into the header row: **You** right-aligned, **AI · provider · model** left-aligned; spacing between turns (not just inside them) |
 | **Streaming** | re-parses ≤ every 150 ms | unchanged; the new chrome must not flicker — the block frame is drawn from the parsed model, not per token |
-| **Long-answer jump** | none | a small "jump to the newest" affordance while a long answer streams (appears only when scrolled up) — helps the T1-style answers the owner runs |
+| **Long-answer jump** | none | **Not built in this pass.** The sheet already follows the stream while `STREAMING` (it scrolls to the end on every chunk), so a jump affordance would need a scroll-position signal and a "user scrolled away" state — a real change to the sheet's scroll policy, best decided after the owner sees the polish on the phone (C13) |
 | **Empty states** | hints exist | a first-run line in an empty chat: "Ask about a selection, or type a question about this project." (copy only) |
 
 ## What is explicitly **not** here
@@ -42,6 +42,16 @@ text". The upgrade:
 - No avatars, timestamps, "typing…" shimmer, or sounds.
 - No change to the link rules: `https`-only behind the dialog (V3 passed) and `javascript:`/`data:` stay inert.
 - No change to `AiMarkdown.kt`'s parsing contract: raw HTML stays characters, an unclosed fence stays code.
+
+## As built (2026-10-04)
+
+- `AiMdColors` gained `frame` (`outlineVariant`), and the code block is now: a **1 dp frame**, a header strip with
+  the language and **Copy**, a divider under the header, the code on its own surface with padding, and the trimmed
+  note when the fence is over 200 lines. `Copy` is unchanged (whole block, `copyAnswer`) and remains the only
+  action a block offers (**S6**).
+- `AiMdColors`' `remember` keys grew, so an unchanged parse still skips the blocks while streaming.
+- **Not done, on purpose:** syntax highlighting (a dependency and a performance question), avatars/timestamps/
+  shimmer, and any change to link handling (V3 passed; `javascript:`/`data:` stay inert).
 
 ## Planned checks
 

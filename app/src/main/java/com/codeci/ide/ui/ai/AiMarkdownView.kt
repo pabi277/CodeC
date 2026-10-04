@@ -1,6 +1,7 @@
 package com.codeci.ide.ui.ai
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.theme.CodecType
@@ -77,10 +79,19 @@ import kotlinx.coroutines.withContext
  * values, so a streaming recomposition with an unchanged parse skips the blocks
  * instead of rebuilding every paragraph's text on every chunk.
  */
+/**
+ * Phase 90 — how many lines of one fence are DRAWN. The block's Copy button
+ * always copies every line; this only keeps a pathological fence from costing a
+ * huge layout, and [AiCopy.CODE_BLOCK_TRIMMED] says so on screen.
+ */
+private const val MAX_DRAWN_CODE_LINES = 200
+
 private data class AiMdColors(
     val link: Color,
     val muted: Color,
-    val codeBackground: Color
+    val codeBackground: Color,
+    /** Phase 90 — the frame around a code block, so it reads as a block on any bubble. */
+    val frame: Color
 )
 
 /**
@@ -96,7 +107,10 @@ internal fun AiMarkdownAnswer(text: String, streaming: Boolean) {
     val linkColor = MaterialTheme.colorScheme.primary
     val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
     val codeColor = MaterialTheme.colorScheme.surfaceVariant
-    val colors = remember(linkColor, mutedColor, codeColor) { AiMdColors(linkColor, mutedColor, codeColor) }
+    val frameColor = MaterialTheme.colorScheme.outlineVariant
+    val colors = remember(linkColor, mutedColor, codeColor, frameColor) {
+        AiMdColors(linkColor, mutedColor, codeColor, frameColor)
+    }
     SelectionContainer {
         Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
             MdBlocks(
@@ -198,38 +212,70 @@ private fun MdBlock(
             }
         }
 
-        is AiMdBlock.Code -> Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.codeBackground, RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.S)))
-                .padding(horizontal = gap, vertical = CodecTokens.space(Space.XS))
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = block.language.ifBlank { AiCopy.CODE_BLOCK_LABEL },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.muted,
-                    modifier = Modifier.weight(1f)
-                )
-                DisableSelection {
-                    // Copy only: the one way out of the AI surface. Never insert, apply or run (S6).
-                    TextButton(
-                        onClick = { onCopy(block.text) },
-                        modifier = Modifier.semantics { contentDescription = AiCopy.CODE_COPY_DESCRIPTION }
-                    ) {
-                        Text(AiCopy.CODE_COPY, style = MaterialTheme.typography.labelMedium)
+        is AiMdBlock.Code -> {
+            // Phase 90 (90.3) — the owner asked for code that reads as a *block*:
+            // a real frame, a header strip with the language and Copy, and the
+            // code on its own surface. Copy still copies the WHOLE block; only
+            // the drawing is capped for a pathological fence, and the note says so.
+            val lines = block.text.lines()
+            val drawn = if (lines.size > MAX_DRAWN_CODE_LINES) lines.take(MAX_DRAWN_CODE_LINES) else lines
+            val trimmed = drawn.size < lines.size
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.codeBackground, RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.S)))
+                    .border(1.dp, colors.frame, RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.S)))
+            ) {
+                Row(
+                    modifier = Modifier.padding(
+                        start = gap,
+                        end = CodecTokens.space(Space.XS),
+                        top = CodecTokens.space(Space.XS)
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = block.language.ifBlank { AiCopy.CODE_BLOCK_LABEL },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.muted,
+                        modifier = Modifier.weight(1f)
+                    )
+                    DisableSelection {
+                        // Copy only: the one way out of the AI surface. Never insert, apply or run (S6).
+                        TextButton(
+                            onClick = { onCopy(block.text) },
+                            modifier = Modifier.semantics { contentDescription = AiCopy.CODE_COPY_DESCRIPTION }
+                        ) {
+                            Text(AiCopy.CODE_COPY, style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
+                HorizontalDivider(color = colors.frame)
+                Text(
+                    text = drawn.joinToString("\n"),
+                    fontFamily = CodecType.codeFamily,
+                    style = MaterialTheme.typography.bodySmall,
+                    softWrap = false,
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(
+                            start = gap,
+                            end = gap,
+                            top = CodecTokens.space(Space.XS),
+                            bottom = CodecTokens.space(Space.XS)
+                        )
+                )
+                if (trimmed) {
+                    Text(
+                        text = AiCopy.CODE_BLOCK_TRIMMED,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.muted,
+                        modifier = Modifier.padding(
+                            start = gap, end = gap, bottom = CodecTokens.space(Space.XS)
+                        )
+                    )
+                }
             }
-            Text(
-                text = block.text,
-                fontFamily = CodecType.codeFamily,
-                style = MaterialTheme.typography.bodySmall,
-                softWrap = false,
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(bottom = CodecTokens.space(Space.XS))
-            )
         }
 
         is AiMdBlock.Table -> Text(

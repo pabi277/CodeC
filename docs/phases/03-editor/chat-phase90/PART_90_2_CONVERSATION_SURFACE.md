@@ -1,6 +1,6 @@
 # Phase 90.2 — The conversation surface
 
-> **Status: 📋 BRIEFED (2026-10-04). No code.** Touches `AiViewModel.kt`, `AiChatSheet.kt`, `AiCopy.kt`,
+> **Status: ✅ IMPLEMENTED (2026-10-04).** Touches `AiViewModel.kt`, `AiChatSheet.kt`, `AiCopy.kt`,
 > `AiContext.kt`, `AiParts.kt`. Everything user-visible is new copy in `AiCopy.kt` (the house rule: no string
 > literals in composables).
 
@@ -54,7 +54,21 @@
 | The measurements card | Still one line per finished task, in memory (Phase 89). With a transcript it attaches to the turn that just finished |
 | `clear()` semantics | Unchanged — the ✕ still clears the task; only New chat also empties the transcript |
 
-## Wiring sketch (implementation, on go)
+## Deviations, as built
+
+- **Idempotence by flag, not by content.** `AiUiState.taskCommitted` guards the commit at every point (a new
+  preview, New chat, ✕ clear, an agent task starting), so a task joins the conversation exactly once and two
+  identical questions in a row are never treated as a duplicate.
+- **The commit point is the preview, not Send.** The transcript block of the request being previewed must include
+  the task that just finished, so the commit happens while the new prompt is frozen — and a cancelled preview
+  therefore commits the finished task too, which is correct: it had already finished.
+- **An agent task carries the block inside its first packed turn.** The agent's runtime bytes come from
+  `AiAgentPrompt.pack`, not `userText`, so the block is handed to `pack(transcript = …)` on the first turn and to
+  `AiPrompt.userText` in the preview — one string, both places (**D4**).
+- **`clear()` commits first.** ✕ means "clear this task, keep the conversation", so a settled task is committed
+  before the view is emptied; **New chat** then empties the session itself.
+
+## Wiring sketch (as built)
 
 1. `AiUiState` gains `session: AiChatSession = AiChatSession()` (in-memory, D6) — beside `answer` at
    `AiViewModel.kt:34`.

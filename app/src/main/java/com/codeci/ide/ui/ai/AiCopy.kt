@@ -500,6 +500,36 @@ object AiCopy {
     const val CONTINUE_PROPOSAL_NOTE =
         "This reply was an edit proposal — review the card above, or ask a new question for the rest."
 
+    // ---- Phase 90: the conversation surface ---------------------------------
+
+    /** The header action: start a fresh conversation (the task and the transcript both clear). */
+    const val NEW_CHAT = "New chat"
+    const val NEW_CHAT_TITLE = "Start a new chat?"
+    const val NEW_CHAT_BODY =
+        "This clears the conversation and the current task. Nothing here is saved anywhere."
+    const val NEW_CHAT_CONFIRM = "New chat"
+    const val NEW_CHAT_KEEP = "Keep it"
+
+    /** The preview's disclosure: exactly what the follow-up will carry from earlier. */
+    fun earlierTurnsLabel(turns: Int, chars: Int): String =
+        "Follow-up · $turns earlier " + (if (turns == 1) "turn" else "turns") +
+            " · $chars characters will be sent again"
+    const val EARLIER_TURNS_SHOW = "Show earlier turns"
+    const val EARLIER_TURNS_HIDE = "Hide earlier turns"
+    const val EARLIER_TURNS_TITLE = "Earlier turns"
+
+    /** One assistant turn's label: who answered it, and whether it was stopped. */
+    fun turnLabel(provider: AiProviderId, model: String, stopped: Boolean): String {
+        val base = "$AI · ${provider.label} · $model"
+        return if (stopped) base + " · stopped" else base
+    }
+
+    /**
+     * A code block that was longer than the drawn cap; the block still Copies in
+     * full, so the note only says what the screen shows.
+     */
+    const val CODE_BLOCK_TRIMMED = "[long block — the Copy button has all of it]"
+
     fun problem(p: AiContextProblem): String = when (p) {
         AiContextProblem.NO_SELECTION -> "Select some code in the editor first, then tap Explain selection."
         AiContextProblem.SELECTION_TOO_LONG ->

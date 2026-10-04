@@ -1,9 +1,11 @@
 # Phase 90.4 — The device checklist
 
-> **Status: 📋 BRIEFED (2026-10-04) — owner-only, and nothing is pre-ticked.** Like Phase 89's
-> [`DEVICE_ROUND.md`](../chat-phase89/DEVICE_ROUND.md): the agent never fills a result cell. This file becomes
-> the working checklist when 90.1–90.3 are implemented and a build is green; the rows below are what the owner
-> and only the owner can answer with a phone in hand.
+> **Status: ✅ IMPLEMENTED (2026-10-04) — the round now lives in the phase's own
+> [`DEVICE_ROUND.md`](DEVICE_ROUND.md), owner-only and nothing pre-ticked.** Like Phase 89's
+> [`DEVICE_ROUND.md`](../chat-phase89/DEVICE_ROUND.md): the agent never fills a result cell. `Phase90DeviceTest`
+> pins the rows and the emptiness of every cell, so no later edit can quietly drop a row or tick one. The rows
+> below are what the owner and only the owner can answer with a phone in hand, and the round adds the **N1–N3**
+> checks for what must not have moved.
 
 ## Before the rows
 

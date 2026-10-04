@@ -132,7 +132,23 @@ data class AiUiState(
      * something is measured, and a provider that reports nothing renders as
      * "not reported" — never as 0 ([AiMeasurePolicy]).
      */
-    val measurements: AiMeasurements = AiMeasurements()
+    val measurements: AiMeasurements = AiMeasurements(),
+    /**
+     * Phase 90 — the conversation so far: his messages and the assistant's
+     * answers, in order, **in memory only**. It is never written to a file, a
+     * store, a log or a backup, and it dies with the process (D6); `clear()`
+     * keeps it (that clears the task), **New chat** empties it, and a project
+     * switch drops it. Every request's prompt packs it inside [AiPrompt.userText],
+     * so the preview still shows exactly what leaves the phone (D4).
+     */
+    val session: AiChatSession = AiChatSession.EMPTY,
+    /**
+     * Phase 90 — true once the settled task on screen has joined [session].
+     * The commit points (a new preview, New chat, ✕ clear) are idempotent, so a
+     * task can never be appended twice and a repeated exchange is never silently
+     * treated as a duplicate.
+     */
+    val taskCommitted: Boolean = false
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -167,6 +183,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     private class AgentSession(
         val question: String,
         val source: AiSource,
+        /**
+         * Phase 90 — the conversation block of the tasks before this one
+         * ([AiChatSession.render]). The FIRST turn of the task carries it, and it
+         * is the same string the preview froze, so preview and send cannot differ
+         * (D4). Later turns repeat the task and steps, not the history.
+         */
+        val transcript: String = "",
         val root: File,
         val mapText: String,
         val memoryStore: AiTaskMemoryStore,
@@ -428,7 +451,14 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         agent = null
         clear()
         closeSheet()
-        _state.update { it.copy(undoSummary = null, undoConflictPaths = emptyList()) }
+        // Phase 90: a transcript about another project is a leak surface — the
+        // conversation does not follow a project switch.
+        _state.update {
+            it.copy(
+                undoSummary = null, undoConflictPaths = emptyList(),
+                session = AiChatSession.EMPTY, taskCommitted = false
+            )
+        }
         if (name != null) {
             viewModelScope.launch {
                 val summary = withContext(Dispatchers.IO) {
@@ -450,26 +480,94 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         if (_state.value.phase == AiPhase.STREAMING || _state.value.testing || _state.value.configuring) return
         when (result) {
             is AiContextResult.Refused -> _state.update { it.copy(notice = AiCopy.problem(result.problem)) }
-            is AiContextResult.Ready -> _state.update {
-                it.copy(
-                    phase = AiPhase.PREVIEW,
-                    prompt = result.prompt.copy(provider = it.provider, model = it.model), notice = null,
-                    retryCountdown = null,
-                    answer = "", error = null, cutShort = false, continuations = 0,
-                    proposalResult = null, applyConflictPaths = emptyList(),
-                    undoConflictPaths = emptyList(),
-                    // A new preview is a new task: the previous timeline belongs
-                    // to a task that is over, and so do its numbers — both are
-                    // display state and neither is persisted (D6).
-                    agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null,
-                    measurements = AiMeasurements()
-                )
+            is AiContextResult.Ready -> {
+                // Phase 90: the settled task joins the conversation BEFORE the new
+                // prompt is frozen, so the preview's transcript block includes it.
+                // Computed outside the update lambda — a commit inside one could
+                // run twice if the CAS retried.
+                val session = sessionForNewPrompt(result.prompt, _state.value.session)
+                _state.update {
+                    it.copy(
+                        phase = AiPhase.PREVIEW,
+                        prompt = result.prompt.copy(
+                            provider = it.provider, model = it.model, session = session
+                        ), notice = null,
+                        retryCountdown = null,
+                        answer = "", error = null, cutShort = false, continuations = 0,
+                        proposalResult = null, applyConflictPaths = emptyList(),
+                        undoConflictPaths = emptyList(),
+                        // A new preview is a new task: the previous timeline belongs
+                        // to a task that is over, and so do its numbers — both are
+                        // display state and neither is persisted (D6).
+                        agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null,
+                        measurements = AiMeasurements(),
+                        // A new task has not been committed yet (Phase 90).
+                        taskCommitted = false
+                    )
+                }
             }
         }
     }
 
     fun cancelPreview() {
         _state.update { it.copy(phase = AiPhase.IDLE, prompt = null) }
+    }
+
+    /**
+     * Phase 90 — the session the NEXT prompt should carry.
+     *
+     * A **fresh** request (no continuation, and not the reviewer) settles the
+     * task that just finished into the conversation first, so the new prompt's
+     * transcript block includes it. A continuation and a review are still about
+     * the current task, so they keep the session exactly as it is.
+     */
+    private fun sessionForNewPrompt(prompt: AiPrompt, current: AiChatSession): AiChatSession {
+        if (prompt.continuation != null || prompt.source == AiSource.REVIEW) return current
+        return commitFinishedTask()
+    }
+
+    /**
+     * Phase 90 — a settled task becomes conversation history. Called when the
+     * next request is built and when the sheet is cleared, never twice for the
+     * same task ([AiPhase.PREVIEW] is not settled, so a re-preview cannot
+     * re-append). A **failed** request keeps the question as a turn with no
+     * answer; a DONE task adds both sides, the answer stripped of every machine
+     * marker ([AiChatSession.stripProtocol]) so a replayed answer can never
+     * reach the parser as an edit or a tool call. In memory only (D6).
+     */
+    private fun commitFinishedTask(): AiChatSession {
+        val s = _state.value
+        val prompt = s.prompt ?: return s.session
+        if (prompt.source == AiSource.REVIEW) return s.session
+        if (s.phase != AiPhase.DONE && s.phase != AiPhase.FAILED) return s.session
+        if (s.taskCommitted) return s.session
+        val asked = AiCopy.youLine(prompt.source, prompt.fileLabel, prompt.question)
+        var session = s.session.addYou(asked, prompt.provider, prompt.model)
+        if (s.phase == AiPhase.DONE) {
+            session = session.addAssistant(
+                text = s.answer,
+                provider = prompt.provider,
+                model = prompt.model,
+                stopped = s.cutShort
+            )
+        }
+        if (session.turns.size == s.session.turns.size) {
+            // Nothing conversational came out of it (an empty proposal, a blank
+            // reviewer line): mark it settled so it is not looked at twice.
+            _state.update { it.copy(taskCommitted = true) }
+            return s.session
+        }
+        _state.update { it.copy(session = session, taskCommitted = true) }
+        return session
+    }
+
+    /**
+     * Phase 90 — **New chat**: the task and the conversation both clear. The
+     * confirm dialog lives in the sheet; this is what runs when he confirms.
+     */
+    fun newChat() {
+        clear()
+        _state.update { it.copy(session = AiChatSession.EMPTY, taskCommitted = false) }
     }
 
     /**
@@ -902,10 +1000,15 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             pendingExistingPaths = scan.allTextPaths.toSet()
+            // Phase 90: the settled task joins the conversation before this one
+            // starts, and its block travels inside the task's FIRST request — the
+            // same string this preview freezes (D4).
+            val transcript = commitFinishedTask().render()
             if (prompt is AiContextResult.Ready) {
                 agent = AgentSession(
                     question = q,
                     source = source,
+                    transcript = transcript,
                     root = root,
                     mapText = map.text,
                     memoryStore = memoryStore,
@@ -1085,7 +1188,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     steps = steps,
                     memory = session.memory,
                     // Level 10: the working-set depth, frozen at Send.
-                    keepLastResults = session.options.workingSetDepth
+                    keepLastResults = session.options.workingSetDepth,
+                    // Phase 90: the conversation travels with the first turn only.
+                    transcript = if (steps.isEmpty()) session.transcript else ""
                 )
             }
             // Captured once. Every retry of this turn has the identical recipient, strings and budget.
@@ -1830,6 +1935,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clear() {
+        // Phase 90: clear() means "clear this task" — a settled task joins the
+        // conversation instead of vanishing with the view. New chat (newChat())
+        // is the action that empties the conversation itself.
+        commitFinishedTask()
         job?.cancel()
         job = null
         gatherJob?.cancel()
@@ -1846,7 +1955,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 // Level 10: offers and a review belong to the task being cleared.
                 budgetOffer = null, backupOffer = null, review = null, reviewedAnswer = null,
                 // Level 12: the numbers belong to the task being cleared too.
-                measurements = AiMeasurements()
+                measurements = AiMeasurements(),
+                // Phase 90: nothing is on screen to commit any more.
+                taskCommitted = false
             )
         }
     }

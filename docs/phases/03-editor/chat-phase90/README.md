@@ -1,12 +1,16 @@
 # Phase 90 — The conversation surface
 
-> **Status: 📋 BRIEFED (2026-10-04) — decision-complete, no code yet.** The owner's own request, dictated straight
+> **Status: ✅ IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec` — the owner said *"Go"* the same day.** All
+> three code parts are written and host-tested (**30 new cases**: `AiChatSessionTest` 14, `AiChatSessionWiringTest`
+> 10, `Phase90DeviceTest` 6 — **30 passed / 0 failed** in the sandbox harness, kotlinc 2.2.10), and the phase's own
+> [`DEVICE_ROUND.md`](DEVICE_ROUND.md) is waiting for the owner (C1–C14 + the V1–V8 re-run + N1–N3, **nothing
+> pre-ticked**). **No PR, no merge, no `main` push** (`rule.md` §3); Level 12 keeps its own open items. The owner's own request, dictated straight
 > after his Level 12 device round: ***"the ai feels not real i want the features like new chat or a follow up chat
 > etc options"***, and, on the visuals: ***"i think it should be better like code with a visible block, etc other
 > stuff like a real ai"***. **This is not Level 13 and not Level 14** — those stay unauthorized and untouched. This
 > is a product-surface phase the owner asked for by name.
-> **Authorization:** he said *"whatever i provide work on that"*. Per `rule.md` §3 the agent writes the brief here
-> and implements **on his explicit go** — no PR, no merge, no `main` push.
+> **Authorization:** he said *"whatever i provide work on that"*, and then **"Go"** when this brief was shown —
+> the implementation in this folder is that command. No PR, no merge and no `main` push: `rule.md` §3 stands.
 > **Baseline:** `arena/01a102bd-codec` @ `7c1c0e1` (Phase 89 / Level 12 implemented, CI-green `37202771868`,
 > Level 12 **not accepted** — S2, T3-Gemini and T4-NVIDIA failed and their fix phases are unopened).
 > **Read with:** [Phase 89 README](../chat-phase89/README.md) · the [owner's device report](../chat-phase89/DEVICE_ROUND_OWNER_REPORT_2026-10-04.md) ·
@@ -49,10 +53,10 @@
 
 | # | Part | What lands |
 |---|---|---|
-| **90.1** | [The session transcript](PART_90_1_SESSION_TRANSCRIPT.md) | `AiChatSession.kt` — the pure, clock-free, bounded model: turns, caps, packing, stripping of protocol markers, the "only the newest answer is parsed" rule, and the D6 pin |
-| **90.2** | [The conversation surface](PART_90_2_CONVERSATION_SURFACE.md) | The sheet draws the turns; **New chat**; the follow-up preview disclosure; per-turn provider/model labels; task controls (Stop, Apply/Undo, run approvals, Continue, budget offer) unchanged and still per-task |
-| **90.3** | [The real-assistant look](PART_90_3_REAL_AI_LOOK.md) | Code blocks as visible blocks (border + header + language + Copy), inline-code chips, list/quote/heading hierarchy, bubble polish, dark theme — all still the hand-written Markdown model, no HTML, no dependency |
-| **90.4** | [The device checklist](PART_90_4_DEVICE_CHECKLIST.md) | Owner-only rows C1–C14 for the new surface, plus the V1–V8 re-run after the polish |
+| **90.1** | [The session transcript](PART_90_1_SESSION_TRANSCRIPT.md) | ✅ `AiChatSession.kt` — the pure, clock-free, bounded model: turns, caps, packing, stripping of protocol markers, the "only the newest answer is parsed" rule, and the D6 pin |
+| **90.2** | [The conversation surface](PART_90_2_CONVERSATION_SURFACE.md) | ✅ The sheet draws the turns; **New chat**; the follow-up preview disclosure; per-turn provider/model labels; task controls (Stop, Apply/Undo, run approvals, Continue, budget offer) unchanged and still per-task |
+| **90.3** | [The real-assistant look](PART_90_3_REAL_AI_LOOK.md) | ✅ Code blocks as visible blocks (frame + header strip + language + Copy + divider), a drawn cap for pathological fences, bubble labels — all still the hand-written Markdown model, no HTML, no dependency |
+| **90.4** | [The device checklist](PART_90_4_DEVICE_CHECKLIST.md) | ✅ The phase's own [`DEVICE_ROUND.md`](DEVICE_ROUND.md): owner-only rows C1–C14, the V1–V8 re-run, and N1–N3 "what must not have moved" — **nothing pre-ticked** |
 
 ## Agent defaults — decided, not asked (veto any)
 
@@ -78,26 +82,41 @@
 | **S10** injection | Transcript text carries the data-not-instructions sentence and is never parsed as tool/edit markup; only the newest answer is |
 | **Only road** | Send; exactly three `client.stream(` sites; exactly two `openUri(` in `ui/ai/` |
 
-## Planned tests (to be written with the code)
+## Tests (written, and green)
 
-| File | Kind | Cases (planned) |
+| File | Kind | Cases |
 |---|---|---|
-| `AiChatSessionTest` | pure host | ~14 — caps, drop-oldest marker, per-turn clip, the new message is never dropped, protocol markers stripped, only the newest answer is parsed, stopped/failed turn rules, clearing rules, D6 shape |
-| `AiChatSessionWiringTest` | source pins | ~8 — three stream sites, two `openUri(`, zero writes in `ui/ai/`, the preview packs exactly `userText`, New chat confirmation, per-turn labels, no persistence calls |
-| `AiMarkdownTest` / view pins | host + CI | code-block header/label/Copy pins where host-checkable; the drawn result is CI/device |
-| `Phase90DeviceTest` | doc pin | the checklist exists with C1–C14 and nothing pre-ticked |
+| [`AiChatSessionTest`](../../../../app/src/test/java/com/codeci/ide/AiChatSessionTest.kt) | pure host | **14** — both sides of an exchange in order; the data-not-instructions opener; a stopped answer kept as stopped; blank question/answer add nothing; provider+model per turn; turn cap and character budget drop the oldest **with the marker**; the newest turn survives; a long answer is clipped to its newest end with the marker; edit blocks, tool blocks and an unclosed block are stripped; a hostile earlier answer stays plain text |
+| [`AiChatSessionWiringTest`](../../../../app/src/test/java/com/codeci/ide/AiChatSessionWiringTest.kt) | source pins (reads the real tree) | **10** — three `client.stream(` sites and two `openUri(` in `ui/ai`; `AiChatSession.kt` has no Android/IO/Log/clock/store; the key store and the Level 9 task store never learn about chat; the prompt packs the block inside `userText`; an agent task carries it on its first packed turn; the commit is idempotent (`taskCommitted`); New chat clears and ✕ keeps; a project switch drops it; every drawn turn names its real recipient; the disclosure shows the exact block |
+| [`Phase90DeviceTest`](../../../../app/src/test/java/com/codeci/ide/Phase90DeviceTest.kt) | doc pin | **6** — C1–C8 asked, C9–C14 asked, the V1–V8 re-run present, the N1–N3 no-move checks present, nothing pre-ticked, the six vetoable defaults stated |
 
 ## Exit conditions
 
-- [ ] 90.1–90.3 are written with their tests; the host harness is green; Build APK is green on the head.
-- [ ] Every default in the table above is either implemented or explicitly overridden by the owner in chat.
-- [ ] `DEVICE_ROUND.md` (this phase's own) carries C1–C14 and the V1–V8 re-run, **nothing pre-ticked**.
-- [ ] No ceiling moves, no new dependency/permission/endpoint, no PR and no merge.
+- [x] 90.1–90.3 are written with their tests; the host harness is green (**30 passed / 0 failed**, kotlinc 2.2.10).
+- [x] Every default in the table above is implemented — the three that changed shape while being built are recorded
+      as deviations in [90.1](PART_90_1_SESSION_TRANSCRIPT.md) and [90.2](PART_90_2_CONVERSATION_SURFACE.md).
+- [x] `DEVICE_ROUND.md` (this phase's own) carries C1–C14, the V1–V8 re-run and N1–N3, **nothing pre-ticked**.
+- [x] No ceiling moves, no new dependency, permission or endpoint (`client.stream(` = 3, `openUri(` = 2 — pinned).
+- [ ] **Build APK green on this head** — the run is watched; its facts (sha, run id, byte counts) land in the
+      follow-up commit, read from the run's own annotations.
+- [ ] **The device round** — owner-only ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); a failed row gets its own fix phase.
 
-## Open items this phase does **not** close
+## Implementation record (2026-10-04)
 
-- Phase 89 / Level 12 is still **not accepted**: **S2**, **T3-Gemini** and **T4-NVIDIA** failed and each needs its
-  own fix phase (owner's rule) — **not opened**, awaiting his command. The read-window finding (F1) is the fourth
-  candidate. This phase is his newer request and does not silently absorb them.
-- The T7/T10/B2 rows of the Level 12 round remain NOT EXERCISED with recipes in the
-  [owner report](../chat-phase89/DEVICE_ROUND_OWNER_REPORT_2026-10-04.md).
+The owner said ***"Go"*** and all three code parts landed in one commit on `arena/01a102bd-codec`:
+
+- **New file** `app/src/main/java/com/codeci/ide/ui/ai/AiChatSession.kt` — 2 enums, 1 data class, 1 pure model.
+- **Wiring:** `AiViewModel.kt` (`session` + `taskCommitted` in the state, `commitFinishedTask()`,
+  `sessionForNewPrompt()`, `newChat()`, the commit inside `clear()`, the project-switch drop, the agent task's
+  frozen `transcript`), `AiContext.kt` (`AiPrompt.session`, the two `userText` branches), `AiAgentLoop.kt`
+  (`AiAgentPrompt.pack(transcript = …)`, defaulted), `AiChatSheet.kt` (the turns, the ＋ New chat action with its
+  confirm, the follow-up disclosure, `AiBubble`'s label), `AiCopy.kt` (the new strings), `AiMarkdownView.kt` (the
+  block frame, header strip, divider and drawn cap), `EditorScreen.kt` (`onNewChat`).
+- **Tests:** the three files above — 30 cases, all host-runnable, **30/0 green** in the sandbox harness.
+
+**Deviations from the brief, all deliberate** (also noted in the parts): the block is a `render()` string the two
+`userText` branches place themselves, rather than a `pack(question)` that would have duplicated the new message;
+idempotence is a `taskCommitted` flag rather than content matching (two identical questions must both be kept); and
+an agent task carries the block **inside** its first packed turn — with `AiPrompt.session` doing the same in the
+preview — because the agent's runtime bytes are built by `AiAgentPrompt`, and the preview and the sent request must
+stay one string (**D4**).

@@ -1249,6 +1249,7 @@ fun EditorScreen(
             onStop = aiViewModel::stop,
             onRetry = aiViewModel::retry,
             onClear = aiViewModel::clear,
+            onNewChat = aiViewModel::newChat,
             onDismissNotice = aiViewModel::dismissNotice,
             onExpand = { aiViewModel.sheetEvent(AiSheetEvent.EXPAND) },
             onMinimize = { aiViewModel.sheetEvent(AiSheetEvent.MINIMIZE) },

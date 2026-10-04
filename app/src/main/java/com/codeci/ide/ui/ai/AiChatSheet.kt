@@ -22,9 +22,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -97,6 +100,8 @@ fun AiChatSheet(
     onStop: () -> Unit,
     onRetry: () -> Unit,
     onClear: () -> Unit,
+    /** Phase 90 — start a fresh conversation: the task and the transcript both clear. */
+    onNewChat: () -> Unit = {},
     onDismissNotice: () -> Unit,
     onExpand: () -> Unit,
     onMinimize: () -> Unit,
@@ -189,7 +194,7 @@ fun AiChatSheet(
                             .background(MaterialTheme.colorScheme.outlineVariant)
                     )
                 }
-                Header(state.provider, state.model, full, onExpand, onMinimize)
+                Header(state.provider, state.model, full, onExpand, onMinimize, onNewChat)
             }
             HorizontalDivider()
             Conversation(
@@ -212,7 +217,32 @@ fun AiChatSheet(
 }
 
 @Composable
-private fun Header(provider: AiProviderId, model: String, full: Boolean, onExpand: () -> Unit, onMinimize: () -> Unit) {
+private fun Header(
+    provider: AiProviderId,
+    model: String,
+    full: Boolean,
+    onExpand: () -> Unit,
+    onMinimize: () -> Unit,
+    onNewChat: () -> Unit
+) {
+    // Phase 90: New chat is destructive to the conversation, so it asks first —
+    // and the dialog says the whole truth: nothing here is saved anywhere.
+    var confirming by remember { mutableStateOf(false) }
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text(AiCopy.NEW_CHAT_TITLE) },
+            text = { Text(AiCopy.NEW_CHAT_BODY) },
+            confirmButton = {
+                TextButton(onClick = { confirming = false; onNewChat() }) {
+                    Text(AiCopy.NEW_CHAT_CONFIRM)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirming = false }) { Text(AiCopy.NEW_CHAT_KEEP) }
+            }
+        )
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,6 +262,13 @@ private fun Header(provider: AiProviderId, model: String, full: Boolean, onExpan
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+        IconButton(onClick = { confirming = true }) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = AiCopy.NEW_CHAT,
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+            )
+        }
         if (!full) {
             IconButton(onClick = onExpand) {
                 Icon(
@@ -285,6 +322,19 @@ private fun Conversation(
             .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
         verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))
     ) {
+        // Phase 90 — the conversation so far. Every settled task (the ones from
+        // before this one) is drawn here, in order, each answer labelled with the
+        // provider and model that actually answered it (S8). In memory only (D6).
+        state.session.turns.forEach { turn ->
+            when (turn.role) {
+                AiChatRole.YOU -> YouBubble(turn.text)
+                AiChatRole.ASSISTANT -> AiBubble(
+                    label = AiCopy.turnLabel(
+                        turn.provider, turn.model, turn.status == AiTurnStatus.STOPPED
+                    )
+                ) { Answer(turn.text) }
+            }
+        }
         val prompt = state.prompt
         if (state.phase != AiPhase.IDLE && prompt != null) {
             YouBubble(AiCopy.youLine(prompt.source, prompt.fileLabel, prompt.question))
@@ -330,6 +380,22 @@ private fun Conversation(
                     it.provider, it.model,
                     if (it.continuation != null) AiContinuation.requestBudget(state.answer.length) else AiLimits.MAX_REPLY_CHARS
                 ))
+                // Phase 90 — the follow-up disclosure (D4): the earlier-turns
+                // block that will be packed into the user message, exactly as it
+                // will be sent, one tap away. Hidden when there is nothing to
+                // carry, and it never replaces the two strings below.
+                val earlier = it.session.render()
+                if (earlier.isNotBlank()) {
+                    var showEarlier by remember(it.session) { mutableStateOf(false) }
+                    Muted(AiCopy.earlierTurnsLabel(it.session.turnsForBlock().size, earlier.length))
+                    TextButton(onClick = { showEarlier = !showEarlier }) {
+                        Text(if (showEarlier) AiCopy.EARLIER_TURNS_HIDE else AiCopy.EARLIER_TURNS_SHOW)
+                    }
+                    if (showEarlier) {
+                        Muted(AiCopy.EARLIER_TURNS_TITLE)
+                        Body(earlier.trimEnd())
+                    }
+                }
                 val summary = it.project
                 when {
                     // Phase 80 (Level 4) — an agent task: the map, not a five-file
@@ -928,7 +994,7 @@ private fun YouBubble(text: String) {
 }
 
 @Composable
-private fun AiBubble(content: @Composable () -> Unit) {
+private fun AiBubble(label: String = AiCopy.AI, content: @Composable () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -936,7 +1002,7 @@ private fun AiBubble(content: @Composable () -> Unit) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(CodecTokens.space(Space.M))) {
-            Text(AiCopy.AI, style = MaterialTheme.typography.labelSmall)
+            Text(label, style = MaterialTheme.typography.labelSmall)
             content()
         }
     }

@@ -72,7 +72,7 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-10-04 (Phase 89 / AI Level 12 ✅ IMPLEMENTED on `arena/01a102bd-codec` — not merged, **device round run by the owner and reported in chat 2026-10-04, not accepted**; Phase 88 / AI Level 11 ✅ MERGED via PR #113 → `main` @ `0fc2bfd`).**
+**CURRENT HANDOFF — 2026-10-04 (Phase 90 / AI — the conversation surface ✅ IMPLEMENTED on `arena/01a102bd-codec` 2026-10-04 on the owner's *"Go"*: New chat, follow-up chats over a bounded in-memory transcript, framed code blocks — 30 host cases green, device round C1–C14 ⏳ owner-only; **Phase 89 / AI Level 12 ✅ IMPLEMENTED, not merged, device round run by the owner and reported in chat 2026-10-04, not accepted**; Phase 88 / AI Level 11 ✅ MERGED via PR #113 → `main` @ `0fc2bfd`).**
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
 `docs/phases/03-editor/chat-phase90/` (the owner's newest request — brief only, no code: New chat, follow-ups, and
 the "real assistant" look),
@@ -138,9 +138,10 @@ work is read-only IO. Do not persist raw chat or prompts. The initial preview an
 and send the same memory/plan text verbatim; send-time reconciliation changes require a refreshed
 preview and another Send.
 
-*Next:* **Phase 90 — the conversation surface — is briefed and awaits the owner's go** (his 2026-10-04 request:
-New chat, follow-up chats, code as visible blocks; brief in `docs/phases/03-editor/chat-phase90/`, six vetoable
-defaults, D4/D6/S6/S8/S9/S10 kept). **Phase 89 / Level 12 is implemented, CI-green and now owner-run (report above),
+*Next:* **Phase 90 — the conversation surface — is implemented** (his 2026-10-04 request: New chat, follow-up
+chats, code as visible blocks; brief + parts in `docs/phases/03-editor/chat-phase90/`, 30 host cases green,
+D4/D6/S6/S8/S9/S10 kept, `client.stream(` = 3 and `openUri(` = 2 pinned). Its device round
+`chat-phase90/DEVICE_ROUND.md` (C1–C14 + the V1–V8 re-run + N1–N3) is owner-only and empty. **Phase 89 / Level 12 is implemented, CI-green and now owner-run (report above),
 but not accepted and not merged**; **Phase 88 / Level 11 is merged** (PR #113) as `0fc2bfd` on `main`, and **Phase 89 / Level 12 was
 briefed** — a brief only, 2026-10-04, on the owner's *"Level 12 / Phase 89 — brief only"*, with the five
 scope answers recorded in the latest-instruction block above. **Nothing is implemented for it and nothing was
