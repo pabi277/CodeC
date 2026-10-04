@@ -98,8 +98,8 @@
       as deviations in [90.1](PART_90_1_SESSION_TRANSCRIPT.md) and [90.2](PART_90_2_CONVERSATION_SURFACE.md).
 - [x] `DEVICE_ROUND.md` (this phase's own) carries C1–C14, the V1–V8 re-run and N1–N3, **nothing pre-ticked**.
 - [x] No ceiling moves, no new dependency, permission or endpoint (`client.stream(` = 3, `openUri(` = 2 — pinned).
-- [x] **Build APK green on this head** — run **37208366826** on `2333cde` (release 7 184 500 B / debug
-      27 076 908 B / mapping 71 266 812 B, no `android:debuggable`), read from the run's own annotations; the same
+- [x] **Build APK green on this head** — run **37209301287** on `46f2cdb` (release 7 184 512 B / debug
+      27 076 916 B / mapping 71 266 812 B, no `android:debuggable`), read from the run's own annotations; the same
       facts are in [`DEVICE_ROUND.md`](DEVICE_ROUND.md) so the phone round names the build it ran.
 - [ ] **The device round** — owner-only ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); a failed row gets its own fix phase.
 
