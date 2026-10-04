@@ -268,6 +268,13 @@ duration unit is chosen from the rounded tenths, and the final line says *"memor
 is green on `58039cd`. All three details — causes, fixes, and what each round bought — are in the narrative above
 and in [89.2](PART_89_2_NUMBERS_READOUT.md#ci-round-the-evidence-of-record).
 
+**The owner's next request (2026-10-04, after this round):** *"the ai feels not real i want the features like new
+chat or a follow up chat etc options"* — and, on the visuals, *"code with a visible block, etc other stuff like a
+real ai"*. That is briefed as [Phase 90](../chat-phase90/README.md) (New chat, follow-ups over a bounded in-memory
+transcript, the real-assistant look; not a roadmap level, no code yet). **It does not absorb this phase's open
+items:** S2, T3-Gemini and T4-NVIDIA stay failed with their fix phases unopened, and T7/T10/B2 stay NOT EXERCISED
+with recipes in the [owner report](DEVICE_ROUND_OWNER_REPORT_2026-10-04.md).
+
 **The device round (owner-run, 2026-10-04):** all three runs per task were done — **48 of the 60 matrix runs**
 (T7 and T10 were not exercised on either model) — and the owner's verdicts are **14 rows pass at 3/3 · T3-Gemini
 and T4-NVIDIA fail · B2, T7, T10 NOT EXERCISED**. Part 1: **19 of 21 rows pass; S2 fails** (an unclosed

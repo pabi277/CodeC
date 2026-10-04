@@ -193,6 +193,21 @@ data-not-instructions sentence in the preview.
 | 3 | Where the results live | **Both** — this report *and* [`DEVICE_ROUND.md`](DEVICE_ROUND.md), whose cells are filled and marked *owner-reported* |
 | 4 | Where "18 000+ lines" was seen | **In the activity rows** → finding F1(a): the model asking for out-of-range windows |
 
+## 7b. The owner's follow-up message (2026-10-04) — the last three items
+
+**Verbatim:** *"Ok for the visuals most of pass but still i think it should be better like code with a visible
+block,etc other stuff like a real ai"* · *"Q1-no problem"* · *"Q2-also no problem"* · *"And other questions skip,
+whatever i provide work on that"* · *"And the ai feels not real i want the features like new chat or a follow up
+chat etc options"*.
+
+| Item | Closed as |
+|---|---|
+| **V1–V8** | **Most pass — owner-reported, not itemised.** His polish note is a real finding, not a pass: carried as Phase 90's [90.3](../../chat-phase90/PART_90_3_REAL_AI_LOOK.md), and V1–V8 re-run there after the polish lands |
+| **Q1** memory caps | ✅ *"no problem"* — the caps hold; no re-reading pressure seen |
+| **Q2** lazy list | ✅ *"also no problem"* — no lazy list needed |
+| **The rest of the Level 12 rows** | He said to skip further questions: **T7, T10, B2 stay NOT EXERCISED** with the recipes in §5, and **S2 / T3-Gemini / T4-NVIDIA stay failed** with their fix phases unopened |
+| **The new request** | **Phase 90 — the conversation surface** was briefed the same day: [`chat-phase90/README.md`](../../chat-phase90/README.md) + parts 90.1–90.4 (**New chat**, **follow-ups** over a bounded in-memory transcript, code as visible blocks and the "real assistant" look). Brief only; implementation on his go |
+
 ## 8. What happens next
 
 1. **Owner's command decides the fix phases.** Three rows failed (**S2**, **T3-Gemini**, **T4-NVIDIA**) and finding

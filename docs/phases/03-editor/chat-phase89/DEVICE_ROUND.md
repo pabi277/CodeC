@@ -120,8 +120,13 @@ the eight individual columns were **not** recorded separately, so they are not s
 
 ## Part 4 — the eight visual checks Phase 88 handed forward
 
-Each one is a look-at-the-screen check; tick only what you actually saw. **Not reported in the owner's
-2026-10-04 chat report — still ⏳.**
+Each one is a look-at-the-screen check; tick only what you actually saw.
+
+**Owner-reported 2026-10-04: *"for the visuals most of pass but still i think it should be better like code with a
+visible block, etc other stuff like a real ai"*.** So: **most rows pass, individually not itemised** — the rows
+below stay ⏳ because he did not name them one by one, and the polish request is a real finding, not a pass: it is
+carried as **[90.3](PART_90_3_REAL_AI_LOOK.md)** in the new Phase 90 brief, and V1–V8 get re-run there after the
+polish lands.
 
 | # | Check | Result |
 |---|---|---|
@@ -138,8 +143,9 @@ Each one is a look-at-the-screen check; tick only what you actually saw. **Not r
 
 | # | Question | What to watch | Answer |
 |---|---|---|---|
-| Q1 | Are the task-memory caps enough? (**5 files**, **160 KiB** cached content, **256 KiB** store) | On an ordinary multi-file task, does the agent hit the cap and start re-reading, or does it stay inside it? Note the file count it reached. | ⏳ |
-| Q2 | Do very long answers need a **lazy list**? | Scroll a long answer up and down: does it jank or stall? Note the phone and roughly how long the answer was. | ⏳ |
+| Q1 | Are the task-memory caps enough? (**5 files**, **160 KiB** cached content, **256 KiB** store) | On an ordinary multi-file task, does the agent hit the cap and start re-reading, or does it stay inside it? Note the file count it reached. | ✅ **owner-reported 2026-10-04: *"no problem"*** — the caps hold; no re-reading pressure observed |
+| Q2 | Do very long answers need a **lazy list**? | Scroll a long answer up and down: does it jank or stall? Note the phone and roughly how long the answer was. | ✅ **owner-reported 2026-10-04: *"also no problem"*** — no lazy list needed; the answer scrolls |
+
 
 ## Device result
 
@@ -149,5 +155,8 @@ adds nothing to a result cell):
 `rows run: 20 / 21 + 48 / 60 matrix runs` (8 tasks × 2 models × 3 runs — T7 and T10 were not exercised) ·
 `failed rows: 3` (**S2** · **T3-Gemini** · **T4-NVIDIA**) · `NOT EXERCISED: B2 · T7 ×2 · T10 ×2` · date
 `2026-10-04`.
+**Visual checks V1–V8:** owner-reported as **mostly passing** but **not itemised**, and he asked for a better look —
+*"code with a visible block, etc other stuff like a real ai"* → carried as Phase 90's [90.3](PART_90_3_REAL_AI_LOOK.md)
+and re-run there. **Q1 and Q2 are answered** (*"no problem"*, both) — the memory caps hold and no lazy list is needed.
 A failed row gets its own fix phase before Level 12 repeats (owner's decision, 2026-10-04) — **not opened yet**;
 that needs the owner's command.
