@@ -4,6 +4,8 @@ import com.codeci.ide.ui.ai.AiMeasureLimits
 import com.codeci.ide.ui.ai.AiMeasurePolicy
 import com.codeci.ide.ui.ai.AiMeasurements
 import com.codeci.ide.ui.ai.AiTokenUsage
+import com.codeci.ide.ui.ai.GeminiResponse
+import com.codeci.ide.ui.ai.NvidiaResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -98,6 +100,43 @@ class AiLevel12MeasureTest {
         assertNull(AiMeasurePolicy.reportedMemory(-1024))
         assertNull(AiMeasurePolicy.reportedMemory(AiMeasureLimits.MAX_MEMORY_BYTES + 1))
         assertEquals(64L * 1024L * 1024L, AiMeasurePolicy.reportedMemory(64L * 1024L * 1024L))
+    }
+
+    // ---- where the numbers come from (the providers' own reports) -------------
+
+    @Test
+    fun `the Gemini report is read when present and stays null when absent`() {
+        val withUsage = GeminiResponse.parse(
+            """{"candidates":[{"content":{"parts":[{"text":"hi"}]},"finishReason":"STOP"}],
+               "usageMetadata":{"promptTokenCount":1812,"candidatesTokenCount":640}}""".trimIndent()
+        )!!
+        assertEquals("hi", withUsage.text)
+        assertEquals(AiTokenUsage(prompt = 1_812, output = 640), withUsage.usage)
+
+        val without = GeminiResponse.parse(
+            """{"candidates":[{"content":{"parts":[{"text":"hi"}]}}]}"""
+        )!!
+        assertNull("no metadata means not reported, not zero", without.usage)
+    }
+
+    @Test
+    fun `the NVIDIA usage-only event keeps its no-text contract and its counts`() {
+        // The Level 5 contract: a usage-only event never becomes answer text.
+        val counted = NvidiaResponse.parse(
+            """{"choices":[],"usage":{"prompt_tokens":1200,"completion_tokens":300}}"""
+        )!!
+        assertEquals("", counted.text)
+        assertEquals(AiTokenUsage(prompt = 1_200, output = 300), counted.usage)
+
+        // A `total_tokens`-only report names no side: the chunk still exists
+        // (that contract predates this phase), its text is still empty, and the
+        // pair stays unknown rather than being invented from a total.
+        val totalOnly = NvidiaResponse.parse("""{"choices":[],"usage":{"total_tokens":4}}""")!!
+        assertEquals("", totalOnly.text)
+        assertNull("an unnameable pair is not reported", totalOnly.usage)
+
+        // No usage object at all: not a chunk, exactly as before this phase.
+        assertNull(NvidiaResponse.parse("""{"choices":[]}"""))
     }
 
     // ---- the task's life -----------------------------------------------------

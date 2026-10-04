@@ -145,7 +145,7 @@ is measured, and the numbers still die with the next task.
 
 ## Implementation (2026-10-04)
 
-Written on `arena/01a102bd-codec`; **22 cases** (15 measure + 7 wiring), all green in the sandbox host harness
+Written on `arena/01a102bd-codec`; **24 cases** (17 measure + 7 wiring), all green in the sandbox host harness
 and on CI.
 
 | File | Change |
@@ -157,7 +157,7 @@ and on CI.
 | `app/src/main/java/com/codeci/ide/ui/ai/AiAnswer.kt` | `AiOutcome.Answer.usage` + the `reportedUsage` accumulator (recorded before the failure/cap early exits) |
 | `app/src/main/java/com/codeci/ide/ui/ai/AiViewModel.kt` | `AiUiState.measurements`, one clock field, four private helpers, wired into `clear()`, both Send paths, both `onText` callbacks, both outcome paths, `stopAgent` and `finishAgent` |
 | `app/src/main/java/com/codeci/ide/ui/ai/AiChatSheet.kt` | `MeasurementsLine(state)` — one helper, drawn under the progress line in the activity card (live for an agent task) and in the terminal area whenever the card is not on screen, so every finished task reports numbers exactly once |
-| `app/src/test/java/com/codeci/ide/AiLevel12MeasureTest.kt` · `AiLevel12WiringTest.kt` | the 22 cases above |
+| `app/src/test/java/com/codeci/ide/AiLevel12MeasureTest.kt` · `AiLevel12WiringTest.kt` | the 24 cases above |
 
 Deviations from the plan above (all intent-preserving; 3–5 are the ones a reviewer should read):
 
@@ -180,9 +180,34 @@ Deviations from the plan above (all intent-preserving; 3–5 are the ones a revi
    rounded tenths so a hair under a minute reads `59.9 s` and 59.95 s reads `1 m 0 s` (never `60.0 s`).
 7. **The reset-on-project-switch claim is `clear()`.** Reading the ViewModel showed project switching goes
    through `onProjectChanged(...)` → `clear()`, so there is no second path to pin.
+9. **The NVIDIA usage-only event keeps its null-ness contract exactly.** The first cut returned
+   `null` from such an event when its `usage` object named no usable `prompt_tokens` / `completion_tokens`
+   pair (e.g. a `total_tokens`-only report). CI round 1 caught it (`NvidiaResponseTest` — *DONE and
+   usage-only events carry no answer text*, `NullPointerException` at `NvidiaResponseTest.kt:56`): an event
+   **with** a `usage` object must stay a parseable chunk with empty text, whatever fields it carries. The
+   decision is therefore made on the presence of the `usage` object, not on the pair, and an unnameable pair
+   simply renders *"not reported"* — the readout never invents a number from a total. Two host cases were
+   added so this contract cannot regress silently again (the test that caught it is Robolectric-only and not
+   host-runnable).
 8. **The readout is drawn for every finished task, not only for agent tasks.** The plan's "beside the usage
    line in the activity card" would have hidden the numbers for a single-shot ask (the card is drawn only when
    a tool step exists). One helper now renders the line in the card *and*, guarded by
    `state.agentSteps.isEmpty()`, in the `DONE`/`FAILED` area — exactly one line on screen per task, and the
    wiring test pins both the helper and the two guards. `preview()` also clears the numbers with the rest of
    the previous task's state.
+
+## CI round (the evidence of record)
+
+**Round 1 — Build APK `37182525547` on head `e7a8677` — ❌ failed, and it caught a real regression.**
+`3 242 tests completed, 1 failed`: `NvidiaResponseTest > DONE and usage-only events carry no answer text
+FAILED` (`java.lang.NullPointerException at NvidiaResponseTest.kt:56`). Cause: the first cut of the NVIDIA
+usage read returned `null` for a usage-bearing event whose `usage` object named no `prompt_tokens` /
+`completion_tokens` pair, which broke the Level 5 contract (an event with a `usage` object is a chunk with
+empty text). **No production contract was rewritten to make a test pass**: the presence of the `usage` object
+again decides whether the event is a chunk, and an unnameable pair stays *"not reported"*. Two host cases
+were added in the same change to pin the contract, because the test that caught it is Robolectric-only and
+could not have caught it in the sandbox harness.
+
+**Round 2** — on the fix head, recorded with its run id and byte counts in the
+[Phase 89 README](README.md#implementation-record-2026-10-04) and in
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md).

@@ -69,10 +69,17 @@ class AiLevel12WiringTest {
         assertTrue("the accumulator carries the report", raw("AiAnswer.kt").contains("reportedUsage"))
         assertTrue("and the answer exposes it", ai("AiAnswer.kt").contains("val usage: AiTokenUsage?"))
         // The old NVIDIA behaviour (drop a usage-only event) must be gone: the
-        // event still carries no text, and now it carries the counts.
+        // event still carries no text, and now it carries the counts. The
+        // null-ness contract is unchanged — the event is a chunk when a `usage`
+        // object is present, and not a chunk at all when it is absent.
+        assertEquals(
+            "both NVIDIA parse sites read the counts (usage-only event and content event)",
+            2,
+            Regex(Regex.escape("usageFrom(usageObject)")).findAll(raw("NvidiaResponse.kt")).count()
+        )
         assertTrue(
-            "a usage-only event is kept with its counts",
-            raw("NvidiaResponse.kt").contains("GeminiChunk(usage = usage)")
+            "and the no-usage event is still not a chunk",
+            raw("NvidiaResponse.kt").contains("return if (usageObject != null) GeminiChunk(usage = usageFrom(usageObject)) else null")
         )
     }
 

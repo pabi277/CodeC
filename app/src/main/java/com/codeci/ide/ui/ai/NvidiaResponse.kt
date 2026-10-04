@@ -17,12 +17,18 @@ object NvidiaResponse {
                 )
             } else {
                 val choice = root.optJSONArray("choices")?.optJSONObject(0)
-                // Phase 89: the usage-only event keeps carrying no answer text,
-                // but it is no longer thrown away — it now carries the counts the
-                // Level 12 readout needs (still never rendered as text).
-                val usage = usageFrom(root.optJSONObject("usage"))
+                val usageObject = root.optJSONObject("usage")
                 if (choice == null) {
-                    return if (usage != null) GeminiChunk(usage = usage) else null
+                    // Some compatible streams include a final usage-only event.
+                    // It never carried answer text and it still carries none;
+                    // Phase 89 reads its counts when the provider named the two
+                    // sides (`prompt_tokens` / `completion_tokens`). The null-ness
+                    // contract is unchanged: an event with a `usage` object is a
+                    // parseable event (chunk, empty text), an event without one is
+                    // not a chunk at all. A `total_tokens`-only report yields no
+                    // usable pair, so the readout says "not reported" — unknown is
+                    // never turned into a number.
+                    return if (usageObject != null) GeminiChunk(usage = usageFrom(usageObject)) else null
                 }
                 val delta = choice.optJSONObject("delta")
                 val content = delta?.opt("content") as? String ?: ""
@@ -32,7 +38,7 @@ object NvidiaResponse {
                     "content_filter" -> "SAFETY"
                     else -> reason
                 }
-                GeminiChunk(text = content, finishReason = finish, usage = usage)
+                GeminiChunk(text = content, finishReason = finish, usage = usageFrom(usageObject))
             }
         } catch (_: Exception) {
             null

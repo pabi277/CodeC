@@ -4,8 +4,8 @@
 > ***"Complete level 12"***, and all four parts are written: [89.1](PART_89_1_S10_INJECTION_PROOF.md) S10
 > driven through the loop · [89.2](PART_89_2_NUMBERS_READOUT.md) the in-memory numbers readout ·
 > [89.3](PART_89_3_TASK_MATRIX_AND_EVALUATION.md) the 10 × 2 × 3 matrix ·
-> [89.4](PART_89_4_DEVICE_ROUND_REFRESH.md) the refreshed [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **38 new test
-> cases**; the whole host-runnable AI suite is **620 pass / 0 fail** in the sandbox harness. **No PR, no merge,
+> [89.4](PART_89_4_DEVICE_ROUND_REFRESH.md) the refreshed [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **40 new test
+> cases**; the whole host-runnable AI suite is **622 pass / 0 fail** in the sandbox harness. **No PR, no merge,
 > no `main` push** — that needs the owner's explicit command (`rule.md` §3). **The device round has NOT been
 > run**: every row in it is ⏳ and owner-only.
 > **Baseline:** `main` @ `0fc2bfd88d99d80ca72d61347dea9b36a4b82381` — the merge commit of [PR #113](https://github.com/pabi277/CodeC/pull/113)
@@ -173,7 +173,7 @@ with the device round inside it for (d) · a failed row becomes its own fix phas
       (**11 cases**; details in [89.1](PART_89_1_S10_INJECTION_PROOF.md#implementation-2026-10-04).)
 - [x] The readout renders first-token latency, total latency, provider tokens and sample memory; unknown is
       *"not reported"*; nothing is persisted (D6 pin) and no ceiling moved (S9 pins re-run).
-      (**15 + 7 cases**; the one new file outside `ui/ai` is the heap probe — [89.2 deviation 4](PART_89_2_NUMBERS_READOUT.md#implementation-2026-10-04).)
+      (**17 + 7 cases**; the one new file outside `ui/ai` is the heap probe — [89.2 deviation 4](PART_89_2_NUMBERS_READOUT.md#implementation-2026-10-04).)
 - [x] The 10-task matrix is written down with the **3/3** bar, the two model ids, and the Level 6 delta columns;
       **5 cases** pin the file. ([89.3](PART_89_3_TASK_MATRIX_AND_EVALUATION.md))
 - [x] The refreshed `DEVICE_ROUND.md` exists in this phase folder with the 21 legacy rows re-pointed at the new
@@ -207,8 +207,17 @@ Command: the owner's ***"Complete level 12"***. Branch `arena/01a102bd-codec`; n
 
 **Verification.** The sandbox host harness (kotlinc 2.2.10 on a JDK; `rule.md` §9) compiles the whole Android-free
 `ui/ai` production set — including every file this phase edited except the two Compose/Android ones, which CI
-compiles — and runs every host-runnable AI test class: **620 pass / 0 fail**, of which **38 are the new Level 12
+compiles — and runs every host-runnable AI test class: **622 pass / 0 fail**, of which **40 are the new Level 12
 cases**. The harness is a pre-validation, not the executor of record: **CI is** (`Build APK`).
+
+**CI round 1 — Build APK `37182525547` on `e7a8677` — failed, and it earned its keep.** `3 242 tests
+completed, 1 failed`: `NvidiaResponseTest > DONE and usage-only events carry no answer text`
+(`NullPointerException` at `NvidiaResponseTest.kt:56`). The first cut of the NVIDIA usage read had returned
+`null` for a usage-bearing event whose object named no usable token pair, breaking the Level 5 contract that
+such an event is still a chunk with empty text. The fix restored that contract (the presence of the `usage`
+object decides) and added two host cases, because the test that caught it is Robolectric-only. CI is the only
+executor that could have caught it, which is exactly why it is the executor of record. **Round 2's run id and
+byte counts are recorded below.**
 
 **Guards re-asserted by the new wiring cases** (no pin was weakened): exactly **three** `client.stream(` sites and
 **two** `openUri(` in `ui/ai/`, no `isSearchable`, every S9 ceiling unchanged (`MAX_TURNS` 12, `MAX_TOOL_CALLS`
