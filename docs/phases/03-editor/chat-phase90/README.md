@@ -2,7 +2,8 @@
 
 > **Status: ✅ IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec` — the owner said *"Go"* the same day.** All
 > three code parts are written and host-tested (**30 new cases**: `AiChatSessionTest` 14, `AiChatSessionWiringTest`
-> 10, `Phase90DeviceTest` 6 — **30 passed / 0 failed** in the sandbox harness, kotlinc 2.2.10), and the phase's own
+> 10, `Phase90DeviceTest` 6 — **30 passed / 0 failed** in the sandbox harness, kotlinc 2.2.10), **Build APK green on
+> the head** (run 37208366826), and the phase's own
 > [`DEVICE_ROUND.md`](DEVICE_ROUND.md) is waiting for the owner (C1–C14 + the V1–V8 re-run + N1–N3, **nothing
 > pre-ticked**). **No PR, no merge, no `main` push** (`rule.md` §3); Level 12 keeps its own open items. The owner's own request, dictated straight
 > after his Level 12 device round: ***"the ai feels not real i want the features like new chat or a follow up chat
@@ -97,8 +98,9 @@
       as deviations in [90.1](PART_90_1_SESSION_TRANSCRIPT.md) and [90.2](PART_90_2_CONVERSATION_SURFACE.md).
 - [x] `DEVICE_ROUND.md` (this phase's own) carries C1–C14, the V1–V8 re-run and N1–N3, **nothing pre-ticked**.
 - [x] No ceiling moves, no new dependency, permission or endpoint (`client.stream(` = 3, `openUri(` = 2 — pinned).
-- [ ] **Build APK green on this head** — the run is watched; its facts (sha, run id, byte counts) land in the
-      follow-up commit, read from the run's own annotations.
+- [x] **Build APK green on this head** — run **37208366826** on `2333cde` (release 7 184 500 B / debug
+      27 076 908 B / mapping 71 266 812 B, no `android:debuggable`), read from the run's own annotations; the same
+      facts are in [`DEVICE_ROUND.md`](DEVICE_ROUND.md) so the phone round names the build it ran.
 - [ ] **The device round** — owner-only ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); a failed row gets its own fix phase.
 
 ## Implementation record (2026-10-04)

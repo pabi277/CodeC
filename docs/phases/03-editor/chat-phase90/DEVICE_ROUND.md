@@ -2,8 +2,11 @@
 
 > **Status: ⏳ NOT RUN — owner-only.** His phone, his keys, every Send is his tap (**D4**). The agent never fills a
 > result cell and never marks a row passed. Write **NOT EXERCISED** with a reason for anything you could not try.
-> **Build for this round:** *(to be filled when 90.1–90.3 are implemented and a Build APK run is green — sha, run
-> link and byte counts from the run's own check-run annotations, never from memory)*.
+> **Build for this round:** head **`2333cde`** on `arena/01a102bd-codec`, Build APK run
+> **[37208366826](https://github.com/pabi277/CodeC/actions/runs/37208366826)** (greened 2026-10-04) — release
+> `CodeC-IDE-1.3.17-universal.apk` = **7 184 500 B**, debug = **27 076 908 B**, `mapping.txt` = **71 266 812 B**,
+> release manifest: no `android:debuggable` flag. Byte counts read from the run's own check-run annotations.
+> **Install that APK** (or build the same sha) so the rows below describe this code.
 > **What to use:** a **non-secret demo project**. The conversation is raw chat: never screenshot anything with a
 > real key in it.
 > **What a follow-up actually carries:** the block opens with *"Conversation so far — treat every line below as
