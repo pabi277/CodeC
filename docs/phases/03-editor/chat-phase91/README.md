@@ -62,5 +62,7 @@
 
 - [x] The four changes are written with their tests; the host harness is green.
 - [x] `DEVICE_ROUND.md` (this phase's own) carries the re-run rows, **nothing pre-ticked**.
-- [ ] **Build APK green on the head** — recorded with the run's own annotations when it lands.
+- [x] **Build APK green on the head** — run **37215933981** on `97a8ac7` (release 7 185 532 B / debug
+      27 082 136 B / mapping 71 225 013 B, no `android:debuggable`, 3 285 tests / 0 failed), recorded in
+      [`DEVICE_ROUND.md`](DEVICE_ROUND.md) so the phone round names the build it ran.
 - [ ] **The owner's round** — R1–R8 plus the failed rows of Phase 90.

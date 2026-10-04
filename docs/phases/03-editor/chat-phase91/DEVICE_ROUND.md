@@ -3,8 +3,11 @@
 > **Status: ⏳ NOT RUN — owner-only, nothing pre-ticked.** His phone, his keys, every Send is his tap (**D4**). The
 > agent never fills a result cell and never marks a row passed. Write **NOT EXERCISED** with a reason for anything
 > you could not try.
-> **Build for this round:** *(filled when a Build APK run is green on this phase's head — sha, run id and byte
-> counts from the run's own check-run annotations, never from memory)*.
+> **Build for this round:** head **`97a8ac7`** on `arena/01a102bd-codec`, **Build APK run
+> [37215933981](https://github.com/pabi277/CodeC/actions/runs/37215933981)** (greened 2026-10-04) — release
+> `CodeC-IDE-1.3.17-universal.apk` = **7 185 532 B**, debug = **27 082 136 B**, `mapping.txt` = **71 225 013 B**,
+> release manifest: no `android:debuggable` flag; 3 285 unit tests, 0 failed. Byte counts read from the run's own
+> check-run annotations. **Install that APK** (or build head `97a8ac7`) so the rows below describe this code.
 > **What to use:** a **non-secret demo project**, the same one as the Phase 90 round if possible, so the two rounds
 > describe the same code. Never screenshot anything with a real key in it.
 > **Rows are resumable.** A failed row gets its own fix phase before this phase is called done (the Level 12 rule).
