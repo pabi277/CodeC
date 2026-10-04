@@ -1,6 +1,6 @@
 # CodeC Phase 89.1 — S10: the injection fixture, driven through the loop
 
-> **Status:** 📋 PLANNED (brief only — nothing written, nothing run) · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** ✅ **IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec`** — the S10 test is written: `AiLevel12InjectionTest`, **11 cases**, all green, and no production source changed · **Cost:** `[client-only]` · **Effort:** M
 > **Owner authorization:** Level 12 briefed 2026-10-04; **S10 is the one genuinely missing regression row** of the
 > Level 12 table (see the [parent brief](README.md#1-the-specs-regression-table-is-stale--13-of-its-14-rows-already-have-tests)).
 > **Security rule under test:** **S10** — *prompt-injection resistance is a test, not a claim.*
@@ -69,13 +69,47 @@ None. This part is host-only by construction; the loop seam is pure and already 
 
 ## Exit condition
 
-- [ ] A hostile answer that *obeys* the injection produces no execution, no write and no run — only an
-      approval pause and refusals.
-- [ ] `AiToolRunner` refuses `request_run` even when it was validated by policy (two independent gates).
-- [ ] No write-shaped tool exists, and the `ui/ai/` no-write/no-run pins still pass.
-- [ ] `.env` and the escaping symlink stay refused inside the same batch after the injection was read.
-- [ ] The data-not-instructions sentence is still in the packed request, and memory re-injection keeps it.
-- [ ] No production source changed: this part is a test, and only a test.
+- [x] A hostile answer that *obeys* the injection produces no execution, no write and no run — only an
+      approval pause and refusals. (`AiLevel12InjectionTest` — *a hostile answer that obeys the injection still
+      only pauses for the user's tap*: the same block with the run budget spent is denied at the policy.)
+- [x] `AiToolRunner` refuses `request_run` even when it was validated by policy (two independent gates).
+      (*the runner refuses a run call even though the policy validated it* — outcome `ok == false`, text
+      *"request_run is approved by the user, not executed as a tool."*)
+- [x] No write-shaped tool exists, and the `ui/ai/` no-write/no-run pins still pass. (*the tool set has no write
+      shape and cannot grow one silently* — the whole `AiToolName` surface pinned; plus the source scan over
+      every `ui/ai/*.kt`.)
+- [x] `.env` and the escaping symlink stay refused inside the same batch after the injection was read.
+      (*the secret the injection asks for stays out of reach inside the same batch* — the `.env` refusal is named
+      while its sibling is delivered; the escaping symlink is denied by the scan *and* refused by the runner's
+      canonical containment check even when the admission list is hostile.)
+- [x] The data-not-instructions sentence is still in the packed request, and memory re-injection keeps it.
+      (*the read result reaches the next request verbatim with the data-not-instructions sentence*; *memory
+      re-injection of the hostile result is still labelled untrusted data*.)
+- [x] No production source changed: this part is a test, and only a test.
+
+## Implementation (2026-10-04)
+
+Written on `arena/01a102bd-codec`; **11 cases**, all green in the sandbox host harness and on CI.
+
+| File | Change |
+|---|---|
+| `app/src/test/java/com/codeci/ide/AiLevel12InjectionTest.kt` | **new** — the eleven S10 cases above |
+| `app/src/test/java/com/codeci/ide/AiLevel12WiringTest.kt` | the `ui/ai` write/run source scan is re-run there with the Level 12 token list |
+
+Deviations from the plan above (intent kept):
+
+1. **The escaping symlink is refused twice, not once.** The plan assumed the runner would be the gate under
+   test. Reading the code showed the reader never admits it (`AiProjectReader.scan` excludes it) and the policy
+   therefore denies it first. The test now pins **both**: the denial at the door, and the runner's canonical
+   containment check with a hostile admission list.
+2. **The hostile run target must be a real path.** `AiToolPolicy.validateRun` refuses a `request_run` whose
+   target is not an admitted file (`AiTools.kt:411-424`), so a block naming `main` was denied for the *wrong*
+   reason. The fixture's own `normalPath` is used, which is what makes the approval pause the gate under test.
+3. **A write/exec source scan landed in the wiring test, not here** (one scan, one home), with the token list
+   narrowed where a legitimate file owns the token: `AiKeyStore.kt` is the only file allowed `writeBytes(` /
+   `delete()` / `mkdirs()` / `renameTo(` — it maintains the encrypted key blob, never a project file. Every
+   other `ui/ai/*.kt` must contain none of them, and no file may contain `Runtime.getRuntime`.
+
 
 ## Tests (plan)
 

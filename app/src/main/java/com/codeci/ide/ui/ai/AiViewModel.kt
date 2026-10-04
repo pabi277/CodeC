@@ -3,6 +3,7 @@ package com.codeci.ide.ui.ai
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.codeci.ide.ui.performance.HeapProbe
 import com.codeci.ide.ui.projects.AiApplyOutcome
 import com.codeci.ide.ui.projects.AiEditApplier
 import com.codeci.ide.ui.projects.AiUndoOutcome
@@ -122,7 +123,16 @@ data class AiUiState(
      * that asking for a second opinion does not delete the first one. The review
      * preview clears [answer] like every other preview does. In memory only (D6).
      */
-    val reviewedAnswer: String? = null
+    val reviewedAnswer: String? = null,
+    /**
+     * Phase 89 (Level 12) — the task's own numbers: first-token latency, total
+     * time, provider-reported tokens and one heap sample. **Display state, in
+     * memory only** (D6): no field here is written to disk, a log, DataStore or
+     * a backup, and it is reset by the next Send and by [clear]. Empty until
+     * something is measured, and a provider that reports nothing renders as
+     * "not reported" — never as 0 ([AiMeasurePolicy]).
+     */
+    val measurements: AiMeasurements = AiMeasurements()
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -208,6 +218,14 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private var agent: AgentSession? = null
+
+    /**
+     * Phase 89 (Level 12) — when the current request started, for the latency
+     * readout. A clock reading is not UI state, so it stays here rather than in
+     * [AiUiState]; the sanitised derived values live in `state.measurements`.
+     * Zero means "nothing is being measured".
+     */
+    private var measureStartedAtMs = 0L
 
     private val _state = MutableStateFlow(AiUiState())
     val state: StateFlow<AiUiState> = _state.asStateFlow()
@@ -441,8 +459,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     proposalResult = null, applyConflictPaths = emptyList(),
                     undoConflictPaths = emptyList(),
                     // A new preview is a new task: the previous timeline belongs
-                    // to a task that is over, and it is never persisted (D6).
-                    agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null
+                    // to a task that is over, and so do its numbers — both are
+                    // display state and neither is persisted (D6).
+                    agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null,
+                    measurements = AiMeasurements()
                 )
             }
         }
@@ -1090,6 +1110,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }
             val outcome = try {
                 streamWithRetry(session = session, onText = { text ->
+                    // Phase 89: the request's first visible text is its first token.
+                    if (text.isNotEmpty()) recordFirstToken()
                     _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = text) else s }
                 }) { publish ->
                     // The agent loop's sole request road; always reached after Send.
@@ -1104,6 +1126,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 else stopAgent(AiAgentStopReason.WALL_CLOCK)
                 return@launch
             }
+            // Phase 89: every completed turn's own report is folded into the task's
+            // numbers before the branch below consumes the outcome.
+            recordUsage((outcome as? AiOutcome.Answer)?.usage)
             when (outcome) {
                 is AiOutcome.Answer ->
                     if (finalSynthesis) {
@@ -1351,6 +1376,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 agentRunRunning = false
             )
         }
+        // Phase 89: the agent task is complete — stamp the numbers.
+        recordFinish()
     }
 
     private fun stopAgent(reason: AiAgentStopReason, message: String? = null) {
@@ -1429,6 +1456,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
         }
+        // Phase 89: a stop is a terminal state too, so the task's numbers are
+        // complete — a stopped task is measured, not erased (the Level 12 matrix
+        // has a Stop row). The numbers still die with the next Send (D6).
+        recordFinish()
     }
 
     /** The only path to a helper request: the user pressed Send on a preview. */
@@ -1472,7 +1503,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     job = null
                     return@launch
                 }
-                session.budget = AiAgentBudget(startedAtMs = System.currentTimeMillis())
+                // Phase 89: ONE instant, shared by the wall clock and the readout.
+                val startedAt = System.currentTimeMillis()
+                session.budget = AiAgentBudget(startedAtMs = startedAt)
+                startMeasuring(startedAt)
                 _state.update {
                     it.copy(
                         phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false,
@@ -1492,6 +1526,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         // the rest underneath it, inside one shared total budget. A fresh
         // request starts empty, exactly as before.
         val base = if (prompt.continuation != null) _state.value.answer else ""
+        // Phase 89: a fresh request restarts the numbers. A continuation is a new
+        // request, so its readout describes the continuation itself.
+        startMeasuring(System.currentTimeMillis())
         _state.update {
             it.copy(
                 phase = AiPhase.STREAMING, answer = base, error = null, cutShort = false,
@@ -1510,6 +1547,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             // a second opinion never overwrites the answer being reviewed.
             val reviewing = prompt.source == AiSource.REVIEW
             val outcome = streamWithRetry(onText = { text ->
+                // Phase 89: this request's first non-empty text is its first token.
+                if (text.isNotEmpty()) recordFirstToken()
                 _state.update { s ->
                     if (s.phase != AiPhase.STREAMING) s
                     else if (reviewing) s.copy(review = AiReviewVerdict.Text(base + text))
@@ -1518,6 +1557,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }) { publish ->
                 client.stream(provider, key, model, body, AiContinuation.requestBudget(base.length), onText = publish)
             }
+            // Phase 89: one completed request's usage, folded before the branches.
+            recordUsage((outcome as? AiOutcome.Answer)?.usage)
             _state.update { s ->
                 if (s.phase != AiPhase.STREAMING) return@update s
                 when (outcome) {
@@ -1550,6 +1591,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     is AiOutcome.Failed -> s.copy(phase = AiPhase.FAILED, error = outcome.failure.message)
                 }
             }
+            // Phase 89: the request is over — total time and one heap sample.
+            recordFinish()
         }
     }
 
@@ -1792,6 +1835,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         gatherJob?.cancel()
         gatherJob = null
         agent = null
+        measureStartedAtMs = 0L
         _state.update {
             it.copy(
                 phase = AiPhase.IDLE, prompt = null, answer = "", error = null,
@@ -1800,8 +1844,67 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 undoConflictPaths = emptyList(),
                 agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null,
                 // Level 10: offers and a review belong to the task being cleared.
-                budgetOffer = null, backupOffer = null, review = null, reviewedAnswer = null
+                budgetOffer = null, backupOffer = null, review = null, reviewedAnswer = null,
+                // Level 12: the numbers belong to the task being cleared too.
+                measurements = AiMeasurements()
             )
+        }
+    }
+
+    // ---- Phase 89 (Level 12): the numbers ----------------------------------
+
+    /**
+     * A request has been approved and is about to start: this is the zero point
+     * for the latency readout, and the previous task's numbers go with it. The
+     * instant is captured **once** and shared with the agent budget so the wall
+     * clock and the readout cannot disagree.
+     */
+    private fun startMeasuring(startedAtMs: Long) {
+        measureStartedAtMs = startedAtMs
+        _state.update { it.copy(measurements = AiMeasurements()) }
+    }
+
+    /**
+     * The first non-empty visible text of this request. Called from the stream
+     * callbacks, which run on IO; the policy is idempotent and the state update
+     * is a no-op once a first token exists, so later chunks cost one comparison.
+     */
+    private fun recordFirstToken() {
+        if (measureStartedAtMs <= 0L) return
+        val now = System.currentTimeMillis()
+        _state.update { s ->
+            if (s.measurements.firstTokenMs != null) s
+            else s.copy(
+                measurements = AiMeasurePolicy.firstToken(s.measurements, now, measureStartedAtMs)
+            )
+        }
+    }
+
+    /**
+     * The provider's own report for a completed request, folded into the task
+     * totals. Null (no report) is folded too: it marks the totals as a floor
+     * rather than silently pretending the provider reported zero.
+     */
+    private fun recordUsage(usage: AiTokenUsage?) {
+        _state.update { it.copy(measurements = AiMeasurePolicy.withUsage(it.measurements, usage)) }
+    }
+
+    /**
+     * The request reached a terminal state: total time, plus one boundary heap
+     * sample for the readout, taken through [HeapProbe] — the standing `ui/ai`
+     * guard forbids `Runtime.getRuntime` here (it is the command-execution
+     * token), so collection lives outside the package and this keeps the number.
+     * The readout labels it "memory", never "peak memory".
+     */
+    private fun recordFinish() {
+        val started = measureStartedAtMs
+        if (started <= 0L) return
+        // One-shot: a second call (or a stale one after clear) cannot restamp.
+        measureStartedAtMs = 0L
+        val now = System.currentTimeMillis()
+        val sample = runCatching { HeapProbe.usedHeapBytes() }.getOrNull()
+        _state.update {
+            it.copy(measurements = AiMeasurePolicy.finish(it.measurements, now, started, sample))
         }
     }
 

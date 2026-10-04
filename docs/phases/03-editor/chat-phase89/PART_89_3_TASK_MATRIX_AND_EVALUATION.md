@@ -1,6 +1,6 @@
 # CodeC Phase 89.3 — The task-level acceptance matrix and how it is run
 
-> **Status:** 📋 PLANNED (brief only — nothing written, nothing run) · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** ✅ **IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec`** — the matrix is written into [`DEVICE_ROUND.md`](DEVICE_ROUND.md) and pinned by `AiLevel12MatrixTest` (**5 cases**); the **60 real runs are owner-only and ⏳ owed** · **Cost:** `[client-only]` · **Effort:** M
 > **Owner authorization (2026-10-04):** one phase, host proof first and the device round inside it · **pass bar
 > 3/3** · models **`gemini-3-flash-preview`** and **`nvidia/nemotron-3-super-120b-a12b`** · a failed row becomes
 > its own fix phase, after which Level 12 repeats.
@@ -56,12 +56,19 @@ were **"Not captured"** in Phase 83, and stayed so through Levels 7–11) so the
 
 ## Exit condition
 
-- [ ] The matrix exists as a written table with both exact model ids, the 3/3 bar, and the Level 6-delta columns.
-- [ ] Structural host replay covers the ten task shapes against the four fixture projects (the tasks that are
-      structural), with named cases; the rest are explicitly owner-run.
-- [ ] The device round carries the 60-run matrix with the recording format above.
-- [ ] No run is claimed that did not happen; NOT EXERCISED and incomplete are first-class outcomes.
-- [ ] A failing row's fix phase is named in the report, and Level 12's repeat is scheduled.
+- [x] The matrix exists as a written table with both exact model ids, the 3/3 bar, and the Level 6-delta columns.
+      ([`DEVICE_ROUND.md` part 2](DEVICE_ROUND.md); `AiLevel12MatrixTest` — *the matrix names both models, the
+      three runs and the pass bar*.)
+- [x] Structural host replay covers the ten task shapes against the four fixture projects (the tasks that are
+      structural), with named cases; the rest are explicitly owner-run. (`AiLevel12MatrixTest` — *the matrix is
+      exactly the ten spec tasks*, plus the 89.1 injection replay and the existing
+      `AiLevel6BaselineTest`/`AiLevel8*`/`AiLevel10*` suites.)
+- [ ] The device round carries the 60-run matrix with the recording format above. **The file carries it; the runs
+      are ⏳ and owner-only — none has been run.**
+- [x] No run is claimed that did not happen; NOT EXERCISED and incomplete are first-class outcomes.
+      (`AiLevel12MatrixTest` — *nothing is pre-ticked and NOT EXERCISED is a first-class outcome*.)
+- [ ] A failing row's fix phase is named in the report, and Level 12's repeat is scheduled. *(No row has been run,
+      so no fix phase is named yet; the rule — own fix phase, then Level 12 repeats — is written into the file.)
 
 ## Tests (plan)
 
@@ -86,3 +93,14 @@ were **"Not captured"** in Phase 83, and stayed so through Levels 7–11) so the
 - **A separate acceptance database or CSV export.** Rejected: the record belongs in the repo's own docs, the
   way every earlier phase records its rounds.
 - **Marking a row passed on a best-of-N run.** Rejected: the owner's bar is 3/3, full stop.
+
+## Implementation (2026-10-04)
+
+Written on `arena/01a102bd-codec`. The matrix and its recording format live in
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) (part 2: T1–T10 × 2 models × 3 runs, per-run readout evidence, 3/3 to pass);
+`AiLevel12MatrixTest` (**5 cases**) pins the contract so a future refactor cannot drop a task, a model, the 3/3
+bar, the eight visual checks, the P8 row or the two owed questions.
+
+**Nothing has been run.** No run row is claimed, no model was called, and no result cell is filled. The 60 real
+runs are the owner's, on his phone and his keys (**D4**), and a failed row gets its own fix phase, after which
+Level 12 repeats.

@@ -1,9 +1,13 @@
 # Phase 89 — AI Level 12: evaluation and acceptance
 
-> **Status:** 📋 **PLANNED — brief only. No production or test source is written, and nothing has been run
-> for this phase.** The owner authorized **Level 12 for a brief** in chat on 2026-10-04 and answered the
-> five scope questions recorded under [*Owner authorization*](#owner-authorization-2026-10-04). Implementation
-> needs a further explicit command (for example *"Complete level 12"*), as `rule.md` §3 requires.
+> **Status:** ✅ **IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec`** — the owner commanded
+> ***"Complete level 12"***, and all four parts are written: [89.1](PART_89_1_S10_INJECTION_PROOF.md) S10
+> driven through the loop · [89.2](PART_89_2_NUMBERS_READOUT.md) the in-memory numbers readout ·
+> [89.3](PART_89_3_TASK_MATRIX_AND_EVALUATION.md) the 10 × 2 × 3 matrix ·
+> [89.4](PART_89_4_DEVICE_ROUND_REFRESH.md) the refreshed [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **38 new test
+> cases**; the whole host-runnable AI suite is **620 pass / 0 fail** in the sandbox harness. **No PR, no merge,
+> no `main` push** — that needs the owner's explicit command (`rule.md` §3). **The device round has NOT been
+> run**: every row in it is ⏳ and owner-only.
 > **Baseline:** `main` @ `0fc2bfd88d99d80ca72d61347dea9b36a4b82381` — the merge commit of [PR #113](https://github.com/pabi277/CodeC/pull/113)
 > (Phase 88 / AI Level 11), first parent `c3771c5`, second parent `06c1433`, merged 2026-10-03 16:21 UTC;
 > post-merge Build APK run [`37136523881`](https://github.com/pabi277/CodeC/actions/runs/37136523881) is
@@ -54,6 +58,10 @@ Three deliverables, one per part:
 | **89.2** | The **numbers readout** — first-token latency, total latency, provider-reported tokens, sample-time memory; in memory only, never persisted (**D6**) | new app code + host tests |
 | **89.3** | The **task-level acceptance matrix** — 10 tasks × 2 models × 3 runs, **3/3 to pass**, recorded against the Level 6 baseline | protocol + host replay + owner-run device rows |
 | **89.4** | The **refreshed device round** — the Phase 82 checklist (21 R/B/P/S rows + the 5-task P5 comparison) on the new build, plus the 8 visual checks from Phase 88.5, the still-unticked **P8** scrub row, the memory-cap question and the long-answer question | owner-run checklist |
+
+Parts: [89.1 S10 injection proof](PART_89_1_S10_INJECTION_PROOF.md) · [89.2 numbers readout](PART_89_2_NUMBERS_READOUT.md) ·
+[89.3 task matrix](PART_89_3_TASK_MATRIX_AND_EVALUATION.md) · [89.4 device round](PART_89_4_DEVICE_ROUND_REFRESH.md) ·
+[the round itself](DEVICE_ROUND.md) (owner-only).
 
 ## First move: evidence, not code
 
@@ -160,17 +168,63 @@ with the device round inside it for (d) · a failed row becomes its own fix phas
 
 ## Exit condition
 
-- [ ] `AiLevel12InjectionTest` drives the injected fixture **through the loop** and proves: no run without the
+- [x] `AiLevel12InjectionTest` drives the injected fixture **through the loop** and proves: no run without the
       owner's tap, no write from `ui/ai/`, secrets still refused, the data-not-instructions sentence intact.
-- [ ] The readout renders first-token latency, total latency, provider tokens and sample memory; unknown is
+      (**11 cases**; details in [89.1](PART_89_1_S10_INJECTION_PROOF.md#implementation-2026-10-04).)
+- [x] The readout renders first-token latency, total latency, provider tokens and sample memory; unknown is
       *"not reported"*; nothing is persisted (D6 pin) and no ceiling moved (S9 pins re-run).
-- [ ] The 10-task matrix is written down with the **3/3** bar, the two model ids, and the Level 6 delta columns.
-- [ ] The refreshed `DEVICE_ROUND.md` exists in this phase folder with the 21 legacy rows re-pointed at the new
+      (**15 + 7 cases**; the one new file outside `ui/ai` is the heap probe — [89.2 deviation 4](PART_89_2_NUMBERS_READOUT.md#implementation-2026-10-04).)
+- [x] The 10-task matrix is written down with the **3/3** bar, the two model ids, and the Level 6 delta columns;
+      **5 cases** pin the file. ([89.3](PART_89_3_TASK_MATRIX_AND_EVALUATION.md))
+- [x] The refreshed `DEVICE_ROUND.md` exists in this phase folder with the 21 legacy rows re-pointed at the new
       build, the 5-task P5 comparison, the 10-task matrix, the 8 visual checks from 88.5, the P8 scrub row, the
-      memory-cap question (5 files / 160 KiB / 256 KiB) and the long-answer lazy-list question.
-- [ ] Build APK is green on the implementation head; the number is recorded in the part docs.
+      memory-cap question (5 files / 160 KiB / 256 KiB) and the long-answer lazy-list question. Every row is ⏳;
+      nothing is pre-ticked. ([89.4](PART_89_4_DEVICE_ROUND_REFRESH.md))
+- [ ] Build APK is green on the implementation head; the number is recorded in the part docs. *(run requested on
+      push; the run id and byte sizes are recorded in the follow-up commit on this branch)*
 - [ ] Host inventory and APK delta are recorded against this brief's baseline (`0fc2bfd`; release 7 177 180 B).
-- [ ] No PR, no merge, no `main` push until the owner commands it (`rule.md` §3).
+      *(inventory recorded below; the APK delta lands with the build number)*
+- [x] No PR, no merge, no `main` push until the owner commands it (`rule.md` §3). *(none opened, none pushed)*
+
+## Implementation record (2026-10-04)
+
+Command: the owner's ***"Complete level 12"***. Branch `arena/01a102bd-codec`; nothing merged, nothing on `main`.
+
+| File | Part | Change |
+|---|---|---|
+| `app/src/main/java/com/codeci/ide/ui/ai/AiMeasurements.kt` | 89.2 | **new** — `AiMeasureLimits`, `AiTokenUsage`, `AiMeasurements`, `AiMeasurePolicy` (pure, host-testable, no clock of its own) |
+| `app/src/main/java/com/codeci/ide/ui/performance/HeapProbe.kt` | 89.2 | **new** — the one boundary heap sample, deliberately outside `ui/ai` (deviation 4) |
+| `app/src/main/java/com/codeci/ide/ui/ai/GeminiResponse.kt` | 89.2 | `usageMetadata` parsed into an optional `AiTokenUsage`; absent stays `null` |
+| `app/src/main/java/com/codeci/ide/ui/ai/NvidiaResponse.kt` | 89.2 | the usage-only event is read instead of dropped |
+| `app/src/main/java/com/codeci/ide/ui/ai/AiAnswer.kt` | 89.2 | `AiOutcome.Answer.usage` + the accumulator that survives the failure/cap early exits |
+| `app/src/main/java/com/codeci/ide/ui/ai/AiViewModel.kt` | 89.2 | `AiUiState.measurements`, one clock, four helpers, wired into both Send paths, both stream callbacks, every terminal path, `preview()` and `clear()` |
+| `app/src/main/java/com/codeci/ide/ui/ai/AiChatSheet.kt` | 89.2 | `MeasurementsLine(state)` — the card (live) plus the guarded terminal sites, so no task is drawn twice |
+| `app/src/test/java/com/codeci/ide/AiLevel12InjectionTest.kt` | 89.1 | **new** — 11 cases |
+| `app/src/test/java/com/codeci/ide/AiLevel12MeasureTest.kt` | 89.2 | **new** — 15 cases |
+| `app/src/test/java/com/codeci/ide/AiLevel12WiringTest.kt` | 89.2 | **new** — 7 source-pin cases |
+| `app/src/test/java/com/codeci/ide/AiLevel12MatrixTest.kt` | 89.3 | **new** — 5 doc/contract cases |
+| `docs/phases/03-editor/chat-phase89/DEVICE_ROUND.md` | 89.4 | **new** — the owner's refreshed round (nothing ticked) |
+
+**Verification.** The sandbox host harness (kotlinc 2.2.10 on a JDK; `rule.md` §9) compiles the whole Android-free
+`ui/ai` production set — including every file this phase edited except the two Compose/Android ones, which CI
+compiles — and runs every host-runnable AI test class: **620 pass / 0 fail**, of which **38 are the new Level 12
+cases**. The harness is a pre-validation, not the executor of record: **CI is** (`Build APK`).
+
+**Guards re-asserted by the new wiring cases** (no pin was weakened): exactly **three** `client.stream(` sites and
+**two** `openUri(` in `ui/ai/`, no `isSearchable`, every S9 ceiling unchanged (`MAX_TURNS` 12, `MAX_TOOL_CALLS`
+24, `MAX_RUNS` 2, `MAX_IDENTICAL_REPEATS` 3, `MAX_READ_CHARS` 24 000, `MAX_RESULT_CHARS` 8 000,
+`MAX_BATCH_READS` 8), no `Runtime.getRuntime` anywhere in `ui/ai/`, the D6 scan over `AiMeasurements.kt`
+(no file, store, key or log call), and the new `HeapProbe.kt` reads nothing but the heap.
+
+**Deviations from the brief** (each with its reason in the part docs): the readout's wording lives in
+`AiMeasurePolicy` rather than `AiCopy` · the heap sample lives in `ui/performance/HeapProbe.kt` because the
+standing `ui/ai` guard forbids `Runtime.getRuntime` (the command-execution token) · a **Stop keeps** the numbers
+instead of erasing them (the matrix has a Stop row that needs its readout) · `render` returns `String?`, the
+duration unit is chosen from the rounded tenths, and the final line says *"memory at finish"*.
+
+**Still owed, and it is the owner's:** the **60 real runs** (10 tasks × 2 models × 3 runs, **3/3** to pass) and
+every device row in [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **No row is claimed run.** A failed row gets its own
+fix phase, after which Level 12 repeats.
 
 ## Tests (plan)
 

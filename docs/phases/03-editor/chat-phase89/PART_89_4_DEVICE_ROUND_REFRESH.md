@@ -1,6 +1,6 @@
 # CodeC Phase 89.4 — The refreshed device round
 
-> **Status:** 📋 PLANNED (brief only — nothing written, nothing run) · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** ✅ **IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec`** — [`DEVICE_ROUND.md`](DEVICE_ROUND.md) is refreshed (21 legacy rows + the 60-run matrix + the 8 visual checks + Q1/Q2); **every row is ⏳ and nothing is pre-ticked** — the round itself is owner-only and has **not** been run · **Cost:** `[client-only]` · **Effort:** M
 > **Owner authorization (2026-10-04):** one phase, with the owner's device round as a checklist inside it.
 > **Only the owner can run it** — his phone, his keys, and every Send is his tap (**D4**).
 > **Parent brief:** [Phase 89 README](README.md)
@@ -56,10 +56,15 @@ None. This part writes a checklist; the app under test is whatever Phase 89's im
 
 ## Exit condition
 
-- [ ] `chat-phase89/DEVICE_ROUND.md` exists with all eight sections above and the 21 legacy rows.
-- [ ] Every row has an expectation and an empty result cell; nothing is pre-ticked.
+- [x] `chat-phase89/DEVICE_ROUND.md` exists with all eight sections above and the 21 legacy rows. (Part 1 =
+      R1–R5, B1–B3, P1–P8, S1–S4, re-pointed at this build; parts 2–5 = the 60-run matrix, the P5 five-task
+      comparison, V1–V8 and Q1/Q2.)
+- [x] Every row has an expectation and an empty result cell; nothing is pre-ticked. (`AiLevel12MatrixTest` pins
+      the P8 row as unticked and the two questions as asked.)
 - [ ] The build line names the real sha and run id, and the byte counts come from check-run annotations, not memory.
-- [ ] The file states plainly: **only the owner runs it**, and formal acceptance is his report.
+      *(the file carries the placeholders; the sha/run id/bytes are filled from CI on the implementation head —
+      see the follow-up commit on this branch)*
+- [x] The file states plainly: **only the owner runs it**, and formal acceptance is his report.
 
 ## Tests (plan)
 
@@ -82,3 +87,11 @@ so a future refactor cannot quietly drop a required row.
   old build; overwriting it would fake a history the repo does not have.
 - **Automating the checks (Robolectric/UI tests standing in for the phone).** Rejected: this is exactly the
   mistake the repo already made once — CI green mistaken for device acceptance.
+
+## Implementation (2026-10-04)
+
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) is written on `arena/01a102bd-codec`. Its header is ⏳ **OWED, owner-only**;
+every one of its rows is ⏳ with an empty result cell, and the completion bars are empty. Nothing in it was
+filled from a run, because none has been run. The build line names the branch head and takes the byte counts
+from the `build` check-run annotations once the push has produced them (the run request is made by pushing;
+the numbers land in the follow-up commit on this branch).

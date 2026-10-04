@@ -451,6 +451,11 @@ private fun Conversation(
                         modifier = Modifier.clickable(onClick = onRequestReview)
                     )
                 }
+                // Phase 89 (Level 12): a task with no activity card on screen (a
+                // single-shot ask, or an agent task that used no tool) reports its
+                // numbers here instead, so no finished task goes unmeasured on
+                // screen and none is ever drawn twice.
+                if (state.agentSteps.isEmpty()) MeasurementsLine(state)
                 state.notice?.let { Body(it) }
                 if (state.undoSummary != null && state.proposalResult !is AiProposalResult.Proposal) {
                     UndoTaskCard(state, onUndoEdits, onDismissUndoConflict)
@@ -458,7 +463,12 @@ private fun Conversation(
                 Muted(AiCopy.WRONG_NOTE)
             }
 
-            AiPhase.FAILED -> state.error?.let { ErrorLine(it) }
+            AiPhase.FAILED -> {
+                // A failure is a terminal state with numbers too (a failed row of
+                // the Level 12 matrix is recorded, not erased).
+                if (state.agentSteps.isEmpty()) MeasurementsLine(state)
+                state.error?.let { ErrorLine(it) }
+            }
         }
     }
 }
@@ -606,6 +616,19 @@ private fun progressInput(state: AiUiState) = AiProgressInput(
     retrying = state.retryCountdown != null
 )
 
+/**
+ * Phase 89 (Level 12, part 89.2) — the one numbers-only line: first-token and
+ * total latency, provider-reported tokens and one boundary heap sample.
+ *
+ * Display state only (D6): the values live in `AiUiState.measurements`, are never
+ * persisted, and the policy owns both the wording and the honesty rules — an
+ * unreported value renders as "not reported" / "—", never as `0` (S3).
+ */
+@Composable
+private fun MeasurementsLine(state: AiUiState) {
+    AiMeasurePolicy.render(state.measurements)?.let { Muted(it) }
+}
+
 @Composable
 private fun AgentActivityCard(
     state: AiUiState,
@@ -630,6 +653,10 @@ private fun AgentActivityCard(
             if (AiProgressPolicy.placement(state.phase, state.agentSteps.isNotEmpty()) == AiProgressPolicy.Placement.CARD) {
                 Muted(AiProgressPolicy.line(AiProgressPolicy.stage(progressInput(state)), state.agentUsage))
             }
+            // Phase 89 (Level 12): the task's own numbers, one line, under the
+            // progress line — live for an agent task, whose card is on screen
+            // while it runs.
+            MeasurementsLine(state)
             // Phase 87 (Level 10, 87.5) — the *tool activity* control. It changes
             // ONLY what is drawn here: the same disclosed strings are behind the
             // row in both states, so the packed request text cannot depend on it
