@@ -117,7 +117,10 @@ report (*"in light mode visible"*). A future edit that walks the block back into
 
 ## Exit conditions
 
-- [x] The command is implemented with its tests; the host harness is green.
+- [x] The command is implemented with its tests; the host harness is green (**75 / 0**).
 - [x] The report is redacted and pinned as such; the contrast numbers are pinned.
-- [ ] **Build APK green on the head** — recorded with the run's own annotations when it lands.
-- [ ] **The owner runs it once** and pastes the report.
+- [x] **Build APK green on the head** — run [`37220578998`](https://github.com/pabi277/CodeC/actions/runs/37220578998)
+      on `090af93`: release `CodeC-IDE-1.3.17-universal.apk` = **7 191 772 B**, debug = **27 106 392 B**,
+      `mapping.txt` = 71 597 427 B, release manifest with **no `android:debuggable` flag**. (The first head,
+      `407cf4d`, failed this job on the missing `SELF_CHECK_TITLE` — the lesson above.)
+- [ ] **The owner runs it once and pastes the report** — the whole point of the phase.
