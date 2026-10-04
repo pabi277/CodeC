@@ -9,8 +9,12 @@
 > 0 fail** in the sandbox harness, and **Build APK [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349)
 > is green on head `58039cd`** (release APK 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B) after two
 > failed rounds that CI caught and the sandbox harness could not (below). **No PR, no merge,
-> no `main` push** — that needs the owner's explicit command (`rule.md` §3). **The device round has NOT been
-> run**: every row in it is ⏳ and owner-only.
+> no `main` push** — that needs the owner's explicit command (`rule.md` §3). **The device round has been RUN by the
+> owner (2026-10-04) and reported via chat** — see [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (cells marked
+> *owner-reported*) and [`DEVICE_ROUND_OWNER_REPORT_2026-10-04.md`](DEVICE_ROUND_OWNER_REPORT_2026-10-04.md)
+> (transcript + reading): **19 of 21 legacy rows pass, S2 failed, B2 not exercised; the matrix is 14 rows at 3/3
+> with T3-Gemini and T4-NVIDIA failed, T7/T10 not exercised**. Acceptance is **not** declared, and the failed
+> rows' fix phases need the owner's command.
 > **Baseline:** `main` @ `0fc2bfd88d99d80ca72d61347dea9b36a4b82381` — the merge commit of [PR #113](https://github.com/pabi277/CodeC/pull/113)
 > (Phase 88 / AI Level 11), first parent `c3771c5`, second parent `06c1433`, merged 2026-10-03 16:21 UTC;
 > post-merge Build APK run [`37136523881`](https://github.com/pabi277/CodeC/actions/runs/37136523881) is
@@ -181,8 +185,10 @@ with the device round inside it for (d) · a failed row becomes its own fix phas
       **5 cases** pin the file. ([89.3](PART_89_3_TASK_MATRIX_AND_EVALUATION.md))
 - [x] The refreshed `DEVICE_ROUND.md` exists in this phase folder with the 21 legacy rows re-pointed at the new
       build, the 5-task P5 comparison, the 10-task matrix, the 8 visual checks from 88.5, the P8 scrub row, the
-      memory-cap question (5 files / 160 KiB / 256 KiB) and the long-answer lazy-list question. Every row is ⏳;
-      nothing is pre-ticked. ([89.4](PART_89_4_DEVICE_ROUND_REFRESH.md))
+      memory-cap question (5 files / 160 KiB / 256 KiB) and the long-answer lazy-list question. **The owner ran it
+      on 2026-10-04 and reported the results in chat; the cells are filled and marked *owner-reported*** — the
+      agent judged nothing and the round is not accepted. ([89.4](PART_89_4_DEVICE_ROUND_REFRESH.md) ·
+      [the report](DEVICE_ROUND_OWNER_REPORT_2026-10-04.md))
 - [x] Build APK is green on the implementation head; the number is recorded in the part docs.
       ([`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349) on `58039cd` — after two failed
       rounds, both recorded below. Release 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B.)
@@ -210,7 +216,8 @@ Command: the owner's ***"Complete level 12"***. Branch `arena/01a102bd-codec`; n
 | `app/src/test/java/com/codeci/ide/AiLevel12WiringTest.kt` | 89.2 | **new** — 7 source-pin cases |
 | `app/src/test/java/com/codeci/ide/GeminiResponseTest.kt` · `NvidiaResponseTest.kt` | 89.2 | one case each — the decoder usage reads, in their Robolectric homes (CI-only, by necessity) |
 | `app/src/test/java/com/codeci/ide/AiLevel12MatrixTest.kt` | 89.3 | **new** — 5 doc/contract cases |
-| `docs/phases/03-editor/chat-phase89/DEVICE_ROUND.md` | 89.4 | **new** — the owner's refreshed round (nothing ticked) |
+| `docs/phases/03-editor/chat-phase89/DEVICE_ROUND.md` | 89.4 | **new** — the owner's refreshed round, cells now **owner-reported** (2026-10-04) |
+| `docs/phases/03-editor/chat-phase89/DEVICE_ROUND_OWNER_REPORT_2026-10-04.md` | 89.4 | **new** — the owner's chat report verbatim, plus procedures for the open rows and five findings for a fix phase |
 
 **APK delta (against the brief's baseline `0fc2bfd`, post-merge run `37136523881`).** Release
 **7 179 540 B** vs 7 177 180 B = **+2 360 B** (+0.03 %); debug **27 062 592 B** vs 27 054 824 B = **+7 768 B**
@@ -261,9 +268,15 @@ duration unit is chosen from the rounded tenths, and the final line says *"memor
 is green on `58039cd`. All three details — causes, fixes, and what each round bought — are in the narrative above
 and in [89.2](PART_89_2_NUMBERS_READOUT.md#ci-round-the-evidence-of-record).
 
-**Still owed, and it is the owner's:** the **60 real runs** (10 tasks × 2 models × 3 runs, **3/3** to pass) and
-every device row in [`DEVICE_ROUND.md`](DEVICE_ROUND.md). **No row is claimed run.** A failed row gets its own
-fix phase, after which Level 12 repeats.
+**The device round (owner-run, 2026-10-04):** all three runs per task were done — **48 of the 60 matrix runs**
+(T7 and T10 were not exercised on either model) — and the owner's verdicts are **14 rows pass at 3/3 · T3-Gemini
+and T4-NVIDIA fail · B2, T7, T10 NOT EXERCISED**. Part 1: **19 of 21 rows pass; S2 fails** (an unclosed
+`<<<SEARCH>>>`/`<<<REPLACE>>>`/`<<<END_SEARCH>>>` block in `app.py` — no write happened, but the row could not be
+completed); **P8 is filled for the first time since Level 10**. The owner's model for this round's Gemini column is
+**`gemini-3.1-flash-lite`** (a recorded deviation). **Acceptance is not declared by the agent**, and per the
+owner's own rule each failed row becomes its **own fix phase** — **none of those is opened yet**; that needs the
+owner's command. Everything he reported, verbatim, is in
+[`DEVICE_ROUND_OWNER_REPORT_2026-10-04.md`](DEVICE_ROUND_OWNER_REPORT_2026-10-04.md).
 
 ## Tests (plan)
 

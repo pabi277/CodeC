@@ -63,11 +63,15 @@ were **"Not captured"** in Phase 83, and stayed so through Levels 7–11) so the
       structural), with named cases; the rest are explicitly owner-run. (`AiLevel12MatrixTest` — *the matrix is
       exactly the ten spec tasks*, plus the 89.1 injection replay and the existing
       `AiLevel6BaselineTest`/`AiLevel8*`/`AiLevel10*` suites.)
-- [ ] The device round carries the 60-run matrix with the recording format above. **The file carries it; the runs
-      are ⏳ and owner-only — none has been run.**
+- [x] The device round carries the 60-run matrix with the recording format above. **The file carries it, and the
+      owner ran it on 2026-10-04 and reported the results in chat** — 48 of 60 runs done (T7/T10 not exercised),
+      14 rows at 3/3, **T3-Gemini and T4-NVIDIA failed**. Cells are marked *owner-reported*; the agent judged
+      nothing. ([`DEVICE_ROUND.md`](DEVICE_ROUND.md) · [owner report](DEVICE_ROUND_OWNER_REPORT_2026-10-04.md))
 - [x] No run is claimed that did not happen; NOT EXERCISED and incomplete are first-class outcomes.
       (`AiLevel12MatrixTest` — *nothing is pre-ticked and NOT EXERCISED is a first-class outcome*.)
-- [ ] A failing row's fix phase is named in the report, and Level 12's repeat is scheduled. *(No row has been run,
+- [ ] A failing row's fix phase is named in the report, and Level 12's repeat is scheduled. *(Three rows failed —
+      **S2**, **T3-Gemini**, **T4-NVIDIA** — and finding **F1** (out-of-range read windows) is a fourth candidate;
+      the report names fix directions but **no fix phase is opened**, because that needs the owner's command.
       so no fix phase is named yet; the rule — own fix phase, then Level 12 repeats — is written into the file.)
 
 ## Tests (plan)

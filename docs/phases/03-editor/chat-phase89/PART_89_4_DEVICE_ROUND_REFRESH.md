@@ -59,8 +59,9 @@ None. This part writes a checklist; the app under test is whatever Phase 89's im
 - [x] `chat-phase89/DEVICE_ROUND.md` exists with all eight sections above and the 21 legacy rows. (Part 1 =
       R1–R5, B1–B3, P1–P8, S1–S4, re-pointed at this build; parts 2–5 = the 60-run matrix, the P5 five-task
       comparison, V1–V8 and Q1/Q2.)
-- [x] Every row has an expectation and an empty result cell; nothing is pre-ticked. (`AiLevel12MatrixTest` pins
-      the P8 row as unticked and the two questions as asked.)
+- [x] Every row has an expectation and a result cell; nothing was **pre**-ticked by the agent. **The owner filled
+      the cells on 2026-10-04 from his own report**, and each is marked *owner-reported*. (`AiLevel12MatrixTest`
+      pins the P8 row as *owner-reported*, the failed rows as failed, and the two questions as asked.)
 - [x] The build line names the real sha and run id, and the byte counts come from check-run annotations, not memory.
       (head `58039cd`, Build APK [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349) green,
       release 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B.)
@@ -90,8 +91,10 @@ so a future refactor cannot quietly drop a required row.
 
 ## Implementation (2026-10-04)
 
-[`DEVICE_ROUND.md`](DEVICE_ROUND.md) is written on `arena/01a102bd-codec`. Its header is ⏳ **OWED, owner-only**;
-every one of its rows is ⏳ with an empty result cell, and the completion bars are empty. Nothing in it was
-filled from a run, because none has been run. The build line names the branch head — `58039cd` — and takes its byte counts
+[`DEVICE_ROUND.md`](DEVICE_ROUND.md) is written on `arena/01a102bd-codec`. Its header was ⏳ **OWED, owner-only**
+with every row empty; **later on 2026-10-04 the owner ran the round and reported the results in chat**, and the
+cells are now filled and marked *owner-reported* — 19 of 21 legacy rows pass with **S2 failed** and **B2 not
+exercised**; the matrix is 14 rows at 3/3 with **T3-Gemini** and **T4-NVIDIA failed** and **T7/T10 not exercised**.
+The agent filled nothing from its own judgement, and acceptance is not declared. The build line names the branch head — `58039cd` — and takes its byte counts
 from the `build` check-run annotations of the green run [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349)
 (release 7 179 540 B · debug 27 062 592 B · R8 mapping 71 172 428 B), never from memory.

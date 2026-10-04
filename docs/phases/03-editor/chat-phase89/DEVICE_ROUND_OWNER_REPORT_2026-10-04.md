@@ -6,8 +6,16 @@
 > touch. **Nothing here is an acceptance.** [`DEVICE_ROUND.md`](DEVICE_ROUND.md) keeps its own cells and its
 > own status (⏳ OWED): by its header, only the owner fills a result cell.
 >
-> **Round status: IN PROGRESS.** Open: **B2** (Part 1), **T7** and **T10** on both models (Part 2), and the
-> matrix's **3-runs-per-cell** requirement (this report reads as one run per cell — see the questions at the end).
+> **Round status: IN PROGRESS.** Open: **B2** (Part 1), **T7** and **T10** on both models (Part 2), the eight
+> visual checks and the two questions (not reported). The failed rows — **S2**, **T3-Gemini**, **T4-NVIDIA** — wait
+> for their fix phases, which need the owner's command.
+>
+> **Owner's four answers (2026-10-04, after this report was written):** ① all **three runs** were done per task —
+> the verdicts here *are* the **3/3** summary; ② the Gemini column's model for this round stays
+> **`gemini-3.1-flash-lite`** (a recorded deviation from the brief's pinned `gemini-3-flash-preview`); ③ the results
+> live **both** here and in [`DEVICE_ROUND.md`](DEVICE_ROUND.md) — that file's cells are filled and marked
+> *owner-reported*; ④ the "18 000+ lines" figure was seen **in the activity rows**, which points at finding F1(a)
+> below — the model asking for windows past the end of the file, each refused with the true line total.
 
 ## 1. Owner's words (verbatim, 2026-10-04)
 
@@ -83,8 +91,8 @@ on a 72-file project (*"carefully read all the md files … answers was accurate
 
 ## 3. Reading of Part 2 — the matrix, as reported
 
-Bar: **3 runs per task per model, needing 3/3** (owner's decision, 2026-10-04). As written, this report is
-**one run per cell**; the remaining two runs are owed unless the owner says otherwise.
+Bar: **3 runs per task per model, needing 3/3** (owner's decision, 2026-10-04). **All three runs were done per
+task** (owner, 2026-10-04); the verdict below is the 3/3 summary. A failed row fails the whole row.
 
 | # | Gemini — owner used `gemini-3.1-flash-lite` | NVIDIA — `nvidia/nemotron-3-super-120b-a12b` |
 |---|---|---|
@@ -99,8 +107,12 @@ Bar: **3 runs per task per model, needing 3/3** (owner's decision, 2026-10-04). 
 | T9 | PASS | PASS |
 | T10 | **NOT EXERCISED** — *"can't test"* | **NOT EXERCISED** |
 
-So, as reported: **14 PASS · 2 FAIL (T3 Gemini, T4 NVIDIA) · 4 NOT EXERCISED**, over 20 cells that the bar
-says should carry 60 runs.
+So, as reported: **14 rows PASS at 3/3 · 2 rows FAIL (T3 Gemini, T4 NVIDIA) · 4 NOT EXERCISED** — 48 of the
+60 matrix runs done (8 tasks × 2 models × 3 runs).
+
+> **The Gemini model is `gemini-3.1-flash-lite`** (owner's decision, 2026-10-04: *"Keep `gemini-3.1-flash-lite`"*),
+> not the brief's `gemini-3-flash-preview`. In the table above, "Gemini" means that model, and the 3/3 verdicts
+> belong to it.
 
 ## 4. Owner observations to keep (verbatim, unedited)
 
@@ -166,15 +178,29 @@ data-not-instructions sentence in the preview.
 
 | # | Finding | Where the code stands today | Fix direction, if the owner opens a fix phase |
 |---|---|---|---|
-| **F1** | "the AI is reading 18000+ lines of a 500-line file" | The app has **no** cumulative "lines read" counter anywhere. Every read row is honest — `FILE app.py — lines 1-60 of 500 [partial: more lines follow]` (`AiToolRunner.kt:433`) — and a window past the end is **refused** with the true total: `app.py has 500 lines; the requested start 18000 is past the end. [refused: out of range]` (`AiToolRunner.kt:241-246`). So the 18 000+ figure is either (a) the **model asking** for windows past the end (refused each time; the loop only ends at the 12-step/24-read ceiling or the NO_PROGRESS guard) or (b) the **model saying** it read 18 000 lines in its prose. Which one it was decides whether this is an app fix or a prompt fix | (a) → tell the model the file's line total more loudly / stop the wild-range loop earlier; (b) → the honest rows already contradict it; consider a note in the prompt |
+| **F1** | "the AI is reading 18000+ lines of a 500-line file" — **seen in the activity rows** (owner, 2026-10-04) | The app has **no** cumulative "lines read" counter anywhere. Every read row is honest — `FILE app.py — lines 1-60 of 500 [partial: more lines follow]` (`AiToolRunner.kt:433`) — and a window past the end is **refused** with the true total: `app.py has 500 lines; the requested start 18000 is past the end. [refused: out of range]` (`AiToolRunner.kt:241-246`). Since the figure was **in the rows**, this is case **(a): the model asking for windows past the end of the file**, refused each time — the loop then continues until the 12-step/24-read ceiling or the NO_PROGRESS guard, and NO_PROGRESS only fires on an *identical* call, so varied wild ranges slip past it | Tell the model the true total more loudly (it is already in every refusal), and/or stop the wild-range loop earlier — e.g. treat a second out-of-range read of the *same file* as no progress. The rows must keep showing the true total; the displayed number is already the model's own request, not a claim the app makes |
 | **F2** | **S2**: unclosed edit block → dead end | `AiEditProposal.kt:519` builds the "Unclosed …" reason; `AiChatSheet.kt:411-415` shows the prose plus a bare `ErrorLine(reason)`; the **Rebuild proposal** button exists only on the successful `Proposal` card (`AiChatSheet.kt:528`) | Give the `Invalid` branch the same one-tap retry (`Rebuild proposal`), and treat a missing `<<<END_SEARCH>>>` as an *incomplete* block with a retry, not a dead end. No write is involved either way — the guard was correct |
 | **F5** | Cut-off proposals (T3) | Deliberate: a cut proposal gets no Continue (`AiChatSheet.kt:429` → `CONTINUE_PROPOSAL_NOTE`) because a resumed block can mis-parse | Reachable only through the same Rebuild affordance as F2 |
 | **F4** | Repetition without progress (T1/T2/T4 on NVIDIA) | NO_PROGRESS exists for a *repeated identical call* (`AiAgentLoop.kt:105`); repeating *different* work or repeating prose is not caught | Decision needed: detect "same file, same range, again" and/or repeated answer text |
 | **F2b** | Catalog models that are not NVIDIA's own (deepseek, glm) fail | Fixed errors only (`AiErrors.kt:78/83/84`); nothing distinguishes "this catalog model does not support the streaming chat API the app uses" from a generic failure | One extra sentence on `MODEL_NOT_FOUND` / `BAD_REQUEST` for NVIDIA. Nothing about bodies, keys or URLs — **D3** holds |
 
-## 7. Questions this report leaves open (for the owner)
+## 7. The owner's answers (2026-10-04) — all four closed
 
-1. **Runs per cell** — one run each, or three? The bar is 3/3.
-2. **Gemini model** — the round pinned `gemini-3-flash-preview`; this report used `gemini-3.1-flash-lite`.
-3. **Where the results should live** — inside [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (owner-reported) or here.
-4. **F1's location** — the 18 000+ figure was seen in the AI's answer text, in the activity rows, or elsewhere?
+| # | Question | Answer |
+|---|---|---|
+| 1 | Runs per cell | **Three** — all three runs were done per task; the verdicts above are the 3/3 summary |
+| 2 | Which Gemini model this round | **`gemini-3.1-flash-lite`** — kept deliberately; a recorded deviation from the brief |
+| 3 | Where the results live | **Both** — this report *and* [`DEVICE_ROUND.md`](DEVICE_ROUND.md), whose cells are filled and marked *owner-reported* |
+| 4 | Where "18 000+ lines" was seen | **In the activity rows** → finding F1(a): the model asking for out-of-range windows |
+
+## 8. What happens next
+
+1. **Owner's command decides the fix phases.** Three rows failed (**S2**, **T3-Gemini**, **T4-NVIDIA**) and finding
+   **F1** is a fourth candidate. Per the owner's decision, each failed row becomes its **own fix phase**, after
+   which Level 12 repeats. None of that is authorized yet.
+2. **The open rows** — T7, T10 (both models) and B2 — have runnable procedures in §5, plus the optional T6
+   upgrade.
+3. **The visual checks (V1–V8) and Q1/Q2** were not reported this round; they stay ⏳ in
+   [`DEVICE_ROUND.md`](DEVICE_ROUND.md).
+4. **No PR, no merge, no `main` push** — unchanged; Level 12 acceptance is the owner's call, and this report is
+   evidence, not a verdict.

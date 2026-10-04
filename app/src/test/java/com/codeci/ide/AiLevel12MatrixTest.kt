@@ -11,8 +11,9 @@ import org.junit.Test
  * A checklist that silently loses a row is a checklist that quietly passes. These
  * cases read the real files in the repo (the house style of `RepoFiles`) so that
  * a future edit cannot drop the owner's model ids, the 3/3 pass bar, the ten
- * tasks, the eight visual checks, the still-unticked support-report row, the
- * memory-cap question or the long-answer question.
+ * tasks, the eight visual checks, the support-report row (now carrying the
+ * owner's 2026-10-04 report, never an agent tick), the memory-cap question or
+ * the long-answer question.
  */
 class AiLevel12MatrixTest {
 
@@ -66,11 +67,29 @@ class AiLevel12MatrixTest {
     }
 
     @Test
-    fun `the support-report scrub row is still asked, and still unticked`() {
+    fun `the support-report scrub row records the owner's report, never an agent tick`() {
         assertTrue("P8 is the scrub check", round.contains("P8"))
         assertTrue(
-            "and it must not be pre-ticked",
-            Regex("\\| *P8 *\\|[^\\n]*\\| *⏳ *\\|").containsMatchIn(round)
+            "and its cell must say owner-reported",
+            Regex("\\| *P8 *\\|[^\\n]*owner-reported[^\\n]*\\|").containsMatchIn(round)
+        )
+        assertTrue(
+            "every filled cell is marked with the owner's provenance",
+            round.contains("owner-reported")
+        )
+        assertTrue(
+            "the failed rows are recorded as failed, not smoothed over",
+            Regex("\\| *S2 *\\|[^\\n]*❌").containsMatchIn(round) &&
+                Regex("\\| *T3 *\\|[^\\n]*❌").containsMatchIn(round) &&
+                Regex("\\| *T4 *\\|[^\\n]*❌").containsMatchIn(round)
+        )
+        assertTrue(
+            "the round keeps its NOT EXERCISED rows first-class",
+            round.contains("NOT EXERCISED")
+        )
+        assertTrue(
+            "the model the owner actually ran is the model named",
+            round.contains("gemini-3.1-flash-lite")
         )
     }
 

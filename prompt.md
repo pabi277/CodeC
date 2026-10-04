@@ -72,7 +72,7 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-10-04 (Phase 89 / AI Level 12 ✅ IMPLEMENTED on `arena/01a102bd-codec` — not merged, device round ⏳ owner-only; Phase 88 / AI Level 11 ✅ MERGED via PR #113 → `main` @ `0fc2bfd`).**
+**CURRENT HANDOFF — 2026-10-04 (Phase 89 / AI Level 12 ✅ IMPLEMENTED on `arena/01a102bd-codec` — not merged, **device round run by the owner and reported in chat 2026-10-04, not accepted**; Phase 88 / AI Level 11 ✅ MERGED via PR #113 → `main` @ `0fc2bfd`).**
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
 `docs/phases/03-editor/chat-phase89/README.md` and parts 89.1–89.4,
 `docs/roadmaps/ai-integration/12_AGENT_EVALUATION_AND_ACCEPTANCE.md`,
@@ -85,10 +85,17 @@ named models · one phase · failed rows get their own fix phase) and then comma
 four parts are written ([README + parts 89.1–89.4](docs/phases/03-editor/chat-phase89/README.md), each with an
 implementation record) and the owner-only [DEVICE_ROUND.md](docs/phases/03-editor/chat-phase89/DEVICE_ROUND.md)
 is refreshed: 21 legacy rows + the 10-task × 2-model × 3-run matrix (60 real runs, 3/3 to pass) + the 8 visual
-checks + P8 + Q1/Q2 — **every row ⏳, nothing pre-ticked**. **S10 is no longer missing** (11 cases); 40 new cases
+checks + P8 + Q1/Q2 — every row empty, nothing pre-ticked. **The owner then ran it (2026-10-04) and reported:
+19 of 21 legacy rows pass, S2 failed, B2 not exercised; the matrix 14 rows at 3/3 with T3-Gemini and T4-NVIDIA
+failed, T7/T10 not exercised** — transcribed in
+[DEVICE_ROUND_OWNER_REPORT_2026-10-04.md](docs/phases/03-editor/chat-phase89/DEVICE_ROUND_OWNER_REPORT_2026-10-04.md)
+and marked *owner-reported* in the round. Acceptance is not declared; the failed rows' fix phases need his command. **S10 is no longer missing** (11 cases); 40 new cases
 in total (**38 host-runnable + 2 Robolectric-only**); **620/620 host cases green** in the sandbox harness. **Build APK [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349) is green on head `58039cd`** (release APK 7 179 540 B, debug 27 062 592 B, R8 mapping 71 172 428 B). **Not merged; no PR.** The **60 real runs and the
-whole device round are the owner's and none has been run**. **Levels 13–14 remain unauthorized; formal device
-acceptance stays postponed until the owner's Level 12 round.**
+whole device round are the owner's — **and he ran the round on 2026-10-04 and reported it**: 19 of 21 Part-1 rows
+pass with **S2 failed** and **B2 not exercised**; the matrix 14 rows at 3/3 (48 of 60 runs) with **T3-Gemini** and
+**T4-NVIDIA failed** and **T7/T10 not exercised**; Gemini on **`gemini-3.1-flash-lite`** (owner's kept deviation).
+**Not accepted** — each failed row becomes its own fix phase, then Level 12 repeats. **Levels 13–14 remain
+unauthorized.**
 `main` is the merge commit of [PR #113](https://github.com/pabi277/CodeC/pull/113) (Phase 88 / Level 11), merged on the
 owner's *"Ok merge to main"* (2026-10-03) after the PR's own `build` check passed on the final head. Its first
 parent is `c3771c58007f2f7ad4af6a26437dc19ef3819a3f`, the [PR #112](https://github.com/pabi277/CodeC/pull/112) merge (Phase 87 / Level 10),
@@ -129,8 +136,9 @@ work is read-only IO. Do not persist raw chat or prompts. The initial preview an
 and send the same memory/plan text verbatim; send-time reconciliation changes require a refreshed
 preview and another Send.
 
-*Next:* **Phase 88 / Level 11 is merged** (PR #113) as `0fc2bfd` on `main`, and **Phase 89 / Level 12 has
-been briefed** — a brief only, 2026-10-04, on the owner's *"Level 12 / Phase 89 — brief only"*, with the five
+*Next:* **Phase 89 / Level 12 is implemented, CI-green and now owner-run (report above), but not accepted and not
+merged**; **Phase 88 / Level 11 is merged** (PR #113) as `0fc2bfd` on `main`, and **Phase 89 / Level 12 was
+briefed** — a brief only, 2026-10-04, on the owner's *"Level 12 / Phase 89 — brief only"*, with the five
 scope answers recorded in the latest-instruction block above. **Nothing is implemented for it and nothing was
 run; implementation needs a further explicit command.** If the owner commands it: 89.1 writes the missing
 **S10** test (injection driven through the loop), 89.2 adds the in-memory numbers readout (D6), 89.3 writes the
