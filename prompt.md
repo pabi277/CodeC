@@ -72,7 +72,7 @@
 
 ---
 
-**CURRENT HANDOFF — 2026-10-04 (Phase 90 / AI — the conversation surface ✅ IMPLEMENTED on `arena/01a102bd-codec` 2026-10-04 on the owner's *"Go"*: New chat, follow-up chats over a bounded in-memory transcript, framed code blocks — 30 host cases green, Build APK green on head `2333cde`, device round C1–C14 ⏳ owner-only; **Phase 89 / AI Level 12 ✅ IMPLEMENTED, not merged, device round run by the owner and reported in chat 2026-10-04, not accepted**; Phase 88 / AI Level 11 ✅ MERGED via PR #113 → `main` @ `0fc2bfd`).**
+**CURRENT HANDOFF — 2026-10-04 (Phase 91 / AI — the simple chat ✅ IMPLEMENTED on `arena/01a102bd-codec` 2026-10-04 from the owner's Phase 90 device round: Simple by default, Copy on every reply, New question gone, the quoted conversation closed with an instruction, a code block visible in both themes; 41 host cases green; **Phase 90 / AI — the conversation surface ✅ IMPLEMENTED, round run by the owner with C2/C7/C9/C11/N1 failures now answered by Phase 91**; originally: New chat, follow-up chats over a bounded in-memory transcript, framed code blocks — 30 host cases green, Build APK green on head `2333cde`, device round C1–C14 ⏳ owner-only; **Phase 89 / AI Level 12 ✅ IMPLEMENTED, not merged, device round run by the owner and reported in chat 2026-10-04, not accepted**; Phase 88 / AI Level 11 ✅ MERGED via PR #113 → `main` @ `0fc2bfd`).**
 Read `rule.md` (§3 merge gate, §9 snapshot), `docs/getting-started/NEXT_STEPS.md` (head entry),
 `docs/phases/03-editor/chat-phase90/` (the owner's newest request — brief only, no code: New chat, follow-ups, and
 the "real assistant" look),

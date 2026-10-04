@@ -49,11 +49,30 @@ class Phase90DeviceTest {
     }
 
     @Test
-    fun `nothing is pre-ticked and the round says who owns it`() {
+    fun `the owner ran the round, and every result says so`() {
         assertTrue("owner-only", round.contains("owner-only"))
-        assertTrue("not run", round.contains("NOT RUN"))
-        assertFalse("no pass tick anywhere", round.contains("✅"))
-        assertTrue("the C rows are all ⏳", Regex("\\| *C1 *\\|[^\\n]*\\| *⏳ *\\|").containsMatchIn(round))
+        assertTrue("the owner ran it", round.contains("RUN by the owner"))
+        assertTrue("owner-reported", round.contains("owner-reported"))
+        // Phase 91: the results are his, so a tick is allowed only when it is
+        // attributed to him (Phase 89's convention). No tick stands alone.
+        assertFalse(
+            "no unattributed pass tick anywhere",
+            Regex("✅(?! owner-reported)").containsMatchIn(round)
+        )
+        assertTrue("C1 is his pass", Regex("\\| *C1 *\\|[^\\n]*\\| *✅ owner-reported *\\|").containsMatchIn(round))
+        assertTrue("C2 is his fail", Regex("\\| *C2 *\\|[^\\n]*❌ owner-reported").containsMatchIn(round))
+        assertTrue("C11 names the dark theme", round.contains("failed: C2, C4 (not possible), C7, C8 (no permission), C9, C11 (dark theme), N1"))
+        assertTrue("C6 and C14 are not understood, not guessed", round.contains("not understood: C6, C14"))
+        assertTrue("the V re-run moved to Phase 91", round.contains("Phase 91"))
+    }
+
+    @Test
+    fun `his change requests are written where they can be answered`() {
+        assertTrue("the technical toggle", round.contains("toggle option to hide all technical part"))
+        assertTrue("the copy ask", round.contains("set the copy part after every reply default"))
+        assertTrue("the button that goes", round.contains("remove the new question"))
+        assertTrue("the permission ask", round.contains("grand permission as user request"))
+        assertTrue("the follow-up ask", round.contains("C2/C7"))
     }
 
     @Test

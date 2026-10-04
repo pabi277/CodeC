@@ -1,6 +1,12 @@
 # Phase 90 — The conversation surface
 
-> **Status: ✅ IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec` — the owner said *"Go"* the same day.** All
+> **Status: ✅ IMPLEMENTED (2026-10-04) and ✅ ROUND-RUN by the owner the same day.** His row-by-row results are in
+> [`DEVICE_ROUND.md`](DEVICE_ROUND.md) (passed C1, C3, C5, C10, C12, C13, N2, N3; **failed C2, C4, C7, C8, C9, C11
+> — dark theme — and N1**; C6 and C14 not understood), and the changes he asked for are
+> [**Phase 91 — the simple chat**](../chat-phase91/README.md), implemented on the same branch.
+>
+> **Original status line, kept for the record:** ✅ IMPLEMENTED (2026-10-04) on `arena/01a102bd-codec` — the owner said
+> *"Go"* the same day. All
 > three code parts are written and host-tested (**30 new cases**: `AiChatSessionTest` 14, `AiChatSessionWiringTest`
 > 10, `Phase90DeviceTest` 6 — **30 passed / 0 failed** in the sandbox harness, kotlinc 2.2.10), **Build APK green on
 > the head** (run 37208366826), and the phase's own
@@ -101,7 +107,10 @@
 - [x] **Build APK green on this head** — run **37209301287** on `46f2cdb` (release 7 184 512 B / debug
       27 076 916 B / mapping 71 266 812 B, no `android:debuggable`), read from the run's own annotations; the same
       facts are in [`DEVICE_ROUND.md`](DEVICE_ROUND.md) so the phone round names the build it ran.
-- [ ] **The device round** — owner-only ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)); a failed row gets its own fix phase.
+- [x] **The device round** — owner-only ([`DEVICE_ROUND.md`](DEVICE_ROUND.md)), run **2026-10-04**: 8 rows passed,
+  7 failed, 2 not understood, V1–V8 moved to Phase 91. **A failed row gets its own fix phase**: that phase is
+  [Phase 91 — the simple chat](../chat-phase91/README.md) for C2/C7/C9/C11 and the three UI asks; C4, C8 and N1 are
+  [recorded with their evidence](../chat-phase91/PART_91_2_FINDINGS.md), not silently fixed.
 
 ## Implementation record (2026-10-04)
 

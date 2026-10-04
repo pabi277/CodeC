@@ -1250,6 +1250,8 @@ fun EditorScreen(
             onRetry = aiViewModel::retry,
             onClear = aiViewModel::clear,
             onNewChat = aiViewModel::newChat,
+            // Phase 91 — the simple/technical face (the owner's Phase 90 round).
+            onToggleMode = aiViewModel::toggleMode,
             onDismissNotice = aiViewModel::dismissNotice,
             onExpand = { aiViewModel.sheetEvent(AiSheetEvent.EXPAND) },
             onMinimize = { aiViewModel.sheetEvent(AiSheetEvent.MINIMIZE) },

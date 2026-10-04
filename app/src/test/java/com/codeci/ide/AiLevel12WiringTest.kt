@@ -37,10 +37,13 @@ class AiLevel12WiringTest {
         // task whose card is not on screen (single-shot, no-tool, failure).
         assertTrue("one helper owns the line", sheet.contains("private fun MeasurementsLine(state: AiUiState)"))
         assertEquals("the helper is drawn three times", 3, Regex("MeasurementsLine[(]state[)]").findAll(sheet).count())
+        // Phase 91 added a face guard to the two terminal sites: the numbers are
+        // machinery, so the simple face does not draw them. The rule this pin
+        // protects is unchanged — one helper, one draw per finished task.
         assertEquals(
-            "two of those are the guarded terminal sites",
+            "and the two terminal sites are guarded by the face and the empty card",
             2,
-            Regex("if [(]state[.]agentSteps[.]isEmpty[(][)][)] MeasurementsLine[(]state[)]").findAll(sheet).count()
+            Regex("if [(][!]simple && state[.]agentSteps[.]isEmpty[(][)][)] MeasurementsLine[(]state[)]").findAll(sheet).count()
         )
     }
 

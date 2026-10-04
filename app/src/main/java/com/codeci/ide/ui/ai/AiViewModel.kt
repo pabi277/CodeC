@@ -148,7 +148,14 @@ data class AiUiState(
      * task can never be appended twice and a repeated exchange is never silently
      * treated as a duplicate.
      */
-    val taskCommitted: Boolean = false
+    val taskCommitted: Boolean = false,
+    /**
+     * Phase 91 — the face of the sheet. **Simple** (the default) draws questions,
+     * answers and Copy; **Technical** adds the machinery. Display state only: it
+     * never changes a request (the packed bytes are identical in both modes,
+     * **S1**) and it is never persisted (**D6**).
+     */
+    val mode: AiChatMode = AiChatMode.SIMPLE
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -566,6 +573,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      * Phase 90 — **New chat**: the task and the conversation both clear. The
      * confirm dialog lives in the sheet; this is what runs when he confirms.
      */
+    /** Phase 91 — the simple/technical toggle. Display state only (D6). */
+    fun toggleMode() {
+        _state.update {
+            it.copy(mode = if (it.mode == AiChatMode.SIMPLE) AiChatMode.TECHNICAL else AiChatMode.SIMPLE)
+        }
+    }
+
     fun newChat() {
         clear()
         _state.update { it.copy(session = AiChatSession.EMPTY, taskCommitted = false) }

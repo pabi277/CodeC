@@ -57,8 +57,39 @@ object AiCopy {
     const val CANCEL = "Cancel"
     const val STOP = "Stop"
     const val COPY = "Copy answer"
+
+    // ---- Phase 91 — the simple chat (the owner's Phase 90 device round) --------
+
+    /** The two faces of the sheet. Simple is the default: question, answer, Copy. */
+    const val MODE_SIMPLE = "Simple"
+    const val MODE_TECHNICAL = "Technical"
+    const val MODE_TOGGLE_DESCRIPTION = "Switch between the simple chat and the technical view"
+
+    /** Every assistant turn carries its own Copy (the owner's ask). */
+    const val COPY_THIS = "Copy"
+
+    /** Replaces the old "New question" on a failed task: it clears the task, nothing else. */
+    const val CLEAR_TASK = "Clear"
+
+    /** Simple mode: the answer is still arriving and there is nothing to show yet. */
+    const val WORKING = "Working…"
+
+    /** Simple mode never hides the exact text — it puts it one tap away. */
+    const val SENT_TEXT_SHOW = "What will be sent"
+    const val SENT_TEXT_HIDE = "Hide what will be sent"
+
+    fun modeToggleLabel(simple: Boolean): String = if (simple) MODE_SIMPLE else MODE_TECHNICAL
+
+    /** Simple mode's header: who answers, without the raw model id. */
+    fun sheetTitleSimple(provider: AiProviderId): String = "AI · ${provider.label}"
+
+    /** Simple mode's answer label, still honest about a stopped turn. */
+    fun turnLabelSimple(stopped: Boolean): String = if (stopped) "$AI · stopped" else AI
+
+    /** Simple mode's one-line preview — the disclosure stays, the machinery goes. */
+    fun previewSimple(provider: AiProviderId, model: String): String =
+        "Send this to ${provider.label} · $model? Nothing leaves your phone until you tap Send."
     const val COPIED = "Answer copied"
-    const val NEW_QUESTION = "New question"
     const val TRY_AGAIN = "Try again"
     const val WRONG_NOTE = "AI answers can be wrong. Nothing in your project was changed."
     const val NOT_SAVED_NOTE =

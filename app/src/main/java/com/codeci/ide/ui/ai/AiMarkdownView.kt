@@ -106,8 +106,14 @@ internal fun AiMarkdownAnswer(text: String, streaming: Boolean) {
     val context = LocalContext.current
     val linkColor = MaterialTheme.colorScheme.primary
     val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val codeColor = MaterialTheme.colorScheme.surfaceVariant
-    val frameColor = MaterialTheme.colorScheme.outlineVariant
+    // Phase 91 — the owner's Phase 90 round: *"in light mode visible but dark
+    // mode not visible"*. The block's own surface was `surfaceVariant`, the very
+    // colour of the bubble it sits in, and its 1 dp frame was `outlineVariant`,
+    // the weakest line in the theme. Now the block is `surface` (darker than the
+    // bubble in the dark theme, lighter than it in the light one — contrast in
+    // both) with an `outline` frame, so the block reads as a block either way.
+    val codeColor = MaterialTheme.colorScheme.surface
+    val frameColor = MaterialTheme.colorScheme.outline
     val colors = remember(linkColor, mutedColor, codeColor, frameColor) {
         AiMdColors(linkColor, mutedColor, codeColor, frameColor)
     }

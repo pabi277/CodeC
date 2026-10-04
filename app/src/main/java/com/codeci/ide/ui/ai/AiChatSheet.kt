@@ -102,6 +102,8 @@ fun AiChatSheet(
     onClear: () -> Unit,
     /** Phase 90 — start a fresh conversation: the task and the transcript both clear. */
     onNewChat: () -> Unit = {},
+    /** Phase 91 — the simple/technical face. Display state only (D6). */
+    onToggleMode: () -> Unit = {},
     onDismissNotice: () -> Unit,
     onExpand: () -> Unit,
     onMinimize: () -> Unit,
@@ -194,7 +196,10 @@ fun AiChatSheet(
                             .background(MaterialTheme.colorScheme.outlineVariant)
                     )
                 }
-                Header(state.provider, state.model, full, onExpand, onMinimize, onNewChat)
+                Header(
+                    state.provider, state.model, state.mode, full,
+                    onExpand, onMinimize, onNewChat, onToggleMode
+                )
             }
             HorizontalDivider()
             Conversation(
@@ -220,11 +225,14 @@ fun AiChatSheet(
 private fun Header(
     provider: AiProviderId,
     model: String,
+    mode: AiChatMode,
     full: Boolean,
     onExpand: () -> Unit,
     onMinimize: () -> Unit,
-    onNewChat: () -> Unit
+    onNewChat: () -> Unit,
+    onToggleMode: () -> Unit
 ) {
+    val simple = mode == AiChatMode.SIMPLE
     // Phase 90: New chat is destructive to the conversation, so it asks first —
     // and the dialog says the whole truth: nothing here is saved anywhere.
     var confirming by remember { mutableStateOf(false) }
@@ -256,12 +264,22 @@ private fun Header(
         )
         Spacer(Modifier.width(CodecTokens.space(Space.S)))
         Text(
-            AiCopy.sheetTitle(provider, model),
+            // Phase 91 — the simple face names who answers, without the model id.
+            if (simple) AiCopy.sheetTitleSimple(provider) else AiCopy.sheetTitle(provider, model),
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+        // Phase 91 — the face toggle, one tap, added at the owner's request:
+        // "make it a toggle option to hide all technical part and make it only
+        // question answer". Simple is the default.
+        TextButton(
+            onClick = onToggleMode,
+            modifier = Modifier.semantics { contentDescription = AiCopy.MODE_TOGGLE_DESCRIPTION }
+        ) {
+            Text(AiCopy.modeToggleLabel(simple), style = MaterialTheme.typography.labelMedium)
+        }
         IconButton(onClick = { confirming = true }) {
             Icon(
                 Icons.Filled.Add,
@@ -311,6 +329,7 @@ private fun Conversation(
     modifier: Modifier
 ) {
     val scroll = rememberScrollState()
+    val simple = state.mode == AiChatMode.SIMPLE
     // Follow the stream; the user's own scrolling stops mattering once it ends.
     LaunchedEffect(state.answer.length, state.phase) {
         if (state.phase == AiPhase.STREAMING) scroll.scrollTo(scroll.maxValue)
@@ -329,10 +348,22 @@ private fun Conversation(
             when (turn.role) {
                 AiChatRole.YOU -> YouBubble(turn.text)
                 AiChatRole.ASSISTANT -> AiBubble(
-                    label = AiCopy.turnLabel(
-                        turn.provider, turn.model, turn.status == AiTurnStatus.STOPPED
-                    )
-                ) { Answer(turn.text) }
+                    label = if (simple) {
+                        // Phase 91 — the simple face: "AI" (still honest about a
+                        // stopped turn). The technical face keeps the full S8 label.
+                        AiCopy.turnLabelSimple(turn.status == AiTurnStatus.STOPPED)
+                    } else {
+                        AiCopy.turnLabel(
+                            turn.provider, turn.model, turn.status == AiTurnStatus.STOPPED
+                        )
+                    }
+                ) {
+                    Answer(turn.text)
+                    // Phase 91 — the owner asked for copy *after every reply*,
+                    // so every reply carries its own. Same road as the block
+                    // Copy: the clipboard and a toast, nothing else (S6).
+                    TurnCopy(turn.text)
+                }
             }
         }
         val prompt = state.prompt
@@ -342,7 +373,9 @@ private fun Conversation(
         // Phase 80 — every step of the agent task, in order, as it happens:
         // the reads it asked for, the refusals, the run it requested and the
         // run's own result. In memory and never persisted (D6).
-        if (state.agentSteps.isNotEmpty()) {
+        // Phase 91 — simple mode hides the machinery, never a control: the
+        // budget offer lives inside this card, so the card stays when one waits.
+        if (state.agentSteps.isNotEmpty() && (!simple || state.budgetOffer != null)) {
             AgentActivityCard(state, onAcceptBudget, onDeclineBudget)
         }
         // Phase 87 (Level 10, 87.7) — the manual backup-provider offer. It is a
@@ -375,11 +408,18 @@ private fun Conversation(
             }
 
             AiPhase.PREVIEW -> prompt?.let {
-                Body(AiCopy.previewHeader(it.provider, it.model, it.sentChars))
-                Muted(AiCopy.answerBudgetNote(
-                    it.provider, it.model,
-                    if (it.continuation != null) AiContinuation.requestBudget(state.answer.length) else AiLimits.MAX_REPLY_CHARS
-                ))
+                // Phase 91 — the disclosure does not change with the face; the
+                // machinery does. Simple says who answers and that Send is the
+                // only door; the exact text stays one tap away below (D4).
+                if (simple) {
+                    Body(AiCopy.previewSimple(it.provider, it.model))
+                } else {
+                    Body(AiCopy.previewHeader(it.provider, it.model, it.sentChars))
+                    Muted(AiCopy.answerBudgetNote(
+                        it.provider, it.model,
+                        if (it.continuation != null) AiContinuation.requestBudget(state.answer.length) else AiLimits.MAX_REPLY_CHARS
+                    ))
+                }
                 // Phase 90 — the follow-up disclosure (D4): the earlier-turns
                 // block that will be packed into the user message, exactly as it
                 // will be sent, one tap away. Hidden when there is nothing to
@@ -397,7 +437,7 @@ private fun Conversation(
                     }
                 }
                 val summary = it.project
-                when {
+                if (!simple) when {
                     // Phase 80 (Level 4) — an agent task: the map, not a five-file
                     // list, is what leaves the phone, so the preview says how many
                     // files the map names (the map's own sentence) and what the
@@ -425,11 +465,23 @@ private fun Conversation(
                         Text(AiCopy.PREVIEW_TITLE, style = MaterialTheme.typography.titleSmall)
                     }
                 }
-                it.continuation?.let { c -> Muted(AiCopy.continuePreviewNote(c.index)) }
-                if (it.unsaved && summary == null) Muted(AiCopy.UNSAVED_NOTE)
-                Body(AiCopy.providerDataNote(it.provider))
+                if (!simple) {
+                    it.continuation?.let { c -> Muted(AiCopy.continuePreviewNote(c.index)) }
+                    if (it.unsaved && summary == null) Muted(AiCopy.UNSAVED_NOTE)
+                    Body(AiCopy.providerDataNote(it.provider))
+                }
                 state.notice?.let { notice -> ErrorLine(notice) }
-                SentText(it.systemInstruction + "\n\n" + it.userText)
+                // Phase 91 — simple mode still shows everything that leaves the
+                // phone, exactly, one tap away rather than always open.
+                if (simple) {
+                    var showSent by remember(it) { mutableStateOf(false) }
+                    TextButton(onClick = { showSent = !showSent }) {
+                        Text(if (showSent) AiCopy.SENT_TEXT_HIDE else AiCopy.SENT_TEXT_SHOW)
+                    }
+                    if (showSent) SentText(it.systemInstruction + "\n\n" + it.userText)
+                } else {
+                    SentText(it.systemInstruction + "\n\n" + it.userText)
+                }
             }
 
             AiPhase.STREAMING -> {
@@ -503,25 +555,27 @@ private fun Conversation(
                 // button is a request, not an action: it builds a preview of a
                 // request the user still has to Send (D4), and the reviewer has
                 // no tools, so its reply can never become a call.
-                if (state.review != null || state.reviewedAnswer != null) {
-                    ReviewCard(state.reviewedAnswer, state.review)
-                }
-                if (state.options.reviewer == AiReviewer.ON &&
-                    state.answer.isNotBlank() &&
-                    state.prompt?.source != AiSource.REVIEW
-                ) {
-                    Text(
-                        text = AiCopy.REVIEWER_ACTION,
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.clickable(onClick = onRequestReview)
-                    )
+                if (!simple) {
+                    if (state.review != null || state.reviewedAnswer != null) {
+                        ReviewCard(state.reviewedAnswer, state.review)
+                    }
+                    if (state.options.reviewer == AiReviewer.ON &&
+                        state.answer.isNotBlank() &&
+                        state.prompt?.source != AiSource.REVIEW
+                    ) {
+                        Text(
+                            text = AiCopy.REVIEWER_ACTION,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.clickable(onClick = onRequestReview)
+                        )
+                    }
                 }
                 // Phase 89 (Level 12): a task with no activity card on screen (a
                 // single-shot ask, or an agent task that used no tool) reports its
                 // numbers here instead, so no finished task goes unmeasured on
                 // screen and none is ever drawn twice.
-                if (state.agentSteps.isEmpty()) MeasurementsLine(state)
+                if (!simple && state.agentSteps.isEmpty()) MeasurementsLine(state)
                 state.notice?.let { Body(it) }
                 if (state.undoSummary != null && state.proposalResult !is AiProposalResult.Proposal) {
                     UndoTaskCard(state, onUndoEdits, onDismissUndoConflict)
@@ -531,8 +585,9 @@ private fun Conversation(
 
             AiPhase.FAILED -> {
                 // A failure is a terminal state with numbers too (a failed row of
-                // the Level 12 matrix is recorded, not erased).
-                if (state.agentSteps.isEmpty()) MeasurementsLine(state)
+                // the Level 12 matrix is recorded, not erased). Phase 91: those
+                // numbers are machinery, so only the technical face draws them.
+                if (!simple && state.agentSteps.isEmpty()) MeasurementsLine(state)
                 state.error?.let { ErrorLine(it) }
             }
         }
@@ -1008,6 +1063,67 @@ private fun AiBubble(label: String = AiCopy.AI, content: @Composable () -> Unit)
     }
 }
 
+/**
+ * Phase 91 — the composer, shared by IDLE, DONE and FAILED so the next question
+ * never needs a button pressed first (the owner's *"remove the new question"*
+ * round). It only ever builds a PREVIEW: nothing is sent until Send on it (D4).
+ *
+ * Phase 78 device round 1 (owner, 2026-10-01): *"The device test B part if i
+ * question anything it's saying select some code in the editor"*. The arrow was
+ * hardcoded to Explain-selection, so typing a question with nothing selected hit
+ * `fromSelection`'s blank-selection refusal (`AiContext.kt:122`) and the sheet
+ * answered "Select some code in the editor first" — a dead end wearing a send
+ * icon. The arrow now means what the user meant: with code selected it still
+ * explains the selection; with nothing selected it asks about the project, which
+ * is what a bare question is.
+ */
+@Composable
+private fun Composer(
+    state: AiUiState,
+    hasSelection: Boolean,
+    question: String,
+    onQuestionChange: (String) -> Unit,
+    onDismissNotice: () -> Unit,
+    onExplainSelection: (String) -> Unit,
+    onAskProject: (String) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = question,
+            onValueChange = { onQuestionChange(it.take(AiLimits.MAX_QUESTION_CHARS)) },
+            placeholder = { Text(AiCopy.QUESTION_PLACEHOLDER) },
+            maxLines = 3,
+            modifier = Modifier
+                .weight(1f)
+                .defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH))
+        )
+        IconButton(
+            onClick = {
+                onDismissNotice()
+                if (hasSelection) onExplainSelection(question) else onAskProject(question)
+            },
+            enabled = hasSelection || !state.gathering
+        ) {
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = AiCopy.SEND_QUESTION)
+        }
+    }
+}
+
+/**
+ * Phase 91 — every reply carries its own Copy (the owner: *"set the copy part
+ * after every reply default"*). Same road as the code-block Copy: clipboard and
+ * a toast, nothing else — no insert, no apply, no run (**S6**).
+ */
+@Composable
+private fun TurnCopy(text: String) {
+    val context = LocalContext.current
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        TextButton(onClick = { copyAnswer(context, text) }) {
+            Text(AiCopy.COPY_THIS, style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
 // ---- the pinned bottom bar: the input while idle, the phase's actions otherwise -----
 
 @Composable
@@ -1070,37 +1186,10 @@ private fun BottomBar(
                         Text(AiCopy.PROPOSE_EDITS)
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = question,
-                        onValueChange = { onQuestionChange(it.take(AiLimits.MAX_QUESTION_CHARS)) },
-                        placeholder = { Text(AiCopy.QUESTION_PLACEHOLDER) },
-                        maxLines = 3,
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH))
-                    )
-                    // ➤ only builds the PREVIEW — nothing is sent until Send on it (D4).
-                    //
-                    // Phase 78 device round 1 (owner, 2026-10-01): *"The device test B
-                    // part if i question anything it's saying select some code in the
-                    // editor"*. The arrow was hardcoded to Explain-selection, so typing a
-                    // question with nothing selected hit `fromSelection`'s blank-selection
-                    // refusal (`AiContext.kt:122`) and the sheet answered "Select some code
-                    // in the editor first" — a dead end wearing a send icon. Now the arrow
-                    // means what the user meant: with code selected it still explains the
-                    // selection (Phase 77 device-passed, unchanged); with nothing selected
-                    // it asks about the project, which is what a bare question is.
-                    IconButton(
-                        onClick = {
-                            onDismissNotice()
-                            if (hasSelection) onExplainSelection(question) else onAskProject(question)
-                        },
-                        enabled = hasSelection || !state.gathering
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = AiCopy.SEND_QUESTION)
-                    }
-                }
+                Composer(
+                    state, hasSelection, question, onQuestionChange,
+                    onDismissNotice, onExplainSelection, onAskProject
+                )
             }
 
             AiPhase.PREVIEW -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
@@ -1124,28 +1213,51 @@ private fun BottomBar(
                         )
                     )
                 } else {
+                    // Phase 91 — the simple face shows no counters; when there is
+                    // nothing else on screen it says it is working, nothing more.
+                    if (state.mode == AiChatMode.SIMPLE) {
+                        if (state.answer.isEmpty() && state.retryCountdown == null) Muted(AiCopy.WORKING)
+                    }
                     state.retryCountdown?.let { Muted(AiRateLimits.countdownLine(it)) }
                 }
                 OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
             }
 
-            AiPhase.DONE -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
-                Button(onClick = { copyAnswer(context, state.answer) }) { Text(AiCopy.COPY) }
-                // Phase 81 — only for a cut-off prose answer with room left, and
-                // only as a door to the preview: it sends nothing by itself (D4).
-                val p = state.prompt
-                val canContinue = state.cutShort && p != null && !p.agent &&
-                    p.source != AiSource.PROPOSE_EDITS &&
-                    AiContinuation.canContinue(state.continuations, state.answer.length)
-                if (canContinue) {
-                    OutlinedButton(onClick = onContinue) { Text(AiCopy.CONTINUE) }
+            AiPhase.DONE -> {
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    Button(onClick = { copyAnswer(context, state.answer) }) { Text(AiCopy.COPY) }
+                    // Phase 81 — only for a cut-off prose answer with room left, and
+                    // only as a door to the preview: it sends nothing by itself (D4).
+                    val p = state.prompt
+                    val canContinue = state.cutShort && p != null && !p.agent &&
+                        p.source != AiSource.PROPOSE_EDITS &&
+                        AiContinuation.canContinue(state.continuations, state.answer.length)
+                    if (canContinue) {
+                        OutlinedButton(onClick = onContinue) { Text(AiCopy.CONTINUE) }
+                    }
                 }
-                OutlinedButton(onClick = { onQuestionChange(""); onClear() }) { Text(AiCopy.NEW_QUESTION) }
+                // Phase 91 — the owner: *"remove the new question it also default
+                // no need to click the new question part"*. There is nothing to
+                // press first: the composer is here, and typing the next question
+                // is the whole gesture. The finished task joins the conversation
+                // when that new preview is built, so nothing is lost.
+                Composer(
+                    state, hasSelection, question, onQuestionChange,
+                    onDismissNotice, onExplainSelection, onAskProject
+                )
             }
 
-            AiPhase.FAILED -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
-                if (state.keySaved) Button(onClick = onRetry) { Text(AiCopy.TRY_AGAIN) }
-                OutlinedButton(onClick = onClear) { Text(AiCopy.NEW_QUESTION) }
+            AiPhase.FAILED -> {
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    if (state.keySaved) Button(onClick = onRetry) { Text(AiCopy.TRY_AGAIN) }
+                    // Not "New question" any more (Phase 91): this only puts the
+                    // failed task away. The composer below starts the next one.
+                    OutlinedButton(onClick = onClear) { Text(AiCopy.CLEAR_TASK) }
+                }
+                Composer(
+                    state, hasSelection, question, onQuestionChange,
+                    onDismissNotice, onExplainSelection, onAskProject
+                )
             }
         }
     }
