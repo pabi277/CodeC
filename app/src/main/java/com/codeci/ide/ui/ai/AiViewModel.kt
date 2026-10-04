@@ -1,8 +1,14 @@
 package com.codeci.ide.ui.ai
 
+import android.Manifest
 import android.app.Application
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Environment
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.codeci.ide.BuildConfig
 import com.codeci.ide.ui.performance.HeapProbe
 import com.codeci.ide.ui.projects.AiApplyOutcome
 import com.codeci.ide.ui.projects.AiEditApplier
@@ -155,7 +161,13 @@ data class AiUiState(
      * never changes a request (the packed bytes are identical in both modes,
      * **S1**) and it is never persisted (**D6**).
      */
-    val mode: AiChatMode = AiChatMode.SIMPLE
+    val mode: AiChatMode = AiChatMode.SIMPLE,
+    /**
+     * Phase 92 — the self-check run in progress, or null. The run lives in
+     * memory only (**D6**): it is a script of questions the owner still sends
+     * himself and a list of verdicts built from numbers, never from text.
+     */
+    val selfCheck: AiSelfCheck.Run? = null
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -463,7 +475,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update {
             it.copy(
                 undoSummary = null, undoConflictPaths = emptyList(),
-                session = AiChatSession.EMPTY, taskCommitted = false
+                session = AiChatSession.EMPTY, taskCommitted = false, selfCheck = null
             )
         }
         if (name != null) {
@@ -534,6 +546,116 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         return commitFinishedTask()
     }
 
+    // ---- Phase 92: the self-check (the owner: "give some command and I will run") ----
+
+    /**
+     * Starts the scripted check. Nothing here sends anything: the first step
+     * needs no request at all, and every other step stops at an ordinary
+     * preview whose **Send** is the owner's tap (**D4**).
+     */
+    fun startSelfCheck() {
+        val s = _state.value
+        if (s.selfCheck != null) return
+        if (s.phase == AiPhase.STREAMING || s.gathering || s.applying) return
+        _state.update { it.copy(selfCheck = AiSelfCheck.Run()) }
+        selfCheckNext()
+    }
+
+    /**
+     * The card's button. It settles the step the owner just ran (if it can be
+     * settled) and previews the next check's question — or walks past a step
+     * that needs no request. It never sends.
+     */
+    fun selfCheckNext() {
+        var run = _state.value.selfCheck ?: return
+        if (AiSelfCheck.isFinished(run)) return
+        while (!AiSelfCheck.isFinished(run) && AiSelfCheck.stepAt(run)?.door == null) {
+            val step = AiSelfCheck.stepAt(run) ?: break
+            run = run.copy(
+                stepIndex = run.stepIndex + 1,
+                verdicts = run.verdicts + AiSelfCheck.judge(step, selfCheckObserved())
+            )
+        }
+        _state.update { state -> if (state.selfCheck == null) state else state.copy(selfCheck = run) }
+        val step = AiSelfCheck.stepAt(run) ?: return
+        val question = step.prompt ?: return
+        when (step.door) {
+            // The ordinary doors: preview, then the owner's Send (D4).
+            AiSelfCheckDoor.ASK -> agentAsk(question, null, null, false, emptyMap())
+            AiSelfCheckDoor.PROPOSE -> agentPropose(question, null, null, false, emptyMap())
+            null -> Unit
+        }
+    }
+
+    /** Puts the card away. The checks that already ran stay in the conversation. */
+    fun stopSelfCheck() {
+        _state.update { it.copy(selfCheck = null) }
+    }
+
+    /** The card's Copy button. Redacted by construction (**D6**). */
+    fun selfCheckReport(): String {
+        val run = _state.value.selfCheck ?: return ""
+        return AiSelfCheck.report(BuildConfig.VERSION_NAME, selfCheckObserved(), run)
+    }
+
+    /** The live verdict of the step being run, for the card's own line. */
+    fun selfCheckLive(): AiSelfCheckVerdict? {
+        val run = _state.value.selfCheck ?: return null
+        return AiSelfCheck.liveVerdict(run, selfCheckObserved())
+    }
+
+    /**
+     * Records the verdict of the step whose task just settled. Idempotent: it
+     * only advances when the step's own question is the settled one, and it
+     * re-reads the state before writing, so a stale verdict cannot be appended
+     * twice or out of order.
+     */
+    private fun settleSelfCheckStep() {
+        val run = _state.value.selfCheck ?: return
+        val step = AiSelfCheck.stepAt(run) ?: return
+        if (step.door == null) return
+        val v = AiSelfCheck.judge(step, selfCheckObserved())
+        if (v.outcome == AiSelfCheckOutcome.PENDING) return
+        _state.update { state ->
+            val live = state.selfCheck ?: return@update state
+            if (live.stepIndex != run.stepIndex) return@update state
+            state.copy(selfCheck = live.copy(stepIndex = live.stepIndex + 1, verdicts = live.verdicts + v))
+        }
+    }
+
+    /**
+     * The redacted snapshot the verdicts and the report are built from: counts,
+     * labels and booleans only — never a prompt and never an answer (**D6**).
+     */
+    private fun selfCheckObserved(): AiSelfCheckObserved {
+        val s = _state.value
+        val p = s.prompt
+        val proposal = s.proposalResult
+        val app = getApplication<Application>()
+        return AiSelfCheckObserved(
+            question = p?.question,
+            settled = s.phase == AiPhase.DONE || s.phase == AiPhase.FAILED,
+            answerChars = s.answer.length,
+            usedCodeWord = AiSelfCheck.usedCodeWord(s.answer),
+            cutShort = s.cutShort,
+            errorLine = s.error,
+            proposalFiles = (proposal as? AiProposalResult.Proposal)?.proposal?.files?.size ?: 0,
+            proposalInvalidReason = (proposal as? AiProposalResult.Invalid)?.reason,
+            runRequested = s.agentRun != null,
+            sentChars = p?.sentChars ?: 0,
+            // The follow-up evidence: how much conversation the request carried.
+            transcriptChars = p?.session?.render()?.length ?: 0,
+            provider = p?.provider ?: s.provider,
+            model = p?.model ?: s.model,
+            keySaved = s.keySaved,
+            sdkInt = Build.VERSION.SDK_INT,
+            allFilesAccess = Build.VERSION.SDK_INT >= 30 && Environment.isExternalStorageManager(),
+            storageGranted = ContextCompat.checkSelfPermission(
+                app, Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
     /**
      * Phase 90 — a settled task becomes conversation history. Called when the
      * next request is built and when the sheet is cleared, never twice for the
@@ -548,6 +670,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         val prompt = s.prompt ?: return s.session
         if (prompt.source == AiSource.REVIEW) return s.session
         if (s.phase != AiPhase.DONE && s.phase != AiPhase.FAILED) return s.session
+        // Phase 92: a self-check step is judged the moment its own task settles —
+        // before the `taskCommitted` short-circuit, so pressing ✕ clear (which
+        // calls this) can never lose a verdict.
+        settleSelfCheckStep()
         if (s.taskCommitted) return s.session
         val asked = AiCopy.youLine(prompt.source, prompt.fileLabel, prompt.question)
         var session = s.session.addYou(asked, prompt.provider, prompt.model)
@@ -582,7 +708,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     fun newChat() {
         clear()
-        _state.update { it.copy(session = AiChatSession.EMPTY, taskCommitted = false) }
+        // Phase 92: the self-check's follow-up step reads the conversation, so a
+        // brand-new conversation means a brand-new check — never a stale verdict.
+        _state.update { it.copy(session = AiChatSession.EMPTY, taskCommitted = false, selfCheck = null) }
     }
 
     /**

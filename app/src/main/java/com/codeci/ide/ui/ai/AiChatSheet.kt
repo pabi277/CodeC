@@ -104,6 +104,14 @@ fun AiChatSheet(
     onNewChat: () -> Unit = {},
     /** Phase 91 — the simple/technical face. Display state only (D6). */
     onToggleMode: () -> Unit = {},
+    /** Phase 92 — the self-check: five scripted checks, judged by the app, reported as text. */
+    onSelfCheckStart: () -> Unit = {},
+    onSelfCheckNext: () -> Unit = {},
+    onSelfCheckStop: () -> Unit = {},
+    /** The report text, built where the Android reads live (never in a composable). */
+    onSelfCheckReport: () -> String = { "" },
+    /** The live verdict of the step being run, computed where the reads live. */
+    onSelfCheckLive: () -> AiSelfCheckVerdict? = { null },
     onDismissNotice: () -> Unit,
     onExpand: () -> Unit,
     onMinimize: () -> Unit,
@@ -208,14 +216,19 @@ fun AiChatSheet(
                 onUndoEdits, onDismissUndoConflict,
                 onApproveRun, onSkipRun, onContinue, onAcceptBudget, onDeclineBudget,
                 onAcceptBackup, onDeclineBackup, onRequestReview, lastRunCommand, runBusy,
-                Modifier.weight(1f)
+                onSelfCheckNext = onSelfCheckNext,
+                onSelfCheckStop = onSelfCheckStop,
+                onSelfCheckReport = onSelfCheckReport,
+                onSelfCheckLive = onSelfCheckLive,
+                modifier = Modifier.weight(1f)
             )
             HorizontalDivider()
             BottomBar(
                 state, hasSelection, question, onQuestionChange,
                 onExplainSelection, onExplainError, onAskProject, onProposeEdits,
                 onCancelGather, onSend, onCancelPreview,
-                onStop, onRetry, onClear, onDismissNotice, onContinue
+                onStop, onRetry, onClear, onDismissNotice, onContinue,
+                onSelfCheckStart = onSelfCheckStart
             )
         }
     }
@@ -326,6 +339,11 @@ private fun Conversation(
     onRequestReview: () -> Unit,
     lastRunCommand: String?,
     runBusy: Boolean,
+    /** Phase 92 — the self-check's own controls (see [SelfCheckCard]). */
+    onSelfCheckNext: () -> Unit = {},
+    onSelfCheckStop: () -> Unit = {},
+    onSelfCheckReport: () -> String = { "" },
+    onSelfCheckLive: () -> AiSelfCheckVerdict? = { null },
     modifier: Modifier
 ) {
     val scroll = rememberScrollState()
@@ -383,6 +401,17 @@ private fun Conversation(
         // the preview, and the user still taps Send (S8, D4).
         state.backupOffer?.let { next ->
             BackupProviderCard(next, onAcceptBackup, onDeclineBackup)
+        }
+        // Phase 92 — the self-check card. It is a control surface, so it is drawn
+        // in both faces, and every line on it is a verdict the app computed.
+        state.selfCheck?.let { run ->
+            SelfCheckCard(
+                run = run,
+                live = onSelfCheckLive(),
+                onNext = onSelfCheckNext,
+                onStop = onSelfCheckStop,
+                onReport = onSelfCheckReport
+            )
         }
         when (state.phase) {
             AiPhase.IDLE -> {
@@ -1110,6 +1139,75 @@ private fun Composer(
 }
 
 /**
+ * Phase 92 — the self-check card (the owner: *"I am tired of testing — give some
+ * command and I will run and share what is wrong"*).
+ *
+ * One line per check, with the verdict the app computed — a count, a parse
+ * result or a permission, never an opinion — the next check to run, and the
+ * report to paste back. The report is redacted by construction: no prompt, no
+ * answer, no key (**D6**).
+ */
+@Composable
+private fun SelfCheckCard(
+    run: AiSelfCheck.Run,
+    live: AiSelfCheckVerdict?,
+    onNext: () -> Unit,
+    onStop: () -> Unit,
+    onReport: () -> String
+) {
+    val context = LocalContext.current
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(CodecTokens.space(Space.M)),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.XS))
+        ) {
+            Text(
+                text = if (AiSelfCheck.isFinished(run)) {
+                    AiCopy.SELF_CHECK_TITLE + " — all checks run"
+                } else {
+                    AiCopy.SELF_CHECK_TITLE + " — " + AiSelfCheck.progressLabel(run)
+                },
+                style = MaterialTheme.typography.titleSmall
+            )
+            Muted(AiCopy.SELF_CHECK_NOTE)
+            AiSelfCheck.STEPS.forEachIndexed { index, step ->
+                val verdict = AiSelfCheck.verdictAt(run, index, live)
+                val mark = when (verdict?.outcome) {
+                    AiSelfCheckOutcome.PASS -> "✔"
+                    AiSelfCheckOutcome.FAIL -> "✘"
+                    AiSelfCheckOutcome.PENDING -> "…"
+                    null -> "·"
+                }
+                val color = when (verdict?.outcome) {
+                    AiSelfCheckOutcome.PASS -> MaterialTheme.colorScheme.primary
+                    AiSelfCheckOutcome.FAIL -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Text(
+                    text = "$mark  ${step.title} — ${verdict?.detail ?: "not run"}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = color
+                )
+            }
+            val current = AiSelfCheck.stepAt(run)
+            if (current?.door != null && live == null) Muted(AiCopy.SELF_CHECK_SEND_HINT)
+            Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                if (current != null && (current.door == null || live != null)) {
+                    OutlinedButton(onClick = onNext) { Text(AiCopy.SELF_CHECK_NEXT) }
+                }
+                TextButton(onClick = { copyAnswer(context, onReport()) }) { Text(AiCopy.SELF_CHECK_REPORT) }
+                TextButton(onClick = onStop) { Text(AiCopy.SELF_CHECK_STOP) }
+            }
+        }
+    }
+}
+
+/**
  * Phase 91 — every reply carries its own Copy (the owner: *"set the copy part
  * after every reply default"*). Same road as the code-block Copy: clipboard and
  * a toast, nothing else — no insert, no apply, no run (**S6**).
@@ -1144,7 +1242,9 @@ private fun BottomBar(
     onClear: () -> Unit,
     onDismissNotice: () -> Unit,
     /** Phase 81 — the door to the continuation preview (the button sends nothing). */
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    /** Phase 92 — starts the scripted check from the idle bar. */
+    onSelfCheckStart: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Column(
@@ -1190,6 +1290,13 @@ private fun BottomBar(
                     state, hasSelection, question, onQuestionChange,
                     onDismissNotice, onExplainSelection, onAskProject
                 )
+                // Phase 92 — the one command: five checks the app judges itself,
+                // then a report to share. It starts nothing but the first preview.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onSelfCheckStart) { Text(AiCopy.SELF_CHECK_START) }
+                    Spacer(Modifier.width(CodecTokens.space(Space.S)))
+                    Muted(AiCopy.SELF_CHECK_HINT)
+                }
             }
 
             AiPhase.PREVIEW -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {

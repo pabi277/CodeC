@@ -1252,6 +1252,12 @@ fun EditorScreen(
             onNewChat = aiViewModel::newChat,
             // Phase 91 — the simple/technical face (the owner's Phase 90 round).
             onToggleMode = aiViewModel::toggleMode,
+            // Phase 92 — the self-check (the owner: "give some command and I will run").
+            onSelfCheckStart = aiViewModel::startSelfCheck,
+            onSelfCheckNext = aiViewModel::selfCheckNext,
+            onSelfCheckStop = aiViewModel::stopSelfCheck,
+            onSelfCheckReport = aiViewModel::selfCheckReport,
+            onSelfCheckLive = aiViewModel::selfCheckLive,
             onDismissNotice = aiViewModel::dismissNotice,
             onExpand = { aiViewModel.sheetEvent(AiSheetEvent.EXPAND) },
             onMinimize = { aiViewModel.sheetEvent(AiSheetEvent.MINIMIZE) },

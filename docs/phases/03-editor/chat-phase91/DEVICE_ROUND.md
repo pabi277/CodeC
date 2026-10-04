@@ -11,6 +11,9 @@
 > **What to use:** a **non-secret demo project**, the same one as the Phase 90 round if possible, so the two rounds
 > describe the same code. Never screenshot anything with a real key in it.
 > **Rows are resumable.** A failed row gets its own fix phase before this phase is called done (the Level 12 rule).
+> **Tired of judging rows?** [Phase 92](../chat-phase92/README.md) is the shortcut: tap **Self-check** in the sheet,
+> Send the four previews it builds, and paste the report — the app judges the file-access, follow-up, edit-proposal
+> and run-request rows itself. The visual rows (R7, P3, V1–V8) still need your eyes.
 
 ## Part 1 — the simple chat (R1–R8)
 

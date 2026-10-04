@@ -106,9 +106,11 @@ class AiChatSessionWiringTest {
         val model = src("AiViewModel.kt")
         assertTrue("newChat exists", model.contains("fun newChat()"))
         assertTrue(
+            // Phase 92 added the self-check to the same reset: a brand-new
+            // conversation means a brand-new check.
             "newChat empties the session after clearing the task",
             model.contains("fun newChat() {") &&
-                model.contains("it.copy(session = AiChatSession.EMPTY, taskCommitted = false)")
+                model.contains("it.copy(session = AiChatSession.EMPTY, taskCommitted = false, selfCheck = null)")
         )
         assertTrue(
             "clear commits the settled task instead of dropping it",

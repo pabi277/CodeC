@@ -71,6 +71,24 @@ object AiCopy {
     /** Replaces the old "New question" on a failed task: it clears the task, nothing else. */
     const val CLEAR_TASK = "Clear"
 
+    // ---- Phase 92 — the self-check (the owner: "give some command and I will run it") ----
+
+    /** The one command: five scripted checks and a report, instead of judging rows by eye. */
+    const val SELF_CHECK_START = "Self-check"
+    const val SELF_CHECK_NEXT = "Next check"
+    const val SELF_CHECK_STOP = "Stop check"
+    const val SELF_CHECK_REPORT = "Copy report"
+    const val SELF_CHECK_COPIED = "Report copied"
+
+    /**
+     * The card's promise, in the owner's own terms: every check is an ordinary
+     * Send he approves (D4), and the report is redacted by construction (D6).
+     */
+    const val SELF_CHECK_NOTE =
+        "Five checks. Each one is an ordinary Send you approve first. The report has no prompts, no answers and no keys — sizes and results only."
+    const val SELF_CHECK_SEND_HINT = "Send this check in the bar below when you are ready."
+    const val SELF_CHECK_HINT = "Five checks the app judges itself, then a report to share."
+
     /** Simple mode: the answer is still arriving and there is nothing to show yet. */
     const val WORKING = "Working…"
 
