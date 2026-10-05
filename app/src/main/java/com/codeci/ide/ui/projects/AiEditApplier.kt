@@ -519,7 +519,9 @@ object AiEditApplier {
      */
     val STORAGE_PERMISSION_MESSAGE: String =
         "CodeC cannot read or write this project folder. If it lives outside CodeC's own storage, " +
-            "grant storage access to CodeC in Android Settings (Settings → Apps → CodeC → Permissions)."
+            "grant storage access to CodeC in Android Settings (Settings → Apps → CodeC → Permissions) — " +
+            "allow access to files and media, and on Android 11 and later choose " +
+            "\"Allow management of all files\" (the same switch the Grant access button opens)."
 
     // ---- pure hex-framed journal serialization (no org.json / Robolectric) -
 

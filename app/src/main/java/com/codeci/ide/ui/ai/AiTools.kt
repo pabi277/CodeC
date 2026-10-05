@@ -276,8 +276,20 @@ object AiToolPolicy {
         readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): AiToolVerdict {
         val name = request.name ?: return AiToolVerdict.Denied(
-            request, "unknown tool \"${request.rawName}\"; the tools are " +
-                AiToolName.entries.joinToString(", ") { it.wire }
+            request,
+            // Phase 93c — the owner's *"why can't the agent write code?"*: a
+            // coding model very naturally calls `write_file`/`edit_file`/
+            // `apply_patch`, and the old sentence stopped at "unknown tool" plus a
+            // list. The list is true and useless — the model then answers in
+            // prose and no file changes. The way a write *can* happen is named
+            // here instead, and this text is exactly what the model reads back as
+            // the tool result, so it can correct itself inside the same task.
+            "unknown tool \"${request.rawName}\"; this agent has no write tool and no command tool, and " +
+                "the tools it does have are " + AiToolName.entries.joinToString(", ") { it.wire } + ". " +
+                "To change a file, do not call a tool: answer with a " +
+                "${AiEditProposalParser.OPEN_TAG_PREFIX} path=\"…\" op=\"modify|create|delete\">>> block " +
+                "(SEARCH/REPLACE for part of a file, the full content for a new one) — CodeC turns it " +
+                "into a diff the user reviews and applies."
         )
         val allowedKeys = when (name) {
             AiToolName.LIST_FILES -> setOf("path", "ext")

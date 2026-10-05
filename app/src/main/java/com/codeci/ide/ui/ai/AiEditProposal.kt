@@ -179,6 +179,55 @@ object AiEditProposalParser {
     private val HEADER_ATTR = Regex("(path|op)\\s*=\\s*\"([^\"]*)\"")
     private val DRIVE_PREFIX = Regex("^[A-Za-z]:")
 
+    /** One `<<<CODEC_EDIT …>>>` header, as a caller reads it. Phase 93c. */
+    data class ProposedEdit(val path: String, val op: String)
+
+    /**
+     * Phase 93c — the paths and ops a reply's `<<<CODEC_EDIT …>>>` **headers**
+     * name, in order, deduped, each already through [validateTargetPath]. A
+     * `path="…"` string inside a SEARCH body is content and never appears here.
+     *
+     * This exists for the write path's real wall: a `modify` can only be
+     * diffed against a file whose current content the app captured, and what it
+     * captured is the shortlist packed into the request (≤
+     * [AiProjectFiles.READ_SHORTLIST] files). The agent, though, reads any file
+     * with `read_file` — so a file it had just read was still refused with
+     * *"its current contents were not in the shared project context"*.
+     * [missingBaselinePaths] names exactly those, and the caller reads them.
+     */
+    fun proposedEdits(answerText: String): List<ProposedEdit> {
+        val text = normalizeLf(answerText)
+        val out = LinkedHashMap<String, String>()
+        var cursor = 0
+        while (cursor < text.length && out.size < MAX_EDIT_FILES) {
+            val openStart = text.indexOf(OPEN_TAG_PREFIX, cursor)
+            if (openStart < 0) break
+            val openEnd = text.indexOf(">>>", openStart + OPEN_TAG_PREFIX.length)
+            if (openEnd < 0) break
+            val header = text.substring(openStart + OPEN_TAG_PREFIX.length, openEnd)
+            val attrs = HEADER_ATTR.findAll(header).associate { it.groupValues[1] to it.groupValues[2] }
+            val safe = attrs["path"]?.let { validateTargetPath(it) }
+            if (safe != null && safe !in out) out[safe] = attrs["op"]?.trim()?.lowercase().orEmpty()
+            cursor = openEnd + 3
+        }
+        return out.map { ProposedEdit(it.key, it.value) }
+    }
+
+    /**
+     * Phase 93c — the proposed **modify** targets whose current content the
+     * parse could not compare against. Each one is worth a bounded read (the
+     * caller's job: this object is pure), after which the parse runs again —
+     * every rule still applies, and the user still approves the diff.
+     *
+     * The op aliases mirror [parse]'s own mapping (`modify`, `edit`, `update`);
+     * `AiEditProposalTest` pins the two together.
+     */
+    fun missingBaselinePaths(answerText: String, baselines: Map<String, AiFileBaseline>): List<String> =
+        proposedEdits(answerText)
+            .filter { it.op in setOf("modify", "edit", "update") }
+            .map { it.path }
+            .filterNot { path -> baselines.keys.any { AiProjectFiles.samePath(it, path) } }
+
     fun normalizeLf(text: String): String =
         if (text.indexOf('\r') < 0) text else text.replace("\r\n", "\n").replace('\r', '\n')
 

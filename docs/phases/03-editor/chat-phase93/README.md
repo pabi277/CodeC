@@ -86,3 +86,14 @@ re-diagnosed from the app's own contracts and fixed in code; the full record is
 0 failed.** Build APK [`37309397712`](https://github.com/pabi277/CodeC/actions/runs/37309397712) is **green** on
 **`ada48f9`** — release universal **7 198 092 B**, debug universal **27 122 048 B**, R8 mapping **71 626 835 B**,
 release manifest *no `android:debuggable` flag*.
+
+## 7. Round 3 — *"why can't the agent write code?"* (Phase 93c)
+
+The owner asked for the permission surface to be checked properly and for the real reason the agent cannot write.
+The full audit — every gate from the door to the editor refresh, with the two app-side bugs it found and fixed — is
+[`PART_93C_THE_WRITE_PATH.md`](PART_93C_THE_WRITE_PATH.md). In one line: **the agent's write route is the
+`<<<CODEC_EDIT>>>` proposal → your **Apply**** (there is no write tool, by Level 3/4 design), and two of the things
+that stopped a proposal were the app's own: Phase 93's preflight asked Android for a storage grant **before** it asked
+whether one was needed — refusing CodeC's own private projects, which need no permission — and the parser could not
+diff a file the model had read but which was not among the ≤12 shortlisted files. Both are fixed; the unknown-tool
+refusal now teaches the model the block route, and the applier's fallback sentence names the Android 11+ switch.

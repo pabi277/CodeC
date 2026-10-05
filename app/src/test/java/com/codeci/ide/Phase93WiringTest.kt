@@ -103,6 +103,46 @@ class Phase93WiringTest {
         assertTrue("which is a real request, on the editor", editor.contains("onGrantAccess = { (context as? MainActivity)?.requestStoragePermissions() }"))
     }
 
+    // ---- Phase 93c: the write path, audited end to end ----------------------
+
+    @Test
+    fun `a project inside CodeC's own storage is never refused for a grant it cannot have`() {
+        // Phase 93 asked the storage facts FIRST and only then whether a grant was
+        // needed, so a phone whose shared-storage grant was missing had every AI
+        // task refused — even on `filesDir/CodeC/projects`, where no permission
+        // exists to grant — with "the folder may have been moved or deleted".
+        val fn = vm.substringAfter("private fun storageProblemFor(").substringBefore("private fun storageFacts(")
+        val needsAt = fn.indexOf("needsExternalAccess")
+        val factsAt = fn.indexOf("storageFacts(app)")
+        assertTrue("the folder is classified before any permission is read", needsAt in 0 until factsAt)
+        assertTrue("and a private folder returns before the facts are read at all", fn.contains("if (!needs) return null"))
+        assertTrue("only an outside folder asks the write side", fn.contains("facts.canWrite else facts.canRead"))
+        assertTrue("the sentence names the switch", fn.contains("StorageAccessPolicy.fixSteps(facts)"))
+    }
+
+    @Test
+    fun `a proposal refused for an uncaptured file is parsed again from the real file`() {
+        // The write wall: `modify` needs the file's current content, and only the
+        // packed shortlist had it. The answer's own modify targets are read (the
+        // walk's admitted paths, the walk's capped reader, dirty buffers first),
+        // then every rule runs again — nothing is loosened.
+        val finish = vm.substringAfter("private fun finishAgent(").substringBefore("private fun widenedBaselines(")
+        assertTrue("the refused parse is followed up", finish.contains("AiEditProposalParser.missingBaselinePaths(answer, pendingBaselines)"))
+        assertTrue("only for an edit task", finish.contains("session.source == AiSource.PROPOSE_EDITS && parsed !is AiProposalResult.Proposal"))
+        assertTrue("the files are read off the main thread", finish.contains("widenedBaselines(session, missing)"))
+        assertTrue(
+            "and the re-parse runs the whole parser again",
+            finish.contains("AiEditProposalParser.parse(answer, pendingBaselines + widened, pendingExistingPaths)")
+        )
+        assertTrue("the state only moves if that answer is still on screen", finish.contains("s.answer == answer"))
+        val reader = vm.substringAfter("private suspend fun widenedBaselines(")
+        assertTrue("reads are bounded to the admitted walk", reader.contains("pendingExistingPaths.firstOrNull"))
+        assertTrue("an unsaved buffer wins over the disk copy", reader.contains("session.dirtyBuffers.entries"))
+        assertTrue("the read is the walk's own capped one", reader.contains("AiProjectReader.readCapped"))
+        assertTrue("no more files than one proposal may touch", reader.contains("missing.take(AiEditProposalParser.MAX_EDIT_FILES)"))
+        assertTrue("secret-like names stay out", reader.contains("AiProjectFiles.isSecretLike(name)"))
+    }
+
     @Test
     fun `every storage reader asks the same object`() {
         val shell = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/terminal/ShellEnvironment.kt").readText()

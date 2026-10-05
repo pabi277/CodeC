@@ -127,6 +127,21 @@ class AiToolProtocolTest {
     }
 
     @Test
+    fun `a write-shaped tool call is refused and told the route that can write`() {
+        // Phase 93c — the owner's *"why can't the agent write code?"*. A coding
+        // model naturally calls write_file/edit_file/apply_patch; the refusal is
+        // correct, but it must also name the one route that ends in a file
+        // change, or the model answers in prose and nothing is ever written.
+        for (name in listOf("write_file", "edit_file", "apply_patch")) {
+            val v = verdict(name, "path" to "README.md", "content" to "x") as AiToolVerdict.Denied
+            assertTrue("$name is refused", v.reason.contains("unknown tool"))
+            assertTrue("$name is told there is no write tool", v.reason.contains("no write tool"))
+            assertTrue("$name learns the block format", v.reason.contains("<<<CODEC_EDIT"))
+            assertTrue("$name learns the user applies it", v.reason.contains("user reviews"))
+        }
+    }
+
+    @Test
     fun `an unexpected argument is denied rather than ignored`() {
         val v = verdict("read_file", "path" to "src/main.c", "encoding" to "utf16") as AiToolVerdict.Denied
         assertTrue(v.reason.contains("encoding"))

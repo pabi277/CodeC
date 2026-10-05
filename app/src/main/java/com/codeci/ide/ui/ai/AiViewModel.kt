@@ -806,20 +806,23 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun storageProblemFor(root: File, source: AiSource): String? {
         val app = getApplication<Application>()
-        val facts = storageFacts(app)
-        val allowed = if (source == AiSource.PROPOSE_EDITS) facts.canWrite else facts.canRead
-        if (allowed) return null
         // Every root CodeC owns, as paths. `dataDir` is the parent of the other
         // three, so one entry covers them — but they are all listed: a future
         // move of any one of them must not silently open a gate.
         val privateRoots = listOf(app.filesDir, app.noBackupFilesDir, app.cacheDir, app.dataDir)
             .map { it.absolutePath }
+        // Phase 93c — **the ordering was the bug.** Phase 93 asked the facts first
+        // and only then whether a grant was needed at all, so on any phone whose
+        // shared-storage grant was missing it refused *CodeC's own projects* too —
+        // the ones in `filesDir/CodeC/projects`, where no permission exists to
+        // grant — and told the owner the folder "may have been moved, deleted or
+        // renamed". A project inside CodeC's own storage needs no grant, so the
+        // gate is not even asked.
         val needs = StorageAccessPolicy.needsExternalAccess(root.absolutePath, privateRoots)
-        if (!needs) {
-            // CodeC's own storage, and it still refuses? That is a real fault, and
-            // it must not be dressed up as a permission problem.
-            return AiCopy.PROJECT_FOLDER_UNREACHABLE
-        }
+        if (!needs) return null
+        val facts = storageFacts(app)
+        val allowed = if (source == AiSource.PROPOSE_EDITS) facts.canWrite else facts.canRead
+        if (allowed) return null
         return AiCopy.storageNeeded(
             writing = source == AiSource.PROPOSE_EDITS,
             fix = StorageAccessPolicy.fixSteps(facts).orEmpty()
@@ -1837,6 +1840,73 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         }
         // Phase 89: the agent task is complete — stamp the numbers.
         recordFinish()
+        // Phase 93c — **the wall that made the agent look unable to write.**
+        //
+        // A `modify` can only be diffed against content the parse already holds,
+        // and the parse holds the shortlist packed into the request (≤
+        // `AiProjectFiles.READ_SHORTLIST` files). The agent, though, reads any
+        // file it likes with `read_file` — so a file it had just read came back
+        // *"Cannot modify '…' because its current contents were not in the
+        // shared project context."*, which is a sentence about the app's
+        // bookkeeping, not about the file. Here the app reads exactly the
+        // proposed files (their unsaved buffers first, like every tool read) and
+        // parses once more. Nothing is loosened: the re-parse runs every rule,
+        // the diff is still local, the user still approves — and if the real
+        // content is what the hunks do not match, the reason the owner reads is
+        // the true one.
+        if (session.source == AiSource.PROPOSE_EDITS && parsed !is AiProposalResult.Proposal) {
+            val missing = AiEditProposalParser.missingBaselinePaths(answer, pendingBaselines)
+            if (missing.isNotEmpty()) {
+                viewModelScope.launch {
+                    val widened = widenedBaselines(session, missing)
+                    if (widened.isEmpty()) return@launch
+                    val reparsed = AiEditProposalParser.parse(answer, pendingBaselines + widened, pendingExistingPaths)
+                    val next = when (reparsed) {
+                        is AiProposalResult.Proposal -> reparsed
+                        // The truer reason: the file's real content is what the
+                        // hunks did not match, not "the app never captured it".
+                        is AiProposalResult.Invalid -> reparsed
+                        else -> return@launch
+                    }
+                    _state.update { s ->
+                        if (s.phase == AiPhase.DONE && s.answer == answer) s.copy(proposalResult = next) else s
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Phase 93c — the baselines [AiEditProposalParser.missingBaselinePaths]
+     * named, read from the session's own root. Bounded three ways: only paths the
+     * project walk admitted, only `modify` targets, at most
+     * [AiEditProposalParser.MAX_EDIT_FILES] of them — and each read through the
+     * same capped reader the walk uses. A dirty buffer wins over the disk copy,
+     * exactly as `read_file` does, so an unsaved edit is compared as it is.
+     */
+    private suspend fun widenedBaselines(
+        session: AgentSession,
+        missing: List<String>
+    ): Map<String, AiFileBaseline> = withContext(Dispatchers.IO) {
+        val out = LinkedHashMap<String, AiFileBaseline>()
+        for (path in missing.take(AiEditProposalParser.MAX_EDIT_FILES)) {
+            val admitted = pendingExistingPaths.firstOrNull { AiProjectFiles.samePath(it, path) } ?: continue
+            val name = admitted.substringAfterLast('/')
+            if (!AiProjectFiles.isTextFile(name) || AiProjectFiles.isSecretLike(name)) continue
+            val dirty = session.dirtyBuffers.entries
+                .firstOrNull { AiProjectFiles.samePath(it.key, admitted) }?.value
+            val text = dirty ?: AiProjectReader.readCapped(File(session.root, admitted)) ?: continue
+            val normalized = AiEditProposalParser.normalizeLf(text)
+            if (normalized.isBlank()) continue
+            out[admitted] = AiFileBaseline(
+                path = admitted,
+                exists = true,
+                content = normalized,
+                cut = false,
+                fromBuffer = dirty != null
+            )
+        }
+        out
     }
 
     private fun stopAgent(reason: AiAgentStopReason, message: String? = null) {
