@@ -1126,8 +1126,26 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 is AiApplyOutcome.Failed -> {
+                    // Phase 94 — **the row would have been missing here.** Phase 93
+                    // taught the sheet to draw its one-tap `Grant access` fix from
+                    // `storageProblem`, and set that flag on the *preflight* refusal
+                    // only. So when the write itself was the thing that failed for a
+                    // missing grant (the facts were fresh enough to pass the
+                    // preflight and stale by the time the bytes were written, or the
+                    // applier's own `canRead/canWrite` test is the one that fired),
+                    // the owner got the sentence and no button: a named cause with no
+                    // way to act on it — the Phase 93 complaint again, one layer
+                    // deeper. The flag is therefore asked of the SAME policy the
+                    // preflight asks (`storageProblemFor`), never matched out of a
+                    // sentence, so the button appears exactly when granting could
+                    // change the answer and never as a dead control.
+                    val problem = storageProblemFor(root, AiSource.PROPOSE_EDITS)
                     _state.update {
-                        it.copy(applying = false, notice = outcome.message)
+                        it.copy(
+                            applying = false,
+                            notice = problem ?: outcome.message,
+                            storageProblem = problem != null
+                        )
                     }
                 }
             }
@@ -1196,8 +1214,16 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 is AiUndoOutcome.Failed -> {
+                    // Phase 94 — undo writes too, so the same flag is set the same
+                    // way (see the apply branch above): the row is drawn only when
+                    // the app's own storage facts say a grant is missing.
+                    val problem = storageProblemFor(root, AiSource.PROPOSE_EDITS)
                     _state.update {
-                        it.copy(applying = false, notice = outcome.message)
+                        it.copy(
+                            applying = false,
+                            notice = problem ?: outcome.message,
+                            storageProblem = problem != null
+                        )
                     }
                 }
             }

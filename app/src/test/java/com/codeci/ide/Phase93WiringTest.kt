@@ -1,5 +1,10 @@
 package com.codeci.ide
 
+import org.junit.Assert.assertEquals
+import com.codeci.ide.ui.ai.AiCopy
+import com.codeci.ide.ui.ai.AiToolName
+import com.codeci.ide.ui.ai.AiToolProtocol
+import com.codeci.ide.ui.ai.AiToolRequest
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -118,6 +123,52 @@ class Phase93WiringTest {
         assertTrue("and a private folder returns before the facts are read at all", fn.contains("if (!needs) return null"))
         assertTrue("only an outside folder asks the write side", fn.contains("facts.canWrite else facts.canRead"))
         assertTrue("the sentence names the switch", fn.contains("StorageAccessPolicy.fixSteps(facts)"))
+    }
+
+    @Test
+    fun `a refused write offers the fix even when the preflight was not the one that refused`() {
+        // Phase 94 - verified, then fixed: the worst version of the owner's "error
+        // no permission" was a **named** cause with no way to act on it. Phase 93
+        // set `storageProblem` on the preflight refusal only, so a write that
+        // failed for the same missing grant answered with the sentence and no
+        // `Grant access` button. Both failure branches now ask the same policy the
+        // preflight asks - never matching a sentence - so the button is drawn
+        // exactly when granting could change the answer.
+        val apply = vm.substringAfter("is AiApplyOutcome.Failed ->").substringBefore("is AiUndoOutcome.Failed ->")
+        assertTrue("the apply failure asks the policy", apply.contains("storageProblemFor(root, AiSource.PROPOSE_EDITS)") && apply.contains("storageProblem = problem != null"))
+        assertTrue("and prefers the policy's own sentence", apply.contains("notice = problem ?: outcome.message"))
+        val undo = vm.substringAfter("is AiUndoOutcome.Failed ->").substringBefore("fun dismissUndoConflict(")
+        assertTrue("undo writes too, so it is asked the same way", undo.contains("storageProblemFor(root, AiSource.PROPOSE_EDITS)") && undo.contains("storageProblem = problem != null"))
+        assertEquals("one shape, two call sites, no third way to set it", 2, "storageProblem = problem != null".toRegex().findAll(vm).count())
+        assertFalse("the flag is never guessed from the applier's words", vm.contains("outcome.message.contains("))
+    }
+
+    @Test
+    fun `the fifth check reads the refusal row the timeline actually writes`() {
+        // Phase 94 - the Phase 93b fix reads a DENIED row by a title prefix. That
+        // is only sound while both halves are built from the same wire name, so
+        // both halves are pinned: the behaviour of `describe` (always starts with
+        // the wire) and the two source sites that compose and read the row.
+        val request = AiToolRequest("request_run", linkedMapOf("target" to "src/main.py"))
+        val title = AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire) + " " +
+            AiToolProtocol.describe(request) + " - the app's reason"
+        assertTrue(
+            "the refusal row starts with what the check looks for",
+            title.startsWith(AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire))
+        )
+        assertTrue(
+            "and the described tool always starts with its wire name",
+            AiToolProtocol.describe(request).startsWith(AiToolName.REQUEST_RUN.wire)
+        )
+        assertTrue(
+            "the timeline composes the row from describe + the reason",
+            vm.contains("AiCopy.agentStepDenied(AiToolProtocol.describe(d.request), d.reason)")
+        )
+        assertTrue(
+            "and the check asks for exactly that prefix",
+            vm.contains("startsWith(AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire))")
+        )
+        assertTrue("then reads the reason off the row", vm.contains("}?.detail"))
     }
 
     @Test

@@ -45,7 +45,17 @@
 | `outline_file` | `path` (required) | identical to `read_file`: `isSecretLike` → `AiEditProposalParser.validateTargetPath` → must exist in the walk's admitted set; ≤ `MAX_OUTLINE_ROWS` (120) rows |
 | `read_run_output` | `lines?` | 1…`MAX_OUTPUT_LINES` (200), default 60; the snapshot itself is capped at `MAX_OUTPUT_SNAPSHOT_LINES` (400) lines at Send |
 
-## 5. Files
+## 5. Verification round 3 — the two audit items Phase 93/94 owed (2026-10-05)
+
+Two questions were left open when Phase 94 was committed, both about the Phase 93 fix this phase sits on. Both are now
+answered, and one of them was a real bug.
+
+| Question | Verdict | Action |
+|---|---|---|
+| Does the self-check's `runRefusedReason` really find the row the timeline writes? | **Sound, and now pinned both ways.** The row's title is composed as `AiCopy.agentStepDenied(AiToolProtocol.describe(request), reason)` — `describe` starts with the wire name, and the check looks for `AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire)`. The two halves are built from the same wire, so the prefix can never drift. | `Phase93WiringTest` +1: the prefix match and the two source sites are asserted together. |
+| Does a refused **Apply** (or undo) offer the one-tap fix? | **It did not, and that was the bug.** `storageProblem` — the flag `storageFixRow` draws from — was set on the *preflight* refusal only, so when the write itself failed on a missing grant (facts stale by the time the bytes were written, or `AiEditApplier`'s own `canRead/canWrite` test firing) the owner got the sentence and **no button**: the Phase 93 complaint again, one layer deeper, and the worst possible shape of it — a named cause with no way to act. | Both failure branches now ask **the same policy the preflight asks** (`storageProblemFor(root, AiSource.PROPOSE_EDITS)`) and set `notice = problem ?: outcome.message`, `storageProblem = problem != null`. The row appears exactly when granting could change the answer; it is never matched out of a sentence. `Phase93WiringTest` +1 pins both call sites and the count (no third way to set the flag). |
+
+## 6. Files
 
 | File | Change |
 |---|---|
@@ -59,11 +69,16 @@
 | `…/ui/ai/AiContext.kt` | comment records that the packer, not `projectBody`, is where the guard runs (and why baselines stay raw) |
 | `…/ui/ai/AiLevel10Policies.kt` | the reviewer's markup check uses `AiToolProtocol.containsBlock` |
 | `…/ui/ai/AiCopy.kt` | the task preview names the whole read surface (the three new tools included) and states the value-level guard |
-| Tests | `AiSecretScanTest` **9** (new), `AiOutlineTest` **7** (new), `AiToolRunnerTest` 16→**29**, `AiToolProtocolTest` 18→**26**, `AiTaskMemoryTest` 9→**10** (a `read_run_output` call is never versioned or snapshotted), `AiLevel12InjectionTest` tool-set pin widened to the 8 wires |
+| `…/ui/ai/AiViewModel.kt` (round 3) | the `AiApplyOutcome.Failed` and `AiUndoOutcome.Failed` branches ask `storageProblemFor` and set `storageProblem`, so a refused write offers `Grant access` |
+| Tests | `AiSecretScanTest` **9** (new), `AiOutlineTest` **7** (new), `AiToolRunnerTest` 16→**29**, `AiToolProtocolTest` 18→**26**, `AiTaskMemoryTest` 9→**10** (a `read_run_output` call is never versioned or snapshotted), `AiLevel12InjectionTest` tool-set pin widened to the 8 wires, `Phase93WiringTest` 16→**18** (round 3) |
 
-## 6. Verification
+## 7. Verification
 
-* **Host sweep (`/home/user/harness`, kotlinc 2.2.10 — the project's own version): 45 classes / 595 passed / 0 failed.**
+* **Host sweep (`/home/user/harness`, kotlinc 2.2.10 — the project's own version).** Round 3 (with the two audit pins
+  above): **55 classes / 728 passed / 0 failed**, with 11 classes listed as dropped (they need Android/Robolectric or a
+  source the offline sweep cannot reach — `AiEditApplierTest`, `AiProvidersTest`, `AiHttpStreamTest`, the kotlinx
+  clients — and CI runs every one of them). The earlier round measured **45 classes / 595 passed / 0 failed** over a
+  narrower list; the two numbers are not the same set and are quoted separately on purpose.
   The `pins` group compiles the pure AI source set (39 production files, including DiffEngine/ProjectFilesPolicy/
   EditorOpenMode) plus 66 test files, and runs the AI suite plus `Phase93WiringTest` (16) and `Phase91SimpleChatTest`
   (10) — the pins that guard the Phase 93/93c fixes this phase sits on. Dropped (needing Android/Robolectric or
@@ -82,7 +97,7 @@
   with the reason written in the test itself. A guard's own tests must not look like the thing the guard refuses.
 * **Device:** owner-only, [`DEVICE_ROUND.md`](DEVICE_ROUND.md) — D1…D8, all rows empty.
 
-## 7. Boundaries kept
+## 8. Boundaries kept
 
 * No write tool, no delete tool, no command tool, no shell, no new permission, no new dependency, no new store key;
   `request_run` is still an approval request that only the user can turn into a run.
