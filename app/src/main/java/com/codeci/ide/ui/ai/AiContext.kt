@@ -566,6 +566,11 @@ object AiPromptText {
      * [AiLimits.MAX_CONTEXT_CHARS] including these headers.
      */
     fun projectBody(included: List<AiProjectFiles.Included>): String = buildString {
+        // Phase 94 — the content-level secret guard already ran where the slice
+        // was taken (`AiProjectFiles.sliceFor`), so this body is exactly what the
+        // preview shows and exactly what leaves (D4). The edit parser's baselines
+        // are a different object and stay raw: the write path must never write a
+        // redaction back to disk.
         for ((i, f) in included.withIndex()) {
             if (i > 0) append("\n\n")
             append(fileHeader(f)).append("\n```\n").append(f.text).append("\n```")

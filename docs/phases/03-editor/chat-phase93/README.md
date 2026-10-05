@@ -1,5 +1,10 @@
 # Phase 93 — five owner items, and the three bugs the audit found
 
+> **Followed by [Phase 94](../chat-phase94/README.md)** (2026-10-05, same branch): *"more working functions with
+> restrictions for sensitive information … more tool with readable structure"* — three read-only tools
+> (`find_files`, `outline_file`, `read_run_output`) plus the content-level `AiSecretScan` guard. Phase 93's fixes
+> are unchanged and their pins (`Phase93WiringTest`) run in the same host sweep.
+
 > **Status: ✅ IMPLEMENTED (2026-10-05) on `arena/01a10b97-codec`; Build APK ✅ GREEN; not merged.** **No PR, no merge,
 > no `main` push** (`rule.md` §3). **Authorization:** the owner's message, same day: *"Ok Whatever you find fix plus i
 > have some additional fixes"*, followed by his five items. His answers to the pre-work questions are the binding

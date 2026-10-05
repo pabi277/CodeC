@@ -199,7 +199,11 @@ class AiLevel12InjectionTest {
     fun `the tool set has no write shape and cannot grow one silently`() {
         assertEquals(
             "the whole tool surface, pinned",
-            listOf("list_files", "search_project", "read_file", "read_files", "request_run"),
+            listOf(
+                "list_files", "search_project", "read_file", "read_files",
+                // Phase 94 — three more ways to *read*, no way to write:
+                "find_files", "outline_file", "read_run_output", "request_run"
+            ),
             AiToolName.entries.map { it.wire }
         )
         for (name in AiToolName.entries) {

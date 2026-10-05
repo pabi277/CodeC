@@ -1161,7 +1161,10 @@ fun EditorScreen(
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
             openDirty = viewModel.isDirty.value,
-            dirtyBuffers = viewModel.dirtyProjectBuffers()
+            dirtyBuffers = viewModel.dirtyProjectBuffers(),
+            // Phase 94 — the agent's `read_run_output` tool reads this snapshot:
+            // the build/run output the panel shows right now, frozen at Send.
+            runOutput = outputState.lines.map { it.text }
         )
     }
     // Phase 79 → 80 — propose reviewable multi-file edits. The agent reads what
@@ -1175,7 +1178,9 @@ fun EditorScreen(
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
             openDirty = viewModel.isDirty.value,
-            dirtyBuffers = viewModel.dirtyProjectBuffers()
+            dirtyBuffers = viewModel.dirtyProjectBuffers(),
+            // Phase 94 — same snapshot as the ask door (see `aiAskProject`).
+            runOutput = outputState.lines.map { it.text }
         )
     }
     // Phase 80 — the AI asked to run the project. The tap dispatches CodeC's

@@ -220,6 +220,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         var memory: AiTaskMemory,
         /** The Level 2 walk's admitted code/text paths — the tool surface's whole world. */
         val paths: List<String>,
+        /**
+         * Phase 94 — the build/run output the panel held when this task started,
+         * frozen at Send. `read_run_output` reads this and nothing else: no tool
+         * can make anything run, and the model cannot see output the user does
+         * not already have on screen.
+         */
+        val runOutput: List<String> = emptyList(),
         var dirtyBuffers: Map<String, String>,
         val systemInstruction: String,
         val provider: AiProviderId,
@@ -1220,8 +1227,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         openPath: String?,
         openText: String?,
         openDirty: Boolean,
-        dirtyBuffers: Map<String, String> = emptyMap()
-    ) = startAgent(AiSource.PROJECT, question, openPath, openText, openDirty, dirtyBuffers)
+        dirtyBuffers: Map<String, String> = emptyMap(),
+        /** Phase 94 — the Output panel's lines at Send, for `read_run_output`. */
+        runOutput: List<String> = emptyList()
+    ) = startAgent(AiSource.PROJECT, question, openPath, openText, openDirty, dirtyBuffers, runOutput)
 
     /**
      * Phase 80 — start an **agent edit task** (the *Propose edits* chip). Same
@@ -1234,8 +1243,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         openPath: String?,
         openText: String?,
         openDirty: Boolean,
-        dirtyBuffers: Map<String, String> = emptyMap()
-    ) = startAgent(AiSource.PROPOSE_EDITS, question, openPath, openText, openDirty, dirtyBuffers)
+        dirtyBuffers: Map<String, String> = emptyMap(),
+        /** Phase 94 — the Output panel's lines at Send, for `read_run_output`. */
+        runOutput: List<String> = emptyList()
+    ) = startAgent(AiSource.PROPOSE_EDITS, question, openPath, openText, openDirty, dirtyBuffers, runOutput)
 
     private fun startAgent(
         source: AiSource,
@@ -1243,7 +1254,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         openPath: String?,
         openText: String?,
         openDirty: Boolean,
-        dirtyBuffers: Map<String, String>
+        dirtyBuffers: Map<String, String>,
+        runOutput: List<String> = emptyList()
     ) {
         val s = _state.value
         if (s.phase == AiPhase.STREAMING || s.gathering || s.applying) return
@@ -1354,6 +1366,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 agent = AgentSession(
                     question = q,
                     source = source,
+                    // Phase 94: the panel's own tail, frozen here (D4 — the task
+                    // carries exactly what the user could see when they sent it).
+                    runOutput = runOutput.takeLast(AiToolLimits.MAX_OUTPUT_SNAPSHOT_LINES),
                     transcript = transcript,
                     root = root,
                     mapText = map.text,
@@ -1785,7 +1800,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                             shouldStop = stop,
                             cachedFiles = readPlan.cachedFiles,
                             // Level 10: the follow-up hint names this same window.
-                            readWindow = session.options.readWindowLines
+                            readWindow = session.options.readWindowLines,
+                            // Phase 94: the frozen output tail, for read_run_output.
+                            runOutput = session.runOutput
                         )
                     }
                     if (readPlan.resultCacheKey != null && outcome.ok) {

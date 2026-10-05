@@ -259,10 +259,18 @@ object AiCopy {
 
     // ---- Phase 80 (Level 4): the agent surface ----------------------------
 
-    /** The preview's note when the task will be run by the agent, not one shot. */
+    /**
+     * The preview's note when the task will be run by the agent, not one shot.
+     * Phase 94: the sentence names the whole read surface (the three new tools
+     * included) and states the value-level guard, because a preview that
+     * understates what the agent may read would not be a preview.
+     */
     fun agentPreviewNote(): String =
-        "After you tap Send, the AI may read this project — list_files, search_project and read_file — " +
+        "After you tap Send, the AI may read this project — list_files, search_project, read_file, read_files, " +
+            "find_files, outline_file and read_run_output (the build/run output you already have on screen) — " +
             "one step at a time, shown below as it happens (up to ${AiAgentLimits.MAX_TOOL_CALLS} reads). " +
+            "Credential-shaped values (keys, tokens, passwords and pasted private keys) are withheld from " +
+            "everything it reads and from the project text it is sent, and it is told how many were withheld. " +
             "It may ask to run the project (up to ${AiAgentLimits.MAX_RUNS} times); nothing runs until you tap Run. " +
             "A bounded local task memory may keep up to ${AiTaskMemoryLimits.MAX_FILES} non-secret file snapshots " +
             "(${AiTaskMemoryLimits.MAX_FILE_BYTES / 1024} KB each, ${AiTaskMemoryLimits.MAX_TOTAL_FILE_BYTES / 1024} KB total) " +
