@@ -55,12 +55,16 @@ answered, and one of them was a real bug.
 | Does the self-check's `runRefusedReason` really find the row the timeline writes? | **Sound, and now pinned both ways.** The row's title is composed as `AiCopy.agentStepDenied(AiToolProtocol.describe(request), reason)` — `describe` starts with the wire name, and the check looks for `AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire)`. The two halves are built from the same wire, so the prefix can never drift. | `Phase93WiringTest` +1: the prefix match and the two source sites are asserted together. |
 | Does a refused **Apply** (or undo) offer the one-tap fix? | **It did not, and that was the bug.** `storageProblem` — the flag `storageFixRow` draws from — was set on the *preflight* refusal only, so when the write itself failed on a missing grant (facts stale by the time the bytes were written, or `AiEditApplier`'s own `canRead/canWrite` test firing) the owner got the sentence and **no button**: the Phase 93 complaint again, one layer deeper, and the worst possible shape of it — a named cause with no way to act. | Both failure branches now ask **the same policy the preflight asks** (`storageProblemFor(root, AiSource.PROPOSE_EDITS)`) and set `notice = problem ?: outcome.message`, `storageProblem = problem != null`. The row appears exactly when granting could change the answer; it is never matched out of a sentence. `Phase93WiringTest` +1 pins both call sites and the count (no third way to set the flag). |
 
-Build APK [`37365936119`](https://github.com/pabi277/CodeC/actions/runs/37365936119) **green** on `2d495ab` (the round-3 code is `3a07ac0`; the empty commit that follows it exists only because GitHub refused to rerun `37364178929`, whose job was **cancelled by the runner** at 15m01s with no failing step). Release universal APK **7 206 076 B**; artifacts release set **6 544 793 B**, R8 mapping **4 710 804 B**, debug **26 168 818 B**; *release manifest: no `android:debuggable` flag*.
+Build APK [`37365936119`](https://github.com/pabi277/CodeC/actions/runs/37365936119) **green** on `2d495ab` (the round-3 code is `3a07ac0`; the empty commit that follows it exists only because GitHub refused to rerun `37364178929`, whose job was **cancelled by the runner** at 15m01s with no failing step). Release universal APK **7 206 076 B**; artifacts release set **6 544 793 B**, R8 mapping **4 710 804 B**, debug **26 168 818 B**; *release manifest: no `android:debuggable` flag*. **Docs round 3:** [`37369079122`](https://github.com/pabi277/CodeC/actions/runs/37369079122)
+**green** on `a172673` (19m46s; release set **6 544 799 B**, R8 mapping **4 710 804 B**, debug **26 168 929 B**).
 
-**One honest CI wrinkle:** the first round-3 run, `37364178929`, ended as a **failure whose job concludes `cancelled`**
-at 15m01s — no failing step, no annotations, and GitHub refused `gh run rerun` (*"cannot be rerun"*) — so a fresh
-push was made for the same tree. The green run above is that one. It is recorded rather than quietly retried because a
-cancelled job is not evidence of anything, in either direction.
+**Two honest CI wrinkles, both worth keeping.** The first round-3 run (`37364178929`, on `3a07ac0`) and the
+docs-only run after it (`37367483241`, on `60c25af`) both ended as **failures whose jobs conclude `cancelled`** — no
+failing step, no annotations, and GitHub refused `gh run rerun` (*"cannot be rerun"*) — so each was re-triggered with an
+empty commit on the same tree. The re-triggers are the two green runs recorded above (`2d495ab` for the code and
+`a172673` for the docs), and the last one took **19m46s** where the cancelled pair stopped at ~15m03s, which is why the
+cancellations are recorded as **transient runner events, not a duration cap**: a cancelled job is not evidence of
+anything, in either direction, and it must not be mistaken for a pass.
 
 
 ## 6. Files
