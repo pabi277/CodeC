@@ -50,6 +50,10 @@ object StorageAccessAndroid {
      * a launcher that does not answer the per-app intent.
      */
     fun openAllFilesSettings(context: Context) {
+        // The guard lives here, not at the call site: both intents below and the
+        // page they open are API 30, and lint reads the method, not the runtime
+        // condition the caller checked.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
             data = Uri.parse("package:${context.packageName}")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

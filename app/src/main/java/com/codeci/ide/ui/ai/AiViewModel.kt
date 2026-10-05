@@ -791,12 +791,11 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         val facts = storageFacts(app)
         val allowed = if (source == AiSource.PROPOSE_EDITS) facts.canWrite else facts.canRead
         if (allowed) return null
-        val privateRoots = listOf(
-            app.filesDir.absolutePath,
-            app.noBackupFilesDir.absolutePath,
-            app.cacheDir.absolutePath,
-            app.dataDir
-        )
+        // Every root CodeC owns, as paths. `dataDir` is the parent of the other
+        // three, so one entry covers them — but they are all listed: a future
+        // move of any one of them must not silently open a gate.
+        val privateRoots = listOf(app.filesDir, app.noBackupFilesDir, app.cacheDir, app.dataDir)
+            .map { it.absolutePath }
         val needs = StorageAccessPolicy.needsExternalAccess(root.absolutePath, privateRoots)
         if (!needs) {
             // CodeC's own storage, and it still refuses? That is a real fault, and

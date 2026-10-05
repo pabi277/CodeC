@@ -1371,8 +1371,8 @@ private fun BottomBar(
         // conversation and exists in every phase; STREAMING is the one the body
         // does not cover, and FAILED has its own copy there, so this stays exactly
         // one sentence per phase.
-        if (state.notice != null && state.phase == AiPhase.STREAMING) {
-            ErrorLine(state.notice)
+        if (state.phase == AiPhase.STREAMING) {
+            state.notice?.let { ErrorLine(it) }
         }
         // The one tap that answers a permission sentence. It sits with the notice
         // and outside the phase branches, because the preflight raises it in IDLE

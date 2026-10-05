@@ -195,9 +195,12 @@ class Phase93WiringTest {
     fun `a refusal is drawn in the phases that can refuse`() {
         assertTrue(
             "the bar owns the notice exactly while an answer is arriving",
-            bottomBar.contains("if (state.notice != null && state.phase == AiPhase.STREAMING) {")
+            bottomBar.contains("if (state.phase == AiPhase.STREAMING) {")
         )
-        assertTrue("and draws it as an error line", bottomBar.contains("ErrorLine(state.notice)"))
+        assertTrue(
+            "and draws it as an error line",
+            bottomBar.contains("state.notice?.let { ErrorLine(it) }")
+        )
         assertFalse(
             "so no sentence is drawn over the body's own copy",
             bottomBar.contains("if (state.notice != null && state.phase != AiPhase.DONE)")
