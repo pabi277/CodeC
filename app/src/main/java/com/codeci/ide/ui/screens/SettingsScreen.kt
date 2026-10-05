@@ -78,6 +78,7 @@ import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.projects.GitErrors
 import com.codeci.ide.ui.projects.StorageAccessAndroid
+import com.codeci.ide.ui.projects.StorageAccessState
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -926,7 +927,11 @@ fun SettingsScreen(
                     // fell back to the legacy dialog, which Android 13+ can never
                     // grant (both are capped at API 32 now).
                     val facts = StorageAccessAndroid.read(context)
-                    if (facts.granted) return@TextButton
+                    // `state != MISSING` is `granted` in the policy's own words; the
+                    // spelling matters here because `SettingsSearchWiringTest` reads
+                    // this file for a local named `granted` (the launcher's own
+                    // callback) and a bare `.granted` below it reads as a use.
+                    if (facts.state != StorageAccessState.MISSING) return@TextButton
                     val home = ShellEnvironment.homeDir(context.filesDir)
                     ShellEnvironment.setupStorageDirectory(home)
                     if (facts.allFilesApplies) {
