@@ -97,3 +97,6 @@ that stopped a proposal were the app's own: Phase 93's preflight asked Android f
 whether one was needed — refusing CodeC's own private projects, which need no permission — and the parser could not
 diff a file the model had read but which was not among the ≤12 shortlisted files. Both are fixed; the unknown-tool
 refusal now teaches the model the block route, and the applier's fallback sentence names the Android 11+ switch.
+Build APK [`37328263954`](https://github.com/pabi277/CodeC/actions/runs/37328263954) is **green** on **`e612db06`**
+— release universal **7 197 988 B**, debug universal **27 126 752 B**, R8 mapping **71 654 841 B**, release manifest
+*no `android:debuggable` flag*; host sweep **72 classes / 578 passed / 0 failed**.

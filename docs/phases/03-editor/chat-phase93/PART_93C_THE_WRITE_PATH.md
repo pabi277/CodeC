@@ -1,7 +1,10 @@
 # Part 93c — the write path, audited: why the agent "can't write code"
 
-> **Status: ✅ IMPLEMENTED (2026-10-05) on `arena/01a10b97-codec`; host sweep 72 classes, 578 passed / 0 failed.
-> Build APK recorded below once green.** **No PR, no merge, no `main` push** (`rule.md` §3).
+> **Status: ✅ IMPLEMENTED (2026-10-05) on `arena/01a10b97-codec`; host sweep 72 classes, 578 passed / 0 failed;
+> Build APK ✅ GREEN.** [`37328263954`](https://github.com/pabi277/CodeC/actions/runs/37328263954) on **`e612db06`**
+> — host unit + screenshot tests, debug assemble, release assemble and the release-APK set check: release
+> universal **7 197 988 B**, debug universal **27 126 752 B**, R8 mapping **71 654 841 B**, *release manifest: no
+> `android:debuggable` flag*. **No PR, no merge, no `main` push** (`rule.md` §3).
 >
 > **The owner's message (2026-10-05):** *"Check the permission section properly. Read the code base thoroughly research,
 > throw away, open source etc and find. Why can't the agent write code in my codec? And the writing permission was
@@ -83,6 +86,8 @@ of all files*) and the sheet draws the one-tap **Grant access**.
   return null`) and the widen's wiring (source, bounds, dirty buffers, capped reader, `s.answer == answer`).
 * **Host sweep: 72 classes, 578 passed / 0 failed** — the tool-protocol class (18 cases incl. the new one) is now
   part of the sweep, so the write path is host-covered end to end.
+* **CI:** Build APK [`37328263954`](https://github.com/pabi277/CodeC/actions/runs/37328263954) **green on `e612db06`**,
+  first round — the Gradle compile of `AiViewModel`/`AiEditProposal`/`AiTools`, the full unit-test suite and both APKs.
 
 ## 5. Open, for the owner's word (not changed here)
 
