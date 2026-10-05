@@ -83,4 +83,6 @@ re-diagnosed from the app's own contracts and fixed in code; the full record is
 
 **Tests:** `AiEditProposalTest` +5 (and its no-REPLACE pin rewritten to the new sentence), `AiSelfCheckTest` +2,
 `AiSelfCheckWiringTest` +2, `AiLevel3WiringTest` +1, `AiToolProtocolTest` +1. **Host sweep: 71 classes, 556 passed /
-0 failed.**
+0 failed.** Build APK [`37309397712`](https://github.com/pabi277/CodeC/actions/runs/37309397712) is **green** on
+**`ada48f9`** — release universal **7 198 092 B**, debug universal **27 122 048 B**, R8 mapping **71 626 835 B**,
+release manifest *no `android:debuggable` flag*.

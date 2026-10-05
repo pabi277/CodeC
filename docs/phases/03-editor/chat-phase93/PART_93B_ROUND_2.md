@@ -1,7 +1,10 @@
 # Part 93b — the owner's round 2: *"Not solved"*
 
 > **Status: ✅ IMPLEMENTED (2026-10-05) on `arena/01a10b97-codec`; host sweep green (71 classes, 556 passed / 0
-> failed); Build APK ⏳ running at commit time.** **No PR, no merge, no `main` push** (`rule.md` §3).
+> failed); Build APK ✅ GREEN.** [`37309397712`](https://github.com/pabi277/CodeC/actions/runs/37309397712) on
+> **`ada48f9`** — host unit + screenshot tests, debug assemble, release assemble and the release-APK set check:
+> release universal **7 198 092 B**, debug universal **27 122 048 B**, R8 mapping **71 626 835 B**, and *release
+> manifest: no `android:debuggable` flag*. **No PR, no merge, no `main` push** (`rule.md` §3).
 >
 > **What happened:** Phase 93 was pushed and CI-green, but the owner ran his phone again and reported the same two
 > rows as broken. His message is the scope: the edit-proposal dead end (Level 12 **S2**, Phase 89 finding **F2**) and
@@ -80,8 +83,9 @@ The check still reports; it never asks for a permission, never sends, and never 
   `AiToolProtocolTest` +1 — the step's literal names the real wire name.
 * **Host sweep (this round, from the repo root):** **71 classes, 556 passed / 0 failed** — the same sweep command as
   before (*"a step asked for it"*), now including the parser class in the count.
-* **CI (the gate the sandbox cannot be):** the Build APK run for this commit is the record; the run id is in
-  `NEXT_STEPS.md` once green.
+* **CI (the gate the sandbox cannot be):** Build APK [`37309397712`](https://github.com/pabi277/CodeC/actions/runs/37309397712)
+  **green** on `ada48f9`, ~14 minutes — the Gradle compile of the sheet, the view model and the pure model, the full
+  unit-test suite, and both APKs.
 
 ## 5. What is *not* claimed
 
