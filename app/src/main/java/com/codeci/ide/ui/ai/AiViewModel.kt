@@ -1,11 +1,7 @@
 package com.codeci.ide.ui.ai
 
-import android.Manifest
 import android.app.Application
-import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Environment
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.codeci.ide.BuildConfig
@@ -16,6 +12,9 @@ import com.codeci.ide.ui.projects.AiUndoOutcome
 import com.codeci.ide.ui.projects.AiUndoSummary
 import com.codeci.ide.ui.projects.AiTaskMemoryStore
 import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.StorageAccessAndroid
+import com.codeci.ide.ui.projects.StorageAccessPolicy
+import com.codeci.ide.ui.projects.StorageFacts
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -167,7 +166,13 @@ data class AiUiState(
      * memory only (**D6**): it is a script of questions the owner still sends
      * himself and a list of verdicts built from numbers, never from text.
      */
-    val selfCheck: AiSelfCheck.Run? = null
+    val selfCheck: AiSelfCheck.Run? = null,
+    /**
+     * Phase 93 — true when the current [notice] is the storage-permission one, so
+     * the sheet can offer the one tap that fixes it ([AiCopy.GRANT_ACCESS]) rather
+     * than a sentence and a shrug. Display state only, in memory (D6).
+     */
+    val storageProblem: Boolean = false
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -461,21 +466,57 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(notice = text) }
     }
 
-    /** D6: a different project never sees the previous project's exchange. */
+    /**
+     * Phase 93 — **one conversation per project, kept while the app is open.**
+     *
+     * The owner: *"per project, one history, like any AI that must store the
+     * history of previous chats."* D6 does not move: nothing here is written to a
+     * file, a store, a log or a backup — this map lives and dies with the
+     * process, exactly like the transcript it holds. What changed is only *whose*
+     * memory the sheet reads: switching projects used to drop the conversation
+     * (a leak guard, correctly), so moving A → B → A lost A's chat; now the
+     * switch is a save before and a restore after, keyed by project name.
+     *
+     * The leak guard is unchanged in the way that matters: project B's sheet can
+     * only ever draw B's session, because the restore replaces the whole value.
+     */
+    private data class ProjectChat(val session: AiChatSession, val taskCommitted: Boolean)
+
+    private val chatsByProject = LinkedHashMap<String, ProjectChat>()
+
+    private fun rememberChatForCurrentProject() {
+        val name = project ?: return
+        val s = _state.value
+        if (s.session.isEmpty()) chatsByProject.remove(name)
+        else chatsByProject[name] = ProjectChat(s.session, s.taskCommitted)
+    }
+
+    private fun chatForProject(name: String?): ProjectChat =
+        name?.let { chatsByProject[it] } ?: ProjectChat(AiChatSession.EMPTY, false)
+
+    /**
+     * D6: a different project never sees the previous project's exchange — and
+     * (Phase 93) each project's own conversation is put back when it is reopened,
+     * from memory only.
+     */
     fun onProjectChanged(name: String?) {
         if (name == project) return
+        rememberChatForCurrentProject()
         project = name
         pendingBaselines = emptyMap()
         pendingExistingPaths = emptySet()
         agent = null
         clear()
         closeSheet()
-        // Phase 90: a transcript about another project is a leak surface — the
-        // conversation does not follow a project switch.
+        val remembered = chatForProject(name)
         _state.update {
             it.copy(
                 undoSummary = null, undoConflictPaths = emptyList(),
-                session = AiChatSession.EMPTY, taskCommitted = false, selfCheck = null
+                session = remembered.session, taskCommitted = remembered.taskCommitted,
+                // A self-check is about the conversation that was on screen, so it
+                // never follows a switch — the checks that already ran stay in the
+                // remembered transcript.
+                selfCheck = null
             )
         }
         if (name != null) {
@@ -512,6 +553,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                         // pinned immutable-fields rule); session then rides along.
                         prompt = result.prompt.copy(provider = it.provider, model = it.model).copy(session = session),
                         notice = null,
+                        storageProblem = false,
                         retryCountdown = null,
                         answer = "", error = null, cutShort = false, continuations = 0,
                         proposalResult = null, applyConflictPaths = emptyList(),
@@ -690,6 +732,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         val p = s.prompt
         val proposal = s.proposalResult
         val app = getApplication<Application>()
+        // One read of the phone's storage state, shared by both fields below.
+        val storage = storageFacts(app)
         return AiSelfCheckObserved(
             question = p?.question,
             settled = s.phase == AiPhase.DONE || s.phase == AiPhase.FAILED,
@@ -699,7 +743,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             errorLine = s.error,
             proposalFiles = (proposal as? AiProposalResult.Proposal)?.proposal?.files?.size ?: 0,
             proposalInvalidReason = (proposal as? AiProposalResult.Invalid)?.reason,
-            runRequested = s.agentRun != null,
+            runRequested = runRequested(),
             sentChars = p?.sentChars ?: 0,
             // The follow-up evidence: how much conversation the request carried.
             transcriptChars = p?.session?.render()?.length ?: 0,
@@ -707,12 +751,70 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             model = p?.model ?: s.model,
             keySaved = s.keySaved,
             sdkInt = Build.VERSION.SDK_INT,
-            allFilesAccess = Build.VERSION.SDK_INT >= 30 && Environment.isExternalStorageManager(),
-            storageGranted = ContextCompat.checkSelfPermission(
-                app, Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
+            allFilesAccess = storage.allFiles,
+            // Phase 93: both legacy sides — an applied edit that cannot be saved
+            // is not "storage granted". Below API 30 read and write are separate.
+            storageGranted = storage.legacyRead && storage.legacyWrite
         )
     }
+
+    /**
+     * Phase 93 fix — **did the model ask to run, in this task?**
+     *
+     * The old answer was `state.agentRun != null`, and that value is a *pause*,
+     * not a fact: [finishAgent], [stopAgent], [approveAgentRun] and
+     * [skipAgentRun] all clear it. Every one of those is also what turns a task
+     * settled, and a settled task is the only thing a verdict may be read from —
+     * so the self-check's fifth check could never pass, and a run that reached
+     * the card reported "the model never asked to run".
+     *
+     * The timeline row written when the card appears is the latch, because
+     * nothing clears it; `agentRun` is still read as well, for the instant
+     * between the row and the card's own state update.
+     */
+    private fun runRequested(): Boolean =
+        _state.value.agentRun != null ||
+            _state.value.agentSteps.any { it.kind == AiAgentStepKind.RUN_REQUEST }
+
+    /**
+     * Phase 93 — a project outside CodeC's own storage needs the shared-storage
+     * grant *before* a byte of it can be read or written. Checked at the door
+     * (`startAgent`) so the owner learns it in one sentence — with the switch to
+     * flip — instead of spending a request and meeting "no permission" later.
+     *
+     * Returns null when the task may proceed: projects CodeC created live in
+     * `filesDir/CodeC/projects`, where no permission exists to grant, and are
+     * never gated by this.
+     */
+    private fun storageProblemFor(root: File, source: AiSource): String? {
+        val app = getApplication<Application>()
+        val facts = storageFacts(app)
+        val allowed = if (source == AiSource.PROPOSE_EDITS) facts.canWrite else facts.canRead
+        if (allowed) return null
+        val privateRoots = listOf(
+            app.filesDir.absolutePath,
+            app.noBackupFilesDir.absolutePath,
+            app.cacheDir.absolutePath,
+            app.dataDir
+        )
+        val needs = StorageAccessPolicy.needsExternalAccess(root.absolutePath, privateRoots)
+        if (!needs) {
+            // CodeC's own storage, and it still refuses? That is a real fault, and
+            // it must not be dressed up as a permission problem.
+            return AiCopy.PROJECT_FOLDER_UNREACHABLE
+        }
+        return AiCopy.storageNeeded(
+            writing = source == AiSource.PROPOSE_EDITS,
+            fix = StorageAccessPolicy.fixSteps(facts).orEmpty()
+        )
+    }
+
+    /**
+     * Phase 93 — the one place the AI reads the phone's storage permission, and
+     * the same value [StorageAccessPolicy] uses everywhere else (the terminal
+     * gate, the runtime request, the self-check report).
+     */
+    private fun storageFacts(app: Application): StorageFacts = StorageAccessAndroid.read(app)
 
     /**
      * Phase 90 — a settled task becomes conversation history. Called when the
@@ -766,6 +868,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     fun newChat() {
         clear()
+        // Phase 93 — New chat clears THIS project's conversation (and its memory
+        // of it); every other project keeps its own.
+        project?.let { chatsByProject.remove(it) }
         // Phase 92: the self-check's follow-up step reads the conversation, so a
         // brand-new conversation means a brand-new check — never a stale verdict.
         _state.update { it.copy(session = AiChatSession.EMPTY, taskCommitted = false, selfCheck = null) }
@@ -953,7 +1058,15 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 runCatching { ProjectManager(app).project(projectName)?.root }.getOrNull()
             }
             if (root == null) {
-                _state.update { it.copy(applying = false, notice = AiCopy.NEEDS_PROJECT) }
+                // Phase 93 — the folder disappeared or moved. Saying "open a
+                // project" here was a lie about a project that IS open.
+                _state.update { it.copy(applying = false, notice = AiCopy.PROJECT_FOLDER_UNREACHABLE) }
+                return@launch
+            }
+            // Phase 93 — before writing anything, name a permission the app does
+            // not hold instead of failing mid-write with a generic sentence.
+            storageProblemFor(root, AiSource.PROPOSE_EDITS)?.let { problem ->
+                _state.update { it.copy(applying = false, notice = problem, storageProblem = true) }
                 return@launch
             }
             val outcome = withContext(Dispatchers.IO) {
@@ -1015,7 +1128,12 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 runCatching { ProjectManager(app).project(projectName)?.root }.getOrNull()
             }
             if (root == null) {
-                _state.update { it.copy(applying = false, notice = AiCopy.NEEDS_PROJECT) }
+                _state.update { it.copy(applying = false, notice = AiCopy.PROJECT_FOLDER_UNREACHABLE) }
+                return@launch
+            }
+            // Phase 93 — undo writes too; the same permission sentence as apply.
+            storageProblemFor(root, AiSource.PROPOSE_EDITS)?.let { problem ->
+                _state.update { it.copy(applying = false, notice = problem, storageProblem = true) }
                 return@launch
             }
             val outcome = withContext(Dispatchers.IO) {
@@ -1130,6 +1248,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }
             if (root == null) {
                 _state.update { it.copy(gathering = false, notice = AiCopy.NEEDS_PROJECT) }
+                return@launch
+            }
+            // Phase 93 — the permission preflight: a project outside CodeC's own
+            // storage without the shared-storage grant is refused HERE, with the
+            // switch named, instead of after a request and a failed apply.
+            storageProblemFor(root, source)?.let { problem ->
+                _state.update { it.copy(gathering = false, notice = problem, storageProblem = true) }
                 return@launch
             }
             val scan = withContext(Dispatchers.IO) {
@@ -1549,6 +1674,17 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 session.pendingRun = decision.call
                 session.queuedAfterRun = decision.alsoQueued
                 session.queuedDeniedAfterRun = decision.denied
+                // Phase 93 fix — the RUN_REQUEST row is the LATCH: `agentRun` is
+                // cleared by every terminal path (finish, stop, approve, skip), so
+                // a fact derived from it alone could never be read on a settled
+                // task. The timeline row survives, which is what the self-check's
+                // "run request reaches the card" check and the progress line read.
+                appendAgentStep(
+                    AiAgentStep(
+                        kind = AiAgentStepKind.RUN_REQUEST,
+                        title = AiCopy.agentRunRequested(decision.call.path)
+                    )
+                )
                 _state.update { it.copy(agentRun = AiAgentRunRequest(target = decision.call.path)) }
             }
             is AiAgentDecision.ExecuteTools -> executeToolBatch(session, decision.calls, decision.denied)
@@ -2220,7 +2356,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun dismissNotice() = _state.update { it.copy(notice = null) }
+    fun dismissNotice() = _state.update { it.copy(notice = null, storageProblem = false) }
 
     private fun settingsBusy(): Boolean = _state.value.let {
         it.configuring || it.testing || it.gathering || it.applying || it.phase == AiPhase.STREAMING || job?.isActive == true

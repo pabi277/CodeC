@@ -123,12 +123,23 @@ class AiChatSessionWiringTest {
     }
 
     @Test
-    fun `a project switch drops the transcript`() {
+    fun `a project switch keeps each project's own transcript, in memory`() {
         val model = src("AiViewModel.kt")
-        assertTrue(
-            "another project's conversation is a leak surface",
-            Regex("session = AiChatSession\\.EMPTY, taskCommitted = false").findAll(model).count() >= 2
-        )
+        // Phase 93 — item 5, the owner: "per project, one history". The leak guard
+        // is unchanged in the way that matters (B can only ever draw B's session),
+        // but A's conversation is now remembered while the app is open (D6: in
+        // memory, no file, no store) and restored when A is reopened.
+        assertTrue("the memory is a map, keyed by project", model.contains("private val chatsByProject = LinkedHashMap<String, ProjectChat>()"))
+        assertTrue("the leaving project is saved", model.contains("rememberChatForCurrentProject()"))
+        assertTrue("and the arriving one restored", model.contains("val remembered = chatForProject(name)"))
+        assertTrue("into the session", model.contains("session = remembered.session, taskCommitted = remembered.taskCommitted"))
+        assertTrue("New chat clears only this project", model.contains("project?.let { chatsByProject.remove(it) }"))
+        // D6 does not move: the memory is process state, never written anywhere.
+        assertFalse("no file", model.contains("File(chatsByProject"))
+        assertFalse("no store", model.contains("chatsByProject") && model.contains("SharedPreferences"))
+        listOf("writeText(", "dataStore", "noBackupFilesDir, \"chat").forEach { banned ->
+            assertFalse("nothing persists the chat: $banned", model.contains(banned))
+        }
     }
 
     @Test

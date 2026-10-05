@@ -21,6 +21,29 @@ object AiCopy {
 
     const val NEEDS_PROJECT = "Open a project to use the AI helper. It works only inside CodeC projects, not in single-file mode."
 
+    /**
+     * Phase 93 — the permission sentences. The owner's *"it's showing error no
+     * permission"* was true and useless at once: it named neither the cause nor
+     * the switch. [storageNeeded] carries both, spelled for the phone's own
+     * Android version by `StorageAccessPolicy.fixSteps`.
+     */
+    const val PROJECT_FOLDER_UNREACHABLE =
+        "The project folder could not be opened — it may have been moved, deleted or renamed. " +
+            "Open it again from Projects."
+
+    fun storageNeeded(writing: Boolean, fix: String): String =
+        (if (writing) "CodeC cannot change files in this project yet"
+        else "CodeC cannot read this project yet") +
+            " — it lives outside CodeC's own storage, and Android has not granted shared storage." +
+            (if (fix.isBlank()) "" else " " + fix)
+
+    /** The button beside [storageNeeded]: opens this app's own permission page. */
+    const val GRANT_ACCESS = "Grant access"
+
+    /** Phase 93 — the preview bar's one arrow: what it does, said next to it. */
+    const val SEND_ARROW_HINT = "Tap ➤ to send this to the AI."
+    const val SEND_PREVIEW = "Send this request to the AI"
+
     // ---- key setup (O1) ---------------------------------------------------
 
     const val SETUP_INTRO =
@@ -346,6 +369,18 @@ object AiCopy {
     /** Step titles for the timeline. Every sentence the agent surface shows. */
     const val AGENT_STEP_ANSWER = "AI step"
     const val AGENT_STEP_MALFORMED = "Tool block could not be read"
+
+    /**
+     * Phase 93 — the approval card's own arrival, written into the timeline the
+     * moment it appears. The card itself (`agentRun`) is cleared by Run, Skip,
+     * finish and stop, so this row is the only durable record that the model
+     * asked — which is exactly what the progress line and the self-check's
+     * "run request reaches the card" check need to read.
+     */
+    const val AGENT_RUN_REQUESTED = "The AI asked to run the project"
+    fun agentRunRequested(target: String?): String =
+        AGENT_RUN_REQUESTED + (if (target.isNullOrBlank()) "" else " ($target)")
+
     const val AGENT_RUN_APPROVED = "You approved the run"
     fun agentRunApproved(target: String?): String =
         AGENT_RUN_APPROVED + (if (target.isNullOrBlank()) "" else " ($target)")
@@ -563,8 +598,15 @@ object AiCopy {
     /** The header action: start a fresh conversation (the task and the transcript both clear). */
     const val NEW_CHAT = "New chat"
     const val NEW_CHAT_TITLE = "Start a new chat?"
+    /**
+     * Phase 93 — item 5's honest sentence: history is **per project** and lives
+     * **only while the app is open** (D6, unchanged — nothing is written anywhere).
+     * The owner asked for "one history per project"; this is what that means on a
+     * phone, said where the clearing happens.
+     */
     const val NEW_CHAT_BODY =
-        "This clears the conversation and the current task. Nothing here is saved anywhere."
+        "This clears this project's conversation and the current task. Each project keeps its own " +
+            "chat while CodeC is open — nothing here is saved to a file, and closing the app clears it."
     const val NEW_CHAT_CONFIRM = "New chat"
     const val NEW_CHAT_KEEP = "Keep it"
 

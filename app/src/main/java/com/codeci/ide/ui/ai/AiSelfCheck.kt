@@ -1,5 +1,8 @@
 package com.codeci.ide.ui.ai
 
+import com.codeci.ide.ui.projects.StorageAccessPolicy
+import com.codeci.ide.ui.projects.StorageFacts
+
 /**
  * Phase 92 — the self-check (the owner: *"I am tired of testing — give some
  * command and I will run and share what is wrong"*).
@@ -59,7 +62,19 @@ data class AiSelfCheckObserved(
     val sdkInt: Int,
     val allFilesAccess: Boolean,
     val storageGranted: Boolean
-)
+) {
+    /**
+     * Phase 93 — the same facts every storage reader in the app uses, built from
+     * the fields above so a verdict, the report and the preflight can never
+     * disagree about which permission this phone has.
+     */
+    fun storageFacts(): StorageFacts = StorageAccessPolicy.facts(
+        sdkInt = sdkInt,
+        allFiles = allFilesAccess,
+        legacyRead = storageGranted,
+        legacyWrite = storageGranted
+    )
+}
 
 data class AiSelfCheckVerdict(
     val stepId: String,
@@ -123,6 +138,11 @@ object AiSelfCheck {
 
     /** `Check 2 of 5` — the card's own line. */
     fun progressLabel(run: Run): String {
+        // Phase 93 fix: a finished run used to say "Check 5 of 5" while the title
+        // beside it said "finished — Copy report" — two lines contradicting each
+        // other at the moment the run is over. The card's own `isFinished` branch
+        // draws the done title, so the count is only asked for while it is true.
+        if (isFinished(run)) return "all ${STEPS.size} checks"
         val shown = (run.stepIndex + 1).coerceAtMost(STEPS.size)
         return "Check $shown of ${STEPS.size}"
     }
@@ -142,24 +162,22 @@ object AiSelfCheck {
     fun judge(step: AiSelfCheckStep, observed: AiSelfCheckObserved): AiSelfCheckVerdict {
         if (step.door == null) {
             return when (step.id) {
-                "access" -> if (observed.sdkInt >= 30) {
-                    if (observed.allFilesAccess) {
-                        verdict(step, AiSelfCheckOutcome.PASS, "all-files access granted (API ${observed.sdkInt})")
-                    } else {
+                // Phase 93: the switch is named by the phone's own Android
+                // version — one wording rule, in StorageAccessPolicy, shared
+                // with the preflight and the terminal gate.
+                "access" -> {
+                    val facts = observed.storageFacts()
+                    if (facts.granted) {
                         verdict(
-                            step, AiSelfCheckOutcome.FAIL,
-                            "all-files access NOT granted (API ${observed.sdkInt}) — " +
-                                "Settings → Privacy & permissions → all files access"
+                            step, AiSelfCheckOutcome.PASS,
+                            (if (facts.allFilesApplies) "all-files access granted" else "storage permission granted") +
+                                " (API ${observed.sdkInt})"
                         )
-                    }
-                } else {
-                    if (observed.storageGranted) {
-                        verdict(step, AiSelfCheckOutcome.PASS, "storage permission granted (API ${observed.sdkInt})")
                     } else {
                         verdict(
                             step, AiSelfCheckOutcome.FAIL,
-                            "storage permission NOT granted (API ${observed.sdkInt}) — " +
-                                "Settings → Privacy & permissions"
+                            (if (facts.allFilesApplies) "all-files access NOT granted" else "storage permission NOT granted") +
+                                " (API ${observed.sdkInt}) — ${StorageAccessPolicy.fixSteps(facts)}"
                         )
                     }
                 }
@@ -245,10 +263,9 @@ object AiSelfCheck {
         builder.append("CodeC AI self-check — ${STEPS.size} checks, app ").append(appVersion).append('\n')
         // Both storage facts are printed: the modern all-files switch (API 30+)
         // and the legacy permission below it, so a report from any phone says
-        // exactly which one is missing.
-        builder.append("Android API ").append(observed.sdkInt)
-            .append(" · all-files access: ").append(if (observed.allFilesAccess) "granted" else "not granted")
-            .append(" · storage permission: ").append(if (observed.storageGranted) "granted" else "not granted")
+        // exactly which one is missing (Phase 93: on API 33+ the legacy field
+        // says "not applicable" instead of a false "not granted").
+        builder.append(StorageAccessPolicy.reportLine(observed.storageFacts()))
             .append(" · API key saved: ").append(if (observed.keySaved) "yes" else "no")
             .append('\n')
         val recipient = observed.provider

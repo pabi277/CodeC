@@ -117,6 +117,34 @@ class AiChatSessionTest {
     }
 
     @Test
+    fun `the closing line is inside the budget, not on top of it`() {
+        // Phase 93 regression. `charsOf` counted the opening note and the turns
+        // but not TURNS_END (83 chars + its newline), so the trim loop stopped
+        // 84 characters late: the widest two-turn block rendered at 12 084
+        // against a 12 000 cap. The case walks the whole boundary band, so the
+        // exact byte that used to slip through is covered by construction.
+        for (body in 5_800..AiChatSession.MAX_TURN_CHARS) {
+            var s = AiChatSession.EMPTY
+            s = s.addYou("a".repeat(body), gemini, "m")
+            s = s.addAssistant("b".repeat(body), gemini, "m")
+            val block = s.render()
+            assertTrue(
+                "body $body rendered ${block.length} against a ${AiChatSession.MAX_TRANSCRIPT_CHARS} cap",
+                block.length <= AiChatSession.MAX_TRANSCRIPT_CHARS
+            )
+            if (s.turnsForBlock().size == 2) {
+                assertTrue("the promise and the fact agree", s.blockChars() <= AiChatSession.MAX_TRANSCRIPT_CHARS)
+            }
+        }
+        // And the cap is still a cap, not a floor: a small block is untouched, and
+        // the closing instruction is always there (it opens and closes the quote).
+        val small = sessionOf("hi" to "hello")
+        assertTrue("a short block is nowhere near the cap", small.render().length < AiChatSession.MAX_TRANSCRIPT_CHARS / 10)
+        assertTrue("the quote still closes", small.render().contains(AiChatSession.TURNS_END))
+        assertTrue("and still opens as data", small.render().startsWith(AiChatSession.DATA_NOTE))
+    }
+
+    @Test
     fun `one huge answer is clipped to its newest end, with a marker`() {
         val s = AiChatSession.EMPTY.addYou("q", gemini, "m").addAssistant("y".repeat(20_000), gemini, "m")
         val block = s.render()

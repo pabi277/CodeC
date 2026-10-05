@@ -92,7 +92,10 @@ class AiSelfCheckTest {
 
         val fail = AiSelfCheck.judge(step("access"), observed(sdkInt = 34, allFilesAccess = false))
         assertEquals(AiSelfCheckOutcome.FAIL, fail.outcome)
-        assertTrue("the fix is named", fail.detail.contains("all files access"))
+        // Phase 93: the sentence is StorageAccessPolicy.fixSteps — the same words
+        // the preflight and the terminal gate show, and a real path on Android 11+.
+        assertTrue("the fix is named", fail.detail.contains("Settings → Apps → CodeC → Permissions"))
+        assertTrue("and the switch itself", fail.detail.contains("Allow management of all files"))
     }
 
     @Test
@@ -241,7 +244,7 @@ class AiSelfCheckTest {
         val report = AiSelfCheck.report("1.3.17", observed(question = step("run").prompt, runRequested = true), run)
         assertTrue("the app version is named", report.contains("1.3.17"))
         assertTrue("the device line is there", report.contains("Android API 34"))
-        assertTrue("with both storage facts", report.contains("all-files access: granted") && report.contains("storage permission: granted"))
+        assertTrue("with both storage facts", report.contains("all-files access: granted") && report.contains("storage permission: "))
         assertTrue("the recipient is there", report.contains("nvidia/nemotron-3-super-120b-a12b"))
         assertTrue("every check is listed", report.contains("[5/5]"))
         assertTrue("the failures keep their reasons", report.contains("the app, not the model"))

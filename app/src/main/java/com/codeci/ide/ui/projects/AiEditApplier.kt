@@ -158,6 +158,13 @@ object AiEditApplier {
         if (!root.isDirectory || isSymlink(projectRoot)) {
             return AiApplyOutcome.Failed("Project root is not a valid directory.")
         }
+        // Phase 93 — the owner's *"it's showing error no permission"*: a project
+        // folder CodeC cannot write to is a **permission** fact, not a mystery, and
+        // this is where it is named with the switch to flip. (Projects CodeC
+        // created live in its own storage and never reach this branch.)
+        if (!root.canRead() || !root.canWrite()) {
+            return AiApplyOutcome.Failed(STORAGE_PERMISSION_MESSAGE)
+        }
 
         val selected = proposal.selectedFiles
         if (selected.isEmpty()) {
@@ -312,6 +319,10 @@ object AiEditApplier {
             ?: return AiUndoOutcome.NothingToUndo
         val root = projectRoot.canonicalFileSafe()
             ?: return AiUndoOutcome.Failed("Project folder is not accessible.")
+        // Phase 93 — undo writes too, so it names the same permission fact apply does.
+        if (!root.canRead() || !root.canWrite()) {
+            return AiUndoOutcome.Failed(STORAGE_PERMISSION_MESSAGE)
+        }
         val journal = readJournal(noBackupRoot, safeProject)
             ?: return AiUndoOutcome.NothingToUndo
 
@@ -498,6 +509,17 @@ object AiEditApplier {
         runCatching { file.canonicalPath != file.absolutePath }.getOrDefault(false)
 
     private fun File.canonicalFileSafe(): File? = runCatching { canonicalFile }.getOrNull()
+
+    /**
+     * Phase 93 — one sentence for a project folder the app cannot reach, pointing
+     * at the one screen that fixes it. Shared by apply and undo so the two doors
+     * cannot describe the same failure differently; the version-exact switch is
+     * named where the phone's Android version is known (`StorageAccessPolicy.fixSteps`
+     * in the AI preflight, the storage row and the self-check report).
+     */
+    val STORAGE_PERMISSION_MESSAGE: String =
+        "CodeC cannot read or write this project folder. If it lives outside CodeC's own storage, " +
+            "grant storage access to CodeC in Android Settings (Settings → Apps → CodeC → Permissions)."
 
     // ---- pure hex-framed journal serialization (no org.json / Robolectric) -
 

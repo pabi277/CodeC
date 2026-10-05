@@ -123,6 +123,20 @@ data class AiChatSession(val turns: List<AiChatTurn> = emptyList()) {
         return builder.toString()
     }
 
+    /**
+     * Characters [render] adds for a list of turns — **including the closing
+     * line**. Phase 93 fix: `charsOf` counted only the opening note and the turns,
+     * so `TURNS_END` (83 chars + its newline) rode outside the budget and the
+     * block could render at 12 084 against a 12 000 cap. The trim loop now
+     * measures what `render` actually emits, which is what the sheet discloses and
+     * what the KDoc promises.
+     */
+    private fun frameChars(keptSize: Int, totalSize: Int): Int {
+        var total = DATA_NOTE.length + 1 + TURNS_END.length + 1 + 1
+        if (keptSize < totalSize) total += DROPPED_NOTE.length + 1
+        return total
+    }
+
     /** The turns [render] would carry, after the turn cap. Exposed for the sheet's count. */
     fun turnsForBlock(): List<AiChatTurn> = keepWithinBudget()
 
@@ -148,8 +162,7 @@ data class AiChatSession(val turns: List<AiChatTurn> = emptyList()) {
     }
 
     private fun charsOf(list: List<AiChatTurn>): Int {
-        var total = DATA_NOTE.length + 2
-        if (list.size < turns.size) total += DROPPED_NOTE.length + 1
+        var total = frameChars(list.size, turns.size)
         for (turn in list) total += turnHeader(turn).length + 1 + clipTurn(turn.text).length + 1
         return total
     }

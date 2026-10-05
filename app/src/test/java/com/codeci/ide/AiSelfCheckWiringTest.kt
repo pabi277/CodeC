@@ -88,11 +88,15 @@ class AiSelfCheckWiringTest {
     @Test
     fun `the check reports permissions, it never asks for one`() {
         val observed = vm.substringAfter("private fun selfCheckObserved()").substringBefore("Phase 90 — a settled task")
-        assertTrue("the all-files state is read", observed.contains("Environment.isExternalStorageManager()"))
-        assertTrue("the legacy permission is read", observed.contains("checkSelfPermission("))
+        // Phase 93 — the reads moved into one adapter (StorageAccessAndroid), so
+        // the snapshot asks for the facts rather than repeating the two calls.
+        assertTrue("the storage facts are read", observed.contains("storageFacts(app)"))
+        assertTrue("the adapter is the one that reads them", vm.contains("StorageAccessAndroid.read(app)"))
+        assertTrue("and the API level is part of the verdict", observed.contains("sdkInt = Build.VERSION.SDK_INT"))
+        // The rule Phase 92 wrote still holds: the check REPORTS, it never asks.
         assertFalse("no dialog is opened", observed.contains("requestPermissions"))
         assertFalse("nothing is launched", observed.contains("startActivity"))
-        assertTrue("and the API level is part of the verdict", observed.contains("sdkInt = Build.VERSION.SDK_INT"))
+        assertFalse("and no permission action is called from the check", observed.contains("onGrantAccess"))
     }
 
     @Test

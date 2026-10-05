@@ -1,6 +1,7 @@
 package com.codeci.ide
 
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -72,8 +73,16 @@ class AiHelperWiringTest {
         assertTrue(Regex("client\\.stream\\(").findAll(vm).count() == 3)
         assertTrue(vm.contains("GeminiRequest.testBody()"))
         // Phase 77: the chat sheet is where Send lives now, on the PREVIEW phase only.
+        // Phase 93 (item 1): the send is the composer's one arrow, not a text button.
         val sheet = src("AiChatSheet.kt")
-        assertTrue(sheet.contains("Button(onClick = onSend)"))
+        assertTrue(
+            "the preview's arrow is the send",
+            sheet.contains("onTap = {\n                            onDismissNotice()\n                            onSend()\n                        }")
+        )
+        assertEquals(
+            "and one bar only wires it",
+            1, Regex("onSend[(][)]").findAll(sheet).count()
+        )
         assertTrue(sheet.contains("AiPhase.PREVIEW ->"))
     }
 

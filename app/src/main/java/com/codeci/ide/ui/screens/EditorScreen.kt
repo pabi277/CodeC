@@ -148,6 +148,7 @@ import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
+import com.codeci.ide.MainActivity
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.EditorStatusBar
 import com.codeci.ide.ui.components.EditorTabBar
@@ -1259,6 +1260,9 @@ fun EditorScreen(
             onSelfCheckStop = aiViewModel::stopSelfCheck,
             onSelfCheckReport = aiViewModel::selfCheckReport,
             onSelfCheckLive = aiViewModel::selfCheckLive,
+            // Phase 93 — the preflight notice's one tap: the same door the storage
+            // screen and the terminal use, which asks for the route this phone has.
+            onGrantAccess = { (context as? MainActivity)?.requestStoragePermissions() },
             onDismissNotice = aiViewModel::dismissNotice,
             onExpand = { aiViewModel.sheetEvent(AiSheetEvent.EXPAND) },
             onMinimize = { aiViewModel.sheetEvent(AiSheetEvent.MINIMIZE) },

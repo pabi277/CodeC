@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Toast
@@ -80,6 +79,7 @@ import com.codeci.ide.ui.projects.IncomingImportBridge
 import com.codeci.ide.ui.projects.ProjectManager
 import com.codeci.ide.ui.projects.GameArenaSample
 import com.codeci.ide.ui.projects.ProjectPathUtils
+import com.codeci.ide.ui.projects.StorageAccessAndroid
 import com.codeci.ide.ui.screens.EditorScreen
 import com.codeci.ide.ui.screens.FIRST_RUN_LOGO_DURATION_MS
 import com.codeci.ide.ui.screens.FirstRunIntroScreen
@@ -550,33 +550,34 @@ class MainActivity : ComponentActivity() {
         handleIncomingIntent(intent)
     }
 
+    /**
+     * Phase 93 — asks for **the route this phone actually has**, in one place.
+     *
+     * The old version asked for `READ_/WRITE_EXTERNAL_STORAGE` unconditionally
+     * after the all-files check, and on Android 13+ that request can never be
+     * granted (both are capped at API 32 in the manifest now): the dialog either
+     * never appeared or its result was "denied", so the app behaved as if the
+     * user had refused. Now:
+     *
+     *  - API 30+ → the All-files Settings switch, opened for this package.
+     *  - API 24–29 → the one runtime dialog that means storage on those phones.
+     *
+     * Nothing is asked twice, and a phone that already holds the grant opens
+     * neither.
+     */
     fun requestStoragePermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                    data = Uri.parse("package:$packageName")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                try {
-                    startActivity(intent)
-                } catch (_: Exception) {
-                    try {
-                        val fallback = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        startActivity(fallback)
-                    } catch (e: Exception) {
-                        AppLogger.e("MainActivity", "Cannot open all files access settings", e)
-                    }
-                }
-                return
-            }
+        val facts = StorageAccessAndroid.read(this)
+        if (facts.granted) return
+        if (facts.allFilesApplies) {
+            StorageAccessAndroid.openAllFilesSettings(this)
+            return
         }
-        val permissions = arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        storagePermissionLauncher?.launch(
+            arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
         )
-        storagePermissionLauncher?.launch(permissions)
     }
 
     private fun handleStoragePermissionIntent(intent: Intent?) {

@@ -1,10 +1,9 @@
 package com.codeci.ide.ui.terminal
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
-import androidx.core.content.ContextCompat
+import com.codeci.ide.ui.projects.StorageAccessAndroid
 import com.codeci.ide.ui.services.CompilerSettings
 import com.codeci.ide.ui.services.EmbeddedCompiler
 import com.codeci.ide.ui.utils.AppLogger
@@ -1818,16 +1817,13 @@ HELP
         val errorMessage: String? = null
     )
 
-    fun hasStoragePermission(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-    }
+    /**
+     * Phase 93 — delegates to [StorageAccessPolicy], the one place that answers
+     * "does this phone hold the storage grant?". Two readers of the same question
+     * used to disagree (this one and the AI self-check); now there is one rule.
+     */
+    fun hasStoragePermission(context: Context): Boolean =
+        StorageAccessAndroid.granted(context)
 
     fun setupStorageDirectory(
         homeDir: File,

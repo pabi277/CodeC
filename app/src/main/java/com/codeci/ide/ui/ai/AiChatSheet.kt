@@ -107,6 +107,8 @@ fun AiChatSheet(
     onToggleMode: () -> Unit = {},
     /** Phase 92 — the self-check: five scripted checks, judged by the app, reported as text. */
     onSelfCheckStart: () -> Unit = {},
+    /** Phase 93 — opens this app's own permission page when the notice asks for a grant. */
+    onGrantAccess: () -> Unit = {},
     onSelfCheckNext: () -> Unit = {},
     /** Phase 92.1 — moves past the step that is waiting for its Send, as *not run*. */
     onSelfCheckSkip: () -> Unit = {},
@@ -223,6 +225,7 @@ fun AiChatSheet(
                 onSelfCheckStop = onSelfCheckStop,
                 onSelfCheckReport = onSelfCheckReport,
                 onSelfCheckLive = onSelfCheckLive,
+                onGrantAccess = onGrantAccess,
                 modifier = Modifier.weight(1f)
             )
             HorizontalDivider()
@@ -231,7 +234,8 @@ fun AiChatSheet(
                 onExplainSelection, onExplainError, onAskProject, onProposeEdits,
                 onCancelGather, onSend, onCancelPreview,
                 onStop, onRetry, onClear, onDismissNotice, onContinue,
-                onSelfCheckStart = onSelfCheckStart
+                onSelfCheckStart = onSelfCheckStart,
+                onGrantAccess = onGrantAccess
             )
         }
     }
@@ -348,6 +352,8 @@ private fun Conversation(
     onSelfCheckStop: () -> Unit = {},
     onSelfCheckReport: () -> String = { "" },
     onSelfCheckLive: () -> AiSelfCheckVerdict? = { null },
+    /** Phase 93 — the permission notice's one-tap fix, drawn where the notice is. */
+    onGrantAccess: () -> Unit = {},
     modifier: Modifier
 ) {
     val scroll = rememberScrollState()
@@ -406,6 +412,28 @@ private fun Conversation(
         state.backupOffer?.let { next ->
             BackupProviderCard(next, onAcceptBackup, onDeclineBackup)
         }
+        // Phase 93 — the self-check's own preview, held open on purpose.
+        //
+        // Phase 92.1's rule is that the run carries itself to the next question
+        // 900 ms after a verdict lands. For a step still WAITING, the ordinary
+        // `AiPhase.PREVIEW` branch below would take over the sheet and hide the
+        // card — the run's own state, its five lines and its Skip button — at the
+        // exact moment the run is mid-flight. So while a check is waiting for its
+        // Send, the preview keeps the card's company: the exact text that leaves
+        // the phone (D4) is behind the card's own disclosure, and the Send is the
+        // arrow in the bar below.
+        val checking = state.selfCheck != null && state.phase == AiPhase.PREVIEW
+        if (checking) {
+            val p = state.prompt
+            Body(AiCopy.previewSimple(state.provider, state.model))
+            p?.let {
+                var showSent by remember(it) { mutableStateOf(false) }
+                TextButton(onClick = { showSent = !showSent }) {
+                    Text(if (showSent) AiCopy.SENT_TEXT_HIDE else AiCopy.SENT_TEXT_SHOW)
+                }
+                if (showSent) SentText(it.systemInstruction + "\n\n" + it.userText)
+            }
+        }
         // Phase 92 — the self-check card. It is a control surface, so it is drawn
         // in both faces, and every line on it is a verdict the app computed.
         state.selfCheck?.let { run ->
@@ -419,6 +447,8 @@ private fun Conversation(
             )
         }
         when (state.phase) {
+            // Phase 93 — a self-check preview is drawn above, next to its card.
+            AiPhase.PREVIEW -> if (checking) Unit
             AiPhase.IDLE -> {
                 // Phase 78 — the walk is running on IO. Nothing has been sent
                 // (D4); this is a read of the user's own files.
@@ -611,6 +641,9 @@ private fun Conversation(
                 // screen and none is ever drawn twice.
                 if (!simple && state.agentSteps.isEmpty()) MeasurementsLine(state)
                 state.notice?.let { Body(it) }
+                // Phase 93 — a refused Apply lands here (the proposal is still on
+                // screen), so the permission fix must be reachable from DONE too.
+                storageFixRow(state, onGrantAccess)
                 if (state.undoSummary != null && state.proposalResult !is AiProposalResult.Proposal) {
                     UndoTaskCard(state, onUndoEdits, onDismissUndoConflict)
                 }
@@ -622,6 +655,12 @@ private fun Conversation(
                 // the Level 12 matrix is recorded, not erased). Phase 91: those
                 // numbers are machinery, so only the technical face draws them.
                 if (!simple && state.agentSteps.isEmpty()) MeasurementsLine(state)
+                // Phase 93 — FAILED was the one face that swallowed `notice`: the
+                // refusal was set, the phase terminal, and no line ever drew it.
+                // (The run card lives in the STREAMING branch only, so there is no
+                // second copy to avoid here — unless `agentRun` is still pending,
+                // and even then the card is not on screen in this phase.)
+                state.notice?.let { Body(it) }
                 state.error?.let { ErrorLine(it) }
             }
         }
@@ -1131,15 +1170,51 @@ private fun Composer(
                 .weight(1f)
                 .defaultMinSize(minHeight = CodecTokens.space(CodecTokens.MIN_TOUCH))
         )
-        IconButton(
-            onClick = {
+        ArrowButton(
+            enabled = hasSelection || !state.gathering,
+            description = AiCopy.SEND_QUESTION,
+            onTap = {
                 onDismissNotice()
                 if (hasSelection) onExplainSelection(question) else onAskProject(question)
-            },
-            enabled = hasSelection || !state.gathering
-        ) {
-            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = AiCopy.SEND_QUESTION)
-        }
+            }
+        )
+    }
+}
+
+/**
+ * Phase 93 — item 1: *"make the arrow button the final button … one arrow for the
+ * whole flow."*
+ *
+ * One composable, so the arrow is the same control in every phase and always the
+ * last thing in its row. Each caller owns what its arrow MEANS, which is how the
+ * phase-78 rule survives (“with code selected explain the selection, otherwise ask
+ * about the project”) and how a preview's arrow sends (the one place a request
+ * goes on the wire, D4) without the two rules ever leaking into each other.
+ */
+@Composable
+private fun ArrowButton(
+    enabled: Boolean,
+    description: String,
+    onTap: () -> Unit
+) {
+    IconButton(onClick = onTap, enabled = enabled) {
+        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = description)
+    }
+}
+
+/**
+ * Phase 93 — item 2/3: when the notice is the storage-permission one, the sheet
+ * offers the one tap that fixes it. Every other notice is a sentence and stays one.
+ *
+ * This asks for nothing by itself: the button calls the caller's grant action,
+ * which on the editor route opens this app's own permission page — the same door
+ * the storage screen and the terminal already use.
+ */
+@Composable
+private fun storageFixRow(state: AiUiState, onGrantAccess: () -> Unit) {
+    if (!state.storageProblem) return
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Button(onClick = onGrantAccess) { Text(AiCopy.GRANT_ACCESS) }
     }
 }
 
@@ -1262,6 +1337,7 @@ private fun BottomBar(
     onAskProject: (String) -> Unit,
     onProposeEdits: (String) -> Unit,
     onCancelGather: () -> Unit,
+    /** Phase 93 — the composer's arrow inside a preview. It SENDS (and only it does). */
     onSend: () -> Unit,
     onCancelPreview: () -> Unit,
     onStop: () -> Unit,
@@ -1271,7 +1347,13 @@ private fun BottomBar(
     /** Phase 81 — the door to the continuation preview (the button sends nothing). */
     onContinue: () -> Unit,
     /** Phase 92 — starts the scripted check from the idle bar. */
-    onSelfCheckStart: () -> Unit = {}
+    onSelfCheckStart: () -> Unit = {},
+    /**
+     * Phase 93 — the preflight notice's one-tap fix (see [storageFixRow]): opens
+     * this app's own permission page. Display plumbing only; the request itself is
+     * `MainActivity.requestStoragePermissions` (the storage screen's own door).
+     */
+    onGrantAccess: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Column(
@@ -1280,6 +1362,22 @@ private fun BottomBar(
             .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.S)),
         verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))
     ) {
+        // Phase 93 fix — the refusal, drawn where the tap happened.
+        //
+        // The self-check's own round said *"Not all test run"* and its fix printed
+        // `SELF_CHECK_BUSY` into `state.notice` … which the conversation body drew
+        // in IDLE and PREVIEW only — never while the answer the refusal was about
+        // was STREAMING, so the button looked dead. The bar is pinned under the
+        // conversation and exists in every phase; STREAMING is the one the body
+        // does not cover, and FAILED has its own copy there, so this stays exactly
+        // one sentence per phase.
+        if (state.notice != null && state.phase == AiPhase.STREAMING) {
+            ErrorLine(state.notice)
+        }
+        // The one tap that answers a permission sentence. It sits with the notice
+        // and outside the phase branches, because the preflight raises it in IDLE
+        // and a refused Apply raises it in DONE — neither of which was PREVIEW.
+        if (state.phase != AiPhase.DONE) storageFixRow(state, onGrantAccess)
         when (state.phase) {
             AiPhase.IDLE -> {
                 Row(
@@ -1326,12 +1424,38 @@ private fun BottomBar(
                 }
             }
 
-            AiPhase.PREVIEW -> Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
-                if (!state.testing && !state.configuring) {
-                    Button(onClick = onSend) { Text(AiCopy.SEND) }
+            AiPhase.PREVIEW -> {
+                // Phase 93 — item 1: *one arrow for the whole flow.* The bar used
+                // to end in [Send] [Cancel]; now it is Cancel and the same ➤ arrow
+                // the other phases use, in the same place at the end of the row.
+                // Send is still the ONLY thing that sends (D4) — there is one way
+                // to do it, there and nowhere else.
+                if (state.testing) {
+                    OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
                 }
-                if (state.testing) OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
-                OutlinedButton(onClick = onCancelPreview) { Text(AiCopy.CANCEL) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (!state.testing && !state.configuring) {
+                        OutlinedButton(onClick = onCancelPreview) { Text(AiCopy.CANCEL) }
+                    }
+                    Spacer(Modifier.width(CodecTokens.space(Space.S)))
+                    Text(
+                        text = AiCopy.SEND_ARROW_HINT,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ArrowButton(
+                        enabled = !state.gathering && !state.applying,
+                        description = AiCopy.SEND_PREVIEW,
+                        // A preview's arrow is Send, unconditionally: the preview
+                        // is already the answer to "what will be sent", and an
+                        // editor selection must not turn this tap into another ask.
+                        onTap = {
+                            onDismissNotice()
+                            onSend()
+                        }
+                    )
+                }
             }
 
             AiPhase.STREAMING -> {
@@ -1354,7 +1478,23 @@ private fun BottomBar(
                     }
                     state.retryCountdown?.let { Muted(AiRateLimits.countdownLine(it)) }
                 }
-                OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
+                // Phase 93 — item 1: the arrow is the last control of the row in
+                // every phase, so "the final button" never moves. Mid-stream it
+                // asks the project, exactly as phase 91's composer did, and it
+                // never sends anything (that is Send's job alone).
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = onStop) { Text(AiCopy.STOP) }
+                    Spacer(Modifier.width(CodecTokens.space(Space.S)))
+                    Spacer(Modifier.weight(1f))
+                    ArrowButton(
+                        enabled = !state.gathering && !state.applying,
+                        description = AiCopy.SEND_QUESTION,
+                        onTap = {
+                            onDismissNotice()
+                            if (hasSelection) onExplainSelection(question) else onAskProject(question)
+                        }
+                    )
+                }
             }
 
             AiPhase.DONE -> {

@@ -3,7 +3,6 @@ package com.codeci.ide.ui.screens
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -78,6 +77,7 @@ import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.ui.projects.GitErrors
+import com.codeci.ide.ui.projects.StorageAccessAndroid
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -87,7 +87,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.input.TextFieldValue
 import com.codeci.ide.ui.keyboard.CodecKeyboard
 import com.codeci.ide.ui.keyboard.KeyboardDefaults
@@ -922,28 +921,17 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = {
+                    // Phase 93 — one implementation, shared with the terminal and the
+                    // AI preflight. The old copy opened the all-files page itself and
+                    // fell back to the legacy dialog, which Android 13+ can never
+                    // grant (both are capped at API 32 now).
+                    val facts = StorageAccessAndroid.read(context)
+                    if (facts.granted) return@TextButton
                     val home = ShellEnvironment.homeDir(context.filesDir)
                     ShellEnvironment.setupStorageDirectory(home)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                        if (!android.os.Environment.isExternalStorageManager()) {
-                            val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                                data = android.net.Uri.parse("package:${context.packageName}")
-                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            try {
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                try {
-                                    val fallback = android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).apply {
-                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    context.startActivity(fallback)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Cannot open storage settings", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            return@TextButton
-                        }
+                    if (facts.allFilesApplies) {
+                        StorageAccessAndroid.openAllFilesSettings(context)
+                        return@TextButton
                     }
                     storageLauncher.launch(
                         arrayOf(
@@ -1147,7 +1135,7 @@ fun SettingsScreen(
             )
             SettingsItem(
                 title = "Legacy storage read/write (≤ Android 12L)",
-                subtitle = "READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE capped at API 32 — the scoped-storage boundary"
+                subtitle = "READ_EXTERNAL_STORAGE + WRITE_EXTERNAL_STORAGE, both capped at API 32 — on Android 13 and up the all-files access above is the only storage switch that exists"
             )
             SettingsItem(
                 title = "Camera (optional)",
