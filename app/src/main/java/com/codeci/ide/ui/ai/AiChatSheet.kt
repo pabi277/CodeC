@@ -595,6 +595,21 @@ private fun Conversation(
                             AiBubble { Answer(pr.prose) }
                         }
                         ErrorLine(pr.reason)
+                        // Phase 93b (finding F2, owner round 2): an invalid or
+                        // incomplete block is not a dead end. This is the same
+                        // one-tap rebuild the proposal card offers — the same
+                        // question goes back with the reason on screen — and
+                        // nothing is written either way.
+                        if (question.isNotBlank()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                                Button(
+                                    onClick = { onProposeEdits(question) },
+                                    enabled = !state.gathering && !state.applying
+                                ) {
+                                    Text(AiCopy.REBUILD_PROPOSAL)
+                                }
+                            }
+                        }
                     }
                     else -> {
                         AiBubble { Answer(state.answer) }

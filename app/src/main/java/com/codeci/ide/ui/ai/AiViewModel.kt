@@ -744,6 +744,7 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             proposalFiles = (proposal as? AiProposalResult.Proposal)?.proposal?.files?.size ?: 0,
             proposalInvalidReason = (proposal as? AiProposalResult.Invalid)?.reason,
             runRequested = runRequested(),
+            runRefusedReason = runRefusedReason(),
             sentChars = p?.sentChars ?: 0,
             // The follow-up evidence: how much conversation the request carried.
             transcriptChars = p?.session?.render()?.length ?: 0,
@@ -775,6 +776,23 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     private fun runRequested(): Boolean =
         _state.value.agentRun != null ||
             _state.value.agentSteps.any { it.kind == AiAgentStepKind.RUN_REQUEST }
+
+    /**
+     * Phase 93b — **why a run request was refused**, if one was.
+     *
+     * The owner's round: the fifth check said *"the model never asked to run"*
+     * while the timeline held a refusal row — the model *had* asked, with an
+     * argument the run tool does not take, and the app's own gate said no. A
+     * refusal is a different fact from silence, and the check must report the
+     * one that happened. The row's title is built by
+     * [AiCopy.agentStepDeniedPrefix] from the wire name, so this reads the same
+     * string the timeline shows.
+     */
+    private fun runRefusedReason(): String? =
+        _state.value.agentSteps.lastOrNull { step ->
+            step.kind == AiAgentStepKind.DENIED &&
+                step.title.startsWith(AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire))
+        }?.detail
 
     /**
      * Phase 93 — a project outside CodeC's own storage needs the shared-storage

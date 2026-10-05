@@ -36,6 +36,7 @@ class AiSelfCheckTest {
         proposalFiles: Int = 0,
         proposalInvalidReason: String? = null,
         runRequested: Boolean = false,
+        runRefusedReason: String? = null,
         sentChars: Int = 2_500,
         transcriptChars: Int = 1_800,
         keySaved: Boolean = true,
@@ -45,7 +46,8 @@ class AiSelfCheckTest {
     ) = AiSelfCheckObserved(
         question = question, settled = settled, answerChars = answerChars, usedCodeWord = usedCodeWord,
         cutShort = cutShort, errorLine = errorLine, proposalFiles = proposalFiles,
-        proposalInvalidReason = proposalInvalidReason, runRequested = runRequested, sentChars = sentChars,
+        proposalInvalidReason = proposalInvalidReason, runRequested = runRequested,
+        runRefusedReason = runRefusedReason, sentChars = sentChars,
         transcriptChars = transcriptChars, provider = AiProviderId.NVIDIA,
         model = "nvidia/nemotron-3-super-120b-a12b", keySaved = keySaved, sdkInt = sdkInt,
         allFilesAccess = allFilesAccess, storageGranted = storageGranted
@@ -207,6 +209,44 @@ class AiSelfCheckTest {
         val v = AiSelfCheck.judge(q, observed(question = q.prompt, runRequested = false, answerChars = 200))
         assertEquals(AiSelfCheckOutcome.FAIL, v.outcome)
         assertTrue(v.detail.contains("never asked to run"))
+    }
+
+    /**
+     * Phase 93b — the owner's round-2 [5/5]: the model asked with an argument
+     * the run tool does not take, the app's policy refused it, and the check
+     * blamed the model ("never asked"). The refusal is a fact the app owns, and
+     * the line must carry it.
+     */
+    @Test
+    fun `a refused run request fails with the app's refusal, not with silence`() {
+        val q = step("run")
+        val v = AiSelfCheck.judge(
+            q,
+            observed(
+                question = q.prompt,
+                runRequested = false,
+                answerChars = 0,
+                runRefusedReason = "request_run does not take command"
+            )
+        )
+        assertEquals(AiSelfCheckOutcome.FAIL, v.outcome)
+        assertTrue("the refusal is quoted", v.detail.contains("request_run does not take command"))
+        assertFalse("and the model is not blamed for it", v.detail.contains("never asked"))
+    }
+
+    /**
+     * Phase 93b — the scripted question must match the tool that exists:
+     * `request_run(target?)`, a request to run the project. Asking for a shell
+     * command was the round-2 trap — the allow-list has no `command` key, so the
+     * only request the model could build was refused before the card.
+     */
+    @Test
+    fun `the run check asks for the request the run tool can actually deliver`() {
+        val prompt = step("run").prompt!!
+        assertTrue("the tool is named", prompt.contains("request_run"))
+        assertTrue("it asks for a project run", prompt.contains("run this project"))
+        assertFalse("it must not ask for a shell command", prompt.contains("shell"))
+        assertFalse("nor invent a command key", prompt.contains("command"))
     }
 
     // ---- the run, the live verdict and the report ---------------------------

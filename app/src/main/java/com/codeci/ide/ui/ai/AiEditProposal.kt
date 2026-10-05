@@ -159,6 +159,23 @@ object AiEditProposalParser {
     const val REPLACE_TAG = "<<<REPLACE>>>"
     const val END_SEARCH_TAG = "<<<END_SEARCH>>>"
 
+    /**
+     * Phase 93b — the same three markers, read with room for the way models
+     * spell them: `<<<SEARCH >>>`, `<<< END_SEARCH >>>`, lower case. The app
+     * always writes the canonical form above; the reader must not fail a block
+     * over a space the model put inside the brackets (the owner's round:
+     * *"Unclosed …"* on a block the model had in fact closed). The markers
+     * still have to be there — this widens the spelling, never the permission.
+     */
+    private val MARKER = Regex("<<<\\s*(SEARCH|REPLACE|END_SEARCH)\\s*>>>", RegexOption.IGNORE_CASE)
+
+    private data class Marker(val kind: String, val start: Int, val end: Int)
+
+    private fun markerList(text: String): List<Marker> =
+        MARKER.findAll(text).map {
+            Marker(it.groupValues[1].uppercase(), it.range.first, it.range.last + 1)
+        }.toList()
+
     private val HEADER_ATTR = Regex("(path|op)\\s*=\\s*\"([^\"]*)\"")
     private val DRIVE_PREFIX = Regex("^[A-Za-z]:")
 
@@ -222,7 +239,7 @@ object AiEditProposalParser {
         val text = normalizeLf(answerText)
         val hasOpen = text.contains(OPEN_TAG_PREFIX)
         val hasClose = text.contains(CLOSE_TAG)
-        val hasSearch = text.contains(SEARCH_TAG) || text.contains(REPLACE_TAG) || text.contains(END_SEARCH_TAG)
+        val hasSearch = MARKER.containsMatchIn(text)
         if (!hasOpen && !hasClose && !hasSearch) {
             return AiProposalResult.NoProposal
         }
@@ -384,10 +401,7 @@ object AiEditProposalParser {
                             cleanProse
                         )
                     }
-                    if (trimmedBody.contains(SEARCH_TAG) ||
-                        trimmedBody.contains(REPLACE_TAG) ||
-                        trimmedBody.contains(END_SEARCH_TAG)
-                    ) {
+                    if (MARKER.containsMatchIn(trimmedBody)) {
                         return AiProposalResult.Invalid(
                             "Create block for '$safePath' must contain full file content, not search/replace markers.",
                             cleanProse
@@ -469,6 +483,23 @@ object AiEditProposalParser {
     /**
      * Applies either targeted `<<<SEARCH>>> … <<<REPLACE>>> … <<<END_SEARCH>>>`
      * blocks or full-file replacement (when `!wasCut`) to [oldContent].
+     *
+     * Phase 93b (Level 12 finding **F2**) — a block the model **closed** is read,
+     * not refused, when the inner markers are imperfect:
+     *
+     *  - a missing `<<<END_SEARCH>>>` **before the next `<<<SEARCH>>>`** splits
+     *    the two hunks at that next marker — the shape a model produces when it
+     *    repeats the search/replace pair but forgets the end line;
+     *  - a **trailing** hunk with no end marker ends with the block itself, which
+     *    is closed — so the model held nothing back.
+     *
+     * Nothing is guessed and no rule moves: each hunk's SEARCH text must still
+     * match the file byte for byte, the diff is still computed locally, and the
+     * user still approves before a byte changes. What is *not* accepted is a
+     * block that was never closed at all — its tail is missing (the answer was
+     * cut off), and the sheet offers **Rebuild proposal** for that case instead
+     * of a dead end. Two `<<<REPLACE>>>` markers for one search is still
+     * malformed: merging two replacements would be a guess, not a recovery.
      */
     private fun applyModifyBody(
         path: String,
@@ -476,11 +507,9 @@ object AiEditProposalParser {
         body: String,
         wasCut: Boolean
     ): Pair<String?, String?> {
-        val hasSearch = body.contains(SEARCH_TAG)
-        val hasReplace = body.contains(REPLACE_TAG)
-        val hasEndSearch = body.contains(END_SEARCH_TAG)
+        val marks = markerList(body)
 
-        if (!hasSearch && !hasReplace && !hasEndSearch) {
+        if (marks.isEmpty()) {
             if (wasCut) {
                 return null to "Cannot replace all of '$path' because only the first part of the file fitted in the prompt. Use $SEARCH_TAG / $REPLACE_TAG blocks instead."
             }
@@ -491,48 +520,64 @@ object AiEditProposalParser {
             return full to null
         }
 
-        var cursor = 0
         var working = oldContent
         var hunkCount = 0
+        var cursor = 0
+        var i = 0
 
-        while (cursor < body.length) {
-            val sIdx = body.indexOf(SEARCH_TAG, cursor)
-            if (sIdx < 0) {
-                val trailing = body.substring(cursor)
-                if (trailing.contains(REPLACE_TAG) || trailing.contains(END_SEARCH_TAG)) {
-                    return null to "Malformed search/replace markers in '$path'."
-                }
-                if (trailing.isNotBlank()) {
-                    return null to "Unexpected text outside $SEARCH_TAG … $END_SEARCH_TAG in '$path'."
-                }
-                break
+        while (i < marks.size) {
+            val open = marks[i]
+            if (open.kind != "SEARCH") {
+                return null to "Malformed search/replace markers in '$path'."
             }
-            val leading = body.substring(cursor, sIdx)
-            if (leading.isNotBlank()) {
+            if (body.substring(cursor, open.start).isNotBlank()) {
                 return null to "Unexpected text before $SEARCH_TAG in '$path'."
             }
-            val searchStart = sIdx + SEARCH_TAG.length
-            val rIdx = body.indexOf(REPLACE_TAG, searchStart)
-            val eIdx = if (rIdx >= 0) body.indexOf(END_SEARCH_TAG, rIdx + REPLACE_TAG.length) else -1
-            val nextS = body.indexOf(SEARCH_TAG, searchStart)
-            if (rIdx < 0 || eIdx < 0 || (nextS in 0 until eIdx)) {
-                return null to "Unclosed $SEARCH_TAG / $REPLACE_TAG / $END_SEARCH_TAG block in '$path'."
+            val replace = marks.getOrNull(i + 1)?.takeIf { it.kind == "REPLACE" }
+                ?: return null to "The $SEARCH_TAG block in '$path' has no $REPLACE_TAG."
+
+            // Where this hunk's replacement ends: its own end marker, the next
+            // SEARCH (a forgotten end marker), or the end of the closed block.
+            var endIdx = -1
+            var nextIdx = -1
+            for (k in (i + 2) until marks.size) {
+                when (marks[k].kind) {
+                    "END_SEARCH" -> { endIdx = k; break }
+                    "SEARCH" -> { nextIdx = k; break }
+                    else -> return null to "Malformed search/replace markers in '$path'."
+                }
+            }
+            val stop = when {
+                endIdx >= 0 -> marks[endIdx].start
+                nextIdx >= 0 -> marks[nextIdx].start
+                else -> body.length
             }
 
-            val searchBlock = body.substring(searchStart, rIdx).removePrefix("\n").removeSuffix("\n")
-            val replaceBlock = body.substring(rIdx + REPLACE_TAG.length, eIdx).removePrefix("\n").removeSuffix("\n")
+            val searchBlock = body.substring(open.end, replace.start).trimNewlines()
+            val replaceBlock = body.substring(replace.end, stop).trimNewlines()
             if (searchBlock.isEmpty()) {
                 return null to "Empty $SEARCH_TAG block in '$path'."
             }
             val matchAt = working.indexOf(searchBlock)
             if (matchAt < 0) {
-                return null to "The $SEARCH_TAG block for '$path' did not match the current file content."
+                // The one ambiguity a document about this format can create: the
+                // quoted lines themselves contain a marker. Say so — "did not
+                // match" would send the model looking in the wrong place.
+                return null to if (MARKER.containsMatchIn(searchBlock)) {
+                    "The $SEARCH_TAG block for '$path' did not match the current file content, and the quoted lines themselves contain an edit marker."
+                } else {
+                    "The $SEARCH_TAG block for '$path' did not match the current file content."
+                }
             }
             working = working.substring(0, matchAt) +
                 replaceBlock +
                 working.substring(matchAt + searchBlock.length)
             hunkCount++
-            cursor = eIdx + END_SEARCH_TAG.length
+            when {
+                endIdx >= 0 -> { cursor = marks[endIdx].end; i = endIdx + 1 }
+                nextIdx >= 0 -> { cursor = stop; i = nextIdx }
+                else -> { cursor = stop; i = marks.size }
+            }
         }
 
         if (hunkCount == 0) {
@@ -540,6 +585,9 @@ object AiEditProposalParser {
         }
         return working to null
     }
+
+    /** The block bodies normalize to LF; a hunk's own edges should not carry them. */
+    private fun String.trimNewlines(): String = removePrefix("\n").removePrefix("\r").removeSuffix("\n").removeSuffix("\r")
 
     private fun unwrapOptionalCodeFence(text: String): String {
         val t = text.trim()

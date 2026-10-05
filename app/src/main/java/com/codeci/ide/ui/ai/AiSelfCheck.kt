@@ -52,6 +52,13 @@ data class AiSelfCheckObserved(
     val proposalFiles: Int,
     val proposalInvalidReason: String?,
     val runRequested: Boolean,
+    /**
+     * Phase 93b — the app's own reason when a run request **was** made and
+     * refused (a denied timeline row), else null. Without it the run check
+     * cannot tell "the model never asked" from "the app said no", and the
+     * second was the owner's round-2 failure.
+     */
+    val runRefusedReason: String? = null,
     /** Characters the request actually sent (D4's number). */
     val sentChars: Int,
     /** Characters of conversation the request carried — the follow-up evidence. */
@@ -127,8 +134,18 @@ object AiSelfCheck {
             id = "run",
             title = "Run request reaches the card",
             door = AiSelfCheckDoor.ASK,
-            prompt = "To check the run tool: use your run-request tool to ask me to run the shell " +
-                "command `echo codec-check`. Do not answer in prose."
+            // Phase 93b — the question has to match the tool that exists. The
+            // old wording asked for a *shell command*; `request_run` takes a
+            // `target` (a project file) or nothing at all, so the app denied the
+            // only argument the model could give and the check read the silence
+            // as "the model never asked" (the owner's [5/5] round-2 failure).
+            // This asks for the request the tool can actually deliver.
+            // The wire name is written out here rather than interpolated: this
+            // object stays free of every other Ai class (`AiSelfCheckTest` is
+            // one of the harness's smallest groups), and `AiToolProtocolTest`
+            // pins the literal against `AiToolName.REQUEST_RUN.wire`.
+            prompt = "To check the run tool: call your request_run tool to ask me " +
+                "to run this project. Do not answer in prose."
         )
     )
 
@@ -215,10 +232,20 @@ object AiSelfCheck {
                 else ->
                     verdict(step, AiSelfCheckOutcome.FAIL, "no edit block came back (answer ${observed.answerChars} chars)")
             }
-            "run" -> if (observed.runRequested) {
-                verdict(step, AiSelfCheckOutcome.PASS, "the run approval card appeared")
-            } else {
-                verdict(step, AiSelfCheckOutcome.FAIL, "the model never asked to run (answer ${observed.answerChars} chars)")
+            // Phase 93b — three states, not two: the card appeared; a request
+            // was refused by the app's own policy (and says so, with the
+            // reason); or nothing arrived at all. Blaming the model for the
+            // app's refusal is exactly the misreport the owner hit.
+            "run" -> when {
+                observed.runRequested ->
+                    verdict(step, AiSelfCheckOutcome.PASS, "the run approval card appeared")
+                observed.runRefusedReason != null ->
+                    verdict(
+                        step, AiSelfCheckOutcome.FAIL,
+                        "a run request came back but the app refused it: ${observed.runRefusedReason}"
+                    )
+                else ->
+                    verdict(step, AiSelfCheckOutcome.FAIL, "the model never asked to run (answer ${observed.answerChars} chars)")
             }
             else -> verdict(step, AiSelfCheckOutcome.PENDING, "no check is defined for this step")
         }

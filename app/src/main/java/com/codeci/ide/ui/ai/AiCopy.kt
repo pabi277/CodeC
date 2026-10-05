@@ -390,7 +390,15 @@ object AiCopy {
     const val AGENT_RUN_NOT_STARTED_TITLE = "Run did not start"
     const val AGENT_RUN_FINISHED = "Run finished"
     fun agentStepAnswer(number: Int): String = "$AGENT_STEP_ANSWER $number"
-    fun agentStepDenied(title: String, reason: String): String = "Refused $title — $reason"
+    /**
+     * Phase 93b — the prefix every refusal row carries. One builder, so the
+     * timeline row and the self-check's run look-up can never drift apart: the
+     * check reads this prefix to know a run request was refused, rather than
+     * inferring "the model never asked" from an empty answer.
+     */
+    fun agentStepDeniedPrefix(title: String): String = "Refused $title"
+
+    fun agentStepDenied(title: String, reason: String): String = "${agentStepDeniedPrefix(title)} — $reason"
 
     /** Shown when the task ends because of a cap or the user. */
     fun agentStopped(reason: AiAgentStopReason): String = AiAgentLimits.stopSentence(reason)

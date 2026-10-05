@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.ai.AiSelfCheck
 import com.codeci.ide.ui.ai.AiToolLimits
 import com.codeci.ide.ui.ai.AiToolName
 import com.codeci.ide.ui.ai.AiToolParse
@@ -193,6 +194,18 @@ class AiToolProtocolTest {
             view.copy(runsRemaining = 0)
         ) as AiToolVerdict.Denied
         assertTrue(spent.reason.contains("budget"))
+    }
+
+    @Test
+    fun `the self-check's run question names this tool and asks for what it takes`() {
+        // Phase 93b: the scripted question is a literal (AiSelfCheck stays free
+        // of every other Ai class), so the literal is pinned here. The round-2
+        // failure was a question asking for a *shell command* — an argument the
+        // allow-list refuses — so this also pins that it asks for a project run.
+        val prompt = AiSelfCheck.STEPS.single { it.id == "run" }.prompt!!
+        assertTrue("the wire name is the real one", prompt.contains(AiToolName.REQUEST_RUN.wire))
+        assertTrue("and the request it can deliver is named", prompt.contains("run this project"))
+        assertTrue("with no invented argument key", !prompt.contains("command"))
     }
 
     @Test

@@ -60,7 +60,7 @@
 * **New:** `Phase93WiringTest` (14 cases — all five items + the three bugs, source-pinned), `StorageAccessTest` (8 cases — the full route matrix API 24→36, below-30 read/write split, the fix paths per version, the report lines, CodeC-private roots exempt).
 * **Updated:** `AiChatSessionTest` (+1: the 5 800 → 12 000-char budget boundary), `AiChatSessionWiringTest` (per-project memory; D6 bans), `AiHelperWiringTest` / `AiLevel2WiringTest` (the arrow's new shape; the phase-78 rule), `AiSelfCheckTest` (the `storage permission: …` report, the finished label), `AiSelfCheckWiringTest` (the check still *reports*, never asks), `ManifestPermissionsTest` (the cap's reason).
 * **The host sweep:** 70 host-runnable classes, **520 passed / 0 failed** (fresh compile of the pure sources and the tests; Compose/Robolectric suites excluded, as always). The Settings quartet joined it after CI caught what the sweep could not see.
-* **Still owed:** the owner's device round — CI has now covered the compile, the lint-wired tasks and the 3347-test suite. Level 12 stays **not accepted**: S2, T3-Gemini and T4-NVIDIA still await their own fix phases, and Levels 13–14 remain unauthorized.
+* **Still owed:** the owner's device round — CI has now covered the compile, the lint-wired tasks and the 3347-test suite. Level 12 stays **not accepted**: **S2's fix is round 2 (§6)** and needs his phone to close it; **T3-Gemini** (cut off before any diff) and **T4-NVIDIA** (repetition) still await their own fix phases, and Levels 13–14 remain unauthorized.
 
 ## 5. Deliberate non-changes
 
@@ -69,3 +69,18 @@
 * The Agent's own memory ceiling, the three `client.stream(` sites, the two `openUri(` sites and every other pinned
   ceiling are untouched.
 * `AiCopy.SEND` is left in the file (nothing draws it): the pin asserts the **bar**, not the constant.
+
+## 6. Round 2 — *"Not solved"* (Phase 93b)
+
+The owner ran the phone again on 2026-10-05, screenshotted the same two rows and said **"Not solved"**. Both were
+re-diagnosed from the app's own contracts and fixed in code; the full record is
+[`PART_93B_ROUND_2.md`](PART_93B_ROUND_2.md).
+
+| Row | What was actually wrong | Fix |
+|---|---|---|
+| **S2** — the edit proposal never became reviewable | `applyModifyBody` reported every marker problem with one sentence (*"Unclosed …"*) and the sheet's `Invalid` branch was a bare `ErrorLine` with **nothing to press**. | The markers are read with room for the model's spelling (`<<<SEARCH >>>`, any case) and a **forgotten `<<<END_SEARCH>>>` is recovered** — hunk ends at its own closer, else the next `SEARCH`, else the closed block's end — while every hunk still has to match the file byte for byte. Each remaining refusal names the marker that is missing. **`Invalid` now gets the Proposal card's one-tap `Rebuild proposal`** (finding F2; F5's cut note rides the same button). |
+| **[5/5]** — *"the model never asked to run (answer 0 chars)"* | The scripted question asked for a **shell command**; `request_run` takes **`target` only**, so the app refused the only request the model could build, no card appeared — and the verdict blamed the model. | The question now asks for the request the tool can actually deliver (*"call your `request_run` tool to ask me to run this project"*), and the snapshot carries `runRefusedReason` so a refusal fails the check **with the app's own reason** instead of being read as silence. |
+
+**Tests:** `AiEditProposalTest` +5 (and its no-REPLACE pin rewritten to the new sentence), `AiSelfCheckTest` +2,
+`AiSelfCheckWiringTest` +2, `AiLevel3WiringTest` +1, `AiToolProtocolTest` +1. **Host sweep: 71 classes, 556 passed /
+0 failed.**

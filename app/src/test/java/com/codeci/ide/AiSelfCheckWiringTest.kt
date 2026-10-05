@@ -229,6 +229,45 @@ class AiSelfCheckWiringTest {
     }
 
     @Test
+    fun `the run step asks for the request the run tool can deliver, not a shell command`() {
+        // Phase 93b, the owner's round-2 [5/5]: the old question asked for a
+        // *shell command*. `request_run` takes `target` (a project file) or
+        // nothing — so the only argument the model could build was refused by
+        // the allow-list and no card ever appeared.
+        val prompt = raw("AiSelfCheck.kt")
+            .substringAfter("To check the run tool:")
+            .substringBefore("Do not answer in prose")
+        assertTrue("the tool is named as the tool is called", prompt.contains("request_run"))
+        assertTrue("and the request it can deliver is named", prompt.contains("run this project"))
+        assertFalse("no shell command is asked for", prompt.contains("shell"))
+        assertFalse("and no argument the tool does not take is suggested", prompt.contains("command"))
+    }
+
+    @Test
+    fun `a refused run request is reported as the app's refusal, never as silence`() {
+        val pure = src("AiSelfCheck.kt")
+        assertTrue(
+            "the snapshot carries the app's own reason",
+            pure.contains("val runRefusedReason: String? = null")
+        )
+        assertTrue(
+            "and the run verdict separates refused from never-asked",
+            raw("AiSelfCheck.kt").contains("a run request came back but the app refused it")
+        )
+        assertTrue("the view model finds a refused run row", vm.contains("private fun runRefusedReason(): String? ="))
+        assertTrue(
+            "by the same prefix the timeline writes",
+            vm.contains("AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire)")
+        )
+        assertTrue("which the copy owns", src("AiCopy.kt").contains("fun agentStepDeniedPrefix("))
+        assertTrue("and the refusal is packed into the snapshot", vm.contains("runRefusedReason = runRefusedReason()"))
+        assertTrue(
+            "the verdict is a three-way branch, not a boolean",
+            pure.contains("observed.runRequested ->") && pure.contains("observed.runRefusedReason != null ->")
+        )
+    }
+
+    @Test
     fun `the run is memory-only, and a new conversation means a new check`() {
         assertTrue("it lives in the state", vm.contains("val selfCheck: AiSelfCheck.Run? = null = null") ||
             vm.contains("val selfCheck: AiSelfCheck.Run? = null"))
