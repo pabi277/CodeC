@@ -58,6 +58,15 @@ answered, and one of them was a real bug.
 Build APK [`37365936119`](https://github.com/pabi277/CodeC/actions/runs/37365936119) **green** on `2d495ab` (the round-3 code is `3a07ac0`; the empty commit that follows it exists only because GitHub refused to rerun `37364178929`, whose job was **cancelled by the runner** at 15m01s with no failing step). Release universal APK **7 206 076 B**; artifacts release set **6 544 793 B**, R8 mapping **4 710 804 B**, debug **26 168 818 B**; *release manifest: no `android:debuggable` flag*. **Docs round 3:** [`37369079122`](https://github.com/pabi277/CodeC/actions/runs/37369079122)
 **green** on `a172673` (19m46s; release set **6 544 799 B**, R8 mapping **4 710 804 B**, debug **26 168 929 B**).
 
+**The cancellations have a shape worth naming.** Every cancelled job reports **zero steps** and stops at
+**≈15m01s** (`37364178929` 19:33:30→19:48:33, `37367483241` 20:04:39→20:19:42, `37371171764` 20:40:15→20:55:16), while
+the green runs finish in **13m51s–14m20s of job time**; the run that *did* succeed on a docs commit shows 19m46s from
+creation to last update, which is creation-to-update rather than job time. So the honest reading is: **the environment
+cuts a job at ~15 minutes**, the build sits right on that line, and a run that crosses it dies with no failing step and
+nothing to read. Two consequences are recorded rather than worked around: (a) the Phase 94 code's CI gate is
+**`37365936119` on `2d495ab`** — the same tree as `3a07ac0` — and it is green; (b) a docs-only commit's red check is
+**not** evidence about the code, and must never be read as one.
+
 **Two honest CI wrinkles, both worth keeping.** The first round-3 run (`37364178929`, on `3a07ac0`) and the
 docs-only run after it (`37367483241`, on `60c25af`) both ended as **failures whose jobs conclude `cancelled`** — no
 failing step, no annotations, and GitHub refused `gh run rerun` (*"cannot be rerun"*) — so each was re-triggered with an
