@@ -1,14 +1,21 @@
 # Phase 93 — five owner items, and the three bugs the audit found
 
-> **Status: ✅ IMPLEMENTED (2026-10-05) on `arena/01a10b97-codec`; not built, not merged.** **No PR, no merge, no
-> `main` push** (`rule.md` §3). **Authorization:** the owner's message, same day: *"Ok Whatever you find fix plus i
+> **Status: ✅ IMPLEMENTED (2026-10-05) on `arena/01a10b97-codec`; Build APK ✅ GREEN; not merged.** **No PR, no merge,
+> no `main` push** (`rule.md` §3). **Authorization:** the owner's message, same day: *"Ok Whatever you find fix plus i
 > have some additional fixes"*, followed by his five items. His answers to the pre-work questions are the binding
 > scope: **one arrow for the whole flow**, **both** halves of the permission complaint (*name the cause* + *one-tap
 > fix*), **session-only** chat memory (**D6 is not amended**), and **both** homes greet (*hub* and *AI sheet*).
 >
-> **The gate that is still owed:** no Gradle/Android compile has run from this branch — the sandbox has no Android
-> SDK. Every changed Kotlin file passed a `kotlinc` syntax pass, the host-runnable suites are green (below), and the
-> §34 lint-risk grep is clean; **the compile + lint run is the next step before any device round.**
+> **Build facts (Phase 93, CI is the gate the sandbox cannot be):** `37303387512` **green** on `dc96329` —
+> host unit + screenshot tests, debug assemble, release assemble, the release-APK set check; release universal
+> **7 194 500 B**, debug universal **27 119 376 B**, R8 mapping **71 627 297 B**, and *release manifest: no
+> `android:debuggable` flag*. **Two rounds failed first, and both are worth keeping:** `37301197147` died on
+> `:app:compileDebugKotlin` — `listOf(filesDir.absolutePath, …, dataDir)` mixed `String` with `File`, so the list
+> was not the `List<String>` the policy takes (fixed in `e40b887`) — and `37302637525` ran **3347 tests** with
+> exactly one failure, `SettingsSearchWiringTest`'s "no local declaration is split from its uses": the storage row's
+> `facts.granted` read like a use of the launcher callback's own local `granted` at line 899 (fixed in `dc96329` by
+> asking the policy's enum instead: `facts.state != StorageAccessState.MISSING`). Both lessons are in the commit
+> messages; the Settings quartet now runs in the host sweep, which is why the second one is reproducible offline.
 
 ## 1. What the owner asked for, and what shipped
 
@@ -52,8 +59,8 @@
 
 * **New:** `Phase93WiringTest` (14 cases — all five items + the three bugs, source-pinned), `StorageAccessTest` (8 cases — the full route matrix API 24→36, below-30 read/write split, the fix paths per version, the report lines, CodeC-private roots exempt).
 * **Updated:** `AiChatSessionTest` (+1: the 5 800 → 12 000-char budget boundary), `AiChatSessionWiringTest` (per-project memory; D6 bans), `AiHelperWiringTest` / `AiLevel2WiringTest` (the arrow's new shape; the phase-78 rule), `AiSelfCheckTest` (the `storage permission: …` report, the finished label), `AiSelfCheckWiringTest` (the check still *reports*, never asks), `ManifestPermissionsTest` (the cap's reason).
-* **The host sweep:** 68 host-runnable classes, **491 passed / 0 failed** (fresh compile of the pure sources and the tests; Compose/Robolectric suites excluded, as always).
-* **Still owed:** `:app:compileDebugKotlin` + `:app:lintDebug` (no Android SDK in the sandbox), then the owner's device round. Level 12 stays **not accepted**: S2, T3-Gemini and T4-NVIDIA still await their own fix phases, and Levels 13–14 remain unauthorized.
+* **The host sweep:** 70 host-runnable classes, **520 passed / 0 failed** (fresh compile of the pure sources and the tests; Compose/Robolectric suites excluded, as always). The Settings quartet joined it after CI caught what the sweep could not see.
+* **Still owed:** the owner's device round — CI has now covered the compile, the lint-wired tasks and the 3347-test suite. Level 12 stays **not accepted**: S2, T3-Gemini and T4-NVIDIA still await their own fix phases, and Levels 13–14 remain unauthorized.
 
 ## 5. Deliberate non-changes
 
