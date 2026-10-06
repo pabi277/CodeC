@@ -98,3 +98,19 @@ He answered the open list in chat, four lines, and every one of them is a decisi
 This closure commit (`eaea09a`, docs only) is green on CI too: [`37490458684`](https://github.com/pabi277/CodeC/actions/runs/37490458684), 9m46s, release universal **7 217 532 B** — the number moves a few bytes between runs of identical sources, which is R8's, not the app's.
 
 **What is left in the AI line after these answers: the PR, and only the PR.** No code item is open — the six fixes and the three shape fixes are in and CI-green; the level acceptance is closed by his word; the parked and declined items stay parked and declined by his "No change". The next free phase number is **97** and it is unassigned: no phase is briefed, so the line is idle until he names the next thing.
+
+## 8. ✅ MERGED — the owner's command, 2026-10-06
+
+His instruction, verbatim: *"Ok so ai implementation is 100% complete and the rest is future update for now postponed. If it's correct merge with main"*. It was checked against the repository before it was obeyed, and the
+answer is yes with the words defined: **complete** means every AI request from Phase 90 through this phase landed —
+the conversation surface, the self-check, the read tools and their scoping, the write path and its one-tap fix, the
+secret guard at every route, the presentation level, the nine agent controls, the history drawer and the agreement,
+the six bugs and the three shape fixes — with **3 436 unit tests / 0 failed** and no `TODO`, "for now" or half-wired
+path anywhere in `ui/ai/`; **accepted** because Level 12 closed on his own *"Pass"* and the device rounds closed on his
+own waiver; **future** because Level 13 (on-device model) is postponed by his command and Level 14 stays unauthorized.
+The things he called *"No change"* are decisions recorded in these docs, not work owed.
+
+This entry is written on the branch **just before** the merge so it reaches `main` with it, the way the Phase 87/88
+records did; the merge commit's own sha and the post-merge `Build APK` run are recorded by the next change from the
+repository, never guessed here. **`main` was `1c6f910` when this PR opened; the branch head was `db1e796`; seven
+commits — six of code and tests plus one of closure docs — all CI-green.**
