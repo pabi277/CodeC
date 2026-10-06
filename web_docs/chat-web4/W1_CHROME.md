@@ -87,3 +87,12 @@ at 360/1440 and zoom. Resource scan is not just a grep for script: inspect
 src/srcset/link href/style/url/@import/media/frames and actual browser requests.
 Fresh offline file:// render must work with JS disabled and no cached HTTP assets.
 See [W1_CHECKS.md](W1_CHECKS.md) for observed results and deferred links.
+
+## W2 addendum — 2026-10-07
+
+Install/Start now use this chrome. Current index.html remains canonical; headers
+are equal except active state and footers byte-identical across three pages.
+W2 adds guide components and validator-driven semantic fixes (doctype case,
+Home figcaption last, redundant dl label removed); it does not redesign W1.
+See [W2 summary](../chat-web5/W2_SUMMARY.md). Availability is now3/29, not W1-only;
+Privacy remains upcoming until W3.6. D31 requires a full-site ZIP at every exit.

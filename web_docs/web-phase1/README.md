@@ -1,5 +1,9 @@
 # CodeC Website Phase W1 — Scaffold + Home Page
 
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
 > **Current v2.3 — 2026-10-07.** **IMPLEMENTED** — evidence in [W1_SUMMARY](../chat-web4/W1_SUMMARY.md); not merged or deployed.
 
 Scaffold + Home (1/29 pages). Shared 10-link header including AI and Privacy footer; six cards, 19-chapter course preview, release facts. Only index.html/style.css/favicon.svg.

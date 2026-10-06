@@ -4,8 +4,9 @@
 > The owner supplied the v2.3 handoff in chat. It had not landed in this checkout:
 > the base `d4231f0` held v2.2 and 35 phase docs. This session restores the missing
 > specifications, without inventing a past sync or overwriting session history.
-> **W1 is authorized** by “You can watch the pr 42 for reference but you have build
-> it with updated docs and more powerful website”. W2–W6 still require commands.
+> **W1 and W2 are implemented**, local web/ZIP checks PASS. W2 authorized by
+> “Now start w2” (D32). W3–W6 still require commands; review/PR/merge/deploy are
+> not implied. D31 requires a full-site ZIP + direct download link at every phase end.
 > Head state: [NEXT_STEPS.md](NEXT_STEPS.md). Prior v2.2 narrative remains in
 > [chat-web2/SUMMARY.md](chat-web2/SUMMARY.md) and [WEB_JOURNEY.md](WEB_JOURNEY.md).
 
@@ -265,7 +266,7 @@ owner authorization. No deployment in W1. Custom domain O2 remains open.
 O6's owner scope is closed (19 chapters); W4.2 is still the mandatory technical
 verification gate, not permission to re-ask that owner decision. Records must not
 overwrite an existing chat folder: W0.3 is chat-web2; reconstructed W0.4 is
-chat-web3; this W1 uses chat-web4/W1_*. W6's dedicated verification filenames can
+chat-web3; W1 uses chat-web4/W1_* and W2 uses chat-web5/W2_*. W6's dedicated verification filenames can
 live in chat-web6 without replacing any earlier record.
 
 ## 10. Acceptance criteria
@@ -281,6 +282,9 @@ live in chat-web6 without replacing any earlier record.
 9. GitHub-only distribution, true AI/approval/privacy boundaries, no personal contacts,
    7 217 532 B not paired with -74%, no deleted engine picker or Open Folder teaching.
 10. Owner command before each next phase and before any PR/merge.
+11. **Every phase ends with a verified full-website ZIP and a direct GitHub download
+    link in the final report** — mandatory [D31 procedure](REVIEW_DOWNLOAD_RULE.md).
+    An Arena attachment alone is insufficient; review does not authorize deployment.
 
 ## 11. Open items
 

@@ -224,3 +224,37 @@ match website/ at0d16467; ZIP CRC/readback checked, CI37518457228 success for th
 source. Download raw file from GitHub → CodeC Import ZIP → index.html → RUN.
 No source/app/workflow change, no PR/merge/deployment. The archive is explicitly
 a W1 snapshot; future site changes must not silently present it as current.
+
+## W2 — Install + Getting Started (2026-10-07)
+
+**24. A mandatory download, every phase.** After the GitHub branch ZIP solved phone
+review, the owner said “Now make this a hardcore rule every phase end the download
+able zip link provide”. D31 and REVIEW_DOWNLOAD_RULE make the whole-current-site
+ZIP, byte checks, session-branch upload and final direct link a mandatory exit.
+All six phase READMEs/master acceptance/handoff carry it. Arena-only attachments
+are not sufficient. W1 ZIP stays historical; no merge/deployment is needed.
+
+**25. W2 specifically authorized.** “Now start w2” (D32), not W3–W6 or PR/merge.
+Reverified current branch47c09a6 (prior ZIP follow-up CI37524577493 success), main
+d4231f0, open PR42/83 untouched, app-v1.3.18 universal7,217,532B/versionCode22 and
+published digest. README/guides then current UI source—not PR42 implementation.
+
+**26. Two complete guides in the existing chrome.** Install includes release,
+developer and update paths, SHA256, export before signing-channel change, API/ABI
+limits and Termux-only optional fallback instructions. Start follows current
+intro/privacy/Arcade, opt-in Linux, five examples, five-tab map and HTML/LAN safety.
+Home now links to working Start; shared guide CSS is local, no JS. Validator found
+small semantic markup issues; fixed causes (including W1 figcaption order) without
+suppressing rules. Three of29 pages, seven future link targets honestly disclosed.
+
+**27. Verify the whole review snapshot.** Three pages ×320–1440: no page overflow,
+zero axe violations, native keyboard controls/skip, reduced motion, zero external
+resource requests. HTML Validate clean; both C examples pass host syntax/output
+preflight (not Android/TCC);11 GitHub destinations GET200. F-Droid direct TLS EOF,
+page-fetch retrieval successful. Full W2 ZIP25,119B/5files, exact website bytes,
+CRC/safe paths and extracted offline/no-JS browser checks PASS. Records in
+[chat-web5/W2_SUMMARY.md](chat-web5/W2_SUMMARY.md),
+[W2_SOURCES.md](chat-web5/W2_SOURCES.md), [W2_CHECKS.md](chat-web5/W2_CHECKS.md).
+Phase push/CI/readback/final direct link follows these local checks; do not confuse
+local verification with a future uploaded-file or app-CI pass. No PR/merge/deploy;
+W3 waits for its own owner command.

@@ -11,7 +11,9 @@
 > Earlier session-folder references are historical: preserve existing records;
 > W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
 
-**Current status:** PLANNED; not authorized by the W1 command.
+**Current status:** IMPLEMENTED / local web checks PASS, authorized by owner “Now start w2” (D32).
+See [W2 summary](../chat-web5/W2_SUMMARY.md), [sources](../chat-web5/W2_SOURCES.md)
+and [checks](../chat-web5/W2_CHECKS.md). Owner review pending; W3 not authorized.
 
 ## Current v2.3 implementation requirements
 
@@ -29,6 +31,7 @@ fallback automatic, no picker/card. Link privacy.html. Never claim 7.22 MB is
 2. Preserve each non-conflicting numbered exit below, including device gates.
 3. Record source file/line/sha, responsive checks and self-dependent sweep; use 19-chapter crumbs where applicable.
 4. No app/workflow changes or phase expansion; update web living docs and stop at merge gate.
+5. **D31:** full-current-site ZIP + verified upload + direct GitHub download link in final report; [mandatory procedure](../REVIEW_DOWNLOAD_RULE.md).
 
 ---
 

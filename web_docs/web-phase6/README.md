@@ -1,5 +1,9 @@
 # CodeC Website Phase W6 — Learning Wing III: Chapters 13–17 + Polish + Deploy
 
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
 > **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
 
 Ch-13…17, THEN W6.8 ch-18 and W6.9 ch-19, THEN W6.6 polish and W6.7 deployment. Seven new HTML files. All 29 pages and 19 chapters; P1+P5 owner device transcripts. Preserve signed package Pages endpoints.

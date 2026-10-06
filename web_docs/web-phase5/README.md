@@ -1,5 +1,9 @@
 # CodeC Website Phase W5 — Learning Wing II: Chapters 07–12
 
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
 > **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
 
 Ch-07…12. Editor, TCC-safe C, shell, Python, Git truth, networking/LAN. Ch-08 owner device transcript remains required.

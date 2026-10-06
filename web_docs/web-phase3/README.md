@@ -1,5 +1,9 @@
 # CodeC Website Phase W3 — Engines + Packages + FAQ + About
 
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
 > **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
 
 Engines + Packages + FAQ + About + AI + Privacy. Six pages, product wing complete at 9/9. W3 depends on completed W2; do not run in parallel.

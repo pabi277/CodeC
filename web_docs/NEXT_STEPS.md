@@ -1,18 +1,35 @@
 # NEXT_STEPS.md — website head state
 
-> **2026-10-07 · v2.3 · W1 IMPLEMENTED, local website checks PASS; NOT merged or
-> deployed. W2–W6 NOT STARTED.** Current session `arena/8b8f8edc-codec`, base
-> `d4231f0`. Owner authorized fresh W1 using PR #42 only as reference. Three files:
-> `website/index.html`, `style.css`, `favicon.svg`; **1/29 pages**, not a finished
-> product/course. Live sandbox preview is not GitHub Pages deployment.
->
-> **Planning reconciliation complete:** 9 product pages + learn home + 19 chapters;
-> **39 docs (6 phase READMEs + 33 PART docs)**, parts 2/2/6/8/6/9. Four missing
-> v2.3 specs added. Original checkout was v2.2, not a landed Oct6 v2.3 session.
-> [Reconciliation](chat-web3/SUMMARY.md) · [W1 record](chat-web4/W1_SUMMARY.md) ·
-> [checks](chat-web4/W1_CHECKS.md) · [chrome](chat-web4/W1_CHROME.md).
+> **Owner law D31:** every website phase ends with a verified full-site ZIP and a
+> direct GitHub download link in the final reply. [Required procedure](REVIEW_DOWNLOAD_RULE.md).
+> **W2 authorized (D32)**; W3–W6 still need their own commands. No PR/merge/deploy.
 
-## Phone review update — 2026-10-07
+> **2026-10-07 · v2.3 · W1 + W2 IMPLEMENTED, local website/ZIP checks PASS; NOT
+> merged or deployed. W3–W6 NOT STARTED.** Session `arena/8b8f8edc-codec`.
+> Current website: Home, Install, Start + style.css/favicon.svg; **3/29 pages**.
+> W2 was explicitly authorized (D32); D31 makes full-site download mandatory at
+> every phase end. No next phase/PR/merge/deploy authority imported from that.
+>
+> **Current review:** [W2 summary + ZIP](chat-web5/W2_SUMMARY.md),
+> [checks](chat-web5/W2_CHECKS.md), [source ledger](chat-web5/W2_SOURCES.md).
+> The commit carrying this update includes the exact five-file W2 archive.
+> Observe its automatic Build APK CI after push and verify uploaded ZIP bytes
+> before reporting handoff complete; do not infer CI success from web checks.
+>
+> **Planning:** 9 product + course home +19 chapters; **39 docs** (6 phase
+> READMEs +33 PARTs), parts2/2/6/8/6/9. W1 remains in chat-web4; W2 in chat-web5.
+
+## Current download — W2
+
+**[Download full W2 website ZIP](https://raw.githubusercontent.com/pabi277/CodeC/arena/8b8f8edc-codec/web_docs/chat-web5/CodeC-website-W2.zip)**
+
+25,119 B; five files at root; CRC/tree-byte and extracted offline browser checks
+PASS. [Manifest](chat-web5/W2_ARCHIVE.json). Download → CodeC Projects → + →
+Import ZIP → index.html → RUN. The final handoff should use a commit-pinned URL.
+Website works offline; outbound links need internet. Seven future local page
+paths remain explicitly unavailable. Historical W1 ZIP is not the current site.
+
+## Historical W1 phone-review solution — 2026-10-07
 
 **Deployment preparation PAUSED.** The owner wants to review downloads before
 merge. Arena's raw sandbox URL requires a traffic-access header, and the phone
@@ -24,7 +41,7 @@ No PR/merge/publish authorization; the earlier preparation-only choice is paused
 
 ## Verified GitHub baseline (re-check before next work)
 
-- Remote main/checkout base **d4231f0**; PR #116 merged, release app-v1.3.18 published.
+- Remote main/app base **d4231f0**; PR #116 merged, release app-v1.3.18 published.
 - Main Build APK **37505147370 success**; release publish **37505175304 success**.
 - One universal APK **7 217 532 B**, versionCode **22**, published SHA256 present.
 - PR #115 actual merge **0edf4dd**, not earlier main baseline 1c6f910.
@@ -35,7 +52,17 @@ No PR/merge/publish authorization; the earlier preparation-only choice is paused
   belongs to the final report / follow-up here. No manually dispatched build,
   publication, package build or website deployment.
 
-## W1 checks / honest limits
+## W2 checks / honest limits
+
+Three pages ×320/360/390/720/768/1110/1440px: no overflow, zero axe violations,
+keyboard skip/menu/disclosures, reduced motion, no external resource requests.
+HTML Validate clean; local links/anchors/chrome pass; extracted ZIP offline/no-JS
+render and navigation pass. Eleven GitHub destinations GET200; F-Droid retrieved
+through page-fetch after direct TLS EOF. Seven unbuilt target paths stay disclosed.
+No Android device or Pages pass. Existing W1 archive follow-up CI
+**37524577493 / 47c09a6 success** rechecked; W2 commit CI is observed after push.
+
+## Historical W1 checks / honest limits
 
 Responsive at 360/390/768/1100/1440; keyboard mobile menu; automated axe WCAG A/AA
 0 violations; no console errors/page overflow; local-file offline render with JS
@@ -48,8 +75,8 @@ No Android device pass claimed or required for W1.
 
 | Owner says | Agent does |
 |---|---|
-| W1 design/copy feedback | Revise only W1, verify source/visual/accessibility/self-dependent gates, update web records, push session branch |
-| **Start W2** | Read phase2 README/PARTs, current README+guides; build Install and Start only: v1.3.18/checksum/updater/export + current intro/Arcade/optional userland; record, checks, docs/push/report, merge gate |
+| Review feedback on current W2 ZIP | Revise only authorized W1/W2 pages, repeat affected checks, refresh full ZIP + download link, update records and push session branch |
+| **Start W2** | Already received and implemented; do not redo without a reported regression |
 | **Start W3** … **Start W6** | Verify predecessors; execute one phase strictly per amended v2.3 specs; don't skip order/gates |
 | Answers O1/O2/O3/O5/O7 | Dated decision + affected living specs; O5 app link needs separate app authorization |
 | **Create PR and merge** / explicit equivalent | Re-verify tip/checks and existing open PR constraints, act only on authorized session work; never silently merge/close PR42 |
@@ -58,7 +85,7 @@ No Android device pass claimed or required for W1.
 
 - [x] **W0.4 reconciliation** — performed Oct7 from supplied Oct6 scope, no fictitious prior commit.
 - [x] **W1 implementation/static gates** — fresh Home and scaffold, source trace, local browser/offline checks. Owner review/merge pending.
-- [ ] **W2** — Install + Start, current release and first-run facts.
+- [x] **W2 implementation/local gates** — Install + Start, current release/first-run facts, full-site ZIP. Owner review pending; final upload/link and CI observed after push.
 - [ ] **W3** — Engines/Packages/FAQ/About/AI/Privacy, product9/9.
 - [ ] **W4** — W4.2 FIRST: package/source/AI/current-filesystem Verified Facts Table,
   technically lock 19 chapters; learn + ch01–06. O6 owner scope already closed.
@@ -84,7 +111,7 @@ No Android device pass claimed or required for W1.
 - Historical phase bodies are retained under explicit prior-design labels; current
   top amendments/master plan control. Never treat old counts/UI as current.
 - Session numbering: chat-web2=W0.3, chat-web3=reconciliation,
-  chat-web4/W1_*=this W1. Preserve existing filenames; future W4 VERIFIED_FACTS
+  chat-web4/W1_*=W1; chat-web5/W2_*=W2. Preserve existing filenames; future W4 VERIFIED_FACTS
   can coexist. W6 verification records still go in chat-web6.
 
 ## Open owner items

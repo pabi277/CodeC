@@ -72,3 +72,19 @@ W4.2 is still a technical gate, not another request for the owner's chapter-coun
 
 Open items map 1:1 to `WEBSITE_PLAN.md` §11.
 
+
+
+## D31 — Mandatory downloadable website ZIP at every phase end (2026-10-07)
+
+Owner: “Now make this a hardcore rule every phase end the download able zip link
+provide.” Binding implementation: [REVIEW_DOWNLOAD_RULE.md](REVIEW_DOWNLOAD_RULE.md).
+Every phase delivers the entire current website as a tested ZIP committed outside
+website/, pushed to the session branch, with a direct GitHub download link in the
+final reply. Arena-only attachments do not satisfy phone review. Historical ZIPs
+stay historical. No PR/merge/deploy implied. This is an additional phase-exit gate.
+
+## D32 — W2 specifically authorized (2026-10-07)
+
+Owner: “Now start w2”. Install + Getting Started only, on the session branch,
+fresh implementation against current source and v2.3 amendments. W3–W6 remain
+separately gated. Public deployment preparation remains paused for ZIP review.

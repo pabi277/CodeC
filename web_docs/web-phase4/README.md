@@ -1,5 +1,9 @@
 # CodeC Website Phase W4 — Learning Wing I: Course Home + Chapters 01–06
 
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
 > **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
 
 W4.2 FIRST: source-backed Verified Facts Table including AI/Phase46/current first-run and build-config package list. Then learn.html + ch-01…06 (seven HTML files, not eight). 19-chapter scope already chosen; O6 technical verification remains.
