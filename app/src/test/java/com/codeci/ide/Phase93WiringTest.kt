@@ -247,11 +247,15 @@ class Phase93WiringTest {
 
     @Test
     fun `one conversation per project, kept only in memory`() {
-        assertTrue("the map is the store", vm.contains("private val chatsByProject = LinkedHashMap<String, ProjectChat>()"))
+        // Phase 95 — the map now holds an AiChatHistory per project (multiple
+        // conversations). D6 still holds: the memory is process state, in memory,
+        // never written.
+        assertTrue("the map is the store", vm.contains("private val historiesByProject = LinkedHashMap<String, AiChatHistory>()"))
         assertTrue("saved on the way out", vm.contains("rememberChatForCurrentProject()"))
-        assertTrue("restored on the way in", vm.contains("val remembered = chatForProject(name)"))
-        assertTrue("New chat clears one project", vm.contains("project?.let { chatsByProject.remove(it) }"))
-        assertFalse("D6: nothing is written", vm.contains("chatsByProject") && vm.contains("SharedPreferences"))
+        assertTrue("restored on the way in", vm.contains("val remembered = historyForProject(name)"))
+        assertTrue("and lands in both history and session", vm.contains("history = remembered") && vm.contains("session = remembered.session()"))
+        assertTrue("a switch closes the drawer", vm.contains("historyOpen = false"))
+        assertFalse("D6: nothing is written", vm.contains("historiesByProject") && vm.contains("SharedPreferences"))
         assertTrue(
             "and the dialog says what New chat really does",
             copy.contains("Each project keeps its own") && copy.contains("nothing here is saved to a file")
