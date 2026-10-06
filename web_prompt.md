@@ -1,150 +1,283 @@
-# web_prompt.md — paste this into the next chat (WEBSITE project)
+# web_prompt.md — CodeC WEBSITE handoff — v2.3
 
-> Copy **everything between the two `---` lines below** as the first message of
-> a new chat. It forces the next agent to verify before acting, to trust the
-> repo over its own assumptions, and to continue the **CodeC website** without
-> redoing or breaking anything. The app project's handoff file is
-> `prompt.md` — this one is for the website workstream only.
+> Scope supplied by the owner: **2026-10-06 v2.3**. Verified and updated for
+> **W1 on 2026-10-07**. This is the website workstream; app handoff is `prompt.md`.
+> Read the current-state correction below before trusting the original handoff's
+> historical claims. This file is updated in the first W1 commit as commanded.
 
 ---
 
-Read `web_docs/README.md`, `web_docs/WEBSITE_PLAN.md`, `web_docs/getting-started/NEXT_STEPS.md`,
-and **`rule.md`** first, before doing anything else, then report what you found
-and the current git/PR/CI state before making any change.
+Read these first, before doing anything else, then report what you found and
+the current git/PR/CI state before making any change:
 
-You are continuing the **CodeC website** — a public website for the CodeC
-Android C IDE with **two wings** (plan v2.2, 2026-09-12):
-1. **Product wing** — modelled on the Termux site (`termux.dev`): landing
-   page with install CTA, feature callouts, install guide, getting-started
-   guide, compiler engines, packages, FAQ/troubleshooting, About.
-2. **Learning wing** — modelled on the owner's own **Termux-Mastery** site
-   (`pabitra27706-oss.github.io/Termux-Mastery`): a book-like course
-   **"Master CodeC from Zero to Advanced"** — `/learn` course home + 17
-   numbered chapters (`ch-01` … `ch-17`) with hands-on exercises.
-The whole site must be **fully self-dependent** (see law below). Each chat
-session gets its own `arena/*` session branch — verify with `git status`;
-commit and push to the SESSION branch only, never `main` or any other
-branch. `rule.md` is the operating manual (branching, merge gate,
-invariants, docs policy) — follow it for the website work too.
+1. **rule.md** — operating manual (§2 session branch/push, §3 merge gate,
+   §5 CI/device, §6 invariants, §7 docs, §8 done, §9 verified snapshot).
+2. **web_docs/README.md** — website ground rules and file map.
+3. **web_docs/WEBSITE_PLAN.md** — master v2.3, page/chapter content (§3), content
+   rules (§4), self-dependent law (§5), phases (§9), acceptance (§10).
+4. **web_docs/DECISIONS.md** — D1–D30, binding dated decisions and open items.
+5. **web_docs/NEXT_STEPS.md** — current head and owner-command table.
 
-**WHERE THE WEBSITE STANDS (2026-09-12, plan v2.2):**
+When a page needs facts: **README.md first**, then
+`docs/guides/TROUBLESHOOTING.md`, `BETA.md`, `AI.md`, `DATA_AND_PRIVACY.md`,
+`RELEASE_NOTES.md`, then `docs/journal/JOURNEY.md`. All app docs/code are read-only.
 
-- **WEBSITE PHASES W0 + W0.1 + W0.2 + W0.3 (planning + sync) are COMPLETE. NO WEBSITE
-  CODE EXISTS YET, BUT THE SITE IS FULLY SPEC'D END TO END and SYNCED with app Phases 21–43.** The owner's
-  strict rule for the planning session (2026-09-02) was: **no code of any
-  kind** — this workstream started with documentation only, exactly like
-  `docs/` + `prompt.md` started the app project. Plan v2 added the
-  learning wing (owner command); v2.1 added **fully spec'd implementation
-  phases** (owner command "Can you create phases"); v2.2 **synced with app Phases 21–43** (owner command "Check the new updates in the project from the docs folder then update the web-docs and web-prompmt") — see
-  `web_docs/DECISIONS.md` D10–D22 and `WEB_JOURNEY.md` W0.3.
-- **The phase specs (the website's `docs/chat-phase20…24` equivalent):**
-  `web_docs/web-phase1/` … `web_docs/web-phase6/` — 35 docs (6 phase
-  READMEs + 29 PART docs), each part with design, implementation steps and
-  a numbered exit condition. Phase laws baked into the specs: **W4.2 is a
-  verification gate that runs FIRST inside W4** (re-verifies README +
-  `codec-packages/` build config + new facts (icon, backup rules, export-all, LAN, feedback, outputs temporary, GitHub truth, safe walk, universal APK size) into a committed Verified Facts Table,
-  locks the 17-chapter set, closes O6); **ch-08 (W5) and P1+P5 (W6) carry
-  device passes** (owner transcripts — same convention as app phases);
-  **W6.7 verifies before the site goes live** (self-dependent sweep +
-  offline render + full link sweep, recorded in `chat-web6/`).
-- What exists now:
-  - `web_docs/` — the website's history & planning folder (the website's
-    equivalent of `docs/`): `README.md` (index), `WEBSITE_PLAN.md` (the
-    master spec v2.2 — two wings (product + 17-chapter learning course) updated with Phases 21–43 facts: universal APK 6.6 MB, Auto engine only, >_ mark, file icons, LAN server, outputs temporary, GitHub truth, feedback hardcoded, backup include-list, crash-loop guard, export-all, safe walk planned),
-    `web-phase1/` … `web-phase6/` (the fully spec'd phases — 35 docs, v2.2 refresh noted),
-    `DECISIONS.md` (decision log D1–D22 + open O1–O8), `NEXT_STEPS.md` (head
-    state v2.2), `WEB_JOURNEY.md` (narrative incl. W0.3 sync), `chat-web1/SUMMARY.md` (session record).
-  - `web_prompt.md` — this file (v2.2).
-- **Nothing is built, nothing is deployed, there is no `website/` folder
-  yet.** If you see website HTML/CSS/JS anywhere that this session did not
-  create, verify where it came from before touching it.
-- **App head:** Phase 42 COMPLETE & MERGED to `main` via PR #71 (app-v1.3.17 universal 6.6 MB signed non-debuggable, SHA256 lines, updater version guard, backup include-list, crash-loop guard, export-all, BETA.md, RELEASE_NOTES template), Phase 43 PLANNED (safe folder walk + ProjectLink). Check `git log --oneline -10` and `docs/getting-started/NEXT_STEPS.md` head line.
+## Current verified state — 2026-10-07
 
-**WHAT THE OWNER MUST SAY TO PROCEED:**
+**W1 has been built fresh on the current session branch; not merged/deployed.
+W2–W6 are NOT started.** Implementation authorization was:
 
-Implementation starts only when the owner commands a phase in chat —
-**"Start W1"** … **"Start W6"** (or "Build the website" = Start W1). Each
-phase is executed **strictly per its spec folder** `web_docs/web-phaseN/`
-(phase README + PART docs, one phase at a time, in order W1 → W6), writing
-the site (25 pages) into a new top-level `website/` folder: W1 scaffold +
-Home → W2 Install + Getting Started → W3 Engines + Packages + FAQ + About →
-W4 **verification gate first (v2.2 facts)**, then course home + chapters 01–06 (ch-04 Auto only, ch-06 safe walk + ProjectLink + export-all) → W5
-chapters 07–12 (ch-08 device pass, Editor with file icons + typing feel + ghost + strip + snippets 29 packs + Emmet + TextMate + 50 items, C Basics TCC-safe, Git with readiness + push truth + publish, Networking + LAN server QR + open in browser) → W6 chapters 13–17 (Device APIs 8 scripts, Web Projects + LAN, Custom/Advanced with export-all + backup + crash-loop + feedback, Real Projects with LAN share, Troubleshooting with BETA + crash-log + feedback) + polish + GitHub
-Pages deploy + verification (P1+P5 device pass). Only from W1 onward is
-writing HTML/CSS/JS allowed. Until a phase is commanded: planning edits
-only, still no code.
+> “You can watch the pr 42 for reference but you have build it with updated docs
+> and more powerful website”
 
-**LAW (inherits the app project, no exceptions):**
+This was interpreted as **Build the website = Start W1**, not permission for all
+phases, a PR, a merge or deployment. Only three site files exist:
+`website/index.html`, `website/style.css`, `website/favicon.svg`. Home, six
+feature cards, original labelled textual C example, 19-chapter course preview,
+shared AI nav and Privacy footer; native keyboard-operable mobile menu; no JS.
+Future page links keep final relative `.html` URLs but are explicitly upcoming
+and return 404 until their phase. Do not call the course available or the full
+site link sweep complete. Browser/resource/offline evidence and source trace:
+`web_docs/chat-web4/W1_{SUMMARY,CHROME,CHECKS}.md`.
 
-- **No PR/merge without the owner's literal command in chat** (`rule.md`
-  §3). Committing to and pushing the session branch is fine.
-- **The website never touches app code.** `app/`, `codec-packages/`,
-  `gradle*`, `scripts/`, `.github/workflows` (except adding the website's own
-  Pages workflow when W6 starts) and all `docs/` content are out of bounds
-  for website work. `docs/` is the app's history — never rewrite it.
-- **`web_docs/` is the website's history.** Append, don't destructively
-  rewrite. Update `web_prompt.md` (this file), `web_docs/getting-started/NEXT_STEPS.md` (head
-  state line) and `web_docs/WEB_JOURNEY.md` (timeline) as web gates close —
-  the next chat trusts only what is written there and verified in git.
-- **Clean-room:** website *content* is distilled from the public repo files
-  (`README.md`, `docs/guides/TROUBLESHOOTING.md`, `docs/guides/BETA.md`, `docs/guides/RELEASE_NOTES.md`, `docs/journal/JOURNEY.md`) and the Termux
-  site's *public structure* (page model, layout ideas) — never paste
-  Termux's site source (it is GPL-ish licensed; read the public spec,
-  re-implement). No decompilation, no copying of closed-source material.
-- **CI is the only test executor** for app changes; the website is a static
-  site — its "tests" are: builds/deploys green on GitHub Pages and every link
-  on the site resolves (verify during W6).
+### Why the supplied handoff needed reconciliation
 
-**FACTS THAT MUST NOT REGRESS (website, v2.2 synced 2026-09-12):**
+At base **d4231f0**, remote main and this clean shallow checkout agreed:
 
-- **Stack is locked:** plain static HTML + CSS (+ minimal vanilla JS only if
-  a page genuinely needs it), **no framework, no build step, no backend, no
-  CMS, no database**. Served by **GitHub Pages** from the `website/` folder
-  in this same repo (see `web_docs/DECISIONS.md` D3/D7). Reopening this
-  requires the owner's explicit command.
-- **SELF-DEPENDENT = LAW (owner command 2026-09-02, D11):** zero fetched
-  external resources — **no CDN, no external fonts** (system font stack),
-  **no external JS/CSS/images, no analytics, no third-party embeds**. Every
-  file the browser loads must live in this repo's `website/`. Outbound
-  hyperlinks are fine (github.com repo/README/Releases/Issues/JOURNEY/BETA/DATA_AND_PRIVACY, the package
-  repo URL, F-Droid/GitHub only where the README points to Termux). Every
-  page must render **fully offline**. The learning course must be
-  **completable without ever opening the repo** (repo links are optional
-  "go deeper" footnotes). Verified in W6 per plan §5: grep sweep (no
-  external `src=`/`<link href=`/`@import`/`url(`), offline render check,
-  full link sweep — recorded in `web_docs/chat-web6/`).
-- **Learning wing (D10):** "Master CodeC from Zero to Advanced" — `/learn`
-  course home + 17 chapters `ch-01…ch-17`, fixed chapter template (goals →
-  steps → try-it → common mistakes → prev/next). Chapters teach **only what
-  CodeC ships today** (final set locked at W4 against the verified package
-  list + v2.2 facts, plan §3.2); CodeC twists: ch-04 Auto engine only (picker deleted Phase 21, Termux card deleted Phase 38.2, fallback automatic, 4 steps appear in Output Panel only when needed), ch-07 editor with official file icons (Seti MIT) + typing feel + ghost text TAB ▸ + suggestion strip ƒ/λ/≠ chips + ⌄ more + 29 snippet packs MIT + Emmet clean-room rank 0 + TextMate Dark+ + 50 items + CodeC Keys auto-close, ch-08 TCC-safe law (ANSI C + most C99), ch-11 Git with readiness + push truth + publish via POST /user/repos, ch-12 Networking + LAN server opt-in 0.0.0.0 two URLs + QR ZXing Apache-2.0 + open in browser + keep-alive foreground service, ch-13
-  CodeCApi (8 scripts: battery/sensor/TTS/camera/intent + clipboard/notify/toast/share/open-url/vibrate), ch-14 web projects + live preview + LAN share, ch-15 custom setup + export-all ZIP + backup include-list-only + crash-loop guard safe mode 3rd launch + feedback + About fingerprint, ch-16 real projects with LAN share, ch-17 troubleshooting with BETA B-1…B-8 + crash-log.txt header-first + feedback hardcoded. Structure mirrors the owner's own
-  Termux-Mastery (same owner — clean-room safe; its content is NOT reused).
-  Total site at completion: **25 pages** (7 product + course home + 17
-  chapters).
-- **Content source of truth is the repo itself** — `README.md` first, then
-  `docs/guides/TROUBLESHOOTING.md`, `docs/guides/BETA.md`, `docs/guides/RELEASE_NOTES.md`, `docs/journal/JOURNEY.md`. The site never states
-  anything the repo files don't support (feature claims, package list,
-  engine table, install steps, icon, backup rules, export-all, LAN server, feedback). When the README changes, the site's affected
-  section changes in the same effort — drift is a bug.
-- **Install facts (as of 2026-09-12, v2.2):** CodeC is distributed **from GitHub
-  only** — **release channel `app-v*` tags** → `CodeC-IDE-<version>-universal.apk` **ONLY APK** 6.6 MB signed non-debuggable (R8 + shrinkResources -74% from 25.5 MB, per-ABI splits measured <2% and reverted because `assets/tcc/<abi>` not filtered, okhttp removed, mapping.txt CI-only), release notes with `sha256:` lines + versionCode + date + changelog asserted by `scripts/check_release_notes.sh`, **Actions debug artifacts** `CodeC-IDE-debug` / `CodeC-IDE-release` for branch builds (debug key vs upload key), **in-app Settings → About → Check for updates** looks only at `app-v*` releases, compares versions numerically ("up to date" / named refusal when older), verifies `sha256:` line before installing, opens Releases page when no checksum, never installs `userland-*` bootstrap as app, never phones home. **Debug→release signing change = fresh install** — export projects first (Files → Export all). **No Play Store / F-Droid listing** — site must never imply one. Single CTA "Get the APK on GitHub" → Releases page (never artifact URL).
-- **Repo facts the site will state (v2.2):** original **>_ mark** `docs/brand/icon/codec-512.png` (Phase 38.1: adaptive layers + real monochrome layer + 10 PNG rasters + notification silhouette `ic_stat_codec` replacing `ic_launcher_foreground` + system `ic_dialog_info`, `app_mark` in About header, sharp 0.35.4 deterministic md5, template webps deleted), **built-in TCC compiler** (offline, instant, no Termux needed; arm64-v8a + x86_64, **null on armeabi-v7a/x86** so C works via Clang module or Termux fallback), **Auto engine only** (picker deleted Phase 21, Termux card deleted Phase 38.2 but mechanism stays: TermuxCompiler fallback + RUN_COMMAND permission + <queries>, guidance moved to Output Panel error path via CompilerRemediation, 4 setup steps appear only when build fails with Permission denied, wording source TROUBLESHOOTING.md §27), **in-app VT/ANSI terminal** ("Mini-Termux", Canvas grid + PTY via JNI openpty, multi-session TerminalSessionManager 8-cap anyAlive wake lock, session switcher dropdown + rename/close, progressive apt streaming, background command survival), **device as server LAN** (opt-in 0.0.0.0 bind pool 8100–8199 never <1024, ServerEndpoints.of, two-URL share panel + ZXing QR Apache-2.0, ServerRegistry/ServerHost port truth, keep-alive on existing RunForegroundService Serving <project> on <ip>:<port> + Stop, open in browser via OpenInBrowser/ShareActions copy fallback), **25+ signed packages** (`git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, …) from signed repository `https://pabi277.github.io/CodeC/dev` (signed-by= never trusted=yes, gpgv verification, bootstrap userland-v2-dev SHA-256 verified staged atomic), **HTML web preview over loopback + LAN**, **Spck-style editor + Projects hub + honest git** (official file icons Seti MIT, typing feel keyboard stay open smooth non-blinky caret no cursor on open, ghost text TAB ▸, suggestion strip ƒ/λ/≠ chips ⌨ ⌄ more tap-accept long-press tooltip swipe-down dismiss, 29 friendly-snippets MIT packs ~54KB deflated 84C/76Python/126HTML/156CSS/367JS/140TS/62MD/16shell + Emmet clean-room rank 0 + MAX_ITEMS 50 MAX_CHIPS 8 + TextMate Dark+ 15 langs lazy off UI thread + CodeC Keys auto-close, Projects card list type mark ⌥ branch · N files · age change badge amber ↑N when commits never reached remote filter chips + search + ONE + sheet New Project/Clone Git Repo/Import ZIP/Open Folder, file tree with in-tree git status letters, tabs dirty dot close, snippet/extra-keys row above status bar, Source Control sheet per-file stage toggle, opens straight into file you left in first launch → Projects hub autosave ~2s after stop typing, Switch Branch branch list local+remote + New branch… Spck promise dirty work stashed and restored, honest git conflicts grouped purple Mark Resolved block commit branch with no upstream published on first push --set-upstream failed push never looks successful "Committed locally ✓ — NOT pushed: …" PUSH retry, GitReadiness pre-flight is git installed · token stored · is repo · has remote · branch has upstream · anything to push computed pure data rendered before user taps Install Git routed to Modules installer, clone error shows inside dialog not behind, PushOutcome/PushParser result card what pushed to which remote/branch Everything up-to-date * [new branch] or still local because X, Publish to GitHub via POST /user/repos private by default ls-remote-verified adopt-existing, outputs temporary never in repo RunArtifacts filesDir/CodeC/temp/runs/<stamp>/ + TempGc age/capacity/newest-N prunes on start and after Stop RepoHygiene ~60 patterns incl .codec/ enforced inside stageAll git rm --cached already tracked what will be committed list before commit user's .gitignore always wins, safe folder walk planned Throwable-safe TreeWalkPolicy budgets progress+cancel per-provider failure as message Throwable at boundary grant persisted takePersistableUriPermission never called today, ProjectLink projectName treeUri + ProjectLinkPolicy.decide take/refuse/re-pick when grant gone noexec physics emulated storage mounted noexec so linked project runs from internal mirror sync in on open/save push-set on save-back excludes CodeC own outputs 39.1 must land first, ZIP import guarded MAX_ZIP_ENTRIES 10k MAX_ZIP_ENTRY_BYTES 128 MB total-bytes cap path-escape check), **export-all ZIP** over both project roots (filesDir + externalFilesDir candidate list) byte-identical round-trip, **backup include-list-only** (FullBackupContent lint law exclude-under-include hard error, projects only token/userland not backed up), **crash-loop guard** safe mode on 3rd failed launch with export + report hand-off, **feedback & support** (hardcoded DeveloperContact WHATSAPP_E164 916296746606 display +91 62967 46606 EMAIL chakraborttypabi2772006@gmail.com single source every channel reads, FeedbackScreen own screen Settings one OPEN row audit control 46, exit survey back-at-root Enjoying CodeC? 💚 star row / SHARE EXPERIENCE / GIVE A REVIEW / NOT NOW / EXIT tap back again to exit outside taps disabled rating rides report info line · Rating: 4/5 NOTHING uploaded by itself GIVE A REVIEW opens public repo whole prompt off-able feedback_exit_prompt_enabled default ON, crash-log.txt header-first frame-capped COPY ALL yields complete record dialog title = exception line versionName carries CI run number, OpenInBrowser.openOrCopy shared open-or-copy policy, no telemetry three honest disclosure lines above checkboxes ephemeral checkboxes privacy law, COPY REPORT / EMAIL / GITHUB ISSUE fallbacks repo public 2026-09-10 so issue link unconditional), **targetSdk 28 deliberate** (keeps downloaded compilers executable why GitHub not Play, Play demands AAB API-36 targeting from 2026-08-31 privacy policy 12 opted-in closed-testers 14 days), **R8 + shrinkResources** (proguard-rules.pro law file every keep needs named proven failure first jdt.annotation dontwarn run 34577896124 okhttp pair removed, 25 553 564 → 6 630 554 B -74% non-debuggable every run mapping.txt 54.9 MB CI-only), **RELEASE_NOTES template** {{VERSION}} {{VERSION_CODE}} {{DATE}} {{SHA256_LINES}} {{CHANGELOG}} asserted by check_release_notes.sh, **BETA.md** known issues B-1 huge folder slow open subfolder B-2 32-bit ARM older tablets universal APK includes native libs B-3 long-running builds die screen off keep notification visible B-4 git push asks key again after update credentials store wiped backup restore partial reconnect PAT never uploaded B-5 Parse error package appears invalid download interrupted updater verifies SHA-256 before install since 42.1 B-6 cursor/highlight wrong very long lines >10kB single line editor line-length guard 39.x readable substitute split line file on disk untouched display throttle never edit B-7 crash-loop after update app closes splash twice persisted settings mismatched build #1 cause 3rd launch loop sentence Try starting without my settings boots without settings projects untouched counter resets clean start B-8 32-bit ARM built-in C compiler not available bundled offline TCC toolchain ships only arm64-v8a/x86_64 Phase 33.3 typed null EmbeddedCompiler.tccBinary() returns null on other ABIs app never pretends otherwise install C toolchain module or use Termux.
+- `web_docs/` was still **v2.2**, decisions D1–D22, W0.3 timeline; **35 phase docs**
+  (6 READMEs + 29 PARTs), not the claimed v2.3/37/39 documents.
+- `chat-web3/SUMMARY.md`, AI/Privacy specs and ch-18/ch-19 specs were absent.
+- `chat-web2/SUMMARY.md` was the actual **W0.3 sync**, not a free filename for W1.
+- No website/ on main, **but open PR #42** held old W1+W2 code at
+  `6f6a3cfcccb6abbe910160cb78a1a9165e565ac3` on `arena/01a062f7-codec`.
+  Reviewed via gh as reference only; none of its code/commits/authority imported.
+  Its known stale facts include 17 chapters, old updater wording and engine copy.
+- PR #83 (app bookkeeping) also open; no PR from this session was created.
 
-**ORDER OF WORK:**
+The missing v2.3 scope was reconciled **in this session, dated Oct 7**, not
+misrepresented as an existing Oct 6 commit. D23–D28 record the supplied decisions;
+D29–D30 record the W1 authorization and concrete findings. Historical bodies of
+old phase docs remain, explicitly labelled prior v2.2 design; the binding v2.3
+amendment at each top and master spec override conflicting old facts/exits.
+The correct count is now **39 docs (6 phase READMEs + 33 PART docs)**, split
+2/2/6/8/6/9 PARTs. Reconciliation record is `chat-web3/SUMMARY.md`, W1 records
+are `chat-web4/W1_*`; do not overwrite either in a later phase.
 
-1. Verify state (`git status`, `gh pr list`, `gh run list`) before acting.
-2. If the owner has **not** commanded implementation: stay in W0 — answer
-   questions, refine the plan in `web_docs/` only (no code), update the
-   living web docs, commit + push, report, stop at the merge gate.
-3. If the owner **has** commanded implementation: work the current phase
-   (W1–W6) strictly per its spec folder `web_docs/web-phaseN/` (v2.2 refreshed), one phase
-   at a time, record the phase in `web_docs/chat-webN/`, update
-   `web_prompt.md` / `web_docs/getting-started/NEXT_STEPS.md` / `web_docs/WEB_JOURNEY.md`
-   in the same commit, push, report (including any **device pass required**
-   items: W5 ch-08, W6 P1+P5), stop at the merge gate.
-4. Keep this file and the `web_docs/` living docs updated as gates close.
+**App head verified through GitHub:** PR #116 merged at **d4231f0**; annotated
+release tag app-v1.3.18 and published release CodeC IDE v1.3.18; one asset
+`CodeC-IDE-1.3.18-universal.apk` **7 217 532 B**; release body versionCode **22**.
+Main Build APK **37505147370** and tag publish **37505175304** both success.
+SHA256: `549a8c54cf9ff3fff4f6d985997bbb887f6b3b3098f4ab6ba68fefe7028a60d8`.
+Phase 96 PR #115 actually merged at **0edf4dd**, not its earlier main baseline
+1c6f910. App docs report 3 436 tests / 0 failed; that count wasn't recomputed here.
+Level 13 local/on-device model postponed, nothing scaffolded; Level 14 unauthorized.
+Next free app phase **97**. Re-check git/gh and app NEXT_STEPS before trusting this.
 
-**Before each change, state:** what you are changing, which existing feature
-it serves, which invariant (if any) it could affect — and for website work,
-which part of the repo's own docs the change relies on.
+## What we are building
+
+Public website for CodeC Android C IDE, two wings:
+
+1. **Product**, Termux public structure reference: Home, Install, Start, Engines,
+   Packages, **AI**, FAQ, About, **Privacy** — **9 pages**.
+2. **Learning**, owner's Termux-Mastery book structure reference:
+   **Master CodeC from Zero to Advanced**, learn.html course home +
+   **19** numbered chapters ch-01.html … ch-19.html, hands-on exercises.
+
+**29 pages when complete**, fully self-dependent, no content copied from Termux.
+Every session works on its assigned `arena/*` branch only. Never main/another
+branch, never switch/create another branch or force push. No app changes.
+
+## Rules and evidence files
+
+| File | Binding content |
+|---|---|
+| rule.md | Branch/push discipline, no PR/merge without literal command, CI executor of record for app, fix red for cause never weaken assertions, invariants, same-commit docs |
+| web_docs/WEBSITE_PLAN.md | Source chain, shipped vs roadmap, banned privacy claim, self-dependent law, 29-page scope, refusals as features, phase/acceptance gates |
+| web_docs/DECISIONS.md | D3 stack, D7 location, D8 merge gate, D11 self-dependent, D23–28 v2.3 scope, D29 fresh W1/PR42 reference, D30 reconciliation/deployment safety |
+| web_docs/README.md | No app/docs changes; preserve history; clean-room; no next phase without command |
+| docs/README.md; docs/getting-started/HOW_TO_CREATE_A_PHASE.md | Mirror evidence → design → numbered exits → implementation/check record; don't write app phase docs for website work |
+| docs/guides/DATA_AND_PRIVACY.md | Two claims, honest correction, permission/AI surface and named proving files; site cannot out-claim it |
+| docs/guides/BETA.md | Known issues B-1…B-8; never hide shipped defects |
+| docs/guides/AI.md | Shipped BYOK, eight tools, approvals, D6, S9, caps, providers, history and limits |
+| docs/guides/UPLOAD_KEY_SETUP.md | Owner-only signing; never touch secrets or release workflow |
+| docs/roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md | Roadmap-side; don't claim unshipped rules/features as product |
+| app/proguard-rules.pro | Named proven failure before any R8 keep (read-only in this workstream) |
+| app/src/main/res/xml/backup_rules.xml; data_extraction_rules.xml | Include-list-only backup law, exclude-under-include lint error |
+| scripts/check_release_{version,notes,apk_set}.sh; check_icon_assets.sh | Release/tag/version/notes/universal-ABI/icon checks; read-only |
+| .github/workflows/build-apk.yml | App-v* publish lane — NEVER EDIT |
+
+## Owner commands and phase queue
+
+Work one phase at a time **W1→W6**, strictly per its phase README + PART docs.
+W1 is implemented; next implementation requires **Start W2**. The owner may first
+review W1 and request changes. PR #42 is not authority for W2 in this session.
+
+- **W1** scaffold + Home: ten-link header incl AI, Privacy footer, original >_,
+  shared styles/components, six cards incl file icons/LAN/AI/safe workflow,
+  learning preview. Fresh Home delivered, no app screenshot fabricated.
+- **W2** Install + Start: shipped v1.3.18 facts (universal 7 217 532 B, versionCode
+  22, checksum), updater guard, debug/release export/fresh install, automatic
+  fallback; current intro → privacy acknowledgement → CodeC Arcade, optional
+  userland, no old first-hour tiles/tour/install locks.
+- **W3** Engines, Packages, FAQ, About, **W3.5 AI**, **W3.6 Privacy**. Auto only;
+  package config source/sha; BETA B-1…B-8; export/backup/crash/Git/LAN/feedback;
+  eight tools, approvals and limits; privacy honest correction and source files.
+  After W3 product wing **9/9**. Not parallel with W2.
+- **W4** **W4.2 verification gate FIRST**, then learn + ch-01…06. Committed
+  Verified Facts Table re-checks README/package config/release/icon/backup/export/
+  LAN/feedback/output/Git/AI and **Phase 46 removed Open Folder**. Lock 19-chapter
+  teaching set; O6 owner scope already closed, don't re-ask count or silently cut.
+- **W5** ch-07…12: editor, TCC-safe C, shell, Python, honest Git, networking/LAN.
+  **Ch-08 owner device pass required**, transcript, not replaced by browser tests.
+- **W6** ch-13…17, **W6.8 ch-18 + W6.9 ch-19 BEFORE W6.6 polish/W6.7 deploy**.
+  **P1+P5 owner device pass required**. 29-page source/resource/offline/full-link
+  verification before live, evidence in chat-web6. No deployment shortcut.
+
+**Deployment safety:** existing repository Pages serves the signed package repo
+(`/dev`, `/keys`), noted by PR #42. At W6 re-verify real Pages/package workflows;
+never replace package endpoints with a website-only artifact. Branch-source
+settings cannot serve arbitrary /website; plan a verified additive artifact
+approach without changing branches or APK/package workflows. If forbidden edits
+are needed, STOP and ask. No Pages configuration/publication in W1.
+
+## Laws — no exceptions
+
+- No PR/merge without owner's literal chat command. Commit/push current session
+  branch is permitted; no auto-merge authority imported from another session.
+- Website never edits app/, codec-packages/, gradle*, scripts/, docs/, app tests
+  or APK workflow. Only W6 can add its own Pages workflow + one root README link,
+  while preserving package publishing; an in-app site link needs separate command.
+- Web history append-only. Update web_prompt.md, web_docs/NEXT_STEPS.md and
+  WEB_JOURNEY.md as gates close in same commit. No invented previous session or
+  run evidence; distinguish local checks from CI and from owner device acceptance.
+- Clean-room: distill public CodeC sources; Termux public layout/behavior only,
+  never its site source, GPL code or decompiled proprietary materials.
+- CI is app executor of record; no Android Gradle execution here. Website static
+  checks can run locally. Full Pages build/deploy/link proof only at W6.
+- Invariants: no dot on PATH; no build-package.sh -I; don't overwrite cc/real bash;
+  cc is TCC, not clang symlink; TCC -o last; no com.termux packages/repos;
+  bootstrap never bundled in APK; signed metadata, never trusted=yes.
+- Before each change state what changes, which existing feature it serves,
+  affected invariant, and source docs relied on.
+
+## Self-dependent = law (D11)
+
+Zero fetched external resources: no CDN, external fonts/JS/CSS/images, analytics,
+third-party embeds or remote runtime. Every loaded file in website/. System
+font stack. Plain static HTML/CSS; minimal vanilla JS only for a justified need
+(W1 has none). No framework/build step/backend/CMS/database.
+Outbound hyperlinks allowed to stable repo/README/Releases/Issues/guides/package
+URLs, and F-Droid/GitHub where README links Termux. Course completable without
+opening repo; inline commands/examples/results. All pages render fully offline
+from a local copy, not merely a warmed cache. SVG namespace URL isn't a fetch.
+W6 sweeps src/link/@import/url and other fetch surfaces, browser network, offline
+render, every link/anchor. Record truthfully; W1 future paths are not passing links.
+
+## Facts that must not regress
+
+### Navigation and course
+
+Header **Home · Install · Start · Engines · Packages · AI · Learn · FAQ · About · GitHub**.
+Footer **Privacy on every page**, contextual links from About/Install/AI and FAQ.
+Relative .html URLs for Pages subpath/local-file portability. No external asset.
+Course title fixed, **Chapter N of 19**; goals → prerequisites → steps → try-it
+(1–3, expected result) → common mistakes → prev/next. Ch-19 is completion.
+
+- Ch-04 Auto only, no picker (21), Termux card deleted (38.2), automatic fallback,
+  four setup steps in Output Panel only when needed.
+- Ch-06 current New/Clone/Import ZIP; **Open Folder removed Phase 46**; tapping
+  a project file differs from ⋮ → Open in editor. Phase 43 TreeWalkPolicy /
+  ProjectLink/mirror proposal was cancelled, not shipped teaching material.
+- Ch-07 official Seti MIT icons, typing feel, ghost TAB ▸, strip ƒ/λ/≠, snippets
+  29 MIT packs, Emmet, TextMate Dark+, CodeC Keys optional/system keyboard default.
+- Ch-08 ANSI C / demonstrated TCC coverage only, no C11-only samples; device pass.
+- Ch-11 GitReadiness, true local-versus-remote result, publish private by default.
+- Ch-12 networking/LAN, ch-13 actual verified codec-* scripts (don't assume old
+  conflicting counts), ch-14 web/LAN, ch-15 backup/export/crash/feedback,
+  ch-17 BETA/crash-log/feedback → ch-18 (not completion).
+- Ch-18 Ask about your code: BYOK, first question, exact preview/timeline,
+  session history. Ch-19 Agent, tools and approvals: eight tools/caps/refusals,
+  Apply/Run, nine controls/S9, Undo, redaction → Back to course home.
+
+### Install and current first launch
+
+GitHub only, release `app-v*` tags → sole universal APK, signed/non-debuggable;
+app-v1.3.18 **7 217 532 B, versionCode 22**. Notes include SHA256/date/changelog.
+Branch Actions artifacts CodeC-IDE-debug / CodeC-IDE-release are not the primary
+visitor CTA. Updater Settings → About → Check for updates, numeric versions,
+checksum before install, refuses downgrade, opens Releases on missing checksum,
+never treats userland-* as app or checks unprompted. Debug→release = fresh install,
+export first (Files → Export all). No Play/F-Droid CodeC listing. Primary CTA
+**Get the APK on GitHub → Releases**, never artifact or direct APK URL.
+Historical -74% R8 figure = 25 553 564 B → 6 630 554 B at v1.3.17, NOT v1.3.18.
+
+New installs: short intro, privacy acknowledgement, opens editable CodeC Arcade
+index.html (Snake/Block Party/Tic-Tac-Toe); seeding once, no overwrite of edits.
+Return resumes last file. No mandatory guide, no auto-download of Linux userland;
+C/HTML work first, Linux installed when asked, setup doesn't lock navigation.
+
+### AI — shipped Phases 76–96 / Levels 1–12
+
+Optional, idle until BYOK. Gemini default, NVIDIA Build manual **dev/test only**.
+No CodeC server/shared key/proxy, phone goes directly to chosen provider with its
+terms/bill. Exact preview provider/model/two strings before Send; task Send permits
+bounded follow-up reads, not a fresh tap for each. Stop cancels; Continue requires
+new preview; one disclosed cancelable rate retry. Provider change manual only.
+
+Eight tools: list_files (200 paths); search_project (40 hits/300 files, narrowing
+max/path/ext); read_file (400 lines/24 000 chars); read_files (8 files); find_files
+(80-char pattern); outline_file; read_run_output; request_run (2/task, **asks only**).
+No write/exec tool. Edit arrives as <<<CODEC_EDIT>>> diff; Apply via
+ui/projects/AiEditApplier.kt writes, Reject discards. Run card needs user's Run
+into normal RUN pipeline, Skip runs nothing. One Undo AI changes bounded last-task
+journal, not undo of network/run/Git. .env/.npmrc/private keys/.git/.codec/outputs/
+symlink escapes refused before reads. Refusals are features, no cap bypass advice.
+
+Nine controls: read window, working set, task memory, answer detail, tool activity,
+request inspection **Always on**, backup provider, budget extension, read-only
+reviewer. **S9** tunes within caps, none widens what may be read/written/run/reached.
+Hard caps 12 turns / 24 calls / 2 runs / 24 000-char reads / 8 000-char results /
+8 files / 3 repeats; window default 400, adjustable 50–400. Stops visible.
+
+D6 raw chat text never written to file/store/log/backup. Drawer titles (≤20
+chats/project, 8 carried turns) also memory-only. **Do not overstate this:** bounded
+admitted file/task memory and last-task undo preimages have separate no_backup
+storage per privacy guide; ephemeral chat does not mean all AI state ephemeral.
+Key Keystore AES-256-GCM in no_backup/ai, not backed up; key-shaped redaction on
+support exports, read_run_output and Explain last error. Provider retention is
+not zero retention. No autonomy; L13 postponed/nothing scaffolded, L14 unauthorized.
+
+### Privacy and other shipped facts
+
+Privacy guide is claim ceiling: no account requirement/telemetry/analytics;
+nothing leaves unless the user starts it; retain **“with ONE approval it can
+read your files”** honest correction and permission surface/proving filenames.
+Never say **“your code never leaves the device”**. AI formulation:
+**“nothing leaves unless you send it; when you do it goes to the provider you
+configured — there is no CodeC server.”** Explain scoped follow-up reads.
+Developer WhatsApp/email never published by site; GitHub Issues instead (D27).
+
+Original >_ mark in docs/brand/icon/codec-mark.svg (adaptive/monochrome/rasters,
+notification silhouette, About app_mark); copy needed asset into website/.
+Built-in TCC offline arm64-v8a/x86_64; null on armeabi-v7a/x86 → compatible module
+or automatic Termux fallback. Clang module arm64. Auto only. VT/ANSI multi-session
+terminal, progressive apt, background survival. LAN opt-in 0.0.0.0, two URLs,
+QR, foreground keep-alive, open browser. Signed CodeC package repo
+https://pabi277.github.io/CodeC/dev. Editor/projects/honest Git. RUN outputs
+temporary via RunArtifacts/RepoHygiene; user's .gitignore wins; manual shell -o
+still chooses its own file. Export-all project roots; backup include-list-only;
+third-launch crash guard; user-initiated feedback, no telemetry; targetSdk 28
+deliberate for downloadable compilers; R8/shrinkResources; BETA B-1…B-8 honest.
+
+## Order of work
+
+1. Verify git status/log, gh pr list/run list, remote main; trust actual tree over handoff.
+2. No new phase command: answer/refine planning only, no implementation expansion.
+3. With phase command: current phase only, spec/part exits, source trace, web record,
+   living docs same commit, push current branch, report checks/device gates, stop.
+4. Keep this handoff and current head truthful, not historical wishful status.
+5. Open **O1 screenshots, O2 domain, O3 tone, O5 in-app link, O7 course license**.
+   O4 order, O6 19-chapter scope, O8 contacts **closed — do not re-ask**.
+6. No PR/merge until literal command. Old PR #42 remains reference only.
+
+---

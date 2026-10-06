@@ -1,5 +1,47 @@
 # CodeC Website Phase W4.8 — Chapter 06: Files & Projects (safe walk + ProjectLink + export-all)
 
+> **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
+> Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below
+> before the retained prior design. They supersede conflicting old facts and exits:
+> **29 pages / 9 product / 19 chapters**; app-v1.3.18 **7 217 532 B, versionCode 22**;
+> AI in header, Privacy every footer; contacts in-app only; README then AI/privacy
+> guides; Phases 1–96 shipped except cancelled proposals, 97+ roadmap. Never pair
+> current APK size with historical -74%. No picker, Open Folder, ProjectLink,
+> first-hour tiles, mandatory tour or automatic userland setup in visitor teaching.
+> Earlier session-folder references are historical: preserve existing records;
+> W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
+
+**Current status:** PLANNED; not authorized by the W1 command.
+
+## Current v2.3 implementation requirements
+
+REPLACEMENT TEACHING OUTLINE (old safe-walk/ProjectLink material below is NOT
+shipped): New Project / Clone Git Repo / Import ZIP are the three + doors.
+Phase 46 removed Open Folder. To import a folder, zip it and use Import ZIP.
+Distinguish tapping one project file from card ⋮ → Open in editor (whole project).
+Create project → save/move a single file → import ZIP → export project → export-all.
+Teach both verified project roots and ZIP limits only after W4.2 source checks.
+RUN outputs are temporary; manual shell -o a.out chooses its own output location,
+so don't claim RunArtifacts intercepts arbitrary terminal commands. User's
+.gitignore wins. Never exercise nonexistent linked mirrors or persisted grants.
+Try-it: create, add hello.c, export and re-import a disposable copy, inspect files.
+Mistakes: expecting a removed fourth door, confusing file/project entry, assuming
+backup carries tools/credentials. Crumb Chapter 6 of 19; prev ch-05, next ch-07.
+Exit additionally requires explicit stale-UI sweep and current path/source table.
+
+## Current acceptance additions (binding)
+
+1. Follow the current requirements above and the master plan, not superseded UI/copy.
+2. Preserve each non-conflicting numbered exit below, including device gates.
+3. Record source file/line/sha, responsive checks and self-dependent sweep; use 19-chapter crumbs where applicable.
+4. No app/workflow changes or phase expansion; update web living docs and stop at merge gate.
+
+---
+
+## Prior design detail — retained v2.2 record
+
+**Historical reference, not authority for superseded facts or exit counts.**
+
 **Status:** 📋 **PLANNED** · **Cost:** `[static]` · **Effort:** M
 · **Depends on:** W4.2 gate v2.2
 · **Target file:** `website/ch-06.html`

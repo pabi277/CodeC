@@ -1,5 +1,28 @@
 # CodeC Website Phase W6 — Learning Wing III: Chapters 13–17 + Polish + Deploy
 
+> **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
+
+Ch-13…17, THEN W6.8 ch-18 and W6.9 ch-19, THEN W6.6 polish and W6.7 deployment. Seven new HTML files. All 29 pages and 19 chapters; P1+P5 owner device transcripts. Preserve signed package Pages endpoints.
+
+**9 parts in this phase.** The six phases contain **39 docs (6 READMEs + 33 PART docs)**.
+
+Read [master plan v2.3](../WEBSITE_PLAN.md) and the binding v2.3 block at the top
+of every PART doc. Current requirements override the retained prior design below:
+29 pages, 19 chapters, AI nav, Privacy footer, release v1.3.18, contacts in-app
+only, no deleted UI or cancelled proposals taught. W1→W6 strictly sequential.
+Use [NEXT_STEPS](../NEXT_STEPS.md) for status, not old session-folder assumptions.
+
+| Added part (before polish/deploy) | Spec |
+|---|---|
+| W6.8 ch-18 Ask about your code | [PART_6_8_CH18.md](PART_6_8_CH18.md) |
+| W6.9 ch-19 Agent, tools and approvals | [PART_6_9_CH19.md](PART_6_9_CH19.md) |
+
+---
+
+## Prior phase brief — historical v2.2 context
+
+The earlier status, counts and session pointers below are superseded above.
+
 **Status:** 📋 **PLANNED** — not yet started. Awaiting owner's "Start W6".
 · **Cost:** `[static]` — seven new files in `website/` + **one allowed
   exception**: the GitHub Pages workflow (`.github/workflows/pages.yml`) +

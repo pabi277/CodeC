@@ -1,5 +1,28 @@
 # CodeC Website Phase W3 — Engines + Packages + FAQ + About
 
+> **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
+
+Engines + Packages + FAQ + About + AI + Privacy. Six pages, product wing complete at 9/9. W3 depends on completed W2; do not run in parallel.
+
+**6 parts in this phase.** The six phases contain **39 docs (6 READMEs + 33 PART docs)**.
+
+Read [master plan v2.3](../WEBSITE_PLAN.md) and the binding v2.3 block at the top
+of every PART doc. Current requirements override the retained prior design below:
+29 pages, 19 chapters, AI nav, Privacy footer, release v1.3.18, contacts in-app
+only, no deleted UI or cancelled proposals taught. W1→W6 strictly sequential.
+Use [NEXT_STEPS](../NEXT_STEPS.md) for status, not old session-folder assumptions.
+
+| Added part | Spec |
+|---|---|
+| W3.5 AI | [PART_3_5_AI.md](PART_3_5_AI.md) |
+| W3.6 Privacy | [PART_3_6_PRIVACY.md](PART_3_6_PRIVACY.md) |
+
+---
+
+## Prior phase brief — historical v2.2 context
+
+The earlier status, counts and session pointers below are superseded above.
+
 **Status:** 📋 **PLANNED** — not yet started. Awaiting owner's "Start W3"
 (can run in parallel with W2 — both only depend on W1).
 · **Cost:** `[static]` — four new files in `website/`; zero app code

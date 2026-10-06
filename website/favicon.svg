@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CodeC — the master mark (Phase 38.1).
+
+  One drawing, one source of truth: a caret + underscore reading as ">_"
+  (editor + terminal), drawn on the ADAPTIVE-ICON canvas so the same
+  coordinates are the launcher foreground, the monochrome layer and the
+  raster inputs. Original art (rule.md §6): no Android robot, no vendor
+  glyph — just the prompt.
+
+  Geometry laws (verified by IconGeometryTest + SafeZoneMathTest):
+  · viewport 108 × 108 (the adaptive-icon canvas);
+  · every coordinate of both paths lies inside the 66 dp safe zone
+    (21..87 on both axes) — the farthest drawn point is ~27 units from
+    the centre, comfortably inside the 33-unit safe circle, so the
+    roundest OEM mask cannot clip the mark;
+  · the composition's bounding box (34..74 × 36..72) is centred on
+    (54, 54);
+  · flat colours only (no gradients, no shadows) — launchers that
+    rasterise layers themselves render gradients wrong, and the
+    monochrome version must be the SAME drawing.
+
+  Colours: surface #101418 (the background layer / raster tile),
+  accent #3DDC84 (the glyph — the identity green CodeC already used).
+
+  Regenerate the launcher rasters + store art with:
+      cd scripts && npm install && node render_icon.mjs
+  (committed outputs are byte-reproducible; the script re-reads THIS
+  file, so the SVG is the only hand-edited file.)
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="108" height="108" viewBox="0 0 108 108">
+  <!-- caret -->
+  <path fill="#3DDC84" d="M39,36 L57,54 L39,72 L34,67 L47,54 L34,41 Z"/>
+  <!-- underscore -->
+  <path fill="#3DDC84" d="M52,64 L74,64 L74,72 L52,72 Z"/>
+</svg>

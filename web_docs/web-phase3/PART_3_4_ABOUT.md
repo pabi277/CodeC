@@ -1,5 +1,40 @@
 # CodeC Website Phase W3.4 — About CodeC (`/about`)
 
+> **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
+> Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below
+> before the retained prior design. They supersede conflicting old facts and exits:
+> **29 pages / 9 product / 19 chapters**; app-v1.3.18 **7 217 532 B, versionCode 22**;
+> AI in header, Privacy every footer; contacts in-app only; README then AI/privacy
+> guides; Phases 1–96 shipped except cancelled proposals, 97+ roadmap. Never pair
+> current APK size with historical -74%. No picker, Open Folder, ProjectLink,
+> first-hour tiles, mandatory tour or automatic userland setup in visitor teaching.
+> Earlier session-folder references are historical: preserve existing records;
+> W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
+
+**Current status:** PLANNED; not authorized by the W1 command.
+
+## Current v2.3 implementation requirements
+
+Story through Phases 1–96 and app-v1.3.18, with cancelled work excluded. Include
+>_ mark, file icons/editor, LAN, signed packages, outputs temporary, Git truth,
+backup/export/crash guard, Settings trim/feedback and optional AI. Link Privacy.
+No first-hour tiles, Open Folder, Phase 43 safe-walk/ProjectLink promises, or
+personal contact details. R8 -74% only as historical v1.3.17. W3 is NOT complete
+after this part: AI and Privacy must follow for 9/9 product pages.
+
+## Current acceptance additions (binding)
+
+1. Follow the current requirements above and the master plan, not superseded UI/copy.
+2. Preserve each non-conflicting numbered exit below, including device gates.
+3. Record source file/line/sha, responsive checks and self-dependent sweep; use 19-chapter crumbs where applicable.
+4. No app/workflow changes or phase expansion; update web living docs and stop at merge gate.
+
+---
+
+## Prior design detail — retained v2.2 record
+
+**Historical reference, not authority for superseded facts or exit counts.**
+
 **Status:** 📋 **PLANNED** · **Cost:** `[static]` · **Effort:** M
 · **Depends on:** W1
 · **Target file:** `website/about.html`

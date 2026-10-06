@@ -1,5 +1,50 @@
 # CodeC Website Phase W4.2 — Verification gate (locks the chapter set)
 
+> **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
+> Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below
+> before the retained prior design. They supersede conflicting old facts and exits:
+> **29 pages / 9 product / 19 chapters**; app-v1.3.18 **7 217 532 B, versionCode 22**;
+> AI in header, Privacy every footer; contacts in-app only; README then AI/privacy
+> guides; Phases 1–96 shipped except cancelled proposals, 97+ roadmap. Never pair
+> current APK size with historical -74%. No picker, Open Folder, ProjectLink,
+> first-hour tiles, mandatory tour or automatic userland setup in visitor teaching.
+> Earlier session-folder references are historical: preserve existing records;
+> W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
+
+**Current status:** PLANNED; not authorized by the W1 command.
+
+## Current v2.3 implementation requirements
+
+This gate runs FIRST inside W4, before any course page. Deliver
+chat-web4/VERIFIED_FACTS.md with fact/value/source file+line/sha/date/status for:
+release universal APK 7 217 532 B/versionCode 22/checksum/updater; package build
+inventory and executable names; Auto engines and ABIs; optional terminal setup;
+actual codec-* scripts (do not assume an old conflicting script count); editor
+icons/typing/snippets/Emmet; web/LAN; Git readiness/push/publish; original icon;
+current Settings; output temp paths/.gitignore; feedback sans personal contacts;
+backup include-list/export-all/crash guard; BETA; current intro/Arcade; and
+Phase 46 removal of Open Folder (Phase 43 ProjectLink proposals not shipped).
+AI rows mandatory: providers/BYOK, eight tools + individual caps, refusal paths,
+Apply/Run/Undo, exact preview and scoped follow-ups, D6 history versus task-memory
+exception, nine controls/S9, hard caps, key storage/redaction, no autonomy/local
+model promise. Diff W3 package table; correct drift on web pages in same commit.
+Lock the 19-chapter teaching set; O6 scope already closed. If a premise is false,
+STOP and propose corrected teaching, not an unapproved chapter deletion.
+All these row groups (not old '8 rows') must have proof before gate closes.
+
+## Current acceptance additions (binding)
+
+1. Follow the current requirements above and the master plan, not superseded UI/copy.
+2. Preserve each non-conflicting numbered exit below, including device gates.
+3. Record source file/line/sha, responsive checks and self-dependent sweep; use 19-chapter crumbs where applicable.
+4. No app/workflow changes or phase expansion; update web living docs and stop at merge gate.
+
+---
+
+## Prior design detail — retained v2.2 record
+
+**Historical reference, not authority for superseded facts or exit counts.**
+
 **Status:** 📋 **PLANNED** · **Cost:** `[static]` (docs-only deliverable) ·
 **Effort:** M
 · **Depends on:** nothing (README + repo config + BETA + RELEASE_NOTES + 38–43 docs) — **but runs first in W4**

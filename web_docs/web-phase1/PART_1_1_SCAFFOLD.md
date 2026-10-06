@@ -1,5 +1,42 @@
 # CodeC Website Phase W1.1 — Shared scaffold (chrome + stylesheet)
 
+> **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
+> Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below
+> before the retained prior design. They supersede conflicting old facts and exits:
+> **29 pages / 9 product / 19 chapters**; app-v1.3.18 **7 217 532 B, versionCode 22**;
+> AI in header, Privacy every footer; contacts in-app only; README then AI/privacy
+> guides; Phases 1–96 shipped except cancelled proposals, 97+ roadmap. Never pair
+> current APK size with historical -74%. No picker, Open Folder, ProjectLink,
+> first-hour tiles, mandatory tour or automatic userland setup in visitor teaching.
+> Earlier session-folder references are historical: preserve existing records;
+> W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
+
+**Current status:** W1 implemented; static/browser checks recorded in [W1_CHECKS](../chat-web4/W1_CHECKS.md).
+
+## Current v2.3 implementation requirements
+
+Current targets: only website/index.html, style.css, favicon.svg. Header has all
+10 links including AI; footer has Privacy. Use the original local >_ SVG, system
+fonts, dark near-black/green identity. Native details mobile menu, skip link,
+visible focus and reduced motion; no JS, checkbox hacks, light-theme hooks or
+screenshots. CSS must define every inherited component for W2–W6.
+Canonical copy-paste pattern is chat-web4/W1_CHROME.md, not the historical
+chat-web2 record. Render at 360/1440, test keyboard menu and fresh local-file
+offline load. Browser must request only index/style/favicon.
+
+## Current acceptance additions (binding)
+
+1. Follow the current requirements above and the master plan, not superseded UI/copy.
+2. Preserve each non-conflicting numbered exit below, including device gates.
+3. Record source file/line/sha, responsive checks and self-dependent sweep; use 19-chapter crumbs where applicable.
+4. No app/workflow changes or phase expansion; update web living docs and stop at merge gate.
+
+---
+
+## Prior design detail — retained v2.2 record
+
+**Historical reference, not authority for superseded facts or exit counts.**
+
 **Status:** 📋 **PLANNED** · **Cost:** `[static]` · **Effort:** M
 · **Depends on:** nothing
 · **Target files:** `website/style.css`, `website/index.html` (chrome

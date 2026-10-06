@@ -1,5 +1,23 @@
 # CodeC Website Phase W4 — Learning Wing I: Course Home + Chapters 01–06
 
+> **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
+
+W4.2 FIRST: source-backed Verified Facts Table including AI/Phase46/current first-run and build-config package list. Then learn.html + ch-01…06 (seven HTML files, not eight). 19-chapter scope already chosen; O6 technical verification remains.
+
+**8 parts in this phase.** The six phases contain **39 docs (6 READMEs + 33 PART docs)**.
+
+Read [master plan v2.3](../WEBSITE_PLAN.md) and the binding v2.3 block at the top
+of every PART doc. Current requirements override the retained prior design below:
+29 pages, 19 chapters, AI nav, Privacy footer, release v1.3.18, contacts in-app
+only, no deleted UI or cancelled proposals taught. W1→W6 strictly sequential.
+Use [NEXT_STEPS](../NEXT_STEPS.md) for status, not old session-folder assumptions.
+
+---
+
+## Prior phase brief — historical v2.2 context
+
+The earlier status, counts and session pointers below are superseded above.
+
 **Status:** 📋 **PLANNED** — not yet started. Awaiting owner's "Start W4".
 · **Cost:** `[static]` — eight new files in `website/`; zero app code
 · **Depends on:** W1 (chrome) + W2 (course home & ch-01 point at `/install`)

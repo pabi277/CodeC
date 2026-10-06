@@ -30,7 +30,36 @@ proposed by the agent and adopted without objection.
 | D21 | 2026-09-12 | **Phase 43 Planned (affects ch-06 + FAQ + About).** 43.1 "Open folder" cannot crash: SAF copy today plain recursion copyDocumentChildren no visited set, no depth/file/byte budget, no cancellation, opens every file stream serially, caller catches only Exception — provider returning parent as own child is StackOverflowError (Error not Exception) kills app (owner second sentence). Replaced with iterative walk planned by pure TreeWalkPolicy, budgets, progress + cancel, per-provider failure as message, Throwable at boundary, grant persisted takePersistableUriPermission never called today. ZIP path already guarded MAX_ZIP_ENTRIES 10k, MAX_ZIP_ENTRY_BYTES 128 MB, total-bytes cap, path-escape check. 43.2 open folder as project via ProjectLink(projectName, treeUri, …) + pure ProjectLinkPolicy.decide (take / refuse-with-reason / re-pick when grant gone), honest limitation: emulated storage mounted noexec so linked project runs from internal mirror (sync in on open/save, push-set on save-back excludes CodeC own outputs) while user's folder stays source of truth — 39.1 must land first or mirror would push build artifacts into folder user owns. All-files-access open in place variant considered and rejected as default (four reasons + one per-project flag may still earn place). | Agent (from app Phase 43 docs, planned) |
 | D22 | 2026-09-12 | **Website spec v2.2 sync.** WEBSITE_PLAN.md bumped v2.1 → v2.2 to incorporate Phases 21–43 facts: install channel now universal APK 6.6 MB signed SHA256 + updater version guard + debug vs release + export-all + backup include-list + crash-loop guard; engines page Auto only no picker no Termux card (fallback automatic error-path); Home cards include file icons, LAN server, safe features; FAQ includes BETA B-1…B-8 + debug/release + signature change + backup + crash-loop + export-all + huge folder + 32-bit TCC null; About includes >_ mark + Settings trim + feedback hardcoded + export-all + backup + crash-loop + LAN + file icons + outputs temporary + GitHub truth; chapters 01–17 enriched (ch-04 Auto, ch-06 safe walk + ProjectLink + export-all, ch-07 editor with Seti icons + typing feel + ghost + strip + snippets 29 packs + Emmet + TextMate + 50 items, ch-08 TCC-safe law, ch-11 GitReadiness + push truth + publish, ch-12 LAN server + QR + open-in-browser, ch-13 8 scripts, ch-15 export-all + backup + crash-loop + feedback, ch-17 BETA + crash-log + feedback). W4.2 verification gate must re-verify new facts. Open item O8 added: should website show hardcoded feedback contact or keep in-app only? | Agent (sync) |
 
-## Open (pending owner)
+## v2.3 reconciliation — 2026-10-07
+
+The owner's supplied handoff dated 2026-10-06 described D23–D28, but those rows
+were absent at base `d4231f0`. The following records that supplied scope **now**;
+it does not claim a missing October 6 commit existed. D1–D22 above remain history.
+
+| # | Date recorded | Decision | By |
+|---|---|---|---|
+| D23 | 2026-10-07 | Reconcile website specs to shipped Phases 1–96 / app-v1.3.18, not cancelled Phase 43 plans. Release independently verified: 7 217 532 B, versionCode 22. R8 -74% is historical v1.3.17, never the v1.3.18 size. W1→W6 sequential, closes O4; W4.2 first inside W4, W6.8/9 before polish/deploy. | Owner v2.3 handoff (dated Oct 6), recorded from repo/GitHub evidence |
+| D24 | 2026-10-07 | Add AI product page (W3.5) and header nav: Home · Install · Start · Engines · Packages · AI · Learn · FAQ · About · GitHub. BYOK, eight bounded tools, no write/exec tool, Apply/Run taps, D6/S9/caps are content law. | Owner handoff |
+| D25 | 2026-10-07 | Add Privacy product page W3.6, link every footer and Install/About/AI/FAQ. DATA_AND_PRIVACY.md sets claim strength, honest correction, provider recipients, task follow-ups and storage facts. Never claim code cannot leave the device. Product wing 9 pages. | Owner handoff |
+| D26 | 2026-10-07 | Source chain extends README → TROUBLESHOOTING → BETA → AI → DATA_AND_PRIVACY → RELEASE_NOTES → JOURNEY. AI/privacy claims trace to those guides; roadmap is not shipped. All source files read-only. | Owner handoff |
+| D27 | 2026-10-07 | Contacts stay in the app; no personal WhatsApp number/email in website copy, site uses GitHub Issues. Closes O8; overrides old contact-display suggestions without deleting history. | Owner handoff |
+| D28 | 2026-10-07 | Course scope is 19 chapters: add ch-18 Ask about your code and ch-19 Agent, tools and approvals. Total 29 pages; completion moves from ch-17 to ch-19. O6's owner scope decision closed; W4.2 still verifies and locks implementation facts, never silently cuts chapters. | Owner handoff |
+| D29 | 2026-10-07 | W1 authorized: “You can watch the pr 42 for reference but you have build it with updated docs and more powerful website”. Read PR #42 at 6f6a3cf; do not import it, switch branches, close it, or claim its W2/deploy authority. Fresh Home, six cards, original textual code example (not screenshot), accessible native menu, source-backed release/AI/course story. No unapproved screenshots, new stack or W2 pages. | Owner + Agent implementation interpretation |
+| D30 | 2026-10-07 | Record concrete reconciliation findings: v2.2 still on main; 35 docs before this sync, 39 after (6 + 33), not a three-string 37→39 fix. Existing Pages serves package repo; W6 must verify deployment ownership and preserve /dev and /keys. Relative .html paths support project Pages and offline files. W1 preview labels unbuilt guides/course honestly. Record W0.4 in chat-web3 and W1 in chat-web4/W1_* without overwriting actual chat-web2 history. | Agent, from checkout and PR #42 evidence |
+
+## Current open items
+
+- **O1** — Screenshots (owner supplies/approves); no screenshots in W1.
+- **O2** — Custom domain; default proposed project Pages URL, no deployment yet.
+- **O3** — Copy tone; W1 uses concise, friendly-technical copy as a reviewable proposal.
+- **O5** — In-app site link; separate app-workstream authorization needed.
+- **O7** — Course license; do not invent an MIT course grant before the answer.
+
+**Closed scope:** O4 (order), O6 (19 chapters), O8 (contacts in-app only).
+W4.2 is still a technical gate, not another request for the owner's chapter-count answer.
+
+## Historical open list — v2.2 (superseded above)
+
 
 - O1 — Screenshots on Home/chapters: wanted or not? (Owner supplies/approves images.)
 - O2 — Custom domain vs. GitHub Pages URL.

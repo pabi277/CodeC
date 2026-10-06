@@ -1,257 +1,290 @@
 # WEBSITE_PLAN.md — master spec for the CodeC website
 
-> **Status (2026-09-12, v2.2): PLANNED — nothing built yet, all phases
-> fully spec'd, now synced with Phases 21–43.** v2 added the **learning wing** (owner's own Termux-Mastery
-> as structural reference) and the **fully self-dependent** requirement
-> (owner commands 2026-09-02). v2.1: every phase W1–W6 now has a full spec
-> folder — `web_docs/web-phase1/` … `web_docs/web-phase6/` (35 docs: design,
-> implementation steps, exit conditions per part). v2.2 syncs the spec with
-> **Phases 34–43** (file icons, editor feel, terminal speed, LAN server, identity,
-> outputs-temporary, GitHub truth, feedback, share-readiness, file-system strength)
-> plus earlier **Phases 21–33** (Auto engine only, R8 weight, TextMate, snippets/Emmet, etc.).
-> Implementation starts only when the owner commands it in chat —
-> **"Start W1"** … **"Start W6"** (or "Build the website" = Start W1).
-> Stack, pages and deployment are **decided** (see `DECISIONS.md`) —
-> changing them needs the owner's explicit command.
-
----
+> **v2.3 — scope dated 2026-10-06; reconciled with the actual tree 2026-10-07.**
+> The owner supplied the v2.3 handoff in chat. It had not landed in this checkout:
+> the base `d4231f0` held v2.2 and 35 phase docs. This session restores the missing
+> specifications, without inventing a past sync or overwriting session history.
+> **W1 is authorized** by “You can watch the pr 42 for reference but you have build
+> it with updated docs and more powerful website”. W2–W6 still require commands.
+> Head state: [NEXT_STEPS.md](NEXT_STEPS.md). Prior v2.2 narrative remains in
+> [chat-web2/SUMMARY.md](chat-web2/SUMMARY.md) and [WEB_JOURNEY.md](WEB_JOURNEY.md).
 
 ## 1. What we are building
 
-A fully self-dependent public website for **CodeC** — an Android C
-programming IDE with a built-in compiler, an in-app terminal, and a signed
-package repository. The site has **two wings under one roof**:
+A public, self-dependent website for CodeC, the Android C IDE, with two wings:
 
-1. **Product wing** — take a visitor from "never heard of CodeC" to
-   **APK downloaded and first `cc hello.c` compiled**: landing, install
-   guide, getting started, engines, packages, FAQ, about.
-2. **Learning wing** — a complete, book-like course:
-   **"Master CodeC from Zero to Advanced"** — numbered chapters that take a
-   complete beginner (no command line, no C) to real projects, exactly the
-   shape of the owner's **Termux-Mastery** site
-   (`pabitra27706-oss.github.io/Termux-Mastery`): "read it like a book",
-   folder-by-folder chapters, hands-on exercises, a course structure table,
-   free & open source.
+1. **Product:** Home, Install, Start, Engines, Packages, AI, FAQ, About, Privacy — **9 pages**.
+2. **Learning:** **Master CodeC from Zero to Advanced**, course home and **19 numbered chapters**.
 
-### Reference models (structure only — clean-room)
+**29 pages total.** Termux's public site is a structural reference only (never
+copy its source). The owner's Termux-Mastery supplies the book-like learning
+model, not content. PR #42 is an older, unmerged reference, not a source of
+current product truth or authorization to import its W2 implementation.
 
-- **termux.dev** (product wing): landing with one-sentence pitch, install
-  CTAs, feature callout grid; docs-style subpages with stable URLs; plain,
-  fast, content-first.
-- **Termux-Mastery** (learning wing, **the owner's own project** — structure
-  may be mirrored freely): course home (about / why learn / how to use /
-  chapter table / roadmap / disclaimer), 15 numbered chapters from
-  "Getting Started" to "Troubleshooting", each chapter self-contained with
-  hands-on content.
+## 2. Goals and non-goals
 
-**What does NOT transfer from Termux (product wing):**
+- Accurate, source-backed, mobile-first, accessible, fast, useful without opening the repo.
+- A more polished presentation: strong typography, clear product/learning paths,
+  six concise feature cards, readable code examples, explicit limitations.
+- **Locked stack:** plain HTML + one CSS file; minimal vanilla JS only when truly
+  necessary. No framework, build step, backend, CMS, database or runtime dependency.
+- Dark theme only. No theme-switch hooks, fake testimonials, invented statistics,
+  unapproved screenshots, app emulator, website AI chat or automatic APK download.
+- GitHub-only app distribution. No Play Store or F-Droid listing for CodeC.
+- Website work changes only `website/`, `web_docs/`, `web_prompt.md`; W6 alone
+  permits an additive Pages workflow and a one-line root README site link.
 
-- **Install buttons.** Termux offers F-Droid + GitHub. CodeC is distributed
-  **from GitHub only** — **release channel `app-v*` tags** (universal APK `CodeC-IDE-<version>-universal.apk`, 6.6 MB signed non-debuggable, SHA256 lines in release notes), plus **Actions debug artifacts** `CodeC-IDE-debug` / `CodeC-IDE-release` for branch builds, and **in-app Settings → About → Check for updates** which looks only at `app-v*` releases, compares numerically, verifies `sha256:` lines, refuses downgrades with a named reason, and opens Releases page when no checksum. **Single universal APK** — per-ABI splits were measured (<2% saving because `assets/tcc/<abi>` rides every split) and **reverted** (Phase 42.2). One honest CTA: *Get the APK on GitHub*.
-  Never imply a store listing or Play Store.
-- **Package universe scale.** CodeC ships 25+ verified packages — the
-  packages page and chapter 5 list them for real, no inflation.
-- **No sponsors/funders section.**
-
-## 2. Goals & non-goals
-
-**Goals**
-
-1. **Accurate at all times** — every claim traceable to a repo file
-   (`README.md` first, then `docs/guides/TROUBLESHOOTING.md`, `docs/journal/JOURNEY.md`, `docs/guides/BETA.md`, `docs/guides/RELEASE_NOTES.md`). Every new fact from Phases 21–43 must be reflected: Auto engine, Settings trim, >_ icon, file icons, LAN server, outputs temporary, GitHub truth, feedback, backup rules, crash-loop guard, export-all.
-2. **Fully self-dependent (owner requirement):** the site must stand alone —
-   see §5. No external resources of any kind; the learning course must be
-   completable without ever leaving the site.
-3. Dead simple to build, host and maintain: static files, no build step, no
-   backend — the owner can fix a typo in a browser on GitHub and it goes live.
-4. Mobile-first — the audience is Android users, most arrive on a phone.
-5. Deep enough to deflect support: real troubleshooting (product FAQ +
-   chapter 17 + BETA.md known issues), every command in a chapter must work on a fresh CodeC
-   install.
-6. Cheap & boring to host: GitHub Pages on the same repo.
-
-**Non-goals**
-
-- No server-side rendering, no SPA framework, no build step, no CSS framework
-  build, no CMS, no search index, no analytics, no i18n, no blog engine, no
-  download mirror (the APK always downloads from GitHub).
-- No marketing fluff: no fake feature claims, no benchmarks that aren't in
-  the repo docs.
-- The learning wing teaches **what CodeC actually ships today**; planned Phases beyond 43 are mentioned only as "coming", never taught.
-
-## 3. Site structure & content
-
-Single-page-per-topic, one shared header/footer. Final URLs
-(`https://pabi277.github.io/CodeC/…` once deployed — decided in W6, §8).
+## 3. Pages and chapter content
 
 ### 3.0 Shared chrome
 
-- **Header:** wordmark "CodeC" with the **> _ mark** (the original launcher icon from `docs/brand/icon/codec-512.png` — Phase 38.1, flat adaptive + real monochrome layer + legacy PNGs, notification silhouette `ic_stat_codec`), nav: Home · Install · Start · Engines · Packages · **Learn** · FAQ · About · GitHub icon. "Learn" is a top-level nav item (the learning wing is a first-class citizen). Sticky header, collapses to a single toggle on narrow screens.
-- **Footer:** "CodeC — free & open source C IDE for Android" + repo/README/Releases/Issues + "Site source: this repo, `website/`".
-- **Learn pages add:** a chapter breadcrumb ("Chapter N of 17") and prev-chapter / next-chapter footer links on every chapter page.
-- Every page: consistent meta title/description; one canonical link to the Releases page (never hardcoded artifact URLs — they rot).
+Header in order: **Home · Install · Start · Engines · Packages · AI · Learn · FAQ · About · GitHub**.
+Footer on every page: **Privacy** plus repo, README, Releases, Issues, JOURNEY,
+site-source link. Privacy is also linked from Install, About, AI, and the FAQ privacy answer.
+Use the original **>_** mark from `docs/brand/icon/codec-mark.svg`, copied locally.
+System sans and monospace fonts. Green identity accent with restrained amber;
+near-black surfaces, visible keyboard focus, WCAG AA contrast, skip link,
+semantic headings, reduced-motion support, 360 px through desktop and zoom.
+Mobile navigation works without JS using native `<details>`.
 
-### 3.1 Product wing (7 pages)
+Final links are relative `.html` paths (compatible with a project Pages subpath
+and a local file copy), not origin-root `/install` paths. W1 retains final URLs;
+unbuilt pages are explicitly labelled upcoming in the preview, not counted as
+passing links. No placeholder pages just to conceal the phase boundary.
 
-**`/` — Home.** Hero: "CodeC — a C programming IDE for your Android phone."
-One paragraph: built-in offline compiler (TCC), real terminal, package hub, web preview with LAN server (source: `README.md` intro + Phase 37). Primary CTA *Get the APK on GitHub* → Releases (universal 6.6 MB, signed, SHA256); secondary *Read the README*. Feature callouts (6 cards, Termux landing grid pattern): Built-in compiler (offline, instant, no Termux needed; arm64-v8a + x86_64) · Real terminal ("Mini-Termux", Canvas grid + PTY, multi-session) + **Device as server (LAN)** opt-in 0.0.0.0 bind, two URLs, QR (ZXing), keep-alive foreground service · Package hub (25+ signed, 1-tap INSTALL/RUN, live badges) · Spck-grade editor with **official file icons** (Seti MIT), **typing feel** (ghost text TAB ▸, suggestion strip ƒ/λ/≠ chips + ⌄ more, 29 snippet packs MIT + Emmet, TextMate Dark+, CodeC Keys auto-close) · Web preview + LAN sharing · Always updatable & safe (in-app updater with SHA256 verification, export-all ZIP, backup include-list only, crash-loop guard safe mode on 3rd launch). **Learning banner:** "New to the command line or to C? Start the free course — Master CodeC from Zero to Advanced" → `/learn`. Footnote strip: "Free & open source · Built-in compiler · No Termux required · 6.6 MB universal".
+### 3.1 Product wing
 
-**`/install` — Install guide.** Updated to Phase 42.1 release channel:
+**Home (`index.html`, W1).** Hero names the Android C IDE; one primary CTA
+**Get the APK on GitHub** → canonical Releases page, secondary **Read the README**.
+Original textual C example may illustrate write → compile → output, explicitly
+labelled an example, not an app screenshot or live compiler. Six cards:
 
-1. **Release (everyone):** GitHub Releases page → `app-v*` tag → download **`CodeC-IDE-<version>-universal.apk`** — the ONLY APK, 6.6 MB signed non-debuggable (R8 + shrinkResources, -74% vs 25.5 MB, Phase 42.2). Release notes carry `sha256:` lines + versionCode + changelog. Verify with `sha256sum`.
-2. **Developer / branch builds:** push → Actions → Build APK → Artifacts `CodeC-IDE-debug` (debug key, updates only over debug) and `CodeC-IDE-release` (signed with upload key). A release is published only from `app-v*` tag — tag must equal versionName, versionCode must exceed shipped (publish step checks).
-3. **In-app updater:** Settings → About → Check for updates — looks only at `app-v*` releases, compares numerically ("up to date" / named refusal when older), verifies `sha256:` line before installing, opens Releases page when no checksum. Never installs `userland-*` bootstrap as app, never phones home by itself. Also note **debug→release signing change = fresh install** — export projects first (Files → Export all).
+| Card | Required content | Final link |
+|---|---|---|
+| Built-in C | Offline TCC, Auto only; arm64-v8a and x86_64; 32-bit caveat | engines.html |
+| Editor | Official file icons, typing feel, ghost text, snippet packs, Emmet, TextMate Dark+ | about.html |
+| Terminal and web/LAN | Real VT/ANSI terminal, multiple sessions; in-app web preview; opt-in LAN sharing | start.html |
+| Packages | CodeC's signed repository, install on request, real packages not inflated counts | packages.html |
+| AI | BYOK; eight bounded tools, no write/exec tool, Apply/Run approval, session-only history | ai.html |
+| Safe workflow | Export-all, project-only backups, crash-loop guard, checksum updater, honest Git | install.html |
 
-"Allow install from unknown sources". Device support (arm64 best; x86_64 emulators via built-in TCC; 32-bit: built-in TCC **not bundled** — `tccBinary()` returns null on armeabi-v7a/x86, so C works through Clang module or Termux fallback; universal APK still runs, per-ABI splits reverted because `assets/tcc/` not filtered). **Optional Termux engine:** Phase 38.2 removed Settings card — mechanism untouched (TermuxCompiler fallback + RUN_COMMAND permission + <queries> stay). When a build actually needs fallback (Permission denied), Output Panel prints four setup steps (wording source TROUBLESHOOTING.md §27): install Termux 0.109+ from F-Droid/GitHub (Play version outdated), `echo "allow-external-apps=true" >> ~/.termux/termux.properties`, `termux-reload-settings`, `pkg update && pkg install clang`, grant "Run commands in Termux" permission. Links: Releases, BETA.md, TROUBLESHOOTING §27.
+Learning banner: full course title, **19 chapters planned**, chapter-group preview,
+link to `learn.html`. Until W4–W6, do not describe the course as already available.
+Footnote: free/open source, Android, release **app-v1.3.18**, universal APK
+**7 217 532 B** (7.22 MB decimal), versionCode 22. Never attach “-74%” to this size.
 
-**`/start` — Getting started (first hour).** Shortest first compile (hello.c → RUN), the terminal loop (`cc hello.c -o a.out` → `./a.out`, explain the `./` rule), where input programs (`scanf`) run — Term tab, not RUN. Packages tab 1-tap install & run. Web preview (RUN on HTML, live reload). **First-run tiles** (Phase 33.1): three starter tiles C/Python/HTML, DataStore flag `first_launch_complete`. "Where things live" map: Projects · Editor · Terminal · Packages · Settings. Mention **editor opens straight into file you left in** (first launch → Projects hub), autosave ~2s. Cross-link: "Ready for the full course? → Chapter 1".
+**Install (`install.html`, W2).** README first, release channel first. One universal
+`CodeC-IDE-<version>-universal.apk`; shipped v1.3.18 = 7 217 532 B, versionCode 22,
+signed, non-debuggable; release SHA256 verified from GitHub, not guessed.
+Check for updates = Settings → About → Check for updates: numeric version guard,
+checksum verification, refuses downgrade, opens Releases if checksum absent,
+never installs userland bootstrap as app. Debug→release signature change means
+fresh install: export first, Files → Export all. Include supported ABIs and
+32-bit TCC limitation; optional Termux fallback setup from current README.
+F-Droid is mentioned only as a README-supported source of Termux, not CodeC.
+Link Privacy. GitHub Releases CTA is not a transient artifact/download URL.
 
-**`/engines` — Compiler engines.** Updated to Phase 21 + 38.2 truth: **There is nothing to pick — every RUN uses Auto** (built-in TCC first offline instant; if unavailable, Clang module from Packages; if Android blocks downloaded compiler — W^X, noexec, CPU mismatch, broken toolchain — compiles via Termux Clang automatically). The four setup steps for that last fallback appear in Output Panel exactly when needed — TROUBLESHOOTING.md §27. The **Settings → Compiler Engine picker and COMPILER_BACKEND preference were deleted in Phase 21** (D22); **Termux Engine card deleted in Phase 38.2** (D17) — guidance moved to error path via `CompilerRemediation` → `finishFailedBuild` Output-Panel line. Table still explains conceptual engines for learning: Auto (default) / Built-in TCC (ANSI C + most C99, learning & everyday) / Bundled Clang (full C11/C17, arm64 only) / Termux (optional, needs setup). Why TCC first (offline, instant, W^X-safe, static musl, native lib dir allowed at any targetSdk), coverage honesty, arm64 note, x86 emulator note, CHECK BRIDGE removed (now error-path message). Link to /install and /faq.
+**Start (`start.html`, W2).** Fresh install now has the short skippable introduction,
+mandatory privacy acknowledgement (except safe-mode recovery), then the editable
+**CodeC Arcade** HTML project. Returning launches resume the last file. No mandatory
+tour, first-hour tiles or automatic userland download. C and HTML work first;
+Linux userland is opt-in from Terminal, progress/retry never locks navigation.
+Teach a simple `hello.c` and RUN, terminal `cc hello.c -o a.out` then `./a.out`,
+interactive input in Term, package install, web preview, five-tab map, chapter 1 link.
 
-**`/packages` — Package hub & repository.** What `pkg`/Packages tab is (guarded CodeC-only frontend). The real package list (25+; from README + codec-packages config: `git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, …) as a table with N from config (sha recorded in chat-web3, feeds W4.2). How the repo works: `https://pabi277.github.io/CodeC/dev`, signed metadata (`signed-by=`, never `trusted=yes`), SHA-256-verified bootstrap `userland-v2-dev`, atomic installs, gpgv verification. 1-tap UI: INSTALL/RUN buttons, live status badges (`INSTALLED ✓` / `AVAILABLE`), quick system actions (`pkg update`, `upgrade -y`, `codec-setup-storage`, `status`, `heal`, `repair`), interactive command runner. Extra-keys row (ESC/TAB/CTRL/ALT/arrows) + custom macros. Honest scope note.
+**Engines (`engines.html`, W3.1).** **Auto only**: built-in TCC, optional Clang module,
+Termux fallback when needed. No picker (Phase 21), no Termux settings card (38.2).
+Explain conceptual engines, not selectable controls. Four setup steps appear in
+Output Panel only when needed. TCC arm64-v8a/x86_64; null on armeabi-v7a/x86;
+Clang module arm64 limitation; no “switch engine” instructions from stale paragraphs.
 
-**`/faq` — FAQ & troubleshooting.** Distilled from README §Troubleshooting + `docs/guides/TROUBLESHOOTING.md` + `docs/guides/BETA.md` (B-1…B-8) — website-length answers, each linking to repo doc for depth:
+**Packages (`packages.html`, W3.2).** Verify the actual package list against
+`codec-packages/` build config, record source sha and count. README gives examples,
+not an authoritative enumerated total. Signed metadata (`signed-by=`, never
+`trusted=yes`), verified bootstrap, atomic installs; UI badges and quick actions;
+CodeC packages only, never official com.termux packages.
 
-- compiler could not start · Permission denied (W^X/noexec, targetSdk 28 compatibility mode, reinstall once, Termux fallback) · Exec format error (CPU mismatch, TCC null on armeabi-v7a) · Runtime libraries missing · hangs (30s/10s caps, scanf in Term) · Do I need Termux? (No) · hardware keyboards/extra-keys + CodeC Keys · projects & export + **export-all ZIP** + backup rules (include-list-only, token not backed up, userland not backed up) · crash-loop guard (3rd launch safe mode with export + report hand-off) · huge folder slow (open subfolder) · 32-bit ARM built-in not available · debug vs release APK (debuggable flag, run-as risk) · signature change = fresh install · "Parse error / package appears invalid" (SHA256 verification since 42.1) · cursor wrong on very long lines (Phase 39 guard) · where to report bugs (include Logs "Device:" line, versionName with CI run number, feedback & support via WhatsApp hardcoded +91 62967 46606 / email chakraborttypabi2772006@gmail.com, GitHub issue).
+**FAQ (`faq.html`, W3.3).** Keep BETA B-1…B-8 visible, plus compiler errors,
+32-bit limits, long-running commands, backup, crash-loop safe mode on third launch,
+export-all, debug/release signing, checksums, long lines, huge imports and Git push
+truth. Phase 46 removed Open Folder; do not recommend that deleted UI. Include AI
+caps/history/provider costs and Privacy link. Feedback → GitHub Issues; personal
+contact details stay in the app. Every answer has a source, optional deeper link.
 
-**`/about` — About CodeC.** What it is / who it's for. Feature tour in short form (editor with official file icons, ghost text, suggestion strip, snippets+Emmet, TextMate Dark+, typing feel, projects with safe folder walk + ProjectLink persisted SAF grant + noexec mirror, honest git with readiness + push truth + publish, web preview + LAN server with QR + open in browser, device APIs via CodeCApi: battery/sensor/TTS/camera/intent, outputs temporary never in repo, backup rules, crash-loop guard, export-all, feedback & support). **The story:** phases 0–43 built in public (0–19 core, 20–24 multi-lang, 25–33 first-hour UX + IntelliSense, 34–37 UX/UI, 38–43 share-readiness) → link `docs/journal/JOURNEY.md`. **Engineering facts:** original >_ mark (`docs/brand/icon/codec-mark.svg`, safe-zone-verified, adaptive layers + real monochrome layer + 10 PNG rasters + codec-512.png generated by `scripts/render_icon.mjs` sharp 0.35.4 deterministic md5, template webps deleted, `ic_stat_codec` notification silhouette replacing `ic_launcher_foreground` + system `ic_dialog_info`, `app_mark` in About header), static musl TCC in APK arm64+x86_64, signed package repo, CI-built APK (Build APK runs assemble + testDebugUnitTest + lintDebug), clean-room approach, targetSdk 28 deliberate (keeps downloaded compilers executable, why GitHub not Play), R8 + shrinkResources (proguard-rules.pro law file, okhttp pair removed, 25.5 MB → 6.6 MB -74%), backup XMLs include-list-only (FullBackupContent lint law), crash-log.txt header-first with COPY ALL, FeedbackDraft wa.me with hardcoded DeveloperContact, no telemetry, 11 privacy rows, telemetry scan. Links: repo, README, JOURNEY, Releases, Issues, BETA.md, DATA_AND_PRIVACY.md, RELEASE_NOTES.md template.
+**About (`about.html`, W3.4).** >_ identity, built-in compiler, terminal, editor,
+file icons, LAN, packages, honest Git readiness/push/publish, outputs temporary,
+export-all/backup/crash guard, Settings trim and feedback, targetSdk 28 deliberate,
+R8 history and public development through Phase 96. Explain AI without autonomy
+or on-device-model promises. Links: Privacy, Issues, README, JOURNEY, Releases,
+BETA, data/privacy guide. No developer phone/email displayed.
 
-### 3.2 Learning wing — "Master CodeC from Zero to Advanced"
+**AI (`ai.html`, W3.5).** Optional and off until BYOK setup; Gemini default,
+NVIDIA Build manual dev/test only; provider terms/bill apply. No CodeC server,
+shared key or proxy. Preview exact provider/model/text; Send starts the task and
+bounded read follow-ups may send more admitted text without a new tap. Eight tools:
+`list_files`, `search_project`, `read_file`, `read_files`, `find_files`,
+`outline_file`, `read_run_output`, `request_run`; last one requests approval only.
+No write or exec tool. Apply diff / Reject; Run / Skip; bounded Undo AI changes.
+Secret-like files, .git, .codec, outputs and symlink escapes refused before read.
+D6 raw chat never persisted; drawer titles also memory-only, ≤20 chats/project,
+8 turns carried. Nine controls, inspection always on, **S9** no cap widening.
+Hard caps: 12 turns, 24 calls, 2 approved runs, 24 000-char reads, 8 000-char
+results, 8 batched files, 3 identical repeats; read window 50–400, default 400.
+Keystore key under no_backup/ai; redaction also on Explain last error. Provider
+retention is not zero-retention. Link Privacy; L13 postponed, L14 unauthorized.
 
-**`/learn` — Course home** (mirrors the Termux-Mastery home):
+**Privacy (`privacy.html`, W3.6).** Two claims no stronger than
+DATA_AND_PRIVACY.md: no telemetry; nothing leaves unless the user starts it.
+Keep the honest correction **“with ONE approval it can read your files”**, optional
+shared-storage access and permission table with named proving source files. AI
+surface: provider recipients/terms, preview and task follow-ups, visible one-retry,
+manual provider changes, Apply/Run, keys/undo/task memory versus ephemeral chat.
+Use: **“nothing leaves unless you send it; when you do it goes to the provider
+you configured — there is no CodeC server.”** Never claim “your code never leaves
+the device”. No tracking on the site itself.
 
-- *About this course* — structured, text-based guide for complete beginners (no command line, no C required); read like a book, chapter by chapter; each chapter builds on previous; hands-on in CodeC app on phone.
-- *Why learn with CodeC?* — compiler + terminal + packages in one app, offline, no computer needed, 6.6 MB universal, feedback reaches developer.
-- *What you need* — Android phone (arm64 best, x86_64 emulator works, 32-bit needs Clang module), CodeC APK (→ `/install`), 10–20 minutes per chapter.
-- *Course structure* — chapter table (below): number / topic / what you will be able to do (updated with 34–43 facts).
-- *Roadmap* — where course goes ("17 chapters, hands-on projects at end").
-- *Disclaimer* — educational and utility purposes only; no hacking content; use responsibly.
-- *License* — site content licensed with owner's chosen license (default: same as repo; owner confirms in O7).
+### 3.2 Learning wing
 
-**Chapter pages `/learn/ch-01` … `/learn/ch-17`.** Every chapter follows one template (self-contained): **Learning goals → What you need (a fresh CodeC install is enough, or named earlier chapters) → Step-by-step (every command typed by learner, in copyable code block) → Try it yourself (1–3 exercises) → Common mistakes → Prev / Next.** No chapter requires leaving site; repo links optional "go deeper" footnotes.
+`learn.html`: about course, prerequisites, why CodeC, how to use, 19-row chapter
+index, exercises, educational disclaimer, license per O7 (still pending).
+Every `ch-NN.html`: **Chapter N of 19 → learning goals → prerequisites → steps
+→ Try it yourself (1–3 exercises, expected results) → common mistakes → prev/next**.
 
-Proposed chapter set (mirrors Termux-Mastery's 15-chapter arc, adapted to CodeC reality; final set confirmed against verified package list at W4 and by owner via O6, now enriched with Phases 34–43):
+| # | Chapter | Shipped teaching scope |
+|---|---|---|
+| 01 | Getting Started | Current intro + Arcade, GitHub APK, acknowledgement, no forced download |
+| 02 | Your First C Program | hello.c, RUN Auto, terminal compile, explicit ./ rule |
+| 03 | The CodeC Terminal | Commands, one per line, input, sessions, opt-in userland |
+| 04 | Compiler Engines | Auto-only fallback, no picker/card, error-path setup |
+| 05 | Package Manager | Verified package list, signed repo, badges/install/repair |
+| 06 | Files & Projects | New/Clone/Import ZIP; Open Folder deleted Phase 46; outputs temporary/export-all |
+| 07 | The Editor | File icons, typing feel, ghost TAB, strip, snippets, Emmet, TextMate, optional CodeC Keys |
+| 08 | C Programming Basics | ANSI C / TCC-safe examples, no C11-only constructs; device pass |
+| 09 | Shell Scripting | Scripts/variables/loops/conditions in CodeC userland |
+| 10 | Python in CodeC | Install verified Python package, run/REPL/utility |
+| 11 | Git & GitHub | Readiness, clone, local commit vs push truth, publish private by default |
+| 12 | Networking & SSH | Only shipped tools; opt-in LAN bind, two URLs, QR, foreground keep-alive |
+| 13 | Device APIs | Verify actual shipped codec-* scripts; runtime permission/refusal paths |
+| 14 | Web Projects | HTML/CSS/JS preview, modules/fetch, live reload, LAN |
+| 15 | Custom Setup & Advanced Tools | Settings, verified tools, export-all, backup, recovery, feedback |
+| 16 | Real World Projects | C calculator, website/LAN, Python utility, Git, automation; P1+P5 device passes |
+| 17 | Troubleshooting | BETA, errors/logs/crash-log, feedback; next is ch-18, not course completion |
+| 18 | Ask about your code | BYOK setup, first question, exact preview/timeline, session-only history |
+| 19 | Agent, tools and approvals | Eight tools/caps, refusals, Apply/Run doors, nine controls/S9, Undo, redaction |
 
-| # | Chapter | You will be able to… | Updated notes (Phases 34–43) |
-|---|---|---|---|
-| 01 | Getting Started | install CodeC from GitHub (universal APK + SHA256 + updater), find every tab (Projects · Editor · Terminal · Packages · Settings), first-run tiles, take first look, know backup/export-all | Includes release channel, debug vs release, export-all, backup rules |
-| 02 | Your First C Program | write `hello.c`, tap RUN, read output, then terminal loop `cc hello.c -o a.out` → `./a.out` (and why `./`) | RUN = Auto engine, TCC default, no picker |
-| 03 | The CodeC Terminal | work in Term tab: `ls`, `cd`, `pwd`, `mkdir`, `touch`, `cat`, `cp`, `mv`, `rm`, `clear`; one command per line; where programs run; input programs (`scanf`) must run here; multi-terminal sessions, session switcher, terminal speed & feel (Phase 36) | Includes TerminalSessionManager, session switcher dropdown + rename/close |
-| 04 | Compiler Engines | understand Auto fallback chain; know why TCC first; know device limits; see error-path guidance when Termux needed | **Updated:** no picker (deleted Phase 21), Termux card deleted Phase 38.2, CHECK BRIDGE now error-path Output Panel line (CompilerRemediation), 4 setup steps appear only when needed; table = conceptual, not selectable |
-| 05 | Package Manager | 1-tap install & run from Packages tab; `pkg` commands; update/upgrade/heal; read live status badges | Includes quick system actions, extra-keys macros |
-| 06 | Files & Projects | create/open projects, the `+` sheet (New / Clone / Import ZIP / Open Folder), single files, export, where projects live, **safe folder walk** (bounded, Throwable-safe, budgets, cancel/progress), **open folder as project** (ProjectLink + persisted SAF grant, noexec mirror sync in on open/save), export-all ZIP | Includes Phase 43.1/43.2, two project roots (filesDir + externalFilesDir), ZIP caps (10k entries, 128 MB) |
-| 07 | The Editor | tabs & dirty state, undo/redo, find & replace (regex), Format, extra-keys row, autosave, compiler-error squiggles, **official file icons** (Seti), **typing feel** (keyboard stays open, smooth typing, non-blinky caret while typing, no cursor on open until tap), **ghost text** (TAB ▸, →▸ word, caret-row pill, HW Tab & Ctrl+→), **suggestion strip** (ƒ/λ/≠ chips, pinned ⌨ and ⌄ more, tap-accept, long-press tooltip, swipe-down dismiss-per-identifier), **snippets** (29 friendly-snippets MIT packs, 84 C / 76 Python / 126 HTML / 156 CSS / 367 JS / 140 TS / 62 MD / 16 shell), **Emmet** (clean-room, rank 0, `ul>li*3`, `!`, `m10`), **MAX_ITEMS 50** (8 chips + ⌄ more), **TextMate** (VS Code Dark+, 15 langs, lazy per language), **CodeC Keys** auto-close `()[]{}""''`, `{`+Enter indented | Enriched with Phases 28–35 |
-| 08 | C Programming Basics | write real C: types, `printf`/`scanf`, operators, loops, functions, arrays, first pointers — every example typed and RUN in CodeC (standard C teaching content, verified runnable on TCC) | **TCC-safe law:** ANSI C only, no C11 constructs, snippet-review checklist, device pass (owner transcript) |
-| 09 | Shell Scripting | write and run bash scripts in CodeC, variables, loops, conditionals, first automation | |
-| 10 | Python in CodeC | install `python`/`python3`, run scripts, REPL, small utility | |
-| 11 | Git & GitHub | in-app GitHub account, clone repo, Source Control pane, COMMIT & PUSH, branches, honest git (unpushed badge amber ↑N, conflict flow, **GitReadiness** pre-flight, **inline clone error** inside dialog not behind, **PushOutcome/PushParser** result card "Committed locally ✓ — NOT pushed", **Publish to GitHub** via POST /user/repos private by default ls-remote-verified, Switch Branch stash/auto-restore + New branch) | Updated with Phase 40 |
-| 12 | Networking & SSH | network tools **as they exist in CodeC package repo** (list verified at W4: e.g. `curl`/`wget`/`openssh` if shipped); **device as server LAN** (opt-in 0.0.0.0 bind, ServerEndpoints.of, two-URL share panel + ZXing QR Apache-2.0, ServerRegistry/ServerHost port truth, keep-alive on existing RunForegroundService, open-in-browser via OpenInBrowser, copy fallback), basic troubleshooting | Updated with Phase 37 |
-| 13 | Device APIs (CodeCApi) | CodeC answer to Termux API: `codec-battery`, `codec-sensor`, `codec-tts`, `codec-camera`, `codec-intent` — with `NEED_PERMISSION:` flow, plus `codec-clipboard`, `codec-notify`, `codec-toast`, `codec-share`, `codec-open-url`, `codec-vibrate` (Phase 5.3) | Includes Phase 18 + 4.7/4.8/5.3 |
-| 14 | Web Projects | HTML/CSS/JS project in CodeC, RUN = preview, live reload on save, console output, `fetch`/modules over loopback server, **LAN share** from ch-12 | |
-| 15 | Custom Setup & Advanced Tools | themes (VS Code Dark+ default, Monokai, Dracula, GitHub Dark), custom extra-key macros, per-project `.codec.json` config; `make`, `clang`, `ripgrep`, `tmux`, `nano` as repo ships; **export-all ZIP** backup, **backup rules** (include-list-only, projects only, token/userland not backed up), **crash-loop guard** safe mode on 3rd failed launch with export + report hand-off, **first-run permissions explainer**, **About fingerprint** (versionName + CI run number), **feedback & support** (hardcoded developer, WhatsApp chat, exit survey) | Updated with Phases 42.3 + 41 |
-| 16 | Real World Projects | 3–5 hands-on projects: CLI calculator in C; personal web page with live preview + LAN share + QR; Python utility; git-backed project pushed to GitHub (publish flow); small automation script | Includes LAN sharing project |
-| 17 | Troubleshooting | read every common error (mirrors `/faq` + BETA.md B-1…B-8 in depth), read Logs, "Device:" line, crash-log.txt header-first COPY ALL, feedback channel (WhatsApp hardcoded, email, copy report, GitHub issue), how to report useful bug | Includes Phase 41/42 facts |
-
-Chapter content rules:
-
-1. **Only what CodeC ships.** Any chapter that mentions a package, engine or API must be cross-checked against `README.md` + package repo at content-writing time (W4); "if it's not in repo, not in chapter".
-2. **Every command must work on fresh install** — commands written for CodeC terminal environment (`$PREFIX` layout, `./` rule, one command per line).
-3. **Chapter 8 (C Basics)** is only teaching content beyond repo docs (standard C); every snippet must be known-runnable on built-in TCC (ANSI C + most C99) — no C11-only constructs in course.
-4. Code samples inline in page (self-dependent — §5); exercises checkable by learner (expected output shown).
-5. **Outputs are temporary, never in your repo** (Phase 39): `RunArtifacts` routes every language's build output to `filesDir/CodeC/temp/runs/<stamp>/` + `TempGc` (age/capacity/newest-N) prunes on start and after Stop; `RepoHygiene`'s ~60 patterns incl `.codec/` enforced inside `stageAll`, user's own `.gitignore` always wins — chapter 06 must teach this.
+Chapter laws:
+1. Only verified shipped CodeC features; final facts and package inventory at W4.2.
+2. Commands work on a fresh install after named prerequisites; never `.` on PATH,
+   never replace cc, TCC link order with -o last, never use com.termux packages.
+3. Ch-08 examples are TCC-safe, not a C11 course; owner device transcript required.
+4. Samples and expected output are inline; repo links are optional further reading.
+5. Outputs temporary; the user's own .gitignore wins; no deleted Open Folder UI.
+6. **Refusals are features**: secret/cap/path restrictions taught honestly in ch-19.
+   Completion / Back to course home belongs to **ch-19**, not ch-17.
 
 ## 4. Content rules (both wings)
 
-1. **Source of truth order:** `README.md` → `docs/guides/TROUBLESHOOTING.md` → `docs/guides/BETA.md` → `docs/guides/RELEASE_NOTES.md` → `docs/journal/JOURNEY.md` → `docs/chat-phaseN/` (detail). If product fact isn't in repo, not on site.
-2. **Distill, don't dump** — website-length answers; link out for depth.
-3. **No rotting links:** stable places only (Releases page, repo root, README anchors, docs files) — never artifact URLs or run IDs.
-4. **Version-awareness:** "as of" notes where README could change (package count, engine list — now Auto only, universal APK size, versionCode); W6 sweep re-reads README first.
-5. **Honest scope:** C IDE today + multi-language (Python, JS, HTML) shipped; planned phases beyond 43 labelled as roadmap, never taught.
+1. **Source chain:** README first → TROUBLESHOOTING → BETA → AI → DATA_AND_PRIVACY
+   → RELEASE_NOTES → JOURNEY, under `docs/guides/` and `docs/journal/` as appropriate.
+   Detail can use named app implementation files read-only. No unsourced claim.
+2. Distill, don't dump. Store claim/source/line/sha notes in the session record.
+3. Stable outbound hyperlinks only: repo, README, Releases, Issues, guide paths.
+   No CI artifact URLs or run IDs in visitor copy.
+4. Version-aware: shipped = app Phases 1–96 + app-v1.3.18; roadmap = 97+.
+   Cancelled work is not shipped merely because its phase number is below 96.
+   Phase 43 proposed safe walk/ProjectLink must not be taught as shipped.
+5. **Banned privacy sentence:** “your code never leaves the device”. AI requests
+   leave for the chosen provider. Describe task-level consent, not a fresh prompt
+   for every read. No autonomy or on-device-model promise; no personal contacts.
 
-## 5. Fully self-dependent (owner requirement — law)
+## 5. Self-dependent law (D11)
 
-"Self-dependent" means the site stands alone on its own files:
+Zero fetched external resources: no CDN, fonts, JS/CSS/images, analytics or embeds.
+Every browser-loaded file lives in `website/`. Outbound links are allowed (repo,
+Releases, guides, Issues, package URL and README's Termux sources). System fonts.
+All pages fully render offline from a local copy, not merely from a warmed cache;
+no service worker required. Entire course completable without opening the repo.
+SVG namespace URLs are identifiers, not fetches. Code examples can contain URLs
+as text; they must not become network dependencies.
 
-1. **Zero fetched external resources, ever.** No CDN links, no external fonts (system font stack only), no external JavaScript, no external CSS, no external images, no analytics, no third-party embeds. Everything browser *loads* is a file in this repo's `website/` folder.
-2. **Outbound hyperlinks are fine** (they are user's choice, not dependency): github.com (repo, README, Releases, Issues, JOURNEY, BETA, DATA_AND_PRIVACY), package repo URL, F-Droid/GitHub **only** where README tells user to get Termux for optional engine (two links, allowed). Nothing else.
-3. **Offline-complete:** every page must render fully (layout, styles, all content) with network turned off after first load.
-4. **The course is self-sufficient:** learner completes all 17 chapters without ever needing to open GitHub repo. Repo links exist only as optional "go deeper" footnotes.
-5. **Verification (W6, recorded in `chat-web6/`):**
-   - grep sweep: no `http(s)://` in any `src=`, `<link href=`, `<img src=`, `@import`, or `url(` — only `http(s)` occurrences in site may be in `<a href>` (outbound links).
-   - offline check: open site with networking disabled, all pages render.
-   - link sweep: every internal URL and outbound link resolves (HTTP 200 / redirect).
+W1 first sweep; W6 full proof in `chat-web6/`: inspect src/link/@import/url and
+other fetch-capable attributes, browser requests, offline local render, all links
+and anchors. No broken links at launch; deliberately unbuilt W1 paths stay listed
+as deferred, never counted as passing.
 
-## 6. Design direction
+## 6. Design and accessibility
 
-- **Mobile-first, dark by default** — audience is on Android; app wears dark Spck-grade skin with VS Code Dark+ editor theme; site should feel like it belongs to app. Icon >_ mark used as favicon and header.
-- **Terminal accents:** monospace for code/commands/labels; one accent family (green/amber, terminal-style) on near-black; WCAG AA contrast.
-- **Content-first:** max-width text column; card grid for feature callouts; tables for engines/packages/chapter index; simple heading+anchor FAQ.
-- **Learn wing layout (Termux-Mastery pattern):** course home with chapter table (number/topic/what you'll do); each chapter page: goal box at top, "Chapter N of 17" breadcrumb, step sections, highlighted Try-it boxes, Common-mistakes box, Prev/Next footer. Reading chapter should feel like reading book page.
-- **Fast & light:** no carousels, no autoplay video, no blocking webfonts (system font stack — required by §5); optional app screenshots only if owner supplies/approves them (O1), stored locally in `website/` — never fabricated, never external.
-- **No JavaScript by default.** Vanilla JS only if static HTML/CSS cannot do a job (mobile nav toggle, if not done via CSS), decided in W5/W6, kept in repo (self-dependent).
-- Breakpoints: phone (default) → tablet → desktop. Desktop is enhancement.
+Dark, editorial, terminal-inspired; green #3DDC84 identity with amber for status.
+System sans + monospace. Wide Home up to 1160 px, prose up to 760 px. Cards use
+2 columns then 1 on phones. At 360 px navigation is a keyboard-operable native
+menu; desktop has the whole nav. Min 44 px interactive targets, AA contrast,
+no essential animation, visible focus, readable code and scrollable tables.
+Screenshots only after O1 approval. Textual examples are explicitly labelled.
+Canonical header/footer and CSS component reference are documented in the W1
+record so later pages copy consistently (only active link and page content vary).
 
-## 7. Stack & repo layout (locked — D3/D7)
-
-- **Plain static site:** one folder of `.html` files + one shared `.css` (+ favicon). No framework, no build step, no dependencies, no lockfile, no node_modules. (More pages than v1 planned — still right weight: each chapter is one HTML file owner can edit in browser on GitHub.)
-- **Host:** GitHub Pages, same repo.
+## 7. Stack and file layout (locked)
 
 ```
-website/                 ← the ENTIRE website (new top-level folder, created in W1)
-  index.html             ← Home
-  install.html  start.html  engines.html  packages.html
-  faq.html  about.html
-  learn.html             ← course home
-  ch-01.html … ch-17.html
-  style.css
-  (favicon assets; optional approved screenshots)
-  (docs/brand/icon/codec-512.png used as source for favicon if needed — original >_ mark)
+website/
+  index.html
+  install.html  start.html
+  engines.html  packages.html  faq.html  about.html  ai.html  privacy.html
+  learn.html  ch-01.html … ch-19.html
+  style.css  favicon.svg
 ```
 
-- Nothing in `website/` is served by the app; nothing in `app/`, `codec-packages/`, `docs/`, `gradle*` changes as part of website work.
-- The one exception at W6: the GitHub Pages workflow (`pages.yml`, clearly named) + a one-line site link in the root README.
+Only index/style/favicon in W1. No package manifest, generator or build/runtime
+dependency in the site. Test tooling is separate, not shipped as site assets.
 
-## 8. Deployment (W6)
+## 8. Deployment (W6 only)
 
-- **GitHub Pages**, same repo, serving `website/` (source = *main branch / `website` folder* proposed; `gh-pages` branch only if owner prefers — record choice in DECISIONS.md).
-- Site URL: `https://pabi277.github.io/CodeC/…` (custom domain only if O2 says so).
-- After deploy: README gets one line linking site (single allowed cross-workstream edit, part of W6's commit).
-- Evidence for record: green Pages build + every page URL opened once + §5 self-dependency checks pass.
+GitHub Pages, same repo, desired project URL `https://pabi277.github.io/CodeC/`.
+**Deployment safety finding from PR #42:** the existing Pages site serves the
+signed package repo (`/dev`, `/keys`). Re-verify current Pages/package workflows
+in W6 before proposing an additive deployment that preserves them. Do not deploy
+website alone over those endpoints. GitHub's branch-source setting does not serve
+an arbitrary `/website` directory: use a verified Pages artifact approach, without
+switching/creating another branch, editing the APK workflow or replacing package
+publishing. If existing deployment ownership needs a broader change, stop for
+owner authorization. No deployment in W1. Custom domain O2 remains open.
 
-## 9. Implementation phases (owner commands one at a time; product wing first, course second, deploy last)
+## 9. Phases (strict order, separate commands)
 
-**Fully spec'd (2026-09-02):** each phase has its own folder of implementation docs — `web_docs/web-phase1/` … `web_docs/web-phase6/` (phase README + one PART doc per page/chapter, with design, implementation steps and exit conditions). The owner starts one by saying **"Start W1"** … **"Start W6"** (or "Build the website" = Start W1). **v2.2 updates:** W2.1 install and W3.1 engines specs now reflect Phase 42.1 release channel and Phase 21/38.2 Auto-only engine; W3.3 FAQ and W3.4 About reflect Phases 38–43; W4.6 ch-04, W4.8 ch-06, W5.6 ch-12, W6.1 ch-13, W6.3 ch-15, W6.5 ch-17 updated with new facts. Verification gate W4.2 must re-verify against new README + package config + new facts (icon, backup rules, export-all, LAN server, feedback, etc.).
+**39 docs: 6 phase READMEs + 33 PART docs** (2/2/6/8/6/9 parts).
 
-| Phase | Scope | Spec | Exit condition |
-|---|---|---|---|
-| **W1** | Scaffold `website/`: shared chrome (header/footer incl. Learn item, >_ mark), stylesheet, self-dependent rule in force from day one; Home page (hero + learning banner, 6 cards updated with file icons, LAN, safe features). | [web-phase1/](web-phase1/README.md) | Home renders at 360 px & 1440 px; all footer links valid; zero external resources (first §5 sweep). |
-| **W2** | `/install` + `/start` (full content per §3.1 updated: universal APK 6.6 MB, SHA256, updater with version guard + checksum, debug vs release, export-all note, Termux fallback automatic). | [web-phase2/](web-phase2/README.md) | Both pages in scaffold; content matches README facts (v2.2). |
-| **W3** | `/engines` + `/packages` + `/faq` + `/about` (full content per §3.1 updated: Auto only, picker deleted, Termux card deleted, FAQ includes BETA B-1…B-8 + backup + crash-loop + export-all + debug/release, About includes >_ icon + Settings trim + feedback + LAN + file icons + outputs temporary + GitHub truth). | [web-phase3/](web-phase3/README.md) | Tables match README; package list = repo build-config list (recorded with sha); every FAQ answer traceable to repo doc (TROUBLESHOOTING + BETA). |
-| **W4** | **Verification gate first** (re-verify README + package config + new facts: icon, backup rules, export-all, LAN, feedback, outputs temporary, GitHub truth, safe folder walk planned, universal APK size) → lock 17-chapter set, close O6 → `/learn` course home + chapters 01–06 (ch-04 Auto only, ch-06 safe walk + ProjectLink + export-all). | [web-phase4/](web-phase4/README.md) | Verified-facts table committed (v2.2); O6 closed; course home + 6 chapters render on canonical template. |
-| **W5** | Chapters 07–12 (Editor with file icons + typing feel + ghost + strip + snippets + Emmet + TextMate, C Basics TCC-safe, Scripting, Python, Git with readiness + push truth + publish, Networking + LAN server). | [web-phase5/](web-phase5/README.md) | All snippets TCC-safe / as-shipped (review recorded); ch-08 **device pass** (owner transcript); every chapter self-sufficient. |
-| **W6** | Chapters 13–17 (Device APIs with 8 scripts, Web Projects with LAN, Custom/Advanced with export-all + backup + crash-loop + feedback, Real Projects with LAN share, Troubleshooting with BETA + crash-log + feedback) + polish + GitHub Pages deploy + README link + §5 verification. | [web-phase6/](web-phase6/README.md) | 25 pages live; Pages build green; pre-flight sweeps (self-dependent + offline + link) green **before** live; report with URL. |
+| Phase | Scope | Exit |
+|---|---|---|
+| W1 | Scaffold, shared chrome (AI + Privacy), Home six cards/course preview | Responsive 360/1440, offline, first self-dependent sweep, source trace |
+| W2 | Install + Start | Release/current-first-run truth; 3/29 pages |
+| W3 | Engines, Packages, FAQ, About, AI, Privacy | Sources/caps/privacy correct; product 9/9 |
+| W4 | **W4.2 FIRST** → course home + ch-01…06 | Committed Verified Facts Table at current sha incl AI/Phase46; 19-chapter set verified |
+| W5 | ch-07…12 | Self-contained, TCC-safe review, ch-08 owner device transcript |
+| W6 | ch-13…17 → **W6.8 ch-18 + W6.9 ch-19 before W6.6** → polish → W6.7 | P1+P5 transcripts, 29 pages, sweeps before live, package-safe Pages green |
 
-Each phase: one `web_docs/chat-webN/` record + living docs update + commit + push + report + stop at merge gate. Owner may re-scope or re-order — record it in `DECISIONS.md` first.
+O6's owner scope is closed (19 chapters); W4.2 is still the mandatory technical
+verification gate, not permission to re-ask that owner decision. Records must not
+overwrite an existing chat folder: W0.3 is chat-web2; reconstructed W0.4 is
+chat-web3; this W1 uses chat-web4/W1_*. W6's dedicated verification filenames can
+live in chat-web6 without replacing any earlier record.
 
-## 10. Acceptance criteria (whole site)
+## 10. Acceptance criteria
 
-1. **25 pages** (7 product + course home + 17 chapters), shared chrome with >_ mark, no broken internal/external links (W6 sweep, recorded).
-2. **Every factual claim traceable** to a repo file (README, TROUBLESHOOTING, BETA, RELEASE_NOTES, JOURNEY, chat-phase docs); traceability notes in `chat-webN/` records.
-3. **Self-dependent (W6, §5):** zero fetched external resources; offline render verified; course completable without repo.
-4. Renders acceptably at 360 px and 1440 px (visual check, W6).
-5. **Course quality:** every chapter has goals / steps / try-it / common mistakes; every command works on fresh CodeC install (universal APK 6.6 MB, offline TCC).
-6. Deploys on GitHub Pages; site URL recorded in `web_docs/getting-started/NEXT_STEPS.md`.
-7. No app code, tests, or APK CI workflow changed (except Pages workflow in W6).
-8. `web_prompt.md` + `web_docs/` living docs updated in final commit.
-9. **New facts from Phases 21–43 reflected:** Auto engine only (no picker), Settings trim (13→11, Termux card deleted), >_ icon, file icons, typing feel, LAN server with QR + open-in-browser, outputs temporary (RunArtifacts + RepoHygiene), GitHub truth (readiness + push outcome + publish), feedback hardcoded +91 62967 46606 / email + exit survey + crash-log, universal APK 6.6 MB -74% + SHA256 + updater version guard, backup include-list-only + crash-loop guard + export-all, safe folder walk planned + ProjectLink.
+1. 29 real, complete pages, shared chrome, original mark, no broken links/anchors.
+2. Every claim traceable to a repository source; current README re-read at W6.
+3. Zero external resource requests; all pages render offline; course self-contained.
+4. Responsive at 360/1440; keyboard navigation and AA checks; reduced motion.
+5. Each chapter has goals/steps/exercises/common mistakes/prev-next and expected output.
+6. Device transcripts for ch-08 and P1+P5 (never invented or replaced by web tests).
+7. Pages green with every live URL checked; signed package endpoints preserved.
+8. No app code/history/release workflow modifications; all web living docs current.
+9. GitHub-only distribution, true AI/approval/privacy boundaries, no personal contacts,
+   7 217 532 B not paired with -74%, no deleted engine picker or Open Folder teaching.
+10. Owner command before each next phase and before any PR/merge.
 
-## 11. Open questions (owner decides; do not guess)
+## 11. Open items
 
-1. **O1 — Screenshots:** wanted on Home/chapters? Owner supplies/approves images (never fabricated, always stored locally).
-2. **O2 — Domain:** keep GitHub Pages URL or point custom domain? (Default: Pages URL.)
-3. **O3 — Copy tone:** technical-direct (proposed) vs friendly-casual.
-4. **O4 — Phase order:** W1→W6 as listed, or re-prioritized?
-5. **O5 — In-app link to the site** (app workstream, separate command).
-6. **O6 — Chapter set:** the 17 chapters in §3.2 as proposed, or add/drop/reorder? (Locked at W4 against verified package list; v2.2 enriches chapters with 34–43 facts but count stays 17 unless owner re-scopes.)
-7. **O7 — License for course content:** same as repo (default) or MIT (like Termux-Mastery)?
-8. **O8 — Feedback contact display on website?** Phase 41 hardcodes developer WhatsApp +91 62967 46606 and email chakraborttypabi2772006@gmail.com as the only contact — should About/FAQ show it, or keep it in-app only? (Default: in-app only, site links to GitHub Issues.)
+**O1** approved screenshots; **O2** custom domain; **O3** copy tone;
+**O5** in-app site link (separate app work); **O7** course license.
+**O4/O6/O8 closed** by the supplied v2.3 scope: W1→W6; 19 chapters;
+contacts in app only / site links Issues. Do not re-ask them.

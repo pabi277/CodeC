@@ -168,3 +168,47 @@ Key facts extracted for website:
 
 *Next entry: W1 (scaffold + Home) — after the owner's implementation command, now with v2.2 facts.*
 
+
+## W0.4 — Reconcile the supplied v2.3 scope (2026-10-07)
+
+**19. Verify before trusting the handoff.** The owner supplied a v2.3 handoff dated
+October 6. Actual main/base `d4231f0` still had v2.2, D1–D22 and 35 phase docs;
+chat-web3 and the four new specs were missing. The checkout was clean/shallow,
+remote main agreed, PR116/release app-v1.3.18 verified (one universal APK
+7 217 532 B, versionCode22; main37505147370/tag37505175304 green). PR115's real
+merge was 0edf4dd, not earlier baseline1c6f910. Open PR42 held old unmerged W1+W2;
+PR83 app bookkeeping also open. None changed. This is an October7 reconciliation,
+not a claim of a missing October6 commit. Record: [chat-web3](chat-web3/SUMMARY.md).
+
+**20. Restore the missing plan without rewriting history.** Master v2.3 now
+covers 9 product pages and course home +19 chapters =29. Added AI/Privacy/ch18/ch19
+specs: **39 docs, 6 READMEs +33 PARTs**, not37. D23–28 record supplied decisions;
+D29–30 record this session's authorization/facts. Existing phase docs retain
+historical bodies under prominent superseding v2.3 requirements. Corrected
+release size, first run intro/Arcade, optional userland, deleted Open Folder,
+Auto-only engines, contacts in-app, AI/D6/S9/privacy scope. W4.2 first, W6.8/9
+before polish, W5/W6 device transcripts still due. PR42's warning that Pages
+already serves signed packages is preserved for W6; no deployment touched.
+
+## W1 — Fresh scaffold and Home (2026-10-07)
+
+**21. The owner authorizes the fresh build.** “You can watch the pr 42 for reference
+but you have build it with updated docs and more powerful website.” Declared
+Build website=StartW1, one phase only. Read PR42 body/Home at6f6a3cf via gh;
+no import or branch change, no inherited W2/merge/deploy authority. Fresh static
+Home: dark green editorial design, original >_ mark, native keyboard-operable
+mobile menu, six current feature cards including AI and safe workflow, precisely
+labelled illustrative C example, 19-chapter course preview, release metadata and
+honest AI consent note. Only index.html/style.css/favicon.svg; no JS or external
+resources, no screenshot invented, no app/docs/workflow changes.
+
+**22. Verify the actual three-file page.** Browser widths360/390/768/1100/1440,
+no page overflow/script errors; native menu keyboard checks; axe WCAG A/AA zero
+violations; fresh offline file render with networking+JS off; only local resources;
+six unique outbound links GET200. Nine final internal targets are deliberately
+unbuilt and visibly upcoming, not counted as a full link pass. No device/Pages
+claim. Source ledger, chrome pattern and detailed checks in
+[chat-web4/W1_SUMMARY.md](chat-web4/W1_SUMMARY.md),
+[W1_CHROME.md](chat-web4/W1_CHROME.md), [W1_CHECKS.md](chat-web4/W1_CHECKS.md).
+Session push runs existing app CI; actual run state belongs to NEXT_STEPS/final
+report. **No PR, merge or deployment; next phase waits for StartW2.**
