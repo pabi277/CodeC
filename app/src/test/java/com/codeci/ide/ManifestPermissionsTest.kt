@@ -30,7 +30,7 @@ class ManifestPermissionsTest {
         "android.permission.INTERNET" to (("repo sync, git clone/push, GitHub update checks, module downloads") to "HttpURLConnection"),
         "android.permission.ACCESS_NETWORK_STATE" to (("LanAddressProvider: reachability for the LAN address surface") to "ConnectivityManager"),
         "android.permission.ACCESS_WIFI_STATE" to (("LanAddressProvider: WiFi interface address for the LAN URL") to "WifiManager"),
-        "android.permission.READ_EXTERNAL_STORAGE" to (("projects under shared storage on legacy devices") to "READ_EXTERNAL_STORAGE"),
+        "android.permission.READ_EXTERNAL_STORAGE" to (("projects under shared storage on legacy devices, capped at maxSdkVersion 32 with its write twin — see StorageAccessPolicy") to "READ_EXTERNAL_STORAGE"),
         "android.permission.WRITE_EXTERNAL_STORAGE" to (("same, capped at maxSdkVersion 32 (scoped-storage boundary)") to "WRITE_EXTERNAL_STORAGE"),
         "android.permission.MANAGE_EXTERNAL_STORAGE" to (("file manager over the user's own project folders (opt-in grant)") to "isExternalStorageManager"),
         "android.permission.REQUEST_INSTALL_PACKAGES" to (("userland bootstrap + the updater's verified APK install") to "canRequestPackageInstalls"),

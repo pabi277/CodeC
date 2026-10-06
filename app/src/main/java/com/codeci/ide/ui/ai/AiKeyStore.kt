@@ -272,5 +272,22 @@ class AiKeyStore(context: Context) {
         private const val PROP_BACKUP_MODE = "backup_provider_mode"
         private const val PROP_BUDGET_OFFER = "budget_extension_offer"
         private const val PROP_REVIEWER = "readonly_reviewer"
+
+        // Phase 95 — the welcome + agreement screen. Bumped whenever the copy
+        // materially changes, so the owner sees the new text rather than being
+        // silently grandfathered into wording he has not read.
+        private const val PROP_WELCOME_VERSION = "welcome_version"
+        internal const val WELCOME_VERSION = 1
+    }
+
+    /** Phase 95 — the welcome/agreement is shown once per version, on first open. */
+    fun welcomeAccepted(): Boolean = synchronized(STORE_LOCK) {
+        settings().getProperty(PROP_WELCOME_VERSION)?.toIntOrNull() == WELCOME_VERSION
+    }
+
+    fun acceptWelcome(): Boolean = synchronized(STORE_LOCK) {
+        val p = settings()
+        p.setProperty(PROP_WELCOME_VERSION, WELCOME_VERSION.toString())
+        writeSettings(p)
     }
 }

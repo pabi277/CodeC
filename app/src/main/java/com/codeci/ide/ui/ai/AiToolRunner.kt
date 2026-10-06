@@ -62,22 +62,187 @@ object AiToolRunner {
         dirtyBuffers: Map<String, String> = emptyMap(),
         shouldStop: () -> Boolean = { false },
         cachedFiles: Map<String, String> = emptyMap(),
-        readWindow: Int = AiToolLimits.MAX_READ_LINES
+        readWindow: Int = AiToolLimits.MAX_READ_LINES,
+        /**
+         * Phase 94 — the build/run output the Output panel held when this task
+         * started, frozen at Send. Only `read_run_output` reads it, and only what
+         * the user already has on screen travels.
+         */
+        runOutput: List<String> = emptyList()
     ): Outcome {
         val rootDir = AiProjectReader.canonicalFileSafe(root)
-            ?: return Outcome(false, "The project folder could not be read.")
-        if (!rootDir.isDirectory) return Outcome(false, "The project folder was not found.")
+            ?: return Outcome(false, "The project folder could not be read.").scrubbed()
+        if (!rootDir.isDirectory) return Outcome(false, "The project folder was not found.").scrubbed()
         // S9: clamped again here, so the follow-up hint can never name a window
         // the validator would refuse.
         val window = AiOptionsPolicy.clampReadWindow(readWindow).coerceAtMost(AiToolLimits.MAX_READ_LINES)
-        return when (call.name) {
+        val outcome = when (call.name) {
             AiToolName.LIST_FILES -> listFiles(call, paths)
             AiToolName.SEARCH_PROJECT -> search(call, rootDir, paths, shouldStop)
             AiToolName.READ_FILE -> read(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles, window)
             AiToolName.READ_FILES -> readFiles(call, rootDir, paths, dirtyBuffers, shouldStop, cachedFiles, window)
+            AiToolName.FIND_FILES -> findFiles(call, paths)
+            AiToolName.OUTLINE_FILE -> outlineFile(call, rootDir, paths, dirtyBuffers, cachedFiles, shouldStop)
+            AiToolName.READ_RUN_OUTPUT -> readRunOutput(call, runOutput)
             // request_run is an approval request; it must never execute anything.
             AiToolName.REQUEST_RUN -> Outcome(false, "request_run is approved by the user, not executed as a tool.")
         }
+        // Phase 94 — **the last gate before the model**: whatever a tool read, a
+        // credential-shaped VALUE never travels. This is the one place it is
+        // applied, so a new tool cannot forget it (the same single-point rule the
+        // walk's name filter follows).
+        return outcome.scrubbed()
+    }
+
+    /**
+     * Phase 94 — [AiSecretScan] at the result boundary, with the honest count
+     * line appended by the scan itself.
+     */
+    private fun Outcome.scrubbed(): Outcome {
+        val scan = AiSecretScan.redact(text)
+        return if (scan.clean) this else copy(text = scan.text)
+    }
+
+    // ---- find_files -------------------------------------------------------
+
+    /**
+     * Phase 94 — the glob over admitted paths. No disk walk: the list *is* the
+     * walk's output, which is why a pattern can never reach a file the Level 2
+     * filter refused. A pattern without a slash matches file **names** anywhere
+     * (`*.md`), one with a slash matches the whole relative path (`*.kt` after a
+     * `src/` prefix), and `**` crosses directories.
+     */
+    private fun findFiles(call: AiToolCall, paths: List<String>): Outcome {
+        val pattern = call.pattern.orEmpty()
+        if (pattern.isEmpty()) return Outcome(false, "find_files needs a pattern.")
+        val matches = paths.filter { globMatches(pattern, it) }.sorted()
+        val limit = call.max ?: AiToolLimits.MAX_LIST_ENTRIES
+        if (matches.isEmpty()) {
+            return Outcome(true, "FILES matching \"$pattern\" — none of the ${paths.size} admitted files match.")
+        }
+        val truncated = matches.size > limit
+        val shown = if (truncated) matches.take(limit) else matches
+        val body = buildString {
+            append("FILES matching \"$pattern\" — ${shown.size} of ${matches.size} listed")
+            for (p in shown) append('\n').append(p)
+            if (truncated) append('\n').append(CUT_NOTE)
+        }
+        return Outcome(true, clip(body), truncated)
+    }
+
+    /** `*` = any run except `/`, `?` = one character except `/`, `**` = any run. */
+    internal fun globMatches(pattern: String, path: String): Boolean {
+        val target = if (pattern.contains('/')) path else path.substringAfterLast('/')
+        val regex = StringBuilder("^")
+        var i = 0
+        while (i < pattern.length) {
+            val c = pattern[i]
+            when {
+                c == '*' && i + 1 < pattern.length && pattern[i + 1] == '*' -> {
+                    regex.append(".*")
+                    i += 2
+                    if (i < pattern.length && pattern[i] == '/') i += 1
+                }
+                c == '*' -> { regex.append("[^/]*"); i += 1 }
+                c == '?' -> { regex.append("[^/]"); i += 1 }
+                else -> { regex.append(Regex.escape(c.toString())); i += 1 }
+            }
+        }
+        regex.append('$')
+        return Regex(regex.toString()).matches(target)
+    }
+
+    // ---- outline_file -----------------------------------------------------
+
+    /**
+     * Phase 94 — the structure of one file. Reads with the same reader, the same
+     * admission list and the same "dirty buffer wins" rule as [read]; the answer
+     * is [AiOutline]'s rows, capped at [AiToolLimits.MAX_OUTLINE_ROWS].
+     */
+    private fun outlineFile(
+        call: AiToolCall,
+        rootDir: File,
+        paths: List<String>,
+        dirtyBuffers: Map<String, String>,
+        cachedFiles: Map<String, String>,
+        shouldStop: () -> Boolean
+    ): Outcome {
+        val path = call.path ?: return Outcome(false, "outline_file needs a path.")
+        if (AiProjectFiles.isSecretLike(path.substringAfterLast('/'))) {
+            return Outcome(false, "$path is credential-shaped and is never read.")
+        }
+        if (paths.none { AiProjectFiles.samePath(it, path) }) {
+            return Outcome(false, "$path is not a code or text file in this project.")
+        }
+        val file = File(rootDir, path)
+        if (!safeChild(file, rootDir)) return Outcome(false, "$path is outside the project.")
+        if (shouldStop()) return Outcome(true, "STRUCTURE $path — $STOP_NOTE", truncated = true)
+        val fromBuffer = dirtyBuffers.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        val fromMemory = if (fromBuffer == null) {
+            cachedFiles.entries.firstOrNull { AiProjectFiles.samePath(it.key, path) }?.value
+        } else null
+        val source = fromBuffer ?: fromMemory
+        val text = source?.let { AiEditProposalParser.normalizeLf(it) }
+            ?: AiProjectReader.readCapped(file)
+            ?: return Outcome(false, "$path ${if (file.isFile) "could not be read." else "was not found."}")
+        val lineCount = lineCountOf(text)
+        val note = when {
+            fromBuffer != null -> " [unsaved edits]"
+            fromMemory != null -> " [cached memory]"
+            else -> ""
+        }
+        val rows = AiOutline.outline(path, text, AiToolLimits.MAX_OUTLINE_ROWS)
+        if (rows.isEmpty()) {
+            return Outcome(
+                true,
+                "STRUCTURE $path — $lineCount lines$note; no definitions were recognised " +
+                    "(this file may not be code, or it may hold only prose)."
+            )
+        }
+        val body = buildString {
+            append("STRUCTURE $path — $lineCount lines, ${rows.size} definition")
+            if (rows.size == 1) append('\n') else append("s\n")
+            for (row in rows) append(row.line).append(": ").append(row.text).append('\n')
+            if (rows.size >= AiToolLimits.MAX_OUTLINE_ROWS) append(CUT_NOTE)
+        }
+        return Outcome(true, clip(body.trimEnd()), rows.size >= AiToolLimits.MAX_OUTLINE_ROWS)
+    }
+
+    /**
+     * The same count the read result reports: a trailing newline does not make a
+     * line. (`AiProjectReader.countLines` counts it, which is right for a range
+     * walk and wrong for a file's own "N lines" header.)
+     */
+    private fun lineCountOf(text: String): Int {
+        if (text.isEmpty()) return 0
+        val lines = text.split('\n').size
+        return if (text.endsWith("\n")) lines - 1 else lines
+    }
+
+    // ---- read_run_output --------------------------------------------------
+
+    /**
+     * Phase 94 — the tail of the build/run output that was on screen at Send.
+     * The snapshot is the app's own (never a command, never a fresh run), the
+     * caller may ask for fewer lines, and the model is told the size it is
+     * seeing — an empty panel says so instead of inventing output.
+     */
+    private fun readRunOutput(call: AiToolCall, runOutput: List<String>): Outcome {
+        if (runOutput.isEmpty()) {
+            return Outcome(false, "read_run_output: nothing has been built or run yet in this project session.")
+        }
+        val wanted = (call.lines ?: AiToolLimits.DEFAULT_OUTPUT_LINES)
+            .coerceIn(1, AiToolLimits.MAX_OUTPUT_LINES)
+        val shown = runOutput.takeLast(wanted)
+        val truncated = shown.size < runOutput.size
+        val body = buildString {
+            append("OUTPUT (build/run, as it was on screen when this task started) — ")
+            append("last ${shown.size} of ${runOutput.size} line")
+            if (runOutput.size == 1) append('\n') else append("s\n")
+            for (line in shown) append(line).append('\n')
+            if (truncated) append(CUT_NOTE)
+        }
+        return Outcome(true, clip(body.trimEnd()), truncated)
     }
 
     // ---- list_files -------------------------------------------------------

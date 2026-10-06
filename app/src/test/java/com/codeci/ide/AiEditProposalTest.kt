@@ -281,7 +281,7 @@ class AiEditProposalTest {
     }
 
     @Test
-    fun `unclosed SEARCH or missing REPLACE marker is rejected`() {
+    fun `a SEARCH block with no REPLACE marker is rejected and names the missing marker`() {
         val reply = """
             <<<CODEC_EDIT path="src/main.c" op="modify">>>
             <<<SEARCH>>>
@@ -289,7 +289,190 @@ class AiEditProposalTest {
             <<<END_CODEC_EDIT>>>
         """.trimIndent()
         val reason = expectInvalid(AiEditProposalParser.parse(reply, mapOf("src/main.c" to baseMainC)))
-        assertTrue(reason.contains("Unclosed"))
+        assertTrue("the marker that is missing must be named: $reason", reason.contains("has no <<<REPLACE>>>"))
+    }
+
+    // ---- Phase 93b: a forgotten END_SEARCH is not a dead end -----------------
+    //
+    // The owner's round-2 S2: the README ask came back "Unclosed …" and there
+    // was nothing to tap. A block that *was* closed (<<<END_CODEC_EDIT>>> is
+    // there) but forgot a closing marker inside is recoverable: each hunk runs
+    // to its own end marker, the next SEARCH, or the closed block's end. Every
+    // hunk still has to match the file byte for byte; the diff is still local;
+    // the user still approves.
+
+    @Test
+    fun `a forgotten END_SEARCH marker recovers at the next SEARCH block`() {
+        val base = AiFileBaseline(
+            path = "math.py",
+            exists = true,
+            content = "def add(a, b):\n    return a - b\n\ndef mul(a, b):\n    return a + b\n",
+            cut = false
+        )
+        val reply = """
+            <<<CODEC_EDIT path="math.py" op="modify">>>
+            <<<SEARCH>>>
+                return a - b
+            <<<REPLACE>>>
+                return a + b
+            <<<SEARCH>>>
+            def mul(a, b):
+                return a + b
+            <<<REPLACE>>>
+            def mul(a, b):
+                return a * b
+            <<<END_SEARCH>>>
+            <<<END_CODEC_EDIT>>>
+        """.trimIndent()
+
+        val prop = expectProposal(AiEditProposalParser.parse(reply, mapOf("math.py" to base)))
+        val edit = prop.files.single()
+        assertEquals(
+            "both hunks must apply, in order",
+            "def add(a, b):\n    return a + b\n\ndef mul(a, b):\n    return a * b\n",
+            edit.newContent
+        )
+    }
+
+    @Test
+    fun `a trailing hunk with no END_SEARCH is closed by the block's own end`() {
+        val base = AiFileBaseline(path = "app.py", exists = true, content = "x = 1\n", cut = false)
+        val reply = """
+            <<<CODEC_EDIT path="app.py" op="modify">>>
+            <<<SEARCH>>>
+            x = 1
+            <<<REPLACE>>>
+            x = 2
+            <<<END_CODEC_EDIT>>>
+        """.trimIndent()
+
+        val prop = expectProposal(AiEditProposalParser.parse(reply, mapOf("app.py" to base)))
+        assertEquals("x = 2\n", prop.files.single().newContent)
+    }
+
+    @Test
+    fun `markers spelled with inner spaces or lower case are still read`() {
+        val reply = """
+            <<<CODEC_EDIT path="src/main.c" op="modify">>>
+            <<<search>>>
+                return 1;
+            <<<REPLACE >>>
+                return 0;
+            <<< end_search >>>
+            <<<END_CODEC_EDIT>>>
+        """.trimIndent()
+
+        val prop = expectProposal(AiEditProposalParser.parse(reply, mapOf("src/main.c" to baseMainC)))
+        assertEquals("#include <stdio.h>\nint main() {\n    return 0;\n}\n", prop.files.single().newContent)
+    }
+
+    @Test
+    fun `two REPLACE markers for one SEARCH stay malformed, never merged`() {
+        val reply = """
+            <<<CODEC_EDIT path="src/main.c" op="modify">>>
+            <<<SEARCH>>>
+                return 1;
+            <<<REPLACE>>>
+                return 0;
+            <<<REPLACE>>>
+                return 2;
+            <<<END_SEARCH>>>
+            <<<END_CODEC_EDIT>>>
+        """.trimIndent()
+        val reason = expectInvalid(AiEditProposalParser.parse(reply, mapOf("src/main.c" to baseMainC)))
+        assertTrue("merging two replacements would be a guess: $reason", reason.contains("Malformed"))
+    }
+
+    // ---- Phase 93c: the wall the agent met, and the widen that closes it ----
+
+    @Test
+    fun `a modify of a file outside the packed shortlist is refused and named for the widen`() {
+        // The agent can READ any file (read_file), but the parser can only diff a
+        // file whose content the app captured — the ≤12-file shortlist packed into
+        // the request. A file the model had just read was refused with a sentence
+        // about the app's bookkeeping: *"its current contents were not in the
+        // shared project context"*. missingBaselinePaths names exactly what the
+        // caller must read before parsing again.
+        val answer = """
+            <<<CODEC_EDIT path="docs/notes.md" op="modify">>>
+            <<<SEARCH>>>
+            old line
+            <<<REPLACE>>>
+            new line
+            <<<END_SEARCH>>>
+            <<<END_CODEC_EDIT>>>
+        """.trimIndent()
+        val packed = mapOf("src/main.c" to baseMainC)
+        val existing = setOf("src/main.c", "docs/notes.md")
+
+        val reason = expectInvalid(AiEditProposalParser.parse(answer, packed, existing))
+        assertTrue("the refusal is about the app's map: $reason", reason.contains("not in the shared project context"))
+        assertEquals(listOf("docs/notes.md"), AiEditProposalParser.missingBaselinePaths(answer, packed))
+
+        // With the real content captured — what the view model reads — the very
+        // same reply is a reviewable proposal.
+        val widened = packed + ("docs/notes.md" to AiFileBaseline("docs/notes.md", true, "old line\n"))
+        val prop = expectProposal(AiEditProposalParser.parse(answer, widened, existing))
+        assertEquals("new line\n", prop.files.single().newContent)
+
+        // A path whose content is already packed is never read again.
+        assertTrue(
+            AiEditProposalParser.missingBaselinePaths(
+                """<<<CODEC_EDIT path="src/main.c" op="modify">>>x<<<END_CODEC_EDIT>>>""",
+                packed
+            ).isEmpty()
+        )
+    }
+
+    @Test
+    fun `proposedEdits reads headers only, keeps the op aliases, and ignores body text`() {
+        val answer = """
+            <<<CODEC_EDIT path="a.py" op="update">>>
+            <<<SEARCH>>>
+            path="trap.py" op="modify"
+            <<<REPLACE>>>
+            x = 1
+            <<<END_SEARCH>>>
+            <<<END_CODEC_EDIT>>>
+            <<<CODEC_EDIT path="new.txt" op="create">>>
+            hello
+            <<<END_CODEC_EDIT>>>
+        """.trimIndent()
+        assertEquals(
+            listOf(
+                AiEditProposalParser.ProposedEdit("a.py", "update"),
+                AiEditProposalParser.ProposedEdit("new.txt", "create")
+            ),
+            AiEditProposalParser.proposedEdits(answer)
+        )
+        // `create` needs no baseline; the alias `update` is parse's own spelling of
+        // modify, so both agree about which file is worth reading.
+        assertEquals(listOf("a.py"), AiEditProposalParser.missingBaselinePaths(answer, emptyMap()))
+        val parsed = expectProposal(
+            AiEditProposalParser.parse(
+                answer,
+                mapOf("a.py" to AiFileBaseline("a.py", true, "path=\"trap.py\" op=\"modify\"\n")),
+                setOf("a.py")
+            )
+        )
+        assertEquals(AiEditOp.MODIFY, parsed.files.first { it.path == "a.py" }.op)
+        assertEquals(AiEditOp.CREATE, parsed.files.first { it.path == "new.txt" }.op)
+    }
+
+    @Test
+    fun `text before the first SEARCH is still rejected inside a marker block`() {
+        val reply = """
+            <<<CODEC_EDIT path="src/main.c" op="modify">>>
+            here is what I would change
+            <<<SEARCH>>>
+                return 1;
+            <<<REPLACE>>>
+                return 0;
+            <<<END_SEARCH>>>
+            <<<END_CODEC_EDIT>>>
+        """.trimIndent()
+        val reason = expectInvalid(AiEditProposalParser.parse(reply, mapOf("src/main.c" to baseMainC)))
+        assertTrue("the stray line must not be guessed into a hunk: $reason", reason.contains("Unexpected text before"))
     }
 
     @Test

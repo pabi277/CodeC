@@ -156,7 +156,7 @@ entitlement.
 | `INTERNET` | Repo/package downloads, git clone/fetch/push, the SHA-256-verified updater (42.1), the LAN dev-server surface, CodeC AI Gemini/NVIDIA requests (disclosed task Send / Test; scoped read follow-ups and one visible rate retry) | `HttpURLConnection` |
 | `ACCESS_NETWORK_STATE` | "Is any network up?" before fetches; the LAN-address hint | `ConnectivityManager` |
 | `ACCESS_WIFI_STATE` | The classic Wi-Fi fallback for `LanAddressProvider` (37.1) | `WifiManager` |
-| `READ_EXTERNAL_STORAGE` | Opening your project folders on legacy devices | `READ_EXTERNAL_STORAGE` |
+| `READ_EXTERNAL_STORAGE` | Opening your project folders on legacy devices, **capped `maxSdkVersion="32"`** (Android 13 stopped granting it; from API 30 the all-files switch below is the route) | `READ_EXTERNAL_STORAGE` |
 | `WRITE_EXTERNAL_STORAGE` | Same, **capped `maxSdkVersion="32"`** (scoped-storage boundary) | `WRITE_EXTERNAL_STORAGE` |
 | `MANAGE_EXTERNAL_STORAGE` | Whole-tree builds over a project you approved; the honest-correction row | `isExternalStorageManager` |
 | `REQUEST_INSTALL_PACKAGES` | **Only** the two install paths you start: the userland bootstrap and the verified app update | `canRequestPackageInstalls` |
@@ -171,6 +171,22 @@ entitlement.
 The data-sewer drain is simply not there: no `SMS`, `CONTACTS`,
 `LOCATION`, `GET_ACCOUNTS`, `RECORD_AUDIO`, `BLUETOOTH`, `READ_PHONE_STATE`
 in the manifest — the test above fails if any ever is.
+
+### The AI assistant's own permission surface (Phase 93)
+
+The agent holds **no permission of its own**. Every capability it has is one of
+these, and each is the user's, granted once:
+
+| The AI wants to… | What it actually uses | What it can never do |
+|---|---|---|
+| read your project (`list_files`, `search_project`, `read_file`, `read_files`) | the app's own project folder — **no permission at all** for a project CodeC created, the storage rows above only when the project lives outside CodeC | read a file outside the project, follow a symlink out, open a secret-like path |
+| change a file | **nothing by itself**: it emits a `<<<CODEC_EDIT>>>` proposal, which the app parses into a diff you review; only **Apply** writes, through `AiEditApplier` | write before your approval, stage or commit to git, delete anything you did not tick |
+| run the project (`request_run`) | the approval card's **Run** tap | run without it, install packages, open a shell |
+| reach a provider | `INTERNET` — your own key, one request per **Send** you tapped | send anything you have not previewed, call any other host |
+
+So "the AI has no permission" is a storage fact about *your project's folder*,
+never a hidden grant: `StorageAccessPolicy` is the single reader, and a refusal
+now names the exact switch to flip.
 
 ## What the backup/restore actually carries (Phase 42.3 §1)
 

@@ -23,10 +23,22 @@
 > [PR #112](https://github.com/pabi277/CodeC/pull/112); all nine controls wired; **S9 held** (no
 > ceiling moved); 1 594 host cases green on Kotlin 2.2.10.
 > **Level 11** is ✅ MERGED as [Phase 88](../../phases/03-editor/chat-phase88/README.md) via
-> [PR #113](https://github.com/pabi277/CodeC/pull/113) on the owner's *"Ok merge to main"*, after the owner's *"Complete level 11"* (2026-10-03; CI-green, Build APK `37132310296`). **S3** held:
+> [PR #113](https://github.com/pabi277/CodeC/pull/113) on the owner's *"Ok merge to main"*, after the owner's *"Complete level 11"* (2026-10-03; CI-green, Build APK `37132310296`). The merge commit is **`0fc2bfd88d99d80ca72d61347dea9b36a4b82381`** (first parent `c3771c5`, second parent `06c1433`; merged 16:21 UTC) and post-merge Build APK run [`37136523881`](https://github.com/pabi277/CodeC/actions/runs/37136523881) is green on it (release APK 7 177 180 B, debug 27 054 824 B, R8 mapping 71 186 679 B). **S3** held:
 > no HTML interpreter, no image fetch, `https`-only links behind a confirm. **S1/S8** held: rows open to
 > exactly the packed text and disclosure stays one tap away. **S9** held: no ceiling moved.
-> Levels 12–14 remain unauthorized; formal device acceptance is postponed to Level 12.
+> **Level 12** is ✅ **IMPLEMENTED (2026-10-04) as [Phase 89](../../phases/03-editor/chat-phase89/README.md) on
+> `arena/01a102bd-codec`** — the owner briefed it and then commanded *"Complete level 12"*. **S10 now has its test**
+> (`AiLevel12InjectionTest`, 11 cases; the fixture driven through the loop), the numbers readout is in
+> `AiMeasurements`/`AiMeasurePolicy` plus the `ui/performance/HeapProbe.kt` boundary sample (15 + 7 host cases + 2 Robolectric decoder cases), the
+> 60-run matrix is in `DEVICE_ROUND.md` (5 contract cases) and the device round is refreshed — and **the owner ran
+> it on 2026-10-04 and reported it in chat**: Part 1 19 of 21 pass with **S2 failed** and **B2 not exercised**; the
+> matrix 14 rows at 3/3 (48 of 60 runs) with **T3-Gemini** and **T4-NVIDIA failed** and **T7/T10 not exercised**;
+> Gemini on the owner's kept **`gemini-3.1-flash-lite`**. **Not accepted** — the failed rows' fix phases need the
+> owner's command. **40 new cases (38 host-runnable + 2 Robolectric-only); 620/620 host cases green** in the sandbox harness; **Build APK `37185580349` green on `58039cd`** (release 7 179 540 B); **no PR, no merge.**
+> Owner's Level 12 answers: in-memory numbers-only readout
+> (**D6**) · 3/3 pass bar · `gemini-3-flash-preview` + `nvidia/nemotron-3-super-120b-a12b` · one phase ·
+> a failed row becomes its own fix phase and Level 12 repeats. Levels 13–14 remain unauthorized; formal device
+> acceptance is postponed until the owner's Level 12 round.
 
 ---
 
@@ -40,11 +52,11 @@
 
 **✅ MERGED (Phase 88, 2026-10-03, via [PR #113](https://github.com/pabi277/CodeC/pull/113); owner: *"Complete level 11"*, then *"Ok merge to main"*; CI-green, Build APK `37132310296`):** [11 — agent phone presentation](11_AGENT_PHONE_PRESENTATION.md) as [Phase 88](../../phases/03-editor/chat-phase88/README.md) — fixes defects 9 and 10 under gates S3, S8 and S1. Owner decisions 2026-10-03: the full level in one phase (Markdown answers, one truthful progress line, full result on tap, disclosure collapsed and never removed) · `https` links behind a confirm dialog that shows the full URL, while `javascript:`, `data:` and plain `http` stay inert · read-window default stays 400. Implemented in one commit on `arena/01a101db-codec` and merged with PR #113; see the Phase 88 README's implementation and merge records.
 
-**Proposed and unauthorized future levels, in dependency order:**
+**Proposed future levels, in dependency order (Level 12 is implemented as Phase 89 on the session branch; the owner's device round is still owed):**
 
 | Level | Doc | Fixes | Gate |
 |---|---|---|---|
-| **12** | [Evaluation and acceptance](12_AGENT_EVALUATION_AND_ACCEPTANCE.md) | proof, not features | S10, S12 |
+| **12** | [Evaluation and acceptance](12_AGENT_EVALUATION_AND_ACCEPTANCE.md) · ✅ **IMPLEMENTED as [Phase 89](../../phases/03-editor/chat-phase89/README.md) on `arena/01a102bd-codec` (2026-10-04) — S10 test, numbers readout, 60-run matrix, refreshed device round; not merged; the owner's round is ⏳** | proof, not features | S10, S12 |
 
 **Deferred, after the above:** [13 Optional on-device model](13_OPTIONAL_ON_DEVICE_MODEL.md) · [14 Higher autonomy and evaluation](14_AUTONOMY_AND_EVALUATION.md)
 
@@ -147,7 +159,7 @@ of them. **Every level 6–12 must satisfy all twelve before it is called done.*
 | **S7** | **One brain writes.** Parallelism is for **read-only** local IO only. Writes stay single-threaded and user-approved, one file at a time. | Enforced by absence plus a wiring pin. |
 | **S8** | **Every recipient is disclosed per request; switching is never silent.** A provider change needs a fresh tap and a fresh preview. Consent is never replayed across providers. | D4 preserved; recipient frozen per request and its retry. |
 | **S9** | **Options tune within caps; they never raise a permission.** Every control is bounded and cannot widen D1/D5 tool, write, run, or path permissions. | Bounds declared in pure policy; a host test asserts each ceiling. |
-| **S10** | **Prompt-injection resistance is a test, not a claim.** Injection fixtures must be refused and must not alter the agent's rules or reach a write or run. | New fixtures in Level 12. |
+| **S10** | **Prompt-injection resistance is a test, not a claim.** Injection fixtures must be refused and must not alter the agent's rules or reach a write or run. | **✅ Tested since Phase 89.1** ([record](../../phases/03-editor/chat-phase89/PART_89_1_S10_INJECTION_PROOF.md#implementation-2026-10-04)): `AiLevel12InjectionTest` drives the Level 6 fixture **through the loop** — a hostile answer that obeys the injection reaches only `AskRunApproval`, the runner refuses a validated `request_run`, no write tool exists, `.env` and the escaping symlink stay refused, and the data-not-instructions sentence survives memory re-injection. |
 | **S11** | **Budget cannot be spent on repetition.** Exact-duplicate reads are served from the working set at zero execution cost; N identical no-progress calls stop the loop with an explanation. | New loop-detection policy. |
 | **S12** | **Stop means stop, and every stop produces a readable answer.** No delayed action; `state.answer` is always prose on every `AiAgentStopReason`. | `stopAgent` gains a final-synthesis turn with tools **masked**, not removed (Manus). |
 
@@ -192,7 +204,7 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 1. **Level 9 D6 task-memory amendment:** authorized 2026-10-03, bounded to `noBackupFilesDir/ai/task/<project>/`; raw conversation data remains ephemeral. See [Level 0 D6 amendment](00_LEVEL0_DECISION_RECORD.md) and [Level 9](09_TASK_MEMORY_AND_PLANNING.md).
 2. **Level 8 bounded-but-honest reads:** selected by the owner; Phase 85 is merged in PR #110.
 3. **Backup provider routing and bounded option set:** Level 10 — **authorized 2026-10-03**, briefed as [Phase 87](../../phases/03-editor/chat-phase87/README.md). The owner chose **manual offer only**: CodeC offers, the user taps, and a fresh preview discloses the new recipient. Automatic fallback is rejected (S8/D4).
-4. **Level 11:** authorized 2026-10-03 for a brief, then implemented on the owner's *"Complete level 11"* as [Phase 88](../../phases/03-editor/chat-phase88/README.md) (CI-green, Build APK `37132310296`), then merged via [PR #113](https://github.com/pabi277/CodeC/pull/113) on the owner's *"Ok merge to main"*. **Levels 12–14:** remain unauthorized; proceed only on a separate owner command.
+4. **Level 11:** authorized 2026-10-03 for a brief, then implemented on the owner's *"Complete level 11"* as [Phase 88](../../phases/03-editor/chat-phase88/README.md) (CI-green, Build APK `37132310296`), then merged via [PR #113](https://github.com/pabi277/CodeC/pull/113) on the owner's *"Ok merge to main"* — merge commit `0fc2bfd` on `main`, post-merge Build APK `37136523881` green. **Level 12:** authorized 2026-10-04 for a brief, briefed as [Phase 89](../../phases/03-editor/chat-phase89/README.md), then **✅ implemented the same day on the owner's *"Complete level 12"*** — S10's test, the in-memory numbers readout, the 60-run matrix and the refreshed device round, all on `arena/01a102bd-codec`; **40 new cases (38 + 2 Robolectric-only), 620/620 host cases green, no PR and no merge**; the owner's 60 real runs and every device row remain ⏳. **Levels 13–14:** remain unauthorized.
 5. **NVIDIA:** Phase 82's approved internal testing/evaluation-only limit remains; no production entitlement is implied.
 6. **GLM-5.3:** existing editable model field accepts `z-ai/glm-5.3`; **no default-model change is proposed or needed.**
 
@@ -239,4 +251,7 @@ complex frameworks"*) · embeddings (1 of 13 surveyed agents uses them).
 
 **Historical status as of 2026-10-02 (before the owner command):** this was a research record only; it authorized no production/test source, dependency, permission, runtime, SDK, endpoint, DataStore key, or phase. At that point the next free phase number was 83.
 
-**Current status — 2026-10-03:** Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. **Level 9 (Phase 86) was merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit.** The owner authorized **Level 10** and then said *"Complete level 10"*; [Phase 87](../../phases/03-editor/chat-phase87/README.md) is ✅ MERGED to `main` @ `c3771c5` by the owner's explicit command via [PR #112](https://github.com/pabi277/CodeC/pull/112) — all nine controls wired end to end, **1 594 host cases green** on Kotlin 2.2.10, **S9 held** (no ceiling moved), three `client.stream(` sites intact. Owner decisions for it: all nine controls, in the `AiHome` AI panel, manual-only backup provider, answer detail defaulting to `normal`. **Level 11** is ✅ MERGED as [Phase 88](../../phases/03-editor/chat-phase88/README.md) via [PR #113](https://github.com/pabi277/CodeC/pull/113) (owner: *"Complete level 11"*, then *"Ok merge to main"*; CI-green, Build APK `37132310296`). Levels 12–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.
+**Current status — 2026-10-04:** **Level 12 is ✅ IMPLEMENTED as [Phase 89](../../phases/03-editor/chat-phase89/README.md) on `arena/01a102bd-codec`** — the S10 test (11 cases), the in-memory numbers readout (15 + 7 host cases + 2 Robolectric decoder cases), the 60-run matrix (5 contract cases) and the refreshed device round — which the owner then ran and reported
+(2026-10-04: 19 of 21 Part-1 rows pass, **S2 failed**, **B2 not exercised**; the matrix 14 rows at 3/3 with
+**T3-Gemini** and **T4-NVIDIA failed**, **T7/T10 not exercised**), **not accepted**; **620/620 host cases green** (the
+40 new cases included), no PR and no merge. The one genuinely missing regression row (S10) is now covered. Level 6 (Phase 83) was merged as PR #109. Levels 7+8 (Phases 84+85) were merged by authorized PR #110 to `main` @ `32e4a5f87a9f73874a4de17967187445c49a2461`; Build APK `37084800939` is green. **Level 9 (Phase 86) was merged by the owner's explicit command in [PR #111](https://github.com/pabi277/CodeC/pull/111) to `main` @ `6838ea6cf72937766f4d92eb5e9729b71f86b9ee`; post-merge Build APK run `37109573383` is green on that commit.** The owner authorized **Level 10** and then said *"Complete level 10"*; [Phase 87](../../phases/03-editor/chat-phase87/README.md) is ✅ MERGED to `main` @ `c3771c5` by the owner's explicit command via [PR #112](https://github.com/pabi277/CodeC/pull/112) — all nine controls wired end to end, **1 594 host cases green** on Kotlin 2.2.10, **S9 held** (no ceiling moved), three `client.stream(` sites intact. Owner decisions for it: all nine controls, in the `AiHome` AI panel, manual-only backup provider, answer detail defaulting to `normal`. **Level 11** is ✅ MERGED as [Phase 88](../../phases/03-editor/chat-phase88/README.md) via [PR #113](https://github.com/pabi277/CodeC/pull/113) (owner: *"Complete level 11"*, then *"Ok merge to main"*; CI-green, Build APK `37132310296`). The merge commit is **`0fc2bfd88d99d80ca72d61347dea9b36a4b82381`** (merged 2026-10-03 16:21 UTC; first parent `c3771c5`, second parent `06c1433`) and post-merge Build APK run `37136523881` is green on it (release APK 7 177 180 B, debug 27 054 824 B, R8 mapping 71 186 679 B). Levels 12–14 remain proposed/unauthorized; device acceptance remains postponed to Level 12.

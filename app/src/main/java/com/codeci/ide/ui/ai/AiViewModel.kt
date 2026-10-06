@@ -1,14 +1,20 @@
 package com.codeci.ide.ui.ai
 
 import android.app.Application
+import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.codeci.ide.BuildConfig
+import com.codeci.ide.ui.performance.HeapProbe
 import com.codeci.ide.ui.projects.AiApplyOutcome
 import com.codeci.ide.ui.projects.AiEditApplier
 import com.codeci.ide.ui.projects.AiUndoOutcome
 import com.codeci.ide.ui.projects.AiUndoSummary
 import com.codeci.ide.ui.projects.AiTaskMemoryStore
 import com.codeci.ide.ui.projects.ProjectManager
+import com.codeci.ide.ui.projects.StorageAccessAndroid
+import com.codeci.ide.ui.projects.StorageAccessPolicy
+import com.codeci.ide.ui.projects.StorageFacts
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -122,7 +128,65 @@ data class AiUiState(
      * that asking for a second opinion does not delete the first one. The review
      * preview clears [answer] like every other preview does. In memory only (D6).
      */
-    val reviewedAnswer: String? = null
+    val reviewedAnswer: String? = null,
+    /**
+     * Phase 89 (Level 12) — the task's own numbers: first-token latency, total
+     * time, provider-reported tokens and one heap sample. **Display state, in
+     * memory only** (D6): no field here is written to disk, a log, DataStore or
+     * a backup, and it is reset by the next Send and by [clear]. Empty until
+     * something is measured, and a provider that reports nothing renders as
+     * "not reported" — never as 0 ([AiMeasurePolicy]).
+     */
+    val measurements: AiMeasurements = AiMeasurements(),
+    /**
+     * Phase 90 — the conversation so far: his messages and the assistant's
+     * answers, in order, **in memory only**. It is never written to a file, a
+     * store, a log or a backup, and it dies with the process (D6); `clear()`
+     * keeps it (that clears the task), **New chat** empties it, and a project
+     * switch drops it. Every request's prompt packs it inside [AiPrompt.userText],
+     * so the preview still shows exactly what leaves the phone (D4).
+     */
+    val session: AiChatSession = AiChatSession.EMPTY,
+    /**
+     * Phase 90 — true once the settled task on screen has joined [session].
+     * The commit points (a new preview, New chat, ✕ clear) are idempotent, so a
+     * task can never be appended twice and a repeated exchange is never silently
+     * treated as a duplicate.
+     */
+    val taskCommitted: Boolean = false,
+    /**
+     * Phase 91 — the face of the sheet. **Simple** (the default) draws questions,
+     * answers and Copy; **Technical** adds the machinery. Display state only: it
+     * never changes a request (the packed bytes are identical in both modes,
+     * **S1**) and it is never persisted (**D6**).
+     */
+    val mode: AiChatMode = AiChatMode.SIMPLE,
+    /**
+     * Phase 92 — the self-check run in progress, or null. The run lives in
+     * memory only (**D6**): it is a script of questions the owner still sends
+     * himself and a list of verdicts built from numbers, never from text.
+     */
+    val selfCheck: AiSelfCheck.Run? = null,
+    /**
+     * Phase 93 — true when the current [notice] is the storage-permission one, so
+     * the sheet can offer the one tap that fixes it ([AiCopy.GRANT_ACCESS]) rather
+     * than a sentence and a shrug. Display state only, in memory (D6).
+     */
+    val storageProblem: Boolean = false,
+    /**
+     * Phase 95 — true once the welcome + agreement screen has been accepted for
+     * the current [AiKeyStore.WELCOME_VERSION]. Loaded from disk on start; the
+     * sheet gates send on it the same way it gates on a saved key.
+     */
+    val welcomeAccepted: Boolean = false,
+    /** Phase 95 — whether the history drawer is open. Display state only, in memory (D6). */
+    val historyOpen: Boolean = false,
+    /**
+     * Phase 95 — history (multiple conversations per project, this session only).
+     * Keyed by project name exactly like Phase 93's single-chat map, and still
+     * D6: nothing is written, nothing survives the process.
+     */
+    val history: AiChatHistory = AiChatHistory.EMPTY
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -157,12 +221,26 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     private class AgentSession(
         val question: String,
         val source: AiSource,
+        /**
+         * Phase 90 — the conversation block of the tasks before this one
+         * ([AiChatSession.render]). The FIRST turn of the task carries it, and it
+         * is the same string the preview froze, so preview and send cannot differ
+         * (D4). Later turns repeat the task and steps, not the history.
+         */
+        val transcript: String = "",
         val root: File,
         val mapText: String,
         val memoryStore: AiTaskMemoryStore,
         var memory: AiTaskMemory,
         /** The Level 2 walk's admitted code/text paths — the tool surface's whole world. */
         val paths: List<String>,
+        /**
+         * Phase 94 — the build/run output the panel held when this task started,
+         * frozen at Send. `read_run_output` reads this and nothing else: no tool
+         * can make anything run, and the model cannot see output the user does
+         * not already have on screen.
+         */
+        val runOutput: List<String> = emptyList(),
         var dirtyBuffers: Map<String, String>,
         val systemInstruction: String,
         val provider: AiProviderId,
@@ -209,6 +287,14 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     private var agent: AgentSession? = null
 
+    /**
+     * Phase 89 (Level 12) — when the current request started, for the latency
+     * readout. A clock reading is not UI state, so it stays here rather than in
+     * [AiUiState]; the sanitised derived values live in `state.measurements`.
+     * Zero means "nothing is being measured".
+     */
+    private var measureStartedAtMs = 0L
+
     private val _state = MutableStateFlow(AiUiState())
     val state: StateFlow<AiUiState> = _state.asStateFlow()
 
@@ -220,8 +306,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val show = withContext(Dispatchers.IO) { store.showBubble() }
             val conflict = withContext(Dispatchers.IO) { store.outputConflict() }
             val options = withContext(Dispatchers.IO) { store.options() }
+            val welcomed = withContext(Dispatchers.IO) { store.welcomeAccepted() }
             _state.update {
-                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict, options = options, configuring = false)
+                it.copy(
+                    keySaved = ready, model = model, bubble = bubble, showBubble = show,
+                    outputConflict = conflict, options = options, welcomeAccepted = welcomed,
+                    configuring = false
+                )
             }
         }
     }
@@ -401,16 +492,65 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(notice = text) }
     }
 
-    /** D6: a different project never sees the previous project's exchange. */
+    /**
+     * Phase 93 — **one conversation per project, kept while the app is open.**
+     *
+     * The owner: *"per project, one history, like any AI that must store the
+     * history of previous chats."* D6 does not move: nothing here is written to a
+     * file, a store, a log or a backup — this map lives and dies with the
+     * process, exactly like the transcript it holds. What changed is only *whose*
+     * memory the sheet reads: switching projects used to drop the conversation
+     * (a leak guard, correctly), so moving A → B → A lost A's chat; now the
+     * switch is a save before and a restore after, keyed by project name.
+     *
+     * The leak guard is unchanged in the way that matters: project B's sheet can
+     * only ever draw B's session, because the restore replaces the whole value.
+     */
+    /**
+     * Phase 95 — one history per project, **in memory only** (D6): the owner
+     * asked for a history drawer; D6 still says nothing is written to disk, so
+     * this map lives and dies with the process exactly like the transcript it
+     * holds. A history switch replaces the whole [AiUiState.session], so a
+     * different conversation can never leak another one's turns.
+     */
+    private val historiesByProject = LinkedHashMap<String, AiChatHistory>()
+
+    private fun rememberChatForCurrentProject() {
+        val name = project ?: return
+        val s = _state.value
+        historiesByProject[name] = s.history.withCurrent(s.session, s.taskCommitted)
+    }
+
+    private fun historyForProject(name: String?): AiChatHistory =
+        name?.let { historiesByProject[it] } ?: AiChatHistory.EMPTY
+
+    /**
+     * D6: a different project never sees the previous project's exchange — and
+     * (Phase 93/95) each project's own history is put back when it is reopened,
+     * from memory only.
+     */
     fun onProjectChanged(name: String?) {
         if (name == project) return
+        rememberChatForCurrentProject()
         project = name
         pendingBaselines = emptyMap()
         pendingExistingPaths = emptySet()
         agent = null
         clear()
         closeSheet()
-        _state.update { it.copy(undoSummary = null, undoConflictPaths = emptyList()) }
+        val remembered = historyForProject(name)
+        _state.update {
+            it.copy(
+                undoSummary = null, undoConflictPaths = emptyList(),
+                history = remembered,
+                session = remembered.session(), taskCommitted = remembered.taskCommitted(),
+                historyOpen = false,
+                // A self-check is about the conversation that was on screen, so it
+                // never follows a switch — the checks that already ran stay in the
+                // remembered transcript.
+                selfCheck = null
+            )
+        }
         if (name != null) {
             viewModelScope.launch {
                 val summary = withContext(Dispatchers.IO) {
@@ -425,6 +565,66 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ---- Phase 95: the history drawer + welcome agreement -------------------
+
+    fun openHistory() { _state.update { it.copy(historyOpen = true) } }
+    fun closeHistory() { _state.update { it.copy(historyOpen = false) } }
+
+    /**
+     * New chat: archives the conversation in front of you into the drawer and
+     * starts an empty one. This is what a history option *must* mean — New chat
+     * used to delete the conversation, which is exactly what a history must not
+     * do.
+     */
+    fun newChat() {
+        clear()
+        val name = project ?: return
+        val s = _state.value
+        val updated = s.history.withCurrent(s.session, s.taskCommitted).beginNew()
+        historiesByProject[name] = updated
+        _state.update {
+            it.copy(
+                history = updated, session = AiChatSession.EMPTY, taskCommitted = false,
+                selfCheck = null, historyOpen = true
+            )
+        }
+    }
+
+    fun switchChat(id: Long) {
+        val name = project ?: return
+        val s = _state.value
+        val saved = s.history.withCurrent(s.session, s.taskCommitted).switchTo(id)
+        historiesByProject[name] = saved
+        clear()
+        _state.update {
+            it.copy(
+                history = saved,
+                session = saved.session(), taskCommitted = saved.taskCommitted(),
+                selfCheck = null, historyOpen = false
+            )
+        }
+    }
+
+    fun toggleChatPin(id: Long) {
+        val name = project ?: return
+        val s = _state.value
+        val saved = s.history.withCurrent(s.session, s.taskCommitted).togglePin(id)
+        historiesByProject[name] = saved
+        _state.update { it.copy(history = saved) }
+    }
+
+    /**
+     * Phase 95 — accept the welcome/agreement once per version. Persisted as
+     * non-secret metadata (same file as bubble position and provider terms); the
+     * body of the agreement itself lives in code, not in user data.
+     */
+    fun acceptWelcome() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { store.acceptWelcome() }
+            _state.update { it.copy(welcomeAccepted = true) }
+        }
+    }
+
     /** Shows the exact text that would be sent (D4). Nothing leaves the device here. */
     fun preview(result: AiContextResult) {
         // A stream in flight is never replaced behind its back (Phase 77: the
@@ -432,24 +632,356 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         if (_state.value.phase == AiPhase.STREAMING || _state.value.testing || _state.value.configuring) return
         when (result) {
             is AiContextResult.Refused -> _state.update { it.copy(notice = AiCopy.problem(result.problem)) }
-            is AiContextResult.Ready -> _state.update {
-                it.copy(
-                    phase = AiPhase.PREVIEW,
-                    prompt = result.prompt.copy(provider = it.provider, model = it.model), notice = null,
-                    retryCountdown = null,
-                    answer = "", error = null, cutShort = false, continuations = 0,
-                    proposalResult = null, applyConflictPaths = emptyList(),
-                    undoConflictPaths = emptyList(),
-                    // A new preview is a new task: the previous timeline belongs
-                    // to a task that is over, and it is never persisted (D6).
-                    agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null
-                )
+            is AiContextResult.Ready -> {
+                // Phase 90: the settled task joins the conversation BEFORE the new
+                // prompt is frozen, so the preview's transcript block includes it.
+                // Computed outside the update lambda — a commit inside one could
+                // run twice if the CAS retried.
+                val session = sessionForNewPrompt(result.prompt, _state.value.session)
+                _state.update {
+                    it.copy(
+                        phase = AiPhase.PREVIEW,
+                        // provider/model are frozen from the live selection (the
+                        // pinned immutable-fields rule); session then rides along.
+                        prompt = result.prompt.copy(provider = it.provider, model = it.model).copy(session = session),
+                        notice = null,
+                        storageProblem = false,
+                        retryCountdown = null,
+                        answer = "", error = null, cutShort = false, continuations = 0,
+                        proposalResult = null, applyConflictPaths = emptyList(),
+                        undoConflictPaths = emptyList(),
+                        // A new preview is a new task: the previous timeline belongs
+                        // to a task that is over, and so do its numbers — both are
+                        // display state and neither is persisted (D6).
+                        agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null,
+                        measurements = AiMeasurements(),
+                        // A new task has not been committed yet (Phase 90).
+                        taskCommitted = false
+                    )
+                }
             }
         }
     }
 
     fun cancelPreview() {
         _state.update { it.copy(phase = AiPhase.IDLE, prompt = null) }
+    }
+
+    /**
+     * Phase 90 — the session the NEXT prompt should carry.
+     *
+     * A **fresh** request (no continuation, and not the reviewer) settles the
+     * task that just finished into the conversation first, so the new prompt's
+     * transcript block includes it. A continuation and a review are still about
+     * the current task, so they keep the session exactly as it is.
+     */
+    private fun sessionForNewPrompt(prompt: AiPrompt, current: AiChatSession): AiChatSession {
+        if (prompt.continuation != null || prompt.source == AiSource.REVIEW) return current
+        return commitFinishedTask()
+    }
+
+    // ---- Phase 92: the self-check (the owner: "give some command and I will run") ----
+
+    /**
+     * Starts the scripted check. Nothing here sends anything: the first step
+     * needs no request at all, and every other step stops at an ordinary
+     * preview whose **Send** is the owner's tap (**D4**).
+     */
+    fun startSelfCheck() {
+        val s = _state.value
+        if (s.selfCheck != null) return
+        if (s.phase == AiPhase.STREAMING || s.gathering || s.applying) return
+        _state.update { it.copy(selfCheck = AiSelfCheck.Run()) }
+        selfCheckNext()
+    }
+
+    /**
+     * The card's **Next check**. It records the step the owner just ran (if its
+     * own task is on screen and finished) and previews the next check's question
+     * — walking past a step that needs no request. It never sends (**D4**).
+     *
+     * Phase 92.1: it can no longer be a dead end. A door refuses while an answer
+     * is still arriving or a walk is running, and the old code returned in
+     * silence — the card sat on "waiting for Send" with nothing to press (the
+     * owner's round: *"not all test run"*). Now that refusal is said out loud in
+     * the notice line, and **Skip check** always moves the run on.
+     */
+    fun selfCheckNext() {
+        val s = _state.value
+        val run = s.selfCheck ?: return
+        if (AiSelfCheck.isFinished(run)) return
+        if (selfCheckBusy(s)) {
+            _state.update { it.copy(notice = AiCopy.SELF_CHECK_BUSY) }
+            return
+        }
+        _state.update { it.copy(notice = null) }
+        settleSelfCheckStep()
+        previewSelfCheckStep()
+    }
+
+    /**
+     * The card's **Skip check**: the owner moves past the step that is waiting
+     * for its Send. It is recorded as **not run** and the report says so — a
+     * skipped check must never read as a check that passed.
+     */
+    fun selfCheckSkip() {
+        val s = _state.value
+        val run = s.selfCheck ?: return
+        if (AiSelfCheck.isFinished(run)) return
+        if (selfCheckBusy(s)) {
+            _state.update { it.copy(notice = AiCopy.SELF_CHECK_BUSY) }
+            return
+        }
+        val step = AiSelfCheck.stepAt(run) ?: return
+        if (step.door == null) {
+            // A step with no request of its own is judged, not skipped.
+            selfCheckNext()
+            return
+        }
+        _state.update {
+            it.copy(
+                notice = null,
+                selfCheck = run.copy(
+                    stepIndex = run.stepIndex + 1,
+                    verdicts = run.verdicts + AiSelfCheck.skipped(step)
+                )
+            )
+        }
+        previewSelfCheckStep()
+    }
+
+    /** An answer arriving, a project walk running or an apply in flight. */
+    private fun selfCheckBusy(s: AiUiState): Boolean =
+        s.phase == AiPhase.STREAMING || s.gathering || s.applying
+
+    /**
+     * Previews the current step's own question through the ordinary doors —
+     * it is a preview, so the Send that follows is the owner's tap (**D4**).
+     * Steps that need no request are judged on the spot and walked past.
+     */
+    private fun previewSelfCheckStep() {
+        var run = _state.value.selfCheck ?: return
+        while (!AiSelfCheck.isFinished(run) && AiSelfCheck.stepAt(run)?.door == null) {
+            val step = AiSelfCheck.stepAt(run) ?: break
+            run = run.copy(
+                stepIndex = run.stepIndex + 1,
+                verdicts = run.verdicts + AiSelfCheck.judge(step, selfCheckObserved())
+            )
+        }
+        _state.update { state -> if (state.selfCheck == null) state else state.copy(selfCheck = run) }
+        if (AiSelfCheck.isFinished(run)) return
+        val step = AiSelfCheck.stepAt(run) ?: return
+        val question = step.prompt ?: return
+        when (step.door) {
+            AiSelfCheckDoor.ASK -> agentAsk(question, null, null, false, emptyMap())
+            AiSelfCheckDoor.PROPOSE -> agentPropose(question, null, null, false, emptyMap())
+            null -> Unit
+        }
+    }
+
+    /** Puts the card away. The checks that already ran stay in the conversation. */
+    fun stopSelfCheck() {
+        _state.update { it.copy(selfCheck = null) }
+    }
+
+    /** The card's Copy button. Redacted by construction (**D6**). */
+    fun selfCheckReport(): String {
+        val run = _state.value.selfCheck ?: return ""
+        return AiSelfCheck.report(BuildConfig.VERSION_NAME, selfCheckObserved(), run)
+    }
+
+    /** The live verdict of the step being run, for the card's own line. */
+    fun selfCheckLive(): AiSelfCheckVerdict? {
+        val run = _state.value.selfCheck ?: return null
+        return AiSelfCheck.liveVerdict(run, selfCheckObserved())
+    }
+
+    /**
+     * Records the verdict of the step whose task just settled. Idempotent: it
+     * only advances when the step's own question is the settled one, and it
+     * re-reads the state before writing, so a stale verdict cannot be appended
+     * twice or out of order.
+     */
+    private fun settleSelfCheckStep() {
+        val run = _state.value.selfCheck ?: return
+        val step = AiSelfCheck.stepAt(run) ?: return
+        if (step.door == null) return
+        val v = AiSelfCheck.judge(step, selfCheckObserved())
+        if (v.outcome == AiSelfCheckOutcome.PENDING) return
+        _state.update { state ->
+            val live = state.selfCheck ?: return@update state
+            if (live.stepIndex != run.stepIndex) return@update state
+            state.copy(selfCheck = live.copy(stepIndex = live.stepIndex + 1, verdicts = live.verdicts + v))
+        }
+    }
+
+    /**
+     * The redacted snapshot the verdicts and the report are built from: counts,
+     * labels and booleans only — never a prompt and never an answer (**D6**).
+     */
+    private fun selfCheckObserved(): AiSelfCheckObserved {
+        val s = _state.value
+        val p = s.prompt
+        val proposal = s.proposalResult
+        val app = getApplication<Application>()
+        // One read of the phone's storage state, shared by both fields below.
+        val storage = storageFacts(app)
+        return AiSelfCheckObserved(
+            question = p?.question,
+            settled = s.phase == AiPhase.DONE || s.phase == AiPhase.FAILED,
+            answerChars = s.answer.length,
+            usedCodeWord = AiSelfCheck.usedCodeWord(s.answer),
+            cutShort = s.cutShort,
+            errorLine = s.error,
+            proposalFiles = (proposal as? AiProposalResult.Proposal)?.proposal?.files?.size ?: 0,
+            proposalInvalidReason = (proposal as? AiProposalResult.Invalid)?.reason,
+            runRequested = runRequested(),
+            runRefusedReason = runRefusedReason(),
+            sentChars = p?.sentChars ?: 0,
+            // The follow-up evidence: how much conversation the request carried.
+            transcriptChars = p?.session?.render()?.length ?: 0,
+            provider = p?.provider ?: s.provider,
+            model = p?.model ?: s.model,
+            keySaved = s.keySaved,
+            sdkInt = Build.VERSION.SDK_INT,
+            allFilesAccess = storage.allFiles,
+            // Phase 93: both legacy sides — an applied edit that cannot be saved
+            // is not "storage granted". Below API 30 read and write are separate.
+            storageGranted = storage.legacyRead && storage.legacyWrite
+        )
+    }
+
+    /**
+     * Phase 93 fix — **did the model ask to run, in this task?**
+     *
+     * The old answer was `state.agentRun != null`, and that value is a *pause*,
+     * not a fact: [finishAgent], [stopAgent], [approveAgentRun] and
+     * [skipAgentRun] all clear it. Every one of those is also what turns a task
+     * settled, and a settled task is the only thing a verdict may be read from —
+     * so the self-check's fifth check could never pass, and a run that reached
+     * the card reported "the model never asked to run".
+     *
+     * The timeline row written when the card appears is the latch, because
+     * nothing clears it; `agentRun` is still read as well, for the instant
+     * between the row and the card's own state update.
+     */
+    private fun runRequested(): Boolean =
+        _state.value.agentRun != null ||
+            _state.value.agentSteps.any { it.kind == AiAgentStepKind.RUN_REQUEST }
+
+    /**
+     * Phase 93b — **why a run request was refused**, if one was.
+     *
+     * The owner's round: the fifth check said *"the model never asked to run"*
+     * while the timeline held a refusal row — the model *had* asked, with an
+     * argument the run tool does not take, and the app's own gate said no. A
+     * refusal is a different fact from silence, and the check must report the
+     * one that happened. The row's title is built by
+     * [AiCopy.agentStepDeniedPrefix] from the wire name, so this reads the same
+     * string the timeline shows.
+     */
+    private fun runRefusedReason(): String? =
+        _state.value.agentSteps.lastOrNull { step ->
+            step.kind == AiAgentStepKind.DENIED &&
+                step.title.startsWith(AiCopy.agentStepDeniedPrefix(AiToolName.REQUEST_RUN.wire))
+        }?.detail
+
+    /**
+     * Phase 93 — a project outside CodeC's own storage needs the shared-storage
+     * grant *before* a byte of it can be read or written. Checked at the door
+     * (`startAgent`) so the owner learns it in one sentence — with the switch to
+     * flip — instead of spending a request and meeting "no permission" later.
+     *
+     * Returns null when the task may proceed: projects CodeC created live in
+     * `filesDir/CodeC/projects`, where no permission exists to grant, and are
+     * never gated by this.
+     */
+    private fun storageProblemFor(root: File, source: AiSource): String? {
+        val app = getApplication<Application>()
+        // Every root CodeC owns, as paths. `dataDir` is the parent of the other
+        // three, so one entry covers them — but they are all listed: a future
+        // move of any one of them must not silently open a gate.
+        val privateRoots = listOf(app.filesDir, app.noBackupFilesDir, app.cacheDir, app.dataDir)
+            .map { it.absolutePath }
+        // Phase 93c — **the ordering was the bug.** Phase 93 asked the facts first
+        // and only then whether a grant was needed at all, so on any phone whose
+        // shared-storage grant was missing it refused *CodeC's own projects* too —
+        // the ones in `filesDir/CodeC/projects`, where no permission exists to
+        // grant — and told the owner the folder "may have been moved, deleted or
+        // renamed". A project inside CodeC's own storage needs no grant, so the
+        // gate is not even asked.
+        val needs = StorageAccessPolicy.needsExternalAccess(root.absolutePath, privateRoots)
+        if (!needs) return null
+        val facts = storageFacts(app)
+        val allowed = if (source == AiSource.PROPOSE_EDITS) facts.canWrite else facts.canRead
+        if (allowed) return null
+        return AiCopy.storageNeeded(
+            writing = source == AiSource.PROPOSE_EDITS,
+            fix = StorageAccessPolicy.fixSteps(facts).orEmpty()
+        )
+    }
+
+    /**
+     * Phase 93 — the one place the AI reads the phone's storage permission, and
+     * the same value [StorageAccessPolicy] uses everywhere else (the terminal
+     * gate, the runtime request, the self-check report).
+     */
+    private fun storageFacts(app: Application): StorageFacts = StorageAccessAndroid.read(app)
+
+    /**
+     * Phase 90 — a settled task becomes conversation history. Called when the
+     * next request is built and when the sheet is cleared, never twice for the
+     * same task ([AiPhase.PREVIEW] is not settled, so a re-preview cannot
+     * re-append). A **failed** request keeps the question as a turn with no
+     * answer; a DONE task adds both sides, the answer stripped of every machine
+     * marker ([AiChatSession.stripProtocol]) so a replayed answer can never
+     * reach the parser as an edit or a tool call. In memory only (D6).
+     */
+    private fun commitFinishedTask(): AiChatSession {
+        val s = _state.value
+        val prompt = s.prompt ?: return s.session
+        if (prompt.source == AiSource.REVIEW) return s.session
+        if (s.phase != AiPhase.DONE && s.phase != AiPhase.FAILED) return s.session
+        // Phase 92: a self-check step is judged the moment its own task settles —
+        // before the `taskCommitted` short-circuit, so pressing ✕ clear (which
+        // calls this) can never lose a verdict.
+        settleSelfCheckStep()
+        if (s.taskCommitted) return s.session
+        val asked = AiCopy.youLine(prompt.source, prompt.fileLabel, prompt.question)
+        var session = s.session.addYou(asked, prompt.provider, prompt.model)
+        if (s.phase == AiPhase.DONE) {
+            session = session.addAssistant(
+                text = s.answer,
+                provider = prompt.provider,
+                model = prompt.model,
+                stopped = s.cutShort
+            )
+        }
+        if (session.turns.size == s.session.turns.size) {
+            // Nothing conversational came out of it (an empty proposal, a blank
+            // reviewer line): mark it settled so it is not looked at twice.
+            _state.update { it.copy(taskCommitted = true) }
+            return s.session
+        }
+        // Phase 95 — as a task settles, the conversation in front of you is
+        // written back into the per-project history so the drawer shows it and a
+        // switch cannot lose it.
+        val name = project
+        val updated = (name?.let { historiesByProject[it] } ?: s.history).withCurrent(session, taskCommitted = true)
+        name?.let { historiesByProject[it] = updated }
+        _state.update { it.copy(session = session, taskCommitted = true, history = updated) }
+        return session
+    }
+
+    /**
+     * Phase 90 — **New chat**: the task and the conversation both clear. The
+     * confirm dialog lives in the sheet; this is what runs when he confirms.
+     */
+    /** Phase 91 — the simple/technical toggle. Display state only (D6). */
+    fun toggleMode() {
+        _state.update {
+            it.copy(mode = if (it.mode == AiChatMode.SIMPLE) AiChatMode.TECHNICAL else AiChatMode.SIMPLE)
+        }
     }
 
     /**
@@ -634,7 +1166,15 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 runCatching { ProjectManager(app).project(projectName)?.root }.getOrNull()
             }
             if (root == null) {
-                _state.update { it.copy(applying = false, notice = AiCopy.NEEDS_PROJECT) }
+                // Phase 93 — the folder disappeared or moved. Saying "open a
+                // project" here was a lie about a project that IS open.
+                _state.update { it.copy(applying = false, notice = AiCopy.PROJECT_FOLDER_UNREACHABLE) }
+                return@launch
+            }
+            // Phase 93 — before writing anything, name a permission the app does
+            // not hold instead of failing mid-write with a generic sentence.
+            storageProblemFor(root, AiSource.PROPOSE_EDITS)?.let { problem ->
+                _state.update { it.copy(applying = false, notice = problem, storageProblem = true) }
                 return@launch
             }
             val outcome = withContext(Dispatchers.IO) {
@@ -667,8 +1207,26 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 is AiApplyOutcome.Failed -> {
+                    // Phase 94 — **the row would have been missing here.** Phase 93
+                    // taught the sheet to draw its one-tap `Grant access` fix from
+                    // `storageProblem`, and set that flag on the *preflight* refusal
+                    // only. So when the write itself was the thing that failed for a
+                    // missing grant (the facts were fresh enough to pass the
+                    // preflight and stale by the time the bytes were written, or the
+                    // applier's own `canRead/canWrite` test is the one that fired),
+                    // the owner got the sentence and no button: a named cause with no
+                    // way to act on it — the Phase 93 complaint again, one layer
+                    // deeper. The flag is therefore asked of the SAME policy the
+                    // preflight asks (`storageProblemFor`), never matched out of a
+                    // sentence, so the button appears exactly when granting could
+                    // change the answer and never as a dead control.
+                    val problem = storageProblemFor(root, AiSource.PROPOSE_EDITS)
                     _state.update {
-                        it.copy(applying = false, notice = outcome.message)
+                        it.copy(
+                            applying = false,
+                            notice = problem ?: outcome.message,
+                            storageProblem = problem != null
+                        )
                     }
                 }
             }
@@ -696,7 +1254,12 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 runCatching { ProjectManager(app).project(projectName)?.root }.getOrNull()
             }
             if (root == null) {
-                _state.update { it.copy(applying = false, notice = AiCopy.NEEDS_PROJECT) }
+                _state.update { it.copy(applying = false, notice = AiCopy.PROJECT_FOLDER_UNREACHABLE) }
+                return@launch
+            }
+            // Phase 93 — undo writes too; the same permission sentence as apply.
+            storageProblemFor(root, AiSource.PROPOSE_EDITS)?.let { problem ->
+                _state.update { it.copy(applying = false, notice = problem, storageProblem = true) }
                 return@launch
             }
             val outcome = withContext(Dispatchers.IO) {
@@ -732,8 +1295,16 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 is AiUndoOutcome.Failed -> {
+                    // Phase 94 — undo writes too, so the same flag is set the same
+                    // way (see the apply branch above): the row is drawn only when
+                    // the app's own storage facts say a grant is missing.
+                    val problem = storageProblemFor(root, AiSource.PROPOSE_EDITS)
                     _state.update {
-                        it.copy(applying = false, notice = outcome.message)
+                        it.copy(
+                            applying = false,
+                            notice = problem ?: outcome.message,
+                            storageProblem = problem != null
+                        )
                     }
                 }
             }
@@ -763,8 +1334,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         openPath: String?,
         openText: String?,
         openDirty: Boolean,
-        dirtyBuffers: Map<String, String> = emptyMap()
-    ) = startAgent(AiSource.PROJECT, question, openPath, openText, openDirty, dirtyBuffers)
+        dirtyBuffers: Map<String, String> = emptyMap(),
+        /** Phase 94 — the Output panel's lines at Send, for `read_run_output`. */
+        runOutput: List<String> = emptyList()
+    ) = startAgent(AiSource.PROJECT, question, openPath, openText, openDirty, dirtyBuffers, runOutput)
 
     /**
      * Phase 80 — start an **agent edit task** (the *Propose edits* chip). Same
@@ -777,8 +1350,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         openPath: String?,
         openText: String?,
         openDirty: Boolean,
-        dirtyBuffers: Map<String, String> = emptyMap()
-    ) = startAgent(AiSource.PROPOSE_EDITS, question, openPath, openText, openDirty, dirtyBuffers)
+        dirtyBuffers: Map<String, String> = emptyMap(),
+        /** Phase 94 — the Output panel's lines at Send, for `read_run_output`. */
+        runOutput: List<String> = emptyList()
+    ) = startAgent(AiSource.PROPOSE_EDITS, question, openPath, openText, openDirty, dirtyBuffers, runOutput)
 
     private fun startAgent(
         source: AiSource,
@@ -786,7 +1361,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         openPath: String?,
         openText: String?,
         openDirty: Boolean,
-        dirtyBuffers: Map<String, String>
+        dirtyBuffers: Map<String, String>,
+        runOutput: List<String> = emptyList()
     ) {
         val s = _state.value
         if (s.phase == AiPhase.STREAMING || s.gathering || s.applying) return
@@ -811,6 +1387,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }
             if (root == null) {
                 _state.update { it.copy(gathering = false, notice = AiCopy.NEEDS_PROJECT) }
+                return@launch
+            }
+            // Phase 93 — the permission preflight: a project outside CodeC's own
+            // storage without the shared-storage grant is refused HERE, with the
+            // switch named, instead of after a request and a failed apply.
+            storageProblemFor(root, source)?.let { problem ->
+                _state.update { it.copy(gathering = false, notice = problem, storageProblem = true) }
                 return@launch
             }
             val scan = withContext(Dispatchers.IO) {
@@ -882,10 +1465,18 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             pendingExistingPaths = scan.allTextPaths.toSet()
+            // Phase 90: the settled task joins the conversation before this one
+            // starts, and its block travels inside the task's FIRST request — the
+            // same string this preview freezes (D4).
+            val transcript = commitFinishedTask().render()
             if (prompt is AiContextResult.Ready) {
                 agent = AgentSession(
                     question = q,
                     source = source,
+                    // Phase 94: the panel's own tail, frozen here (D4 — the task
+                    // carries exactly what the user could see when they sent it).
+                    runOutput = runOutput.takeLast(AiToolLimits.MAX_OUTPUT_SNAPSHOT_LINES),
+                    transcript = transcript,
                     root = root,
                     mapText = map.text,
                     memoryStore = memoryStore,
@@ -1065,7 +1656,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     steps = steps,
                     memory = session.memory,
                     // Level 10: the working-set depth, frozen at Send.
-                    keepLastResults = session.options.workingSetDepth
+                    keepLastResults = session.options.workingSetDepth,
+                    // Phase 90: the conversation travels with the first turn only.
+                    transcript = if (steps.isEmpty()) session.transcript else ""
                 )
             }
             // Captured once. Every retry of this turn has the identical recipient, strings and budget.
@@ -1090,6 +1683,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }
             val outcome = try {
                 streamWithRetry(session = session, onText = { text ->
+                    // Phase 89: the request's first visible text is its first token.
+                    if (text.isNotEmpty()) recordFirstToken()
                     _state.update { s -> if (s.phase == AiPhase.STREAMING) s.copy(answer = text) else s }
                 }) { publish ->
                     // The agent loop's sole request road; always reached after Send.
@@ -1104,6 +1699,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 else stopAgent(AiAgentStopReason.WALL_CLOCK)
                 return@launch
             }
+            // Phase 89: every completed turn's own report is folded into the task's
+            // numbers before the branch below consumes the outcome.
+            recordUsage((outcome as? AiOutcome.Answer)?.usage)
             when (outcome) {
                 is AiOutcome.Answer ->
                     if (finalSynthesis) {
@@ -1218,6 +1816,17 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 session.pendingRun = decision.call
                 session.queuedAfterRun = decision.alsoQueued
                 session.queuedDeniedAfterRun = decision.denied
+                // Phase 93 fix — the RUN_REQUEST row is the LATCH: `agentRun` is
+                // cleared by every terminal path (finish, stop, approve, skip), so
+                // a fact derived from it alone could never be read on a settled
+                // task. The timeline row survives, which is what the self-check's
+                // "run request reaches the card" check and the progress line read.
+                appendAgentStep(
+                    AiAgentStep(
+                        kind = AiAgentStepKind.RUN_REQUEST,
+                        title = AiCopy.agentRunRequested(decision.call.path)
+                    )
+                )
                 _state.update { it.copy(agentRun = AiAgentRunRequest(target = decision.call.path)) }
             }
             is AiAgentDecision.ExecuteTools -> executeToolBatch(session, decision.calls, decision.denied)
@@ -1298,7 +1907,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                             shouldStop = stop,
                             cachedFiles = readPlan.cachedFiles,
                             // Level 10: the follow-up hint names this same window.
-                            readWindow = session.options.readWindowLines
+                            readWindow = session.options.readWindowLines,
+                            // Phase 94: the frozen output tail, for read_run_output.
+                            runOutput = session.runOutput
                         )
                     }
                     if (readPlan.resultCacheKey != null && outcome.ok) {
@@ -1351,6 +1962,75 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 agentRunRunning = false
             )
         }
+        // Phase 89: the agent task is complete — stamp the numbers.
+        recordFinish()
+        // Phase 93c — **the wall that made the agent look unable to write.**
+        //
+        // A `modify` can only be diffed against content the parse already holds,
+        // and the parse holds the shortlist packed into the request (≤
+        // `AiProjectFiles.READ_SHORTLIST` files). The agent, though, reads any
+        // file it likes with `read_file` — so a file it had just read came back
+        // *"Cannot modify '…' because its current contents were not in the
+        // shared project context."*, which is a sentence about the app's
+        // bookkeeping, not about the file. Here the app reads exactly the
+        // proposed files (their unsaved buffers first, like every tool read) and
+        // parses once more. Nothing is loosened: the re-parse runs every rule,
+        // the diff is still local, the user still approves — and if the real
+        // content is what the hunks do not match, the reason the owner reads is
+        // the true one.
+        if (session.source == AiSource.PROPOSE_EDITS && parsed !is AiProposalResult.Proposal) {
+            val missing = AiEditProposalParser.missingBaselinePaths(answer, pendingBaselines)
+            if (missing.isNotEmpty()) {
+                viewModelScope.launch {
+                    val widened = widenedBaselines(session, missing)
+                    if (widened.isEmpty()) return@launch
+                    val reparsed = AiEditProposalParser.parse(answer, pendingBaselines + widened, pendingExistingPaths)
+                    val next = when (reparsed) {
+                        is AiProposalResult.Proposal -> reparsed
+                        // The truer reason: the file's real content is what the
+                        // hunks did not match, not "the app never captured it".
+                        is AiProposalResult.Invalid -> reparsed
+                        else -> return@launch
+                    }
+                    _state.update { s ->
+                        if (s.phase == AiPhase.DONE && s.answer == answer) s.copy(proposalResult = next) else s
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Phase 93c — the baselines [AiEditProposalParser.missingBaselinePaths]
+     * named, read from the session's own root. Bounded three ways: only paths the
+     * project walk admitted, only `modify` targets, at most
+     * [AiEditProposalParser.MAX_EDIT_FILES] of them — and each read through the
+     * same capped reader the walk uses. A dirty buffer wins over the disk copy,
+     * exactly as `read_file` does, so an unsaved edit is compared as it is.
+     */
+    private suspend fun widenedBaselines(
+        session: AgentSession,
+        missing: List<String>
+    ): Map<String, AiFileBaseline> = withContext(Dispatchers.IO) {
+        val out = LinkedHashMap<String, AiFileBaseline>()
+        for (path in missing.take(AiEditProposalParser.MAX_EDIT_FILES)) {
+            val admitted = pendingExistingPaths.firstOrNull { AiProjectFiles.samePath(it, path) } ?: continue
+            val name = admitted.substringAfterLast('/')
+            if (!AiProjectFiles.isTextFile(name) || AiProjectFiles.isSecretLike(name)) continue
+            val dirty = session.dirtyBuffers.entries
+                .firstOrNull { AiProjectFiles.samePath(it.key, admitted) }?.value
+            val text = dirty ?: AiProjectReader.readCapped(File(session.root, admitted)) ?: continue
+            val normalized = AiEditProposalParser.normalizeLf(text)
+            if (normalized.isBlank()) continue
+            out[admitted] = AiFileBaseline(
+                path = admitted,
+                exists = true,
+                content = normalized,
+                cut = false,
+                fromBuffer = dirty != null
+            )
+        }
+        out
     }
 
     private fun stopAgent(reason: AiAgentStopReason, message: String? = null) {
@@ -1429,6 +2109,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
         }
+        // Phase 89: a stop is a terminal state too, so the task's numbers are
+        // complete — a stopped task is measured, not erased (the Level 12 matrix
+        // has a Stop row). The numbers still die with the next Send (D6).
+        recordFinish()
     }
 
     /** The only path to a helper request: the user pressed Send on a preview. */
@@ -1472,7 +2156,10 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     job = null
                     return@launch
                 }
-                session.budget = AiAgentBudget(startedAtMs = System.currentTimeMillis())
+                // Phase 89: ONE instant, shared by the wall clock and the readout.
+                val startedAt = System.currentTimeMillis()
+                session.budget = AiAgentBudget(startedAtMs = startedAt)
+                startMeasuring(startedAt)
                 _state.update {
                     it.copy(
                         phase = AiPhase.STREAMING, answer = "", error = null, cutShort = false,
@@ -1492,6 +2179,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         // the rest underneath it, inside one shared total budget. A fresh
         // request starts empty, exactly as before.
         val base = if (prompt.continuation != null) _state.value.answer else ""
+        // Phase 89: a fresh request restarts the numbers. A continuation is a new
+        // request, so its readout describes the continuation itself.
+        startMeasuring(System.currentTimeMillis())
         _state.update {
             it.copy(
                 phase = AiPhase.STREAMING, answer = base, error = null, cutShort = false,
@@ -1510,6 +2200,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             // a second opinion never overwrites the answer being reviewed.
             val reviewing = prompt.source == AiSource.REVIEW
             val outcome = streamWithRetry(onText = { text ->
+                // Phase 89: this request's first non-empty text is its first token.
+                if (text.isNotEmpty()) recordFirstToken()
                 _state.update { s ->
                     if (s.phase != AiPhase.STREAMING) s
                     else if (reviewing) s.copy(review = AiReviewVerdict.Text(base + text))
@@ -1518,6 +2210,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }) { publish ->
                 client.stream(provider, key, model, body, AiContinuation.requestBudget(base.length), onText = publish)
             }
+            // Phase 89: one completed request's usage, folded before the branches.
+            recordUsage((outcome as? AiOutcome.Answer)?.usage)
             _state.update { s ->
                 if (s.phase != AiPhase.STREAMING) return@update s
                 when (outcome) {
@@ -1550,6 +2244,8 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     is AiOutcome.Failed -> s.copy(phase = AiPhase.FAILED, error = outcome.failure.message)
                 }
             }
+            // Phase 89: the request is over — total time and one heap sample.
+            recordFinish()
         }
     }
 
@@ -1787,11 +2483,16 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clear() {
+        // Phase 90: clear() means "clear this task" — a settled task joins the
+        // conversation instead of vanishing with the view. New chat (newChat())
+        // is the action that empties the conversation itself.
+        commitFinishedTask()
         job?.cancel()
         job = null
         gatherJob?.cancel()
         gatherJob = null
         agent = null
+        measureStartedAtMs = 0L
         _state.update {
             it.copy(
                 phase = AiPhase.IDLE, prompt = null, answer = "", error = null,
@@ -1800,12 +2501,73 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 undoConflictPaths = emptyList(),
                 agentSteps = emptyList(), agentRun = null, agentRunRunning = false, agentUsage = null,
                 // Level 10: offers and a review belong to the task being cleared.
-                budgetOffer = null, backupOffer = null, review = null, reviewedAnswer = null
+                budgetOffer = null, backupOffer = null, review = null, reviewedAnswer = null,
+                // Level 12: the numbers belong to the task being cleared too.
+                measurements = AiMeasurements(),
+                // Phase 90: nothing is on screen to commit any more.
+                taskCommitted = false
             )
         }
     }
 
-    fun dismissNotice() = _state.update { it.copy(notice = null) }
+    // ---- Phase 89 (Level 12): the numbers ----------------------------------
+
+    /**
+     * A request has been approved and is about to start: this is the zero point
+     * for the latency readout, and the previous task's numbers go with it. The
+     * instant is captured **once** and shared with the agent budget so the wall
+     * clock and the readout cannot disagree.
+     */
+    private fun startMeasuring(startedAtMs: Long) {
+        measureStartedAtMs = startedAtMs
+        _state.update { it.copy(measurements = AiMeasurements()) }
+    }
+
+    /**
+     * The first non-empty visible text of this request. Called from the stream
+     * callbacks, which run on IO; the policy is idempotent and the state update
+     * is a no-op once a first token exists, so later chunks cost one comparison.
+     */
+    private fun recordFirstToken() {
+        if (measureStartedAtMs <= 0L) return
+        val now = System.currentTimeMillis()
+        _state.update { s ->
+            if (s.measurements.firstTokenMs != null) s
+            else s.copy(
+                measurements = AiMeasurePolicy.firstToken(s.measurements, now, measureStartedAtMs)
+            )
+        }
+    }
+
+    /**
+     * The provider's own report for a completed request, folded into the task
+     * totals. Null (no report) is folded too: it marks the totals as a floor
+     * rather than silently pretending the provider reported zero.
+     */
+    private fun recordUsage(usage: AiTokenUsage?) {
+        _state.update { it.copy(measurements = AiMeasurePolicy.withUsage(it.measurements, usage)) }
+    }
+
+    /**
+     * The request reached a terminal state: total time, plus one boundary heap
+     * sample for the readout, taken through [HeapProbe] — the standing `ui/ai`
+     * guard forbids `Runtime.getRuntime` here (it is the command-execution
+     * token), so collection lives outside the package and this keeps the number.
+     * The readout labels it "memory", never "peak memory".
+     */
+    private fun recordFinish() {
+        val started = measureStartedAtMs
+        if (started <= 0L) return
+        // One-shot: a second call (or a stale one after clear) cannot restamp.
+        measureStartedAtMs = 0L
+        val now = System.currentTimeMillis()
+        val sample = runCatching { HeapProbe.usedHeapBytes() }.getOrNull()
+        _state.update {
+            it.copy(measurements = AiMeasurePolicy.finish(it.measurements, now, started, sample))
+        }
+    }
+
+    fun dismissNotice() = _state.update { it.copy(notice = null, storageProblem = false) }
 
     private fun settingsBusy(): Boolean = _state.value.let {
         it.configuring || it.testing || it.gathering || it.applying || it.phase == AiPhase.STREAMING || job?.isActive == true

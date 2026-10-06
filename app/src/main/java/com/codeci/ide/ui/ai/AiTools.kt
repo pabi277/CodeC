@@ -43,6 +43,18 @@ enum class AiToolName(val wire: String) {
     SEARCH_PROJECT("search_project"),
     READ_FILE("read_file"),
     READ_FILES("read_files"),
+    /**
+     * Phase 94 — glob over the walk's admitted paths. Read-only: it opens
+     * nothing; the list it filters is the one the Level 2 filter already made.
+     */
+    FIND_FILES("find_files"),
+    /** Phase 94 — the definitions of one file with their line numbers. */
+    OUTLINE_FILE("outline_file"),
+    /**
+     * Phase 94 — the last build/run output the Output panel held when the task
+     * started. Read-only: it reads a snapshot the app already has on screen.
+     */
+    READ_RUN_OUTPUT("read_run_output"),
     REQUEST_RUN("request_run");
 
     companion object {
@@ -82,13 +94,31 @@ object AiToolProtocol {
     const val OPEN = "<<<CODEC_TOOL"
     const val CLOSE = "<<<END_CODEC_TOOL>>>"
 
+    /**
+     * Phase 94 — the canonical spellings above, read with room for the model's
+     * own: any case, spaces inside the brackets. The app still writes and teaches
+     * the canonical form; only the reader widened.
+     */
+    private val OPEN_MARKER = Regex("""<<<\s*CODEC_TOOL(?![A-Za-z0-9_])""", RegexOption.IGNORE_CASE)
+    private val CLOSE_MARKER = Regex("""<<<\s*END_CODEC_TOOL\s*>>>""", RegexOption.IGNORE_CASE)
+
+    /** The bare protocol word: an answer that names it is attempting the wire. */
+    private val BLOCK_WORD = Regex("""(?<![A-Za-z0-9])CODEC_TOOL(?![A-Za-z0-9_])""", RegexOption.IGNORE_CASE)
+
     /** The instruction text that teaches the format. Part of the sent prompt. */
     const val INSTRUCTIONS: String =
         "To inspect the project, answer with one or more tool blocks and nothing else:\n" +
             "<<<CODEC_TOOL name=\"read_file\">>>\npath: relative/path.ext\nstart: 1\nend: 60\n<<<END_CODEC_TOOL>>>\n" +
-            "Tools: list_files(path?, ext?), search_project(query, max?), read_file(path, start?, end?), read_files(paths), request_run(target?).\n" +
+            "Tools: list_files(path?, ext?), search_project(query, max?), read_file(path, start?, end?), read_files(paths), " +
+            "find_files(pattern, max?), outline_file(path), read_run_output(lines?), request_run(target?).\n" +
             "read_files reads several files in one round trip — paths: a.kt, b.kt:10-40, c.kt (comma-separated, each with an optional :start-end). " +
             "Every path is checked on its own, so one refused path never blocks the others.\n" +
+            "find_files matches project paths with * (any run of characters) and ? (one character): *.md matches by file name anywhere, " +
+            "src/*.kt matches a whole relative path.\n" +
+            "outline_file lists the definitions (functions, classes, headings) of one file with their line numbers — call it before " +
+            "reading a long file, then read only the range you need.\n" +
+            "read_run_output returns the tail of the build/run output that was on screen when this task started — read it to fix a " +
+            "compile error, and never invent output that is not there.\n" +
             "All paths are relative to the project root. When you have enough information, answer normally with no tool block."
 
     /**
@@ -102,19 +132,26 @@ object AiToolProtocol {
         val prose = StringBuilder()
         var at = 0
         while (at < answer.length) {
-            val open = answer.indexOf(OPEN, at)
-            if (open < 0) {
+            // Phase 94 — the reader is as forgiving about the model's spacing and
+            // case as the edit parser is (Phase 93b): `<<<CODEC_TOOL`, `<<< CODEC_TOOL`,
+            // `<<<codec_tool` and `<<<END_CODEC_TOOL >>>` all read the same. The
+            // FORMAT is wide, the PERMISSION is not: nothing here decides whether a
+            // call may run — the policy does, and it never loosened.
+            val found = OPEN_MARKER.find(answer, at)
+            if (found == null) {
                 prose.append(answer, at, answer.length)
                 break
             }
+            val open = found.range.first
             prose.append(answer, at, open)
-            val nameStart = open + OPEN.length
+            val nameStart = found.range.last + 1
             val bodyStart = answer.indexOf(">>>", nameStart)
             if (bodyStart < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block was never closed", calls.toList())
             val header = answer.substring(nameStart, bodyStart).trim()
             val name = nameValue(header)
-            val end = answer.indexOf(CLOSE, bodyStart + 3)
-            if (end < 0) return AiToolParse.Malformed(prose.toString().trim(), "a tool block is missing $CLOSE", calls.toList())
+            val endMarker = CLOSE_MARKER.find(answer, bodyStart + 3)
+            if (endMarker == null) return AiToolParse.Malformed(prose.toString().trim(), "a tool block is missing $CLOSE", calls.toList())
+            val end = endMarker.range.first
             val body = answer.substring(bodyStart + 3, end)
             val args = LinkedHashMap<String, String>()
             for (raw in body.lines()) {
@@ -130,7 +167,7 @@ object AiToolProtocol {
                 args[key] = value
             }
             calls += AiToolRequest(name ?: "", args)
-            at = end + CLOSE.length
+            at = endMarker.range.last + 1
         }
         return AiToolParse.Calls(prose.toString().trim(), calls)
     }
@@ -146,12 +183,23 @@ object AiToolProtocol {
         is AiToolParse.Malformed -> parsed.prose
     }
 
-    /** `name="read_file"` (or bare `read_file`) from a block header. */
+    /**
+     * Phase 94 — does [text] contain a tool block at all, in any spelling this
+     * parser accepts? One rule for the review's "markup is shown, never run"
+     * branch, so widening the reader cannot leave that branch behind.
+     */
+    fun containsBlock(text: String): Boolean =
+        OPEN_MARKER.containsMatchIn(text) || CLOSE_MARKER.containsMatchIn(text) ||
+            BLOCK_WORD.containsMatchIn(text)
+
+    /** `name="read_file"`, `name = read_file`, `name: read_file` or a bare name — any spacing/case. */
     private fun nameValue(header: String): String? {
-        val quoted = Regex("name\\s*=\\s*\"([^\"]*)\"").find(header)?.groupValues?.get(1)
+        val quoted = Regex("name\\s*[=:]?\\s*\"([^\"]*)\"").find(header)?.groupValues?.get(1)
         if (quoted != null) return quoted.trim().ifEmpty { null }
-        val bare = header.removePrefix("name=").trim().trim('"')
-        return bare.ifEmpty { null }
+        val stripped = Regex("^name\\s*[=:]?\\s*", RegexOption.IGNORE_CASE).find(header)?.let {
+            header.removeRange(it.range)
+        } ?: header
+        return stripped.trim().trim('"').ifEmpty { null }
     }
 
     /**
@@ -165,6 +213,10 @@ object AiToolProtocol {
         AiToolName.SEARCH_PROJECT -> "search_project \"${call.query}\""
         AiToolName.LIST_FILES -> "list_files" +
             (call.path?.let { " $it/" } ?: "") + (call.ext?.let { " *.$it" } ?: "")
+        AiToolName.FIND_FILES -> "find_files \"${call.pattern}\""
+        AiToolName.OUTLINE_FILE -> "outline_file ${call.path}"
+        AiToolName.READ_RUN_OUTPUT -> "read_run_output" +
+            (call.lines?.let { " (last $it lines)" } ?: "")
         AiToolName.REQUEST_RUN -> "request_run" + (call.path?.let { " $it" } ?: "")
     }
 
@@ -184,6 +236,10 @@ object AiToolProtocol {
             val ext = request.args["ext"]
             "list_files" + (if (path != null) " $path/" else "") + (if (ext != null) " *.$ext" else "")
         }
+        AiToolName.FIND_FILES -> "find_files \"${request.args["pattern"].orEmpty()}\""
+        AiToolName.OUTLINE_FILE -> "outline_file ${request.args["path"].orEmpty()}"
+        AiToolName.READ_RUN_OUTPUT -> "read_run_output" +
+            (request.args["lines"]?.let { " (last $it lines)" } ?: "")
         AiToolName.REQUEST_RUN -> "request_run" + request.args["target"]?.let { " $it" }.orEmpty()
         null -> "unknown tool \"${request.rawName}\""
     }
@@ -207,6 +263,10 @@ data class AiToolCall(
     val query: String? = null,
     val max: Int? = null,
     val ext: String? = null,
+    /** Phase 94 — the glob of a `find_files` call. */
+    val pattern: String? = null,
+    /** Phase 94 — how many tail lines a `read_run_output` call asked for. */
+    val lines: Int? = null,
     /** Phase 85 (Level 8, item 3): the per-file specs of a `read_files` batch. */
     val reads: List<ReadSpec>? = null
 )
@@ -252,6 +312,23 @@ object AiToolLimits {
 
     /** A search term shorter than this matches half the project and helps nobody. */
     const val MIN_QUERY_CHARS = 2
+
+    /** Characters a `find_files` pattern may carry. */
+    const val MAX_PATTERN_CHARS = 80
+
+    /** Definitions one `outline_file` may return. */
+    const val MAX_OUTLINE_ROWS = AiOutline.MAX_ROWS
+
+    /** Output lines one `read_run_output` may return, and its default. */
+    const val MAX_OUTPUT_LINES = 200
+    const val DEFAULT_OUTPUT_LINES = 60
+
+    /**
+     * Output lines kept in a task's frozen snapshot at Send. The panel can hold
+     * far more; a task carries a bounded tail, because the model's result cap
+     * would cut it anyway and the snapshot lives in memory for the whole task.
+     */
+    const val MAX_OUTPUT_SNAPSHOT_LINES = 400
 }
 
 object AiToolPolicy {
@@ -276,14 +353,29 @@ object AiToolPolicy {
         readWindow: Int = AiToolLimits.MAX_READ_LINES
     ): AiToolVerdict {
         val name = request.name ?: return AiToolVerdict.Denied(
-            request, "unknown tool \"${request.rawName}\"; the tools are " +
-                AiToolName.entries.joinToString(", ") { it.wire }
+            request,
+            // Phase 93c — the owner's *"why can't the agent write code?"*: a
+            // coding model very naturally calls `write_file`/`edit_file`/
+            // `apply_patch`, and the old sentence stopped at "unknown tool" plus a
+            // list. The list is true and useless — the model then answers in
+            // prose and no file changes. The way a write *can* happen is named
+            // here instead, and this text is exactly what the model reads back as
+            // the tool result, so it can correct itself inside the same task.
+            "unknown tool \"${request.rawName}\"; this agent has no write tool and no command tool, and " +
+                "the tools it does have are " + AiToolName.entries.joinToString(", ") { it.wire } + ". " +
+                "To change a file, do not call a tool: answer with a " +
+                "${AiEditProposalParser.OPEN_TAG_PREFIX} path=\"…\" op=\"modify|create|delete\">>> block " +
+                "(SEARCH/REPLACE for part of a file, the full content for a new one) — CodeC turns it " +
+                "into a diff the user reviews and applies."
         )
         val allowedKeys = when (name) {
             AiToolName.LIST_FILES -> setOf("path", "ext")
             AiToolName.SEARCH_PROJECT -> setOf("query", "max")
             AiToolName.READ_FILE -> setOf("path", "start", "end")
             AiToolName.READ_FILES -> setOf("paths")
+            AiToolName.FIND_FILES -> setOf("pattern", "max")
+            AiToolName.OUTLINE_FILE -> setOf("path")
+            AiToolName.READ_RUN_OUTPUT -> setOf("lines")
             AiToolName.REQUEST_RUN -> setOf("target")
         }
         val extra = request.args.keys - allowedKeys
@@ -297,6 +389,9 @@ object AiToolPolicy {
             AiToolName.READ_FILES -> validateReadFiles(request, window)
             AiToolName.SEARCH_PROJECT -> validateSearch(request)
             AiToolName.LIST_FILES -> validateList(request, view)
+            AiToolName.FIND_FILES -> validateFind(request)
+            AiToolName.OUTLINE_FILE -> validateOutline(request, view)
+            AiToolName.READ_RUN_OUTPUT -> validateOutput(request)
             AiToolName.REQUEST_RUN -> validateRun(request, view)
         }
     }
@@ -406,6 +501,104 @@ object AiToolPolicy {
         }
         return AiToolVerdict.Allowed(
             AiToolCall(name = AiToolName.LIST_FILES, rawName = request.rawName, path = path, ext = ext)
+        )
+    }
+
+    /**
+     * Phase 94 — `find_files(pattern, max?)`: a glob over the walk's admitted
+     * paths. The pattern is a **name pattern** (`*.md`, `README*`) or a full
+     * relative one (`src/*.kt`, `**/build.gradle.kts`). It can never name a
+     * path the walk refused, because the list it filters is the walk's own
+     * output — but it is still checked like a path ([safeDirectoryPath]'s
+     * rules): no absolute, no `..`, no control characters, no `.git`/excluded
+     * directory, and a credential-shaped pattern names nothing.
+     */
+    private fun validateFind(request: AiToolRequest): AiToolVerdict {
+        val raw = request.args["pattern"]?.trim().orEmpty()
+        if (raw.isEmpty()) {
+            return AiToolVerdict.Denied(request, "find_files needs a pattern such as *.md or src/*.kt")
+        }
+        if (raw.length > AiToolLimits.MAX_PATTERN_CHARS) {
+            return AiToolVerdict.Denied(
+                request, "find_files pattern is longer than ${AiToolLimits.MAX_PATTERN_CHARS} characters"
+            )
+        }
+        val pattern = raw.replace('\\', '/')
+        if (pattern.startsWith("/") || pattern.startsWith("~") || DRIVE_PREFIX.containsMatchIn(pattern)) {
+            return AiToolVerdict.Denied(request, "find_files refused the pattern \"$raw\"")
+        }
+        if (pattern.split('/').any { it == ".." }) {
+            return AiToolVerdict.Denied(request, "find_files refused the pattern \"$raw\"")
+        }
+        if (pattern.any { it.isISOControl() || it == '\u0000' }) {
+            return AiToolVerdict.Denied(request, "find_files refused the pattern \"$raw\"")
+        }
+        if (!pattern.all { it.isLetterOrDigit() || it in "*?._-/@ " }) {
+            return AiToolVerdict.Denied(request, "find_files takes a plain glob (* and ? only), not \"$raw\"")
+        }
+        val max = numberOrNull(request.args["max"])
+        if (request.args["max"] != null && max == null) {
+            return AiToolVerdict.Denied(request, "find_files max must be a whole number")
+        }
+        if (max != null && max <= 0) {
+            return AiToolVerdict.Denied(request, "find_files max must be at least 1")
+        }
+        return AiToolVerdict.Allowed(
+            AiToolCall(
+                name = AiToolName.FIND_FILES,
+                rawName = request.rawName,
+                pattern = pattern,
+                max = max?.coerceAtMost(AiToolLimits.MAX_LIST_ENTRIES)
+            )
+        )
+    }
+
+    /**
+     * Phase 94 — `outline_file(path)`: the same path rules `read_file` applies
+     * (inside the project, admitted by the walk, text, not credential-shaped),
+     * because it reads the same bytes — it just answers with the structure
+     * instead of 400 lines.
+     */
+    private fun validateOutline(request: AiToolRequest, view: AiToolProjectView): AiToolVerdict {
+        val raw = request.args["path"]?.trim().orEmpty()
+        if (raw.isEmpty()) return AiToolVerdict.Denied(request, "outline_file needs a path")
+        val name = raw.replace('\\', '/').substringAfterLast('/')
+        if (AiProjectFiles.isSecretLike(name)) {
+            return AiToolVerdict.Denied(request, "outline_file never opens credential-shaped files")
+        }
+        val path = AiEditProposalParser.validateTargetPath(raw)
+            ?: return AiToolVerdict.Denied(request, "outline_file refused the path \"$raw\"")
+        if (view.existingPaths.none { AiProjectFiles.samePath(it, path) }) {
+            return AiToolVerdict.Denied(request, "$path is not a code or text file in this project")
+        }
+        return AiToolVerdict.Allowed(
+            AiToolCall(name = AiToolName.OUTLINE_FILE, rawName = request.rawName, path = path)
+        )
+    }
+
+    /**
+     * Phase 94 — `read_run_output(lines?)`. The snapshot is bounded by the app
+     * ([AiToolLimits.MAX_OUTPUT_SNAPSHOT_LINES]); the caller may ask for fewer
+     * tail lines, never more than [AiToolLimits.MAX_OUTPUT_LINES]. No path, no
+     * command: this tool cannot make anything run, it only reads what already
+     * ran.
+     */
+    private fun validateOutput(request: AiToolRequest): AiToolVerdict {
+        val raw = request.args["lines"]
+        val lines = numberOrNull(raw)
+        if (raw != null && lines == null) {
+            return AiToolVerdict.Denied(request, "read_run_output lines must be a whole number")
+        }
+        // A count is a request, not a permission: 0 and negatives clamp to one
+        // line rather than failing the round trip (the tool's whole point is
+        // that asking for output never fails).
+        val wanted = lines?.coerceAtLeast(1)
+        return AiToolVerdict.Allowed(
+            AiToolCall(
+                name = AiToolName.READ_RUN_OUTPUT,
+                rawName = request.rawName,
+                lines = wanted?.coerceAtMost(AiToolLimits.MAX_OUTPUT_LINES)
+            )
         )
     }
 

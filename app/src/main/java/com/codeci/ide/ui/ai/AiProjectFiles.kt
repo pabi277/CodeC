@@ -367,19 +367,27 @@ object AiProjectFiles {
     /** `--- path (N lines) ---` plus the newline before the body. */
     private fun headerCost(relativePath: String): Int = relativePath.length + 24
 
+    /**
+     * The slice of one file that still fits — and, since Phase 94, the one place a
+     * packed file's **values** are checked against [AiSecretScan]. The guard runs
+     * here, before the budget is measured, so the one-request ceiling still holds
+     * exactly and the preview shows precisely what will be sent; the candidate
+     * itself is untouched, so the edit parser's baseline keeps the raw bytes.
+     */
     private fun sliceFor(c: Candidate, budgetLeft: Int): Included? {
         val room = minOf(MAX_FILE_CHARS, budgetLeft)
         if (room < MIN_USEFUL_CHARS) return null
-        if (c.text.length <= room) {
-            return Included(c.relativePath, c.text, c.lines, c.lines, c.fromBuffer, c.readCut)
+        val text = AiSecretScan.redact(c.text).text
+        if (text.length <= room) {
+            return Included(c.relativePath, text, c.lines, c.lines, c.fromBuffer, c.readCut)
         }
         // Take whole lines only — never cut a line in half.
         var end = 0
         var lines = 0
         var at = 0
-        while (at < c.text.length) {
-            val nl = c.text.indexOf('\n', at)
-            val lineEnd = if (nl < 0) c.text.length else nl
+        while (at < text.length) {
+            val nl = text.indexOf('\n', at)
+            val lineEnd = if (nl < 0) text.length else nl
             if (lineEnd > room) break
             end = lineEnd
             lines++
@@ -387,7 +395,7 @@ object AiProjectFiles {
             at = nl + 1
         }
         if (end < MIN_USEFUL_CHARS) return null
-        return Included(c.relativePath, c.text.substring(0, end), lines, c.lines, c.fromBuffer, true)
+        return Included(c.relativePath, text.substring(0, end), lines, c.lines, c.fromBuffer, true)
     }
 
     /** Project-relative paths, tolerant of a leading `./` and of separator style. */

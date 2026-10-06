@@ -4,6 +4,7 @@ import com.codeci.ide.ui.ai.AiToolCall
 import com.codeci.ide.ui.ai.AiToolLimits
 import com.codeci.ide.ui.ai.AiToolName
 import com.codeci.ide.ui.ai.ReadSpec
+import com.codeci.ide.ui.ai.AiSecretScan
 import com.codeci.ide.ui.ai.AiToolRunner
 import java.io.File
 import java.nio.file.Files
@@ -53,8 +54,13 @@ class AiToolRunnerTest {
         end: Int? = null,
         query: String? = null,
         max: Int? = null,
-        ext: String? = null
-    ) = AiToolCall(name = name, rawName = name.wire, path = path, start = start, end = end, query = query, max = max, ext = ext)
+        ext: String? = null,
+        pattern: String? = null,
+        lines: Int? = null
+    ) = AiToolCall(
+        name = name, rawName = name.wire, path = path, start = start, end = end,
+        query = query, max = max, ext = ext, pattern = pattern, lines = lines
+    )
 
     // ---- list_files -------------------------------------------------------
 
@@ -237,6 +243,176 @@ class AiToolRunnerTest {
         assertTrue(out.text.length <= AiToolLimits.MAX_RESULT_CHARS)
         assertTrue(out.truncated)
         assertTrue(out.text.contains("more lines follow"))
+    }
+
+    // ---- find_files -------------------------------------------------------
+
+    @Test
+    fun `find_files matches a glob over admitted paths and never walks the disk`() {
+        tree()
+        val out = AiToolRunner.execute(call(AiToolName.FIND_FILES, pattern = "*.c"), root, admitted)
+        assertTrue(out.ok)
+        assertTrue(out.text.contains("src/main.c"))
+        assertTrue(out.text.contains("src/util.c"))
+        assertFalse("the unadmitted build output stays invisible", out.text.contains("build/out.c"))
+        assertFalse("and so does the secret file", out.text.contains(".env"))
+        assertTrue(out.text.contains("2 of 2 listed"))
+    }
+
+    @Test
+    fun `find_files treats a pattern without a slash as a name match anywhere`() {
+        tree()
+        val out = AiToolRunner.execute(call(AiToolName.FIND_FILES, pattern = "util.c"), root, admitted)
+        assertTrue(out.text.contains("src/util.c"))
+    }
+
+    @Test
+    fun `find_files understands star-star across directories and is honest when empty`() {
+        tree()
+        val deep = AiToolRunner.execute(call(AiToolName.FIND_FILES, pattern = "src/**/*.c"), root, admitted)
+        assertTrue(deep.text.contains("src/main.c"))
+        val none = AiToolRunner.execute(call(AiToolName.FIND_FILES, pattern = "*.kt"), root, admitted)
+        assertTrue(none.ok)
+        assertTrue("an empty result is a result, not an error", none.text.contains("none of the ${admitted.size} admitted files match"))
+    }
+
+    @Test
+    fun `find_files caps its answer with a visible cut`() {
+        tree()
+        val many = (1..40).map { "src/f$it.c" }
+        for (p in many) File(root, p).writeText("int x;\n")
+        val out = AiToolRunner.execute(
+            call(AiToolName.FIND_FILES, pattern = "*.c", max = 5), root, admitted + many
+        )
+        assertTrue("the cap is named with the real total", out.text.contains("5 of "))
+        assertTrue(out.text.contains("result cut"))
+    }
+
+    @Test
+    fun `the slug matcher agrees with the tool and refuses nothing silently`() {
+        assertTrue(AiToolRunner.globMatches("*.c", "src/main.c"))
+        assertTrue(AiToolRunner.globMatches("main.c", "src/main.c"))
+        assertTrue(AiToolRunner.globMatches("src/**/*.c", "src/a/b/c.c"))
+        assertTrue(AiToolRunner.globMatches("src/*.c", "src/main.c"))
+        assertFalse(AiToolRunner.globMatches("src/*.c", "src/a/main.c"))
+        assertFalse(AiToolRunner.globMatches("*.kt", "src/main.c"))
+    }
+
+    // ---- outline_file -----------------------------------------------------
+
+    @Test
+    fun `outline_file maps a file without sending its body`() {
+        tree()
+        val out = AiToolRunner.execute(call(AiToolName.OUTLINE_FILE, path = "src/main.c"), root, admitted)
+        assertTrue(out.ok)
+        assertTrue(out.text.contains("STRUCTURE src/main.c"))
+        assertTrue(out.text.contains("int main(void)"))
+        assertFalse("the body must not ride along", out.text.contains("printf"))
+    }
+
+    @Test
+    fun `outline_file prefers the unsaved buffer like read_file does`() {
+        tree()
+        val out = AiToolRunner.execute(
+            call(AiToolName.OUTLINE_FILE, path = "src/main.c"), root, admitted,
+            dirtyBuffers = mapOf("src/main.c" to "void brandNew(void) { }\n")
+        )
+        assertTrue(out.text.contains("brandNew"))
+        assertFalse(out.text.contains("int main(void)"))
+    }
+
+    @Test
+    fun `outline_file refuses a secret a missing file and an escape - and says so`() {
+        tree()
+        val secret = AiToolRunner.execute(call(AiToolName.OUTLINE_FILE, path = ".env"), root, admitted)
+        assertFalse(secret.ok)
+        val missing = AiToolRunner.execute(call(AiToolName.OUTLINE_FILE, path = "src/nope.c"), root, admitted)
+        assertFalse(missing.ok)
+        val escape = AiToolRunner.execute(call(AiToolName.OUTLINE_FILE, path = "../out.c"), root, admitted)
+        assertFalse(escape.ok)
+        val unadmitted = AiToolRunner.execute(call(AiToolName.OUTLINE_FILE, path = "build/out.c"), root, admitted)
+        assertFalse(unadmitted.ok)
+        assertTrue(unadmitted.text.contains("not a code or text file in this project"))
+    }
+
+    @Test
+    fun `outline_file on a definitionless file answers with an empty structure`() {
+        tree()
+        val out = AiToolRunner.execute(call(AiToolName.OUTLINE_FILE, path = "README.md"), root, admitted)
+        assertTrue(out.ok)
+        assertTrue(out.text.contains("STRUCTURE README.md"))
+    }
+
+    // ---- read_run_output --------------------------------------------------
+
+    @Test
+    fun `read_run_output hands back the frozen snapshot tail with a truthful header`() {
+        tree()
+        val lines = (1..100).map { "line $it" }
+        val out = AiToolRunner.execute(
+            call(AiToolName.READ_RUN_OUTPUT, lines = 10), root, admitted, runOutput = lines
+        )
+        assertTrue(out.ok)
+        assertTrue(out.text.contains("last 10 of 100 lines"))
+        assertTrue(out.text.contains("line 91"))
+        assertTrue(out.text.contains("line 100"))
+        assertFalse("older lines are gone", out.text.contains("line 90\n"))
+    }
+
+    @Test
+    fun `read_run_output defaults to the default window and never exceeds the cap`() {
+        tree()
+        val lines = (1..500).map { "l$it" }
+        val def = AiToolRunner.execute(call(AiToolName.READ_RUN_OUTPUT), root, admitted, runOutput = lines)
+        assertTrue(def.text.contains("last ${AiToolLimits.DEFAULT_OUTPUT_LINES} of 500 lines"))
+        val big = AiToolRunner.execute(
+            call(AiToolName.READ_RUN_OUTPUT, lines = 999), root, admitted, runOutput = lines
+        )
+        assertTrue(big.text.contains("last ${AiToolLimits.MAX_OUTPUT_LINES} of 500 lines"))
+    }
+
+    @Test
+    fun `read_run_output says nothing has been built instead of failing`() {
+        tree()
+        val out = AiToolRunner.execute(call(AiToolName.READ_RUN_OUTPUT), root, admitted)
+        assertFalse("there is nothing to show", out.ok)
+        assertTrue(out.text.contains("nothing has been built or run"))
+    }
+
+    @Test
+    fun `read_run_output can never make anything run`() {
+        val src = RepoFiles.mainSource("app/src/main/java/com/codeci/ide/ui/ai/AiToolRunner.kt").readText()
+        assertTrue(src.contains("snapshot") || src.contains("runOutput"))
+        assertFalse("the tool must not shell out", src.contains("ProcessBuilder"))
+        assertFalse(src.contains("Runtime.getRuntime"))
+        assertFalse(src.contains("exec("))
+    }
+
+    // ---- the scrub at the single result boundary --------------------------
+
+    @Test
+    fun `every tool result is scrubbed - a planted key in a file never reaches the wire`() {
+        tree()
+        File(root, "src/conf.c").writeText(
+            "const char *key = \"AIzaSyD4bC1xH9kLmN0pQrStUvWxYz12345678\";\n"
+        )
+        val out = AiToolRunner.execute(
+            call(AiToolName.READ_FILE, path = "src/conf.c", start = 1, end = 5),
+            root, admitted + "src/conf.c"
+        )
+        assertTrue(out.ok)
+        assertFalse("the value must not survive", out.text.contains("AIzaSyD4bC1xH9kLmN0pQrStUvWxYz12345678"))
+        assertTrue(out.text.contains(AiSecretScan.MARKER))
+        assertTrue("and the model is told", out.text.contains("withheld"))
+    }
+
+    @Test
+    fun `the scrub names the count and leaves ordinary code alone`() {
+        tree()
+        val out = AiToolRunner.execute(call(AiToolName.READ_FILE, path = "src/main.c", start = 1, end = 4), root, admitted)
+        assertTrue(out.ok)
+        assertTrue(out.text.contains("printf"))
+        assertFalse(out.text.contains("withheld"))
     }
 
     // ---- the runner never executes a run ---------------------------------

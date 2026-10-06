@@ -38,7 +38,11 @@ class AiLevel11WiringTest {
         assertTrue(sheet.contains("is AiReviewVerdict.MarkupShownAsText -> VerbatimText(review.text)"))
         assertTrue(sheet.contains("Answer(state.answer, streaming = true)"))
         assertEquals(1, Regex("streaming = true").findAll(sheet).count())
-        assertEquals(6, Regex("\\bAnswer[(]").findAll(sheet).count() + Regex("\\bVerbatimText[(]").findAll(sheet).count())
+        // Phase 90 added one more Markdown-drawn surface (each earlier turn in the
+        // conversation reads through the same model, AiChatSheet `Answer(turn.text)`);
+        // the verbatim exception is still exactly one, so the census moves 6 -> 7.
+        assertTrue(sheet.contains("Answer(turn.text)"))
+        assertEquals(7, Regex("\\bAnswer[(]").findAll(sheet).count() + Regex("\\bVerbatimText[(]").findAll(sheet).count())
     }
 
     @Test

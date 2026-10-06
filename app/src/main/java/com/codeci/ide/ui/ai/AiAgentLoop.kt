@@ -420,12 +420,20 @@ object AiAgentPrompt {
         memory: AiTaskMemory? = null,
         includePlanAtEnd: Boolean = true,
         includeContinueTail: Boolean = true,
-        keepLastResults: Int = AiAgentLimits.KEEP_LAST_RESULTS
+        keepLastResults: Int = AiAgentLimits.KEEP_LAST_RESULTS,
+        /**
+         * Phase 90 — the conversation block ([AiChatSession.render]) of the tasks
+         * before this one, carried **inside** the request so the preview and the
+         * sent bytes are the same string (D4). Only the first turn of a task
+         * carries it: later turns repeat the task and the steps, not the history.
+         */
+        transcript: String = ""
     ): Packed {
         val results = steps.filter {
             it.kind == AiAgentStepKind.TOOL || it.kind == AiAgentStepKind.DENIED || it.kind == AiAgentStepKind.RUN_RESULT
         }
         val staticHead = buildString {
+            if (transcript.isNotEmpty()) append(transcript)
             append("Task: ").append(question.trim()).append("\n\n")
             append(if (mapText.isBlank()) "(the project map could not be built)" else mapText).append('\n')
         }

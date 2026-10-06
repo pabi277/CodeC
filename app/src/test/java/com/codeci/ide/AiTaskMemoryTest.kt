@@ -277,6 +277,27 @@ class AiTaskMemoryTest {
     }
 
     @Test
+    fun `a read_run_output call is never versioned or snapshotted`() {
+        // Phase 94: the build/run tail is live state, not file content. If it
+        // were versioned the scrape could poison read identities (and a cached
+        // "read" of it would be served as if it were a file). It takes the
+        // unversioned path every non-file tool takes.
+        val root = project()
+        File(root, "src/main.c").writeText("int main(void) { return 0; }\n")
+        val admitted = listOf("src/main.c")
+        val call = AiToolCall(
+            name = AiToolName.READ_RUN_OUTPUT,
+            rawName = "read_run_output",
+            lines = 40
+        )
+        val plan = AiTaskMemory.EMPTY.prepareRead(call, root, admitted, emptyMap(), nowMs = 5L)
+        assertTrue("no read identity may be created", plan.memory.files.isEmpty())
+        assertEquals("and no cache entry may exist", null, plan.resultCacheKey)
+        assertTrue(plan.cachedFiles.isEmpty())
+        assertEquals(AiTaskMemory.EMPTY, plan.memory)
+    }
+
+    @Test
     fun `task memory limits the file working set and renders the plan at the end`() {
         val root = temporary.newFolder("many-files")
         val entries = (1..(AiTaskMemoryLimits.MAX_FILES + 4)).map { index ->

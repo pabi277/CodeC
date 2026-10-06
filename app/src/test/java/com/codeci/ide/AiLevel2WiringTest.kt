@@ -125,9 +125,16 @@ class AiLevel2WiringTest {
         // blank-selection refusal and answered "Select some code in the editor
         // first" — a dead end wearing a send icon. Pinned so it cannot go back.
         val sheet = ai("AiChatSheet.kt")
+        // Phase 93: the branch lives in the arrow's own callers now (the shared
+        // ArrowButton only forwards the tap), and the composer is the one that
+        // hands the typed question to either route.
         assertTrue(
             "the arrow must branch on whether code is selected",
             sheet.contains("if (hasSelection) onExplainSelection(question) else onAskProject(question)")
+        )
+        assertTrue(
+            "and the question is what travels",
+            sheet.contains("onDismissNotice()\n                if (hasSelection) onExplainSelection(question) else onAskProject(question)")
         )
         assertFalse(
             "the arrow must no longer be a bare onExplainSelection call",

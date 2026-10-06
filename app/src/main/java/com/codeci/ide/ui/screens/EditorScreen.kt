@@ -148,6 +148,7 @@ import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.rememberMotionSpecs
 import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
+import com.codeci.ide.MainActivity
 import com.codeci.ide.R
 import com.codeci.ide.ui.components.EditorStatusBar
 import com.codeci.ide.ui.components.EditorTabBar
@@ -1160,7 +1161,10 @@ fun EditorScreen(
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
             openDirty = viewModel.isDirty.value,
-            dirtyBuffers = viewModel.dirtyProjectBuffers()
+            dirtyBuffers = viewModel.dirtyProjectBuffers(),
+            // Phase 94 — the agent's `read_run_output` tool reads this snapshot:
+            // the build/run output the panel shows right now, frozen at Send.
+            runOutput = outputState.lines.map { it.text }
         )
     }
     // Phase 79 → 80 — propose reviewable multi-file edits. The agent reads what
@@ -1174,7 +1178,9 @@ fun EditorScreen(
             openPath = viewModel.activeTabPath.value ?: viewModel.fileName.value,
             openText = buffer.text,
             openDirty = viewModel.isDirty.value,
-            dirtyBuffers = viewModel.dirtyProjectBuffers()
+            dirtyBuffers = viewModel.dirtyProjectBuffers(),
+            // Phase 94 — same snapshot as the ask door (see `aiAskProject`).
+            runOutput = outputState.lines.map { it.text }
         )
     }
     // Phase 80 — the AI asked to run the project. The tap dispatches CodeC's
@@ -1244,11 +1250,34 @@ fun EditorScreen(
             onExplainError = aiExplainError,
             onAskProject = aiAskProject,
             onCancelGather = aiViewModel::cancelGather,
-            onSend = aiViewModel::send,
+            // Phase 95 — after Send the composer clears, so the owner's next
+            // question starts on a blank line rather than sitting over the
+            // answer. The value is only display state (rememberSaveable in this
+            // composable); nothing changes about what was sent (D4).
+            onSend = { aiQuestion = ""; aiViewModel.send() },
             onCancelPreview = aiViewModel::cancelPreview,
             onStop = aiViewModel::stop,
             onRetry = aiViewModel::retry,
             onClear = aiViewModel::clear,
+            onNewChat = aiViewModel::newChat,
+            // Phase 95 — the history drawer + welcome/agreement.
+            onOpenHistory = aiViewModel::openHistory,
+            onCloseHistory = aiViewModel::closeHistory,
+            onSwitchChat = aiViewModel::switchChat,
+            onToggleChatPin = aiViewModel::toggleChatPin,
+            onAcceptWelcome = aiViewModel::acceptWelcome,
+            // Phase 91 — the simple/technical face (the owner's Phase 90 round).
+            onToggleMode = aiViewModel::toggleMode,
+            // Phase 92 — the self-check (the owner: "give some command and I will run").
+            onSelfCheckStart = aiViewModel::startSelfCheck,
+            onSelfCheckNext = aiViewModel::selfCheckNext,
+            onSelfCheckSkip = aiViewModel::selfCheckSkip,
+            onSelfCheckStop = aiViewModel::stopSelfCheck,
+            onSelfCheckReport = aiViewModel::selfCheckReport,
+            onSelfCheckLive = aiViewModel::selfCheckLive,
+            // Phase 93 — the preflight notice's one tap: the same door the storage
+            // screen and the terminal use, which asks for the route this phone has.
+            onGrantAccess = { (context as? MainActivity)?.requestStoragePermissions() },
             onDismissNotice = aiViewModel::dismissNotice,
             onExpand = { aiViewModel.sheetEvent(AiSheetEvent.EXPAND) },
             onMinimize = { aiViewModel.sheetEvent(AiSheetEvent.MINIMIZE) },

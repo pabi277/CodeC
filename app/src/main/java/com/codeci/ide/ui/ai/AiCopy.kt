@@ -21,6 +21,29 @@ object AiCopy {
 
     const val NEEDS_PROJECT = "Open a project to use the AI helper. It works only inside CodeC projects, not in single-file mode."
 
+    /**
+     * Phase 93 — the permission sentences. The owner's *"it's showing error no
+     * permission"* was true and useless at once: it named neither the cause nor
+     * the switch. [storageNeeded] carries both, spelled for the phone's own
+     * Android version by `StorageAccessPolicy.fixSteps`.
+     */
+    const val PROJECT_FOLDER_UNREACHABLE =
+        "The project folder could not be opened — it may have been moved, deleted or renamed. " +
+            "Open it again from Projects."
+
+    fun storageNeeded(writing: Boolean, fix: String): String =
+        (if (writing) "CodeC cannot change files in this project yet"
+        else "CodeC cannot read this project yet") +
+            " — it lives outside CodeC's own storage, and Android has not granted shared storage." +
+            (if (fix.isBlank()) "" else " " + fix)
+
+    /** The button beside [storageNeeded]: opens this app's own permission page. */
+    const val GRANT_ACCESS = "Grant access"
+
+    /** Phase 93 — the preview bar's one arrow: what it does, said next to it. */
+    const val SEND_ARROW_HINT = "Tap ➤ to send this to the AI."
+    const val SEND_PREVIEW = "Send this request to the AI"
+
     // ---- key setup (O1) ---------------------------------------------------
 
     const val SETUP_INTRO =
@@ -57,8 +80,66 @@ object AiCopy {
     const val CANCEL = "Cancel"
     const val STOP = "Stop"
     const val COPY = "Copy answer"
+
+    // ---- Phase 91 — the simple chat (the owner's Phase 90 device round) --------
+
+    /** The two faces of the sheet. Simple is the default: question, answer, Copy. */
+    const val MODE_SIMPLE = "Simple"
+    const val MODE_TECHNICAL = "Technical"
+    const val MODE_TOGGLE_DESCRIPTION = "Switch between the simple chat and the technical view"
+
+    /** Every assistant turn carries its own Copy (the owner's ask). */
+    const val COPY_THIS = "Copy"
+
+    /** Replaces the old "New question" on a failed task: it clears the task, nothing else. */
+    const val CLEAR_TASK = "Clear"
+
+    // ---- Phase 92 — the self-check (the owner: "give some command and I will run it") ----
+
+    /** The one command: five scripted checks and a report, instead of judging rows by eye. */
+    const val SELF_CHECK_TITLE = "Self-check"
+    const val SELF_CHECK_START = "Self-check"
+    const val SELF_CHECK_NEXT = "Next check"
+    /** The way on that does not need the step to be sent (Phase 92.1). */
+    const val SELF_CHECK_SKIP = "Skip check"
+    /** The card's own word for the last state, so a skipped step never reads as "all run". */
+    const val SELF_CHECK_DONE = "finished — Copy report"
+    const val SELF_CHECK_STOP = "Stop check"
+    const val SELF_CHECK_REPORT = "Copy report"
+    const val SELF_CHECK_COPIED = "Report copied"
+
+    /**
+     * The card's promise, in the owner's own terms: every check is an ordinary
+     * Send he approves (D4), and the report is redacted by construction (D6).
+     */
+    const val SELF_CHECK_NOTE =
+        "Five checks, one at a time. Each one is an ordinary Send you approve first; Skip check moves past one " +
+            "without sending it (it is reported as not run, never as passed). The report has no prompts, no " +
+            "answers and no keys — sizes and results only."
+    const val SELF_CHECK_SEND_HINT = "Send this check in the bar below when you are ready — or tap Skip check."
+    /** Shown when the button cannot build the next preview yet (Phase 92.1). */
+    const val SELF_CHECK_BUSY = "The previous answer is still coming in — tap again in a moment."
+    const val SELF_CHECK_HINT = "Five checks the app judges itself, then a report to share."
+
+    /** Simple mode: the answer is still arriving and there is nothing to show yet. */
+    const val WORKING = "Working…"
+
+    /** Simple mode never hides the exact text — it puts it one tap away. */
+    const val SENT_TEXT_SHOW = "What will be sent"
+    const val SENT_TEXT_HIDE = "Hide what will be sent"
+
+    fun modeToggleLabel(simple: Boolean): String = if (simple) MODE_SIMPLE else MODE_TECHNICAL
+
+    /** Simple mode's header: who answers, without the raw model id. */
+    fun sheetTitleSimple(provider: AiProviderId): String = "AI · ${provider.label}"
+
+    /** Simple mode's answer label, still honest about a stopped turn. */
+    fun turnLabelSimple(stopped: Boolean): String = if (stopped) "$AI · stopped" else AI
+
+    /** Simple mode's one-line preview — the disclosure stays, the machinery goes. */
+    fun previewSimple(provider: AiProviderId, model: String): String =
+        "Send this to ${provider.label} · $model? Nothing leaves your phone until you tap Send."
     const val COPIED = "Answer copied"
-    const val NEW_QUESTION = "New question"
     const val TRY_AGAIN = "Try again"
     const val WRONG_NOTE = "AI answers can be wrong. Nothing in your project was changed."
     const val NOT_SAVED_NOTE =
@@ -178,10 +259,18 @@ object AiCopy {
 
     // ---- Phase 80 (Level 4): the agent surface ----------------------------
 
-    /** The preview's note when the task will be run by the agent, not one shot. */
+    /**
+     * The preview's note when the task will be run by the agent, not one shot.
+     * Phase 94: the sentence names the whole read surface (the three new tools
+     * included) and states the value-level guard, because a preview that
+     * understates what the agent may read would not be a preview.
+     */
     fun agentPreviewNote(): String =
-        "After you tap Send, the AI may read this project — list_files, search_project and read_file — " +
+        "After you tap Send, the AI may read this project — list_files, search_project, read_file, read_files, " +
+            "find_files, outline_file and read_run_output (the build/run output you already have on screen) — " +
             "one step at a time, shown below as it happens (up to ${AiAgentLimits.MAX_TOOL_CALLS} reads). " +
+            "Credential-shaped values (keys, tokens, passwords and pasted private keys) are withheld from " +
+            "everything it reads and from the project text it is sent, and it is told how many were withheld. " +
             "It may ask to run the project (up to ${AiAgentLimits.MAX_RUNS} times); nothing runs until you tap Run. " +
             "A bounded local task memory may keep up to ${AiTaskMemoryLimits.MAX_FILES} non-secret file snapshots " +
             "(${AiTaskMemoryLimits.MAX_FILE_BYTES / 1024} KB each, ${AiTaskMemoryLimits.MAX_TOTAL_FILE_BYTES / 1024} KB total) " +
@@ -288,6 +377,18 @@ object AiCopy {
     /** Step titles for the timeline. Every sentence the agent surface shows. */
     const val AGENT_STEP_ANSWER = "AI step"
     const val AGENT_STEP_MALFORMED = "Tool block could not be read"
+
+    /**
+     * Phase 93 — the approval card's own arrival, written into the timeline the
+     * moment it appears. The card itself (`agentRun`) is cleared by Run, Skip,
+     * finish and stop, so this row is the only durable record that the model
+     * asked — which is exactly what the progress line and the self-check's
+     * "run request reaches the card" check need to read.
+     */
+    const val AGENT_RUN_REQUESTED = "The AI asked to run the project"
+    fun agentRunRequested(target: String?): String =
+        AGENT_RUN_REQUESTED + (if (target.isNullOrBlank()) "" else " ($target)")
+
     const val AGENT_RUN_APPROVED = "You approved the run"
     fun agentRunApproved(target: String?): String =
         AGENT_RUN_APPROVED + (if (target.isNullOrBlank()) "" else " ($target)")
@@ -297,7 +398,15 @@ object AiCopy {
     const val AGENT_RUN_NOT_STARTED_TITLE = "Run did not start"
     const val AGENT_RUN_FINISHED = "Run finished"
     fun agentStepAnswer(number: Int): String = "$AGENT_STEP_ANSWER $number"
-    fun agentStepDenied(title: String, reason: String): String = "Refused $title — $reason"
+    /**
+     * Phase 93b — the prefix every refusal row carries. One builder, so the
+     * timeline row and the self-check's run look-up can never drift apart: the
+     * check reads this prefix to know a run request was refused, rather than
+     * inferring "the model never asked" from an empty answer.
+     */
+    fun agentStepDeniedPrefix(title: String): String = "Refused $title"
+
+    fun agentStepDenied(title: String, reason: String): String = "${agentStepDeniedPrefix(title)} — $reason"
 
     /** Shown when the task ends because of a cap or the user. */
     fun agentStopped(reason: AiAgentStopReason): String = AiAgentLimits.stopSentence(reason)
@@ -500,6 +609,43 @@ object AiCopy {
     const val CONTINUE_PROPOSAL_NOTE =
         "This reply was an edit proposal — review the card above, or ask a new question for the rest."
 
+    // ---- Phase 90: the conversation surface ---------------------------------
+
+    /** The header action: start a fresh conversation (the task and the transcript both clear). */
+    const val NEW_CHAT = "New chat"
+    const val NEW_CHAT_TITLE = "Start a new chat?"
+    /**
+     * Phase 93 — item 5's honest sentence: history is **per project** and lives
+     * **only while the app is open** (D6, unchanged — nothing is written anywhere).
+     * The owner asked for "one history per project"; this is what that means on a
+     * phone, said where the clearing happens.
+     */
+    const val NEW_CHAT_BODY =
+        "This clears this project's conversation and the current task. Each project keeps its own " +
+            "chat while CodeC is open — nothing here is saved to a file, and closing the app clears it."
+    const val NEW_CHAT_CONFIRM = "New chat"
+    const val NEW_CHAT_KEEP = "Keep it"
+
+    /** The preview's disclosure: exactly what the follow-up will carry from earlier. */
+    fun earlierTurnsLabel(turns: Int, chars: Int): String =
+        "Follow-up · $turns earlier " + (if (turns == 1) "turn" else "turns") +
+            " · $chars characters will be sent again"
+    const val EARLIER_TURNS_SHOW = "Show earlier turns"
+    const val EARLIER_TURNS_HIDE = "Hide earlier turns"
+    const val EARLIER_TURNS_TITLE = "Earlier turns"
+
+    /** One assistant turn's label: who answered it, and whether it was stopped. */
+    fun turnLabel(provider: AiProviderId, model: String, stopped: Boolean): String {
+        val base = "$AI · ${provider.label} · $model"
+        return if (stopped) base + " · stopped" else base
+    }
+
+    /**
+     * A code block that was longer than the drawn cap; the block still Copies in
+     * full, so the note only says what the screen shows.
+     */
+    const val CODE_BLOCK_TRIMMED = "[long block — the Copy button has all of it]"
+
     fun problem(p: AiContextProblem): String = when (p) {
         AiContextProblem.NO_SELECTION -> "Select some code in the editor first, then tap Explain selection."
         AiContextProblem.SELECTION_TOO_LONG ->
@@ -510,4 +656,40 @@ object AiCopy {
         AiContextProblem.PROJECT_TOO_LARGE -> PROJECT_TOO_LARGE
         AiContextProblem.EMPTY_EDIT_QUESTION -> EDIT_QUESTION_REQUIRED
     }
+
+    // ---- Phase 95: welcome, agreement and the history drawer -----------------
+
+    /** Shown once per welcome-version, the first time the sheet is opened on a ready key. */
+    const val WELCOME_TITLE = "Welcome to CodeC AI"
+    const val WELCOME_SUBTITLE =
+        "Your on-device code helper. A fresh screen — your key, your project, your choice."
+
+    /**
+     * The agreement the owner asked for: small work only, the API key is his own,
+     * the creator is not responsible. This is a UI agreement — not a legal
+     * document, not a permission — so it sits in the sheet and is tapped once per
+     * version before anything is sent. It cannot be misread as a grant: the model
+     * still sees nothing until the owner taps Send (D4), and write/run still need
+     * their own approvals (D1).
+     */
+    const val WELCOME_AGREEMENT_TITLE = "Before you ask"
+    val WELCOME_AGREEMENT_BODY = listOf(
+        "Small work only. This helper is for short questions, explanations and small, reviewable edits — not for writing whole apps, large refactors, or code you have not read.",
+        "Your API key, your bill, your rate limits. CodeC does not host a model and does not pay for requests. Calls leave your phone with the key you saved, under the provider's own terms.",
+        "Always review before you apply. Proposed edits are shown as a diff, and Apply is your tap — never automatic. Nothing runs on your device without your tap either.",
+        "The creator is not responsible for what the model writes, for charges you incur through your own key, or for code you run on your own device."
+    )
+    const val WELCOME_AGREE = "I understand — start"
+    const val WELCOME_DISAGREE = "Not now"
+
+    /** The history drawer: Pinned / Recents / New chat, the same shape the owner screenshot'd. */
+    const val HISTORY = "History"
+    const val HISTORY_PIN = "Pin"
+    const val HISTORY_UNPIN = "Unpin"
+    const val PINNED = "Pinned"
+    const val RECENTS = "Recents"
+    const val HISTORY_EMPTY = "No chats yet in this project."
+    const val DRAWER_CLOSE = "Close history"
+    const val DRAWER_OPEN = "Open history"
+    const val CURRENT_CHAT = "Current chat"
 }

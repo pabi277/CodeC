@@ -247,8 +247,14 @@
     <string name="project_type">Type</string>
     <string name="server_preview_live">live</string>
     <string name="delete_project">Delete Project</string>
-    <string name="no_projects">No projects yet</string>
-    <string name="no_projects_hint">Start with C, Python, or a web page — or import an existing codebase.</string>
+    <!-- Phase 93 — item 4: the Projects home greets instead of reporting an
+         absence. The owner: "make the homepage welcome, not just anything like
+         we'll come back or something." Both lines are count-neutral on purpose:
+         FileManagerScreen draws this state only when there is no project at all,
+         but "No projects yet" read like a status report, and it is the first
+         screen a user ever meets. -->
+    <string name="no_projects">Welcome to CodeC</string>
+    <string name="no_projects_hint">Write, run and debug code on your phone — C, Python, web, or a project of your own. Pick a starter below and it is ready to run in one tap.</string>
     <string name="empty_project">This project is empty</string>
     <string name="empty_project_hint">Add a file or folder, or import files from storage.</string>
     <string name="search">Search</string>

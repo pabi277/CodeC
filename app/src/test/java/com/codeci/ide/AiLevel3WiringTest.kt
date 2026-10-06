@@ -131,6 +131,18 @@ class AiLevel3WiringTest {
     }
 
     @Test
+    fun `an invalid edit block is not a dead end - the branch offers the same one-tap rebuild`() {
+        // Phase 93b (finding F2, owner round 2): the parser's own guard is right,
+        // but the sheet used to stop at the reason line with nothing to press.
+        val sheet = ai("AiChatSheet.kt")
+        val invalid = sheet.substringAfter("is AiProposalResult.Invalid ->").substringBefore("else ->")
+        assertTrue("the reason is shown", invalid.contains("ErrorLine(pr.reason)"))
+        assertTrue("and the same retry the proposal card offers", invalid.contains("onProposeEdits(question)"))
+        assertTrue("with the same label", invalid.contains("AiCopy.REBUILD_PROPOSAL"))
+        assertFalse("no write may hide on this branch", invalid.contains("onApplyEdits"))
+    }
+
+    @Test
     fun `EditorScreen synchronizes open tabs dirty buffers file tree and Git badges on apply and undo`() {
         // Phase 80 (Level 4) amendment: both project chips now start the agent
         // task (owner 2026-10-02, "both flows through the agent"), so the

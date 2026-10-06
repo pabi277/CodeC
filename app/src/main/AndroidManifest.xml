@@ -7,7 +7,13 @@
     <!-- Phase 37.1: the Wi-Fi IP fallback for the LAN URL (a normal,
          install-time permission; no runtime dialog). -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- Phase 93: BOTH legacy storage permissions are capped at API 32. Android 13
+         (API 33) stopped granting READ_EXTERNAL_STORAGE; leaving it uncapped meant
+         the app kept requesting a permission the platform can never give, and
+         `checkSelfPermission` answered "denied" on a phone where the all-files
+         grant was already held. From API 30 the route is MANAGE_EXTERNAL_STORAGE
+         below; below API 30 these two are the route. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />

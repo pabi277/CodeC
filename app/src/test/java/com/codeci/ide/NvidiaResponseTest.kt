@@ -55,6 +55,32 @@ class NvidiaResponseTest {
         assertEquals("STOP", NvidiaResponse.parse("[DONE]")!!.finishReason)
         assertEquals("", NvidiaResponse.parse("{\"choices\":[],\"usage\":{\"total_tokens\":4}}")!!.text)
     }
+    /**
+     * Phase 89 (Level 12, 89.2) — a usage-only event keeps its Level 5 shape (a
+     * chunk with **no** answer text) and now carries the counts. Robolectric-only
+     * because `org.json` is a framework class and this project sets
+     * `isReturnDefaultValues = true` (CI round 2, 2026-10-04).
+     */
+    @Test fun `a usage-only event keeps its no-text contract and now carries the counts`() {
+        val counted = NvidiaResponse.parse("{\"choices\":[],\"usage\":{\"prompt_tokens\":1200,\"completion_tokens\":300}}")!!
+        assertEquals("", counted.text)
+        assertEquals(AiTokenUsage(prompt = 1_200, output = 300), counted.usage)
+
+        // A `total_tokens`-only report names no side: still a chunk, still no
+        // text, and the pair stays unknown rather than invented from a total.
+        val totalOnly = NvidiaResponse.parse("{\"choices\":[],\"usage\":{\"total_tokens\":4}}")!!
+        assertEquals("", totalOnly.text)
+        assertNull("an unnameable pair is not reported", totalOnly.usage)
+
+        // No usage object at all: not a chunk, exactly as before this phase.
+        assertNull(NvidiaResponse.parse("{\"choices\":[]}"))
+
+        // A content event carries its own counts verbatim.
+        val withContent = NvidiaResponse.parse("{\"choices\":[{\"delta\":{\"content\":\"tail\"}}],\"usage\":{\"prompt_tokens\":7,\"completion_tokens\":2}}")!!
+        assertEquals("tail", withContent.text)
+        assertEquals(AiTokenUsage(prompt = 7, output = 2), withContent.usage)
+    }
+
     @Test fun `malformed and unknown payloads fail parsing instead of becoming prose`() {
         for (s in listOf("", "not json", "{", "{\"unexpected\":\"private\"}")) assertNull(s, NvidiaResponse.parse(s))
         assertNotNull(NvidiaResponse.parse("{\"choices\":[{\"delta\":{}}]}"))

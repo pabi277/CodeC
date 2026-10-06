@@ -21,7 +21,14 @@ data class GeminiChunk(
     val isError: Boolean = false,
     val errorCode: Int? = null,
     /** Typed markers/delay only; the raw error payload is never retained. */
-    val errorFailure: AiFailure? = null
+    val errorFailure: AiFailure? = null,
+    /**
+     * Phase 89 (Level 12) — the provider's own `usageMetadata` for this event,
+     * when it sent one. Untrusted data (S3): it is sanitised by
+     * [AiMeasurePolicy] before it can reach the readout, and it is display
+     * state only (D6). Null means the provider reported nothing, never zero.
+     */
+    val usage: AiTokenUsage? = null
 )
 
 object GeminiResponse {
@@ -50,9 +57,24 @@ object GeminiResponse {
                     }
                 }
             }
-            GeminiChunk(text = text, finishReason = finish, blockReason = block)
+            GeminiChunk(
+                text = text,
+                finishReason = finish,
+                blockReason = block,
+                // Phase 89: read the provider's own counts if it sent them. A
+                // missing field stays null (unknown), never 0.
+                usage = usageFrom(root.optJSONObject("usageMetadata"))
+            )
         }
     } catch (_: Exception) {
         null
+    }
+
+    /** `usageMetadata.promptTokenCount` / `.candidatesTokenCount`; absent fields stay null. */
+    private fun usageFrom(usage: JSONObject?): AiTokenUsage? {
+        if (usage == null) return null
+        val prompt = if (usage.has("promptTokenCount")) usage.optInt("promptTokenCount") else null
+        val output = if (usage.has("candidatesTokenCount")) usage.optInt("candidatesTokenCount") else null
+        return if (prompt == null && output == null) null else AiTokenUsage(prompt = prompt, output = output)
     }
 }

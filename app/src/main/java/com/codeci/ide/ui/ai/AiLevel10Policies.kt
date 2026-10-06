@@ -217,7 +217,7 @@ object AiReviewerPolicy {
 
     /** Markup in a review never becomes a call; it is displayed. */
     fun parse(text: String): AiReviewVerdict {
-        val hasMarkup = AiToolProtocol.OPEN in text ||
+        val hasMarkup = AiToolProtocol.containsBlock(text) ||
             AiEditProposalParser.OPEN_TAG_PREFIX in text ||
             AiTaskMemoryProtocol.OPEN in text
         return if (hasMarkup) AiReviewVerdict.MarkupShownAsText(text) else AiReviewVerdict.Text(text)

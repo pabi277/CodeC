@@ -1,19 +1,38 @@
 # Level 12 — Evaluation and acceptance
 
-**Status: PROPOSED. Not implemented. Not a phase start command. Runs after Levels 7–11; then repeats.**
+**Status: ✅ IMPLEMENTED (2026-10-04) as [Phase 89](../../phases/03-editor/chat-phase89/README.md) on `arena/01a102bd-codec`** — the owner briefed it and then commanded *"Complete level 12"* the same day. Landed: **S10's test** (`AiLevel12InjectionTest`, 11 cases: the injection fixture driven through the loop — approval pause, runner refusal, no write tool, secret refusals intact), the **numbers readout** (`AiMeasurements`/`AiMeasurePolicy` + `ui/performance/HeapProbe.kt`; 15 + 7 host cases + 2 Robolectric decoder cases; D6-clean, no ceiling moved), the **10 × 2 × 3 matrix** with the 3/3 bar (`DEVICE_ROUND.md` + 5 contract cases) and the **refreshed device round** (every row empty at the time, nothing pre-ticked) — which **the owner ran on
+2026-10-04 and reported in chat**: Part 1 19 of 21 rows pass with **S2 failed** and **B2 not exercised**; the matrix
+14 rows at 3/3 (48 of 60 runs) with **T3-Gemini** and **T4-NVIDIA failed** and **T7/T10 not exercised**; the Gemini
+column on **`gemini-3.1-flash-lite`** (owner's kept deviation). **40 new cases (38 host-runnable + 2 Robolectric-only); 620/620 host cases green** in the sandbox harness, and **Build APK `37185580349` is green on `58039cd`** (release 7 179 540 B, debug 27 062 592 B). **Not merged** (no PR without the owner's command) and **not accepted**: the device round was run by the owner on 2026-10-04 and reported in chat ([report](../../phases/03-editor/chat-phase89/DEVICE_ROUND_OWNER_REPORT_2026-10-04.md)), and **it reported failures — S2, T3-Gemini and T4-NVIDIA** — so, per the owner's own rule, each becomes its own fix phase before Level 12 repeats. **No fix phase is opened yet**; that needs the owner's command.
 **Shared foundation:** [defect register, security rules S1–S12, sources](00_AGENTIC_MAP_AND_SECURITY_RULES.md).
+**Owner decisions (2026-10-04):** latency/tokens/memory by a **small in-memory numbers-only readout** (must respect **D6**) · pass bar **3 runs per task per model, needing 3/3** · models **`gemini-3-flash-preview`** and **`nvidia/nemotron-3-super-120b-a12b`** (GLM-5.3 not run) · **one phase** — host proof first, then the owner's device round as a checklist inside it · **a failed row becomes its own fix phase**, after which Level 12 repeats.
+**Corrections found while briefing** (evidence in the [Phase 89 README](../../phases/03-editor/chat-phase89/README.md)): the *Status today* column below predates Level 7 — **13 of the 14 regression rows are already covered** by nine Level 7–10 classes (103 cases) and only **S10** is genuinely missing · the post-Level-6 inventory figure below (391 `@Test` / 31 AI classes) is stale — measured on `0fc2bfd` it is **332 test files / 3 204 `@Test`, of which 52 `Ai*.kt` / 622 `@Test`** · the app still records **no** latency, tokens or memory (`usageMetadata` never parsed; the NVIDIA decoder drops the usage-only event at `NvidiaResponse.kt:21-22`) · the device round to refresh is Phase 82's `DEVICE_ROUND.md` (21 R/B/P/S rows + the 5-task P5 comparison, all `⏳`, P8 unticked), plus the eight visual checks Phase 88 handed forward.
 
 ## User value
 
 Proof instead of promise. This level produces the numbers that decide whether the series worked, and it
-unblocks the **postponed owner device round**.
+unblocks the **postponed owner device round** — which **the owner then ran on 2026-10-04 and reported in chat**
+([owner report](../../phases/03-editor/chat-phase89/DEVICE_ROUND_OWNER_REPORT_2026-10-04.md)): Part 1 19 of 21 pass
+with **S2 failed** and **B2 not exercised**; the matrix 14 rows at 3/3 — 48 of 60 runs — with **T3-Gemini** and
+**T4-NVIDIA failed** and **T7/T10 not exercised**; the Gemini column on **`gemini-3.1-flash-lite`** (owner's kept
+deviation from the pinned model). **The round is not accepted**: per the owner's rule each failed row becomes its
+own fix phase, then Level 12 repeats — and no fix phase is opened yet.
 
 The repo already states the rule this level enforces: CI green is **not** device acceptance. Phase 82's
 code CI was green while the agent remained unusable on a phone.
 
 ## Host-JVM regression suite
 
-Extends the post-Level-6 baseline of **391 `@Test` cases across 31 AI test classes**. Phase 83 adds five cases to the pre-Level-6 inventory of 386 cases across 30 classes; later counts must be measured from the checkout rather than copied forward.
+Extends the post-Level-6 baseline of **391 `@Test` cases across 31 AI test classes**. Phase 83 adds five cases to the pre-Level-6 inventory of 386 cases across 30 classes; later counts must be measured from the checkout rather than copied forward. **Measured 2026-10-04 on `0fc2bfd`: 332 test files / 3 204 `@Test`, of which 52 `Ai*.kt` / 622 `@Test`.**
+**Status correction (2026-10-04, and completed the same day):** the table below is the pre-Level-7 snapshot kept
+as history. On today's tree **all 14 rows have tests** — the 13 that were already covered by
+`AiLevel7CorrectnessTest`, `AiLevel6BaselineTest`, `AiLevel8BatchTest`, `AiLevel8ReuseTest`, `AiAgentLoopTest`
+(every stop reason has a sentence), `AiLevel10PoliciesTest`, `AiTaskMemoryTest`, `AiTaskMemoryStoreTest` and
+`AiLevel10CeilingTest` (103 cases between them), plus **S10** (injection text in a project file cannot reach a
+write or a run), which [Phase 89.1](../../phases/03-editor/chat-phase89/PART_89_1_S10_INJECTION_PROOF.md#implementation-2026-10-04)
+took from *"asserted as data"* to *"driven through the loop"* with 11 cases. **Nothing in the table below was
+re-ticked row by row for this; the point is that the level's own evidence obligations are met on the branch, not
+that the snapshot aged well.**
 
 | Test | Status today |
 |---|---|
@@ -68,7 +87,10 @@ screenshot task as the headline case. Record: the exact model IDs compared, refu
 quality, latency, memory, and whether the activity view is readable.
 
 **No marketing benchmark and no single successful demo counts as a pass.** The R/B/P/S matrix stays red
-until a real device round says otherwise.
+until a real device round says otherwise — and a real device round that reports failed rows keeps them red too:
+on 2026-10-04 the owner's run passed 19 of 21 legacy rows, failed **S2**, and left **B2** not exercised, so those
+rows are not accepted and their fix phases (plus **T3-Gemini** and **T4-NVIDIA** from the matrix) are what stands
+between this level and acceptance.
 
 ## What is explicitly *not* proof
 

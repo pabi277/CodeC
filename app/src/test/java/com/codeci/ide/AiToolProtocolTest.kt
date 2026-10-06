@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.ai.AiSelfCheck
 import com.codeci.ide.ui.ai.AiToolLimits
 import com.codeci.ide.ui.ai.AiToolName
 import com.codeci.ide.ui.ai.AiToolParse
@@ -9,6 +10,7 @@ import com.codeci.ide.ui.ai.AiToolProtocol
 import com.codeci.ide.ui.ai.AiToolRequest
 import com.codeci.ide.ui.ai.AiToolVerdict
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -126,6 +128,21 @@ class AiToolProtocolTest {
     }
 
     @Test
+    fun `a write-shaped tool call is refused and told the route that can write`() {
+        // Phase 93c — the owner's *"why can't the agent write code?"*. A coding
+        // model naturally calls write_file/edit_file/apply_patch; the refusal is
+        // correct, but it must also name the one route that ends in a file
+        // change, or the model answers in prose and nothing is ever written.
+        for (name in listOf("write_file", "edit_file", "apply_patch")) {
+            val v = verdict(name, "path" to "README.md", "content" to "x") as AiToolVerdict.Denied
+            assertTrue("$name is refused", v.reason.contains("unknown tool"))
+            assertTrue("$name is told there is no write tool", v.reason.contains("no write tool"))
+            assertTrue("$name learns the block format", v.reason.contains("<<<CODEC_EDIT"))
+            assertTrue("$name learns the user applies it", v.reason.contains("user reviews"))
+        }
+    }
+
+    @Test
     fun `an unexpected argument is denied rather than ignored`() {
         val v = verdict("read_file", "path" to "src/main.c", "encoding" to "utf16") as AiToolVerdict.Denied
         assertTrue(v.reason.contains("encoding"))
@@ -193,6 +210,119 @@ class AiToolProtocolTest {
             view.copy(runsRemaining = 0)
         ) as AiToolVerdict.Denied
         assertTrue(spent.reason.contains("budget"))
+    }
+
+    @Test
+    fun `the self-check's run question names this tool and asks for what it takes`() {
+        // Phase 93b: the scripted question is a literal (AiSelfCheck stays free
+        // of every other Ai class), so the literal is pinned here. The round-2
+        // failure was a question asking for a *shell command* — an argument the
+        // allow-list refuses — so this also pins that it asks for a project run.
+        val prompt = AiSelfCheck.STEPS.single { it.id == "run" }.prompt!!
+        assertTrue("the wire name is the real one", prompt.contains(AiToolName.REQUEST_RUN.wire))
+        assertTrue("and the request it can deliver is named", prompt.contains("run this project"))
+        assertTrue("with no invented argument key", !prompt.contains("command"))
+    }
+
+    // ---- Phase 94 tools ----------------------------------------------------
+
+    @Test
+    fun `find_files takes a glob and clamps its cap`() {
+        val ok = verdict("find_files", "pattern" to "src/*.c")
+        assertTrue(ok is AiToolVerdict.Allowed)
+        assertEquals("src/*.c", (ok as AiToolVerdict.Allowed).call.pattern)
+        val capped = verdict("find_files", "pattern" to "**/*.c", "max" to "9999")
+        assertTrue(capped is AiToolVerdict.Allowed)
+        assertEquals(AiToolLimits.MAX_LIST_ENTRIES, (capped as AiToolVerdict.Allowed).call.max)
+    }
+
+    @Test
+    fun `find_files refuses an empty an escaping or a shell-shaped pattern`() {
+        assertTrue(verdict("find_files") is AiToolVerdict.Denied)
+        assertTrue(verdict("find_files", "pattern" to "") is AiToolVerdict.Denied)
+        assertTrue(verdict("find_files", "pattern" to "/etc/*.conf") is AiToolVerdict.Denied)
+        assertTrue(verdict("find_files", "pattern" to "../*.c") is AiToolVerdict.Denied)
+        assertTrue(verdict("find_files", "pattern" to "*.c; rm -rf /") is AiToolVerdict.Denied)
+        assertTrue(verdict("find_files", "pattern" to "a".repeat(AiToolLimits.MAX_PATTERN_CHARS + 1)) is AiToolVerdict.Denied)
+        assertTrue("no path argument on a glob tool", verdict("find_files", "pattern" to "*.c", "path" to "src") is AiToolVerdict.Denied)
+    }
+
+    @Test
+    fun `outline_file takes the same refusals as read_file and nothing extra`() {
+        val ok = verdict("outline_file", "path" to "app.py")
+        assertTrue(ok is AiToolVerdict.Allowed)
+        assertEquals("app.py", (ok as AiToolVerdict.Allowed).call.path)
+        assertTrue(verdict("outline_file") is AiToolVerdict.Denied)
+        assertTrue(verdict("outline_file", "path" to ".env") is AiToolVerdict.Denied)
+        assertTrue(verdict("outline_file", "path" to "/etc/hosts") is AiToolVerdict.Denied)
+        assertTrue(verdict("outline_file", "path" to "src/../util.c") is AiToolVerdict.Denied)
+        assertTrue(verdict("outline_file", "path" to "src/nope.c") is AiToolVerdict.Denied)
+        assertTrue(verdict("outline_file", "path" to "app.py", "start" to "1") is AiToolVerdict.Denied)
+    }
+
+    @Test
+    fun `read_run_output takes only a line count and clamps both ends`() {
+        val plain = verdict("read_run_output")
+        assertTrue(plain is AiToolVerdict.Allowed)
+        assertEquals(null, (plain as AiToolVerdict.Allowed).call.lines)
+        val small = verdict("read_run_output", "lines" to "1")
+        assertEquals(1, (small as AiToolVerdict.Allowed).call.lines)
+        val big = verdict("read_run_output", "lines" to "9999")
+        assertEquals(AiToolLimits.MAX_OUTPUT_LINES, (big as AiToolVerdict.Allowed).call.lines)
+        val zero = verdict("read_run_output", "lines" to "0")
+        assertEquals(1, (zero as AiToolVerdict.Allowed).call.lines)
+        assertTrue(verdict("read_run_output", "lines" to "ten") is AiToolVerdict.Denied)
+        assertTrue("it reads the app's own panel, never a file", verdict("read_run_output", "path" to "src/main.c") is AiToolVerdict.Denied)
+        assertTrue(verdict("read_run_output", "command" to "make") is AiToolVerdict.Denied)
+    }
+
+    @Test
+    fun `the timeline line names the new tools and their target`() {
+        val find = verdict("find_files", "pattern" to "*.md") as AiToolVerdict.Allowed
+        assertTrue(AiToolProtocol.describeCall(find.call).contains("find_files"))
+        assertTrue(AiToolProtocol.describeCall(find.call).contains("*.md"))
+        val outline = verdict("outline_file", "path" to "app.py") as AiToolVerdict.Allowed
+        assertTrue(AiToolProtocol.describeCall(outline.call).contains("outline_file app.py"))
+        val output = verdict("read_run_output", "lines" to "20") as AiToolVerdict.Allowed
+        assertTrue(AiToolProtocol.describeCall(output.call).contains("last 20 lines"))
+    }
+
+    @Test
+    fun `the block reader tolerates the spellings a real model writes`() {
+        for (spelling in listOf(
+            "<<<CODEC_TOOL name=\"find_files\">>>",
+            "<<<codec_tool name=\"find_files\">>>",
+            "<<< CODEC_TOOL name=\"find_files\" >>>",
+            "<<<CODEC_TOOL name = find_files>>>",
+            "<<<CODEC_TOOL name: find_files>>>"
+        )) {
+            val parsed = AiToolProtocol.parse("$spelling\npattern: *.c\n<<<END_CODEC_TOOL>>>")
+            assertTrue("must parse: $spelling", parsed is AiToolParse.Calls)
+            val calls = (parsed as AiToolParse.Calls).calls
+            assertEquals("must parse: $spelling", 1, calls.size)
+            assertEquals("must parse: $spelling", AiToolName.FIND_FILES, calls[0].name)
+        }
+    }
+
+    @Test
+    fun `containsBlock spots a wire block however it is spelled`() {
+        assertTrue(AiToolProtocol.containsBlock("x\n<<<CODEC_TOOL name=\"read_file\">>>\npath: a.c\n<<<END_CODEC_TOOL>>>"))
+        assertTrue(AiToolProtocol.containsBlock("<<< CODEC_TOOL"))
+        assertTrue(AiToolProtocol.containsBlock("... <<< END_CODEC_TOOL >>>"))
+        assertTrue(AiToolProtocol.containsBlock("<<<codec_tool name=\"x\">>>"))
+        assertTrue(AiToolProtocol.containsBlock("END_CODEC_TOOL >>>"))
+        assertFalse("prose that merely mentions the name is not a block", AiToolProtocol.containsBlock("use the course tool name here"))
+    }
+
+    @Test
+    fun `the instructions teach every wire - and the new read tools are read-shaped`() {
+        val instructions = AiToolProtocol.INSTRUCTIONS
+        for (name in AiToolName.entries) {
+            assertTrue("the model must be told about ${name.wire}", instructions.contains(name.wire))
+        }
+        for (banned in listOf("write_file", "delete_file", "exec", "shell")) {
+            assertFalse(instructions.contains(banned))
+        }
     }
 
     @Test

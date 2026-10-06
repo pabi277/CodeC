@@ -114,7 +114,15 @@ data class AiPrompt(
      * instructions never carried the brevity line, so they are untouched.
      * Frozen per request like everything else D4 discloses.
      */
-    val answerDetail: AiAnswerDetail = AiAnswerDetail.NORMAL
+    val answerDetail: AiAnswerDetail = AiAnswerDetail.NORMAL,
+    /**
+     * Phase 90 — the finished conversation [AiChatSession] carried into this
+     * request. It is packed **inside** [userText], so the preview and the sent
+     * bytes stay the same string (D4) and no second network road exists. In
+     * memory only (D6). [AiChatSession.EMPTY] for a first request, which keeps
+     * that request byte-for-byte what it always was.
+     */
+    val session: AiChatSession = AiChatSession.EMPTY
 ) {
     val systemInstruction: String
         get() {
@@ -131,23 +139,38 @@ data class AiPrompt(
             return if (agent) base + " " + AiOptionsPolicy.detailSentence(answerDetail) else base
         }
 
-    /** The single user message of the request — the preview shows exactly this. */
+    /**
+     * The single user message of the request — the preview shows exactly this.
+     *
+     * Phase 90: the conversation block comes FIRST, then the request itself, so
+     * a follow-up reads as a conversation to the model and the disclosure is the
+     * same string the Send button sends (D4). It is `""` for a first request.
+     */
     val userText: String
-        get() = if (agent) {
-            // The first request of an agent task: the task and the map, packed
-            // by the same object every later turn uses, so the preview and the
-            // sent bytes cannot drift apart.
-            AiAgentPrompt.pack(
-                question = question,
-                mapText = context,
-                steps = emptyList(),
-                memory = agentMemory
-            ).text
-        } else {
+        get() {
+            if (agent) {
+                // The first request of an agent task: the task and the map, packed
+                // by the same object every later turn uses, so the preview and the
+                // sent bytes cannot drift apart. Phase 90: the conversation block
+                // rides inside the packed text, at the same trimmed head the
+                // runtime turns use.
+                return AiAgentPrompt.pack(
+                    question = question,
+                    mapText = context,
+                    steps = emptyList(),
+                    memory = agentMemory,
+                    transcript = session.render()
+                ).text
+            }
             // Phase 81: a continuation is the same request plus the tail of the
-            // answer so far and the resume sentence — one string, so the
-            // preview, the byte count and the sent body cannot drift.
-            AiPromptText.userText(this) + (continuation?.let { AiContinuation.block(it) } ?: "")
+            // answer so far and the resume sentence — one string, so the preview,
+            // the byte count and the sent body cannot drift.
+            val body = AiPromptText.userText(this) + (continuation?.let { AiContinuation.block(it) } ?: "")
+            // Phase 90: the conversation block comes FIRST, then the request, so a
+            // follow-up reads as a conversation and the disclosure is the same
+            // string the Send button sends. It is "" for a first request.
+            val transcript = session.render()
+            return if (transcript.isEmpty()) body else transcript + body
         }
 
     /** Characters that leave the device (instruction + message). */
@@ -543,6 +566,11 @@ object AiPromptText {
      * [AiLimits.MAX_CONTEXT_CHARS] including these headers.
      */
     fun projectBody(included: List<AiProjectFiles.Included>): String = buildString {
+        // Phase 94 — the content-level secret guard already ran where the slice
+        // was taken (`AiProjectFiles.sliceFor`), so this body is exactly what the
+        // preview shows and exactly what leaves (D4). The edit parser's baselines
+        // are a different object and stay raw: the write path must never write a
+        // redaction back to disk.
         for ((i, f) in included.withIndex()) {
             if (i > 0) append("\n\n")
             append(fileHeader(f)).append("\n```\n").append(f.text).append("\n```")

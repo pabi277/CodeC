@@ -3,9 +3,14 @@
 > **Status:** ✅ **MERGED.** The owner commanded the merge in chat (*"Ok merge to main"*, 2026-10-03);
 > [PR #113](https://github.com/pabi277/CodeC/pull/113) was opened from `arena/01a101db-codec` and merged to `main` once its own
 > `build` check passed on the final head. This status was written on the branch just **before** the merge,
-> so that it lands on `main` with it. That is why it names neither the merge commit nor the post-merge
-> Build APK run; see [*Merge record*](#merge-record-2026-10-03). That merge authorization was one-time and
-> is complete.
+> so that it lands on `main` with it; the merge commit and the post-merge run were therefore added by the
+> next change (2026-10-03), read from the repository itself. **Merge commit
+> `0fc2bfd88d99d80ca72d61347dea9b36a4b82381`** (first parent `c3771c5`, second parent `06c1433`; merged
+> 2026-10-03 16:21 UTC); post-merge Build APK run
+> [`37136523881`](https://github.com/pabi277/CodeC/actions/runs/37136523881) is **green** on that exact
+> commit — release APK **7 177 180 B**, debug **27 054 824 B**, R8 mapping **71 186 679 B**, release
+> manifest with no `android:debuggable` flag. See [*Merge record*](#merge-record-2026-10-03). That merge
+> authorization was one-time and is complete.
 >
 > Prior to the merge this phase was ✅ **IMPLEMENTED and CI-GREEN.** The owner commanded the implementation in chat
 > (*"Complete level 11"*, 2026-10-03). Parts 88.1–88.5 are in the tree on `arena/01a101db-codec` @ `88f0186`;
@@ -346,11 +351,19 @@ dependency was added: the growth is the new Kotlin code.
 - **Checks before the merge.** Build APK was green on the implementation (`37132310296`) and on the docs
   follow-up (`37133300436`). The merge waited for the PR's own `build` check on the final head.
 - **Method.** A merge commit, like PRs #109–#112. The session branch is kept, not deleted.
-- **Why this record cannot name the merge commit or the post-merge run.** It was written and pushed before
-  the merge, so it reaches `main` inside the merge. The Phase 87 record was written after its merge and
-  stayed stranded on the old branch until the next session carried it (`7b71ec5`). The merge commit is
-  PR #113's merge commit on `main`, and its first parent is `c3771c5`. Read its sha from
-  `git log origin/main` and the post-merge Build APK run from the Actions tab; the next change records both.
+- **Why this record could not name the merge commit or the post-merge run when it was written.** It was
+  written and pushed before the merge, so it reaches `main` inside the merge. The Phase 87 record was
+  written after its merge and stayed stranded on the old branch until the next session carried it
+  (`7b71ec5`).
+- **Recorded by the next change (2026-10-03), read from the repository.** The merge commit is
+  **`0fc2bfd88d99d80ca72d61347dea9b36a4b82381`** — PR #113's merge commit on `main`, first parent
+  `c3771c58007f2f7ad4af6a26437dc19ef3819a3f`, second parent `06c1433a531cba646bac8f18d232ecbea6cc4ef1`,
+  merged 2026-10-03 16:21 UTC. Post-merge Build APK run
+  [`37136523881`](https://github.com/pabi277/CodeC/actions/runs/37136523881) (`push`, workflow *Build
+  APK*) is **green on that exact commit**: release APK **7 177 180 B**, debug **27 054 824 B**, R8
+  mapping **71 186 679 B**, release manifest with no `android:debuggable` flag. The release figure is
+  4 bytes above `37132310296`'s 7 177 184 B on `88f0186` — build-to-build noise, not a code change.
+  **`main` is now `0fc2bfd`; the prior baseline was PR #112 at `c3771c5`.**
 
 ## Exit condition
 
@@ -436,10 +449,12 @@ Ticked items are proven by the host harness or the wiring pins named, and confir
 ## Gate
 
 **Closed by the owner's explicit command in chat** (*"Ok merge to main"*, 2026-10-03), as `rule.md` §3
-requires. [PR #113](https://github.com/pabi277/CodeC/pull/113) was opened from `arena/01a101db-codec` and merged to `main` after its
-own `build` check passed on the final head; see [*Merge record*](#merge-record-2026-10-03). That
-authorization was one-time and is complete. The implementation itself was commanded earlier
-(*"Complete level 11"*, 2026-10-03).
+requires. [PR #113](https://github.com/pabi277/CodeC/pull/113) was opened from `arena/01a101db-codec` and
+merged to `main` after its own `build` check passed on the final head; the merge commit is
+`0fc2bfd88d99d80ca72d61347dea9b36a4b82381` and post-merge Build APK run `37136523881` is green on it
+(release APK 7 177 180 B, debug 27 054 824 B, R8 mapping 71 186 679 B). See
+[*Merge record*](#merge-record-2026-10-03). That authorization was one-time and is complete. The
+implementation itself was commanded earlier (*"Complete level 11"*, 2026-10-03).
 
 **Levels 12–14 remain unauthorized.** Formal device acceptance remains **POSTPONED** to Level 12 and is
 not claimed here.
