@@ -53,3 +53,12 @@ is **not a substitute**. Review must work **before merging or deploying**.
   criteria reference it; web_prompt and NEXT_STEPS carry it to future sessions.
 - W1 archive in chat-web4 remains its historical three-file snapshot. W2 and each
   later phase must have their own archive with the whole then-current site.
+
+
+## D33 batching addendum — 2026-10-07
+
+The owner combined W3–W6 content into one end commit/watch and retained device
+gates. Cumulative pre-polish W3/W4/W5 snapshots are preserved in chat-web6; the
+final full31-file/29page ZIP is the current review deliverable. One combined
+handoff still MUST include its direct download link. Batching does not waive
+source/ZIP checks, owner device transcripts or authorization for public deployment.

@@ -4,9 +4,10 @@
 > The owner supplied the v2.3 handoff in chat. It had not landed in this checkout:
 > the base `d4231f0` held v2.2 and 35 phase docs. This session restores the missing
 > specifications, without inventing a past sync or overwriting session history.
-> **W1 and W2 are implemented**, local web/ZIP checks PASS. W2 authorized by
-> “Now start w2” (D32). W3–W6 still require commands; review/PR/merge/deploy are
-> not implied. D31 requires a full-site ZIP + direct download link at every phase end.
+> **All29 pages are implemented for review.** Owner D33 authorized W3–W6
+> content/polish together, one end commit/watch, and retained device gates.
+> W4.2 facts were verified first; ch08/P1/P5 owner transcripts remain required.
+> No PR/merge/deploy authorization. D31 full-site ZIP/link rule remains.
 > Head state: [NEXT_STEPS.md](NEXT_STEPS.md). Prior v2.2 narrative remains in
 > [chat-web2/SUMMARY.md](chat-web2/SUMMARY.md) and [WEB_JOURNEY.md](WEB_JOURNEY.md).
 
@@ -56,7 +57,7 @@ passing links. No placeholder pages just to conceal the phase boundary.
 ### 3.1 Product wing
 
 **Home (`index.html`, W1).** Hero names the Android C IDE; one primary CTA
-**Get the APK on GitHub** → canonical Releases page, secondary **Read the README**.
+**Get the APK on GitHub** → canonical Releases page, secondary current **Write your first program** → Start (README remains in footer).
 Original textual C example may illustrate write → compile → output, explicitly
 labelled an example, not an app screenshot or live compiler. Six cards:
 
@@ -69,8 +70,9 @@ labelled an example, not an app screenshot or live compiler. Six cards:
 | AI | BYOK; eight bounded tools, no write/exec tool, Apply/Run approval, session-only history | ai.html |
 | Safe workflow | Export-all, project-only backups, crash-loop guard, checksum updater, honest Git | install.html |
 
-Learning banner: full course title, **19 chapters planned**, chapter-group preview,
-link to `learn.html`. Until W4–W6, do not describe the course as already available.
+Learning banner: full course title, **19 chapters written for review**, chapter-group preview,
+link to `learn.html`. All chapters are now locally available; never equate written content with device
+acceptance or public deployment.
 Footnote: free/open source, Android, release **app-v1.3.18**, universal APK
 **7 217 532 B** (7.22 MB decimal), versionCode 22. Never attach “-74%” to this size.
 
@@ -250,7 +252,12 @@ switching/creating another branch, editing the APK workflow or replacing package
 publishing. If existing deployment ownership needs a broader change, stop for
 owner authorization. No deployment in W1. Custom domain O2 remains open.
 
-## 9. Phases (strict order, separate commands)
+## 9. Phase scope and current batching exception (D33)
+
+Original phase boundaries below still define content and acceptance. The owner
+authorized the remaining W3–W6 content in one batch, one end commit/watch. W4.2
+verification still ran FIRST; ch18/19 precede polish. Separate start commands and
+intermediate commits are superseded for this batch only; device/deploy gates stay.
 
 **39 docs: 6 phase READMEs + 33 PART docs** (2/2/6/8/6/9 parts).
 
@@ -281,7 +288,8 @@ live in chat-web6 without replacing any earlier record.
 8. No app code/history/release workflow modifications; all web living docs current.
 9. GitHub-only distribution, true AI/approval/privacy boundaries, no personal contacts,
    7 217 532 B not paired with -74%, no deleted engine picker or Open Folder teaching.
-10. Owner command before each next phase and before any PR/merge.
+10. Owner commands control scope and any PR/merge. D33 combines W3–W6 content
+    only; required device transcripts and public deployment gates are unchanged.
 11. **Every phase ends with a verified full-website ZIP and a direct GitHub download
     link in the final report** — mandatory [D31 procedure](REVIEW_DOWNLOAD_RULE.md).
     An Arena attachment alone is insufficient; review does not authorize deployment.

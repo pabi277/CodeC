@@ -1,6 +1,13 @@
 # CodeC Website W3.6 — Privacy (`privacy.html`)
 
-**Status:** PLANNED, not started · **Cost:** static · **Effort:** M
+> **Current batch status — 2026-10-07, D33: IMPLEMENTED FOR REVIEW.**
+> Owner authorized W3–W6 content together, then one commit/watch; separate start
+> commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
+> [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
+> [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
+> D31 download law retained. No device pass, PR, merge or public deployment implied.
+
+**Status:** IMPLEMENTED FOR REVIEW · **Cost:** static · **Effort:** M
 **Depends:** W3.5; **blocks:** W3 completion (9/9 product pages).
 **Scope:** v2.3 handoff (2026-10-06), recorded 2026-10-07.
 **Sources:** README first, then docs/guides/DATA_AND_PRIVACY.md (claim ceiling),

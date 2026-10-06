@@ -258,3 +258,37 @@ CRC/safe paths and extracted offline/no-JS browser checks PASS. Records in
 Phase push/CI/readback/final direct link follows these local checks; do not confuse
 local verification with a future uploaded-file or app-CI pass. No PR/merge/deploy;
 W3 waits for its own owner command.
+
+
+## Remaining website batch — W3–W6 content/review (2026-10-07)
+
+**28. Owner combined the remaining work, retained device gates.** The owner asked
+for the full website in one go, then a commit/watch, and chose “Keep device
+verification gates”. D33 supersedes separate phase-start/intermediate-commit
+ceremony only. W2's old watch was not resumed; no GitHub run was cancelled.
+Baseline8467ff8 and read-only app/main d4231f0 were verified. No PR/merge/deploy.
+
+**29. Facts first, then the complete product/course text.** W4.2's43 source groups
+and33 configured package roots were recorded BEFORE course authoring. Six product
+guides, course home and19 chapters now make29 pages. Current automatic engines,
+removed folder UI, deferred OpenSSH, actual APIs/Git/settings, AI tools/caps/consent
+and storage distinctions replace old assumptions. Ch18/19 precede polish; chapter
+path17→18→19→course, Privacy/footer and existing accessible static design retained.
+Original source trace and every phase's batch-status note updated together.
+
+**30. Test the final site, not just the new pages.** Static checks cover1,065
+internal targets with0 missing. HTML Validate passes all29.49 host/stub checks
+pass; the final Chromium sweep passes116 responsive/axe cases and29 extracted
+ZIP offline/no-JS pages, plus3 runnable web-example scenarios. HTML escaping and
+320px hostname overflow were real failures fixed before the final run; no weakened
+assertions. No browser/host result substitutes for Android transcripts.
+[Detailed evidence](chat-web6/CHECKS.md).
+
+**31. Full review ZIP and honest remaining gates.** Preserved cumulative W3/W4/W5
+pre-polish snapshots; the current31-file ZIP is134,916B, exact-source bytes and CRC
+verified, SHA256312d6c1c62bece7c7b9f338c5c250b9c87e50e7e7affecc2db48270b20e2b289.
+[Download/summary](chat-web6/BATCH_SUMMARY.md). One batch commit/push follows local
+checks; watch its automatic Build APK and verify uploaded bytes before the final
+commit-pinned download handoff. This pre-push history does not invent a future CI
+conclusion. Owner Chapter8/P1/P5 transcripts and O7 license remain open; W6.7
+public deployment is HELD. No app/package/workflow change, PR, merge or release.

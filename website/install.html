@@ -50,14 +50,11 @@
 
   <main id="main" tabindex="-1">
     <div class="container-wide">
-      <aside class="preview-notice" aria-label="Website progress">
-        <span class="status-label">W2 / 3 OF 29 PAGES</span>
-        <p>Home, Install and Start are ready to review. Other guides, Privacy and the course are still upcoming.</p>
-        <a href="start.html">Next: your first program <span aria-hidden="true">→</span></a>
-      </aside>
+      <aside class="preview-notice" aria-label="Website review status"><span class="status-label">FULL-SITE REVIEW</span><p>All 29 pages are written. Required course device tests and publication are still pending.</p><a href="learn.html#review">Review status →</a></aside>
       <div class="guide-hero">
         <p class="eyebrow">01 / GET THE APP</p>
-        <h1>One APK.<br><span>Your next workspace.</span></h1>
+        <h1>One APK.<br><span>Your next workspace.</span>
+</h1>
         <p class="guide-lead">Get CodeC from GitHub, install it on your Android phone and start with C or HTML. The Linux environment is optional—not a first-launch hurdle.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="https://github.com/pabi277/CodeC/releases">Download from GitHub Releases <span aria-hidden="true">↗</span></a>
@@ -85,7 +82,8 @@
             <a href="#termux"><span>05</span> Optional Termux fallback</a>
             <a href="#developers"><span>06</span> Developer builds</a>
           </nav>
-          <p class="sidebar-note">Already installed?<br><a href="start.html">Write your first program →</a></p>
+          <p class="sidebar-note">Already installed?<br><a href="start.html">Write your first program →</a>
+</p>
         </aside>
         <div class="guide-body">
           <section class="guide-section" id="install-steps" aria-labelledby="install-title">
@@ -107,19 +105,25 @@
             <p class="eyebrow">02 / KNOW WHAT YOU DOWNLOADED</p>
             <h2 id="verify-title">A release you can check.</h2>
             <dl class="release-facts">
-              <div><dt>Release</dt><dd>CodeC IDE v1.3.18</dd></div>
-              <div><dt>Version code</dt><dd>22</dd></div>
-              <div><dt>APK size</dt><dd>7,217,532 bytes</dd></div>
-              <div><dt>Published</dt><dd>6 October 2026</dd></div>
+              <div><dt>Release</dt><dd>CodeC IDE v1.3.18</dd>
+</div>
+              <div><dt>Version code</dt><dd>22</dd>
+</div>
+              <div><dt>APK size</dt><dd>7,217,532 bytes</dd>
+</div>
+              <div><dt>Published</dt><dd>6 October 2026</dd>
+</div>
             </dl>
             <p>The release notes publish a SHA256 checksum. This is the exact digest for the universal v1.3.18 APK above; for any later APK, use that release’s own checksum.</p>
             <p class="code-label">SHA256 · CodeC-IDE-1.3.18-universal.apk</p>
-            <p class="digest"><code>549a8c54cf9ff3fff4f6d985997bbb887f6b3b3098f4ab6ba68fefe7028a60d8</code></p>
+            <p class="digest"><code>549a8c54cf9ff3fff4f6d985997bbb887f6b3b3098f4ab6ba68fefe7028a60d8</code>
+</p>
             <details class="guide-details">
               <summary>Optional: verify with a command-line checksum tool</summary>
               <div class="details-content">
                 <p>In a terminal with <code>sha256sum</code>, change to the download folder and run:</p>
-                <pre class="code-block" tabindex="0" aria-label="Verify the APK SHA256"><code>sha256sum CodeC-IDE-1.3.18-universal.apk</code></pre>
+                <pre class="code-block" tabindex="0" aria-label="Verify the APK SHA256"><code>sha256sum CodeC-IDE-1.3.18-universal.apk</code>
+</pre>
                 <p>Compare the complete result with the checksum in the trusted GitHub release notes. A different result means stop—do not install that file. The in-app updater also checks the published checksum before installation.</p>
               </div>
             </details>
@@ -149,11 +153,17 @@
             <section class="table-wrap" tabindex="0" aria-label="Device and compiler support table">
               <table class="table">
                 <caption>Compiler availability by CPU architecture</caption>
-                <thead><tr><th scope="col">Device architecture</th><th scope="col">What to expect</th></tr></thead>
+                <thead>
+<tr><th scope="col">Device architecture</th><th scope="col">What to expect</th>
+</tr>
+</thead>
                 <tbody>
-                  <tr><th scope="row">arm64-v8a</th><td>Built-in offline TCC. The optional downloadable Clang module also targets arm64. Android restrictions may still require fallback.</td></tr>
-                  <tr><th scope="row">x86_64</th><td>Built-in offline TCC. The optional Clang module is arm64-only, not an x86_64 toolchain.</td></tr>
-                  <tr><th scope="row">32-bit ARM / x86</th><td>No bundled TCC for these ABIs, and the arm64 Clang module is not a fix. A compatible external toolchain such as Termux may help where supported. Beta notes flag 32-bit boot/toolchain gaps; do not assume feature parity or successful startup.</td></tr>
+                  <tr><th scope="row">arm64-v8a</th><td>Built-in offline TCC. The optional downloadable Clang module also targets arm64. Android restrictions may still require fallback.</td>
+</tr>
+                  <tr><th scope="row">x86_64</th><td>Built-in offline TCC. The optional Clang module is arm64-only, not an x86_64 toolchain.</td>
+</tr>
+                  <tr><th scope="row">32-bit ARM / x86</th><td>No bundled TCC for these ABIs, and the arm64 Clang module is not a fix. A compatible external toolchain such as Termux may help where supported. Beta notes flag 32-bit boot/toolchain gaps; do not assume feature parity or successful startup.</td>
+</tr>
                 </tbody>
               </table>
             </section>
@@ -172,9 +182,10 @@
                   <li>Open <strong>Termux itself</strong> and run the following commands, one line at a time. These are <strong>not CodeC terminal commands</strong>.</li>
                 </ol>
                 <p class="code-label">Run inside Termux only</p>
-                <pre class="code-block" tabindex="0" aria-label="Termux-only fallback setup commands"><code>echo "allow-external-apps=true" &gt;&gt; ~/.termux/termux.properties
+                <pre class="code-block" tabindex="0" aria-label="Termux-only fallback setup commands"><code>echo &quot;allow-external-apps=true&quot; &gt;&gt; ~/.termux/termux.properties
 termux-reload-settings
-pkg update &amp;&amp; pkg install clang</code></pre>
+pkg update &amp;&amp; pkg install clang</code>
+</pre>
                 <ol start="3">
                   <li>In Android, open <strong>Settings → Apps → CodeC IDE → Permissions → Additional permissions</strong> and allow <strong>Run commands in Termux environment</strong>. Android labels can vary.</li>
                   <li>Return to CodeC and retry the build. No engine selection is required.</li>
@@ -200,7 +211,7 @@ pkg update &amp;&amp; pkg install clang</code></pre>
             <h2 id="installed-title">From download to “Hello”.</h2>
             <p>Take the short route through first launch, your first C program, terminal input and a web preview.</p>
             <a class="btn btn-primary" href="start.html">Open Getting Started <span aria-hidden="true">→</span></a>
-            <p class="guide-caption">Before using connected features, read the <a href="https://github.com/pabi277/CodeC/blob/main/docs/guides/DATA_AND_PRIVACY.md">current data &amp; privacy guide</a>. The local <a href="privacy.html">Privacy page</a> is upcoming in W3.</p>
+            <p class="guide-caption">Before using connected features, read the <a href="https://github.com/pabi277/CodeC/blob/main/docs/guides/DATA_AND_PRIVACY.md">current data &amp; privacy guide</a>. Read the local <a href="privacy.html">Privacy page</a> offline too.</p>
           </section>
           <aside class="source-note" aria-label="Sources for this guide">
             <h3>Built from the current app documentation</h3>
@@ -215,17 +226,20 @@ pkg update &amp;&amp; pkg install clang</code></pre>
   <footer class="site-footer">
     <div class="container-wide">
       <div class="footer-top">
-        <div><a class="wordmark footer-wordmark" href="index.html"><img src="favicon.svg" alt="" width="34" height="34"><span>CodeC</span></a><p>Free &amp; open source C IDE for Android.<br>A little screen. A lot of possibility.</p></div>
+        <div><a class="wordmark footer-wordmark" href="index.html"><img src="favicon.svg" alt="" width="34" height="34"><span>CodeC</span></a>
+<p>Free &amp; open source C IDE for Android.<br>A little screen. A lot of possibility.</p>
+</div>
         <nav class="footer-links" aria-label="Project links">
           <a href="https://github.com/pabi277/CodeC">Repo <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC#readme">README <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC/releases">Releases <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC/issues">Issues <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC/blob/main/docs/journal/JOURNEY.md">Journey <span aria-hidden="true">↗</span></a>
-          <a href="privacy.html">Privacy <span class="footer-upcoming">(upcoming)</span></a>
+          <a href="privacy.html">Privacy</a>
         </nav>
       </div>
-      <div class="footer-bottom"><span>Built in the open. Nothing here tracks you.</span><a href="https://github.com/pabi277/CodeC">Site source: <code>website/</code> <span aria-hidden="true">↗</span></a><a href="#main">Back to top <span aria-hidden="true">↑</span></a></div>
+      <div class="footer-bottom"><span>Built in the open. Nothing here tracks you.</span><a href="https://github.com/pabi277/CodeC">Site source: <code>website/</code> <span aria-hidden="true">↗</span></a><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+</div>
     </div>
   </footer>
 </body>

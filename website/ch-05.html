@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Install a useful tool, understand its status and leave trust verification intact.">
+  <meta name="theme-color" content="#0b100e">
+  <title>Package Manager — CodeC</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <!-- Shared header v2.3. Copy with footer; change only aria-current. See web_docs/chat-web4/W1_CHROME.md. -->
+  <header class="site-header">
+    <div class="container-wide header-inner">
+      <a class="wordmark" href="index.html" aria-label="CodeC home">
+        <img src="favicon.svg" alt="" width="38" height="38">
+        <span>CodeC<span class="wordmark-caption">THE POCKET IDE</span></span>
+      </a>
+      <nav class="desktop-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="install.html">Install</a>
+        <a href="start.html">Start</a>
+        <a href="engines.html">Engines</a>
+        <a href="packages.html">Packages</a>
+        <a href="ai.html">AI</a>
+        <a href="learn.html" aria-current="page">Learn</a>
+        <a href="faq.html">FAQ</a>
+        <a href="about.html">About</a>
+        <a class="nav-github" href="https://github.com/pabi277/CodeC">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+      <details class="mobile-menu">
+        <summary>Menu <span class="menu-symbol" aria-hidden="true"></span></summary>
+        <nav aria-label="Mobile navigation">
+          <a href="index.html">Home</a>
+          <a href="install.html">Install</a>
+          <a href="start.html">Start</a>
+          <a href="engines.html">Engines</a>
+          <a href="packages.html">Packages</a>
+          <a href="ai.html">AI</a>
+          <a href="learn.html" aria-current="page">Learn</a>
+          <a href="faq.html">FAQ</a>
+          <a href="about.html">About</a>
+          <a href="https://github.com/pabi277/CodeC">GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </details>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+<div class="container-wide">
+<aside class="preview-notice" aria-label="Website review status"><span class="status-label">FULL-SITE REVIEW</span><p>All 29 pages are written. Required course device tests and publication are still pending.</p><a href="learn.html#review">Review status →</a></aside>
+<p class="chapter-crumb"><a href="learn.html">Course home</a> / Chapter 5 of 19</p>
+<div class="guide-hero">
+<p class="eyebrow">MASTER CODEC / 05 OF 19</p>
+<h1>Package Manager</h1>
+<p class="guide-lead">Install a useful tool, understand its status and leave trust verification intact.</p>
+</div>
+<div class="guide-layout">
+<aside class="guide-sidebar" aria-label="Guide navigation">
+<nav class="guide-toc" aria-label="On this page">
+<p class="eyebrow">IN THIS CHAPTER</p><a href="#first"><span>01</span>Start with one tool</a><a href="#metadata"><span>02</span>Refresh, inspect, then change</a><a href="#trust"><span>03</span>Signatures are not an optional nuisance</a><a href="#inventory"><span>04</span>Read the inventory accurately</a><a href="#repair"><span>05</span>When an operation stops halfway</a><a href="#practice"><span>06</span>Try it yourself</a><a href="#mistakes"><span>07</span>Common mistakes</a>
+</nav>
+<p><a href="learn.html">All 19 chapters →</a>
+</p>
+</aside>
+<div class="guide-body">
+<div class="goal-box">
+<h2>What you will learn</h2>
+<ul>
+<li>Install and verify a package.</li>
+<li>Distinguish repository roots, installed binaries and recovery actions.</li>
+</ul>
+</div>
+<div class="goal-box">
+<h2>Before you begin</h2>
+<p>Optional Linux setup completed in Terminal; internet for package metadata/downloads.</p>
+</div>
+<section class="guide-section" id="first" aria-labelledby="first-title">
+<h2 id="first-title">Start with one tool</h2>
+<p>Open Packages and find nano. AVAILABLE means it is not installed according to the app’s check; INSTALL starts the operation. After success, INSTALLED and a supported RUN action tell a different story. Do not treat a catalog row as proof that an interrupted download completed.</p>
+<p class="code-label">Terminal alternative</p>
+<pre class="code-block" tabindex="0" aria-label="Terminal alternative" data-language="text"><code>pkg install nano
+nano --version</code>
+</pre>
+<p>Confirm if prompted. Expected: the package installs and nano reports its version. If unavailable, read the repository/environment error rather than add another ecosystem’s source.</p>
+</section>
+<section class="guide-section" id="metadata" aria-labelledby="metadata-title">
+<h2 id="metadata-title">Refresh, inspect, then change</h2>
+<p class="code-label">Inspect and refresh</p>
+<pre class="code-block" tabindex="0" aria-label="Inspect and refresh" data-language="text"><code>pkg status
+pkg update</code>
+</pre>
+<p>status explains environment health; update fetches current metadata, it is not the same as upgrading every installed package. Use pkg upgrade when you want to review updates. The -y flag pre-approves confirmations; omit it while learning so you see what will change.</p>
+</section>
+<section class="guide-section" id="trust" aria-labelledby="trust-title">
+<h2 id="trust-title">Signatures are not an optional nuisance</h2>
+<p>CodeC’s bootstrap is SHA256-verified, staged and atomically installed. Its package source uses OpenPGP signed-by verification and fails closed. Never replace signed-by with trusted=yes, ignore a failed signature, or add official Termux repositories. The CodeC prefix and package build rules are different.</p>
+<p>Only trusted, source-built CodeC packages belong here. Do not overwrite cc or turn the real bash executable into a script wrapper.</p>
+</section>
+<section class="guide-section" id="inventory" aria-labelledby="inventory-title">
+<h2 id="inventory-title">Read the inventory accurately</h2>
+<p>The <a href="packages.html#inventory">complete local package table</a> lists33 curated build roots from the verified config. Dependencies/subpackages make that different from a count of installable programs. Python’s package is python and executable python3; ripgrep runs as rg; libllvm is a build root that produces Clang subpackages.</p>
+<p>The bootstrap separately seeds core shell/package tools including curl. OpenSSH and Vim are deferred, not magically present because a Termux tutorial mentions them. Your installed build and repository metadata decide current availability.</p>
+</section>
+<section class="guide-section" id="repair" aria-labelledby="repair-title">
+<h2 id="repair-title">When an operation stops halfway</h2>
+<ol class="guide-steps">
+<li>Copy the exact error and run pkg status. Distinguish network failure, signature failure and a missing executable.</li>
+<li>Use the app’s pkg heal / pkg repair guidance when the environment reports an interrupted or damaged installation. Read the action before confirming.</li>
+<li>Keep other navigation available, but let one package operation finish before another mutation. Back up important source before larger recovery work.</li>
+</ol>
+</section>
+<section class="guide-section" id="practice" aria-labelledby="practice-title">
+<h2 id="practice-title">Try it yourself</h2>
+<ol class="guide-steps">
+<li>Install nano and record its version line. Expected: a real binary response, not just a changed badge.</li>
+<li>Find Python3 in Packages and compare its install package name with python3 --version. Install only if you want the later chapter.</li>
+<li>Explain why33 build roots does not mean33 installed apps. Expected: mention dependencies and subpackages.</li>
+</ol>
+</section>
+<section class="guide-section" id="mistakes" aria-labelledby="mistakes-title">
+<h2 id="mistakes-title">Common mistakes</h2>
+<ul>
+<li>pkg update refreshes metadata; it is not an APK updater.</li>
+<li>A failed signature is a stop signal, never a prompt to weaken trust.</li>
+<li>OpenSSH is deferred in this verified config; do not invent pkg install openssh instructions.</li>
+</ul>
+</section>
+<nav class="prev-next" aria-label="Chapter navigation"><a rel="prev" href="ch-04.html">← Chapter 4</a><a rel="next" href="ch-06.html">Chapter 6 →</a>
+</nav>
+</div>
+</div>
+</div>
+</main>
+  <!-- Shared footer v2.3. Privacy appears on every page. -->
+  <footer class="site-footer">
+    <div class="container-wide">
+      <div class="footer-top">
+        <div><a class="wordmark footer-wordmark" href="index.html"><img src="favicon.svg" alt="" width="34" height="34"><span>CodeC</span></a>
+<p>Free &amp; open source C IDE for Android.<br>A little screen. A lot of possibility.</p>
+</div>
+        <nav class="footer-links" aria-label="Project links">
+          <a href="https://github.com/pabi277/CodeC">Repo <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC#readme">README <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC/releases">Releases <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC/issues">Issues <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC/blob/main/docs/journal/JOURNEY.md">Journey <span aria-hidden="true">↗</span></a>
+          <a href="privacy.html">Privacy</a>
+        </nav>
+      </div>
+      <div class="footer-bottom"><span>Built in the open. Nothing here tracks you.</span><a href="https://github.com/pabi277/CodeC">Site source: <code>website/</code> <span aria-hidden="true">↗</span></a><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+</div>
+    </div>
+  </footer>
+</body>
+</html>

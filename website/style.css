@@ -421,3 +421,35 @@ h2 { font-size: clamp(32px, 3.25vw, 44px); }
 .install-path-grid a > span:last-child { color: var(--muted); font-size: 12px; line-height: 1.8; }
 @media (max-width: 720px) { .install-path-grid { grid-template-columns: 1fr; } }
 @media print { .install-path-grid a, .install-path-grid a:first-child { background: white; color: black; } }
+
+/* W3–W6: the reading path. Static links, same shared design tokens. */
+.guide-body .chapter-index { list-style: none; padding: 0; margin-block: 24px; }
+.guide-body .chapter-index li { padding: 0; margin: 0; }
+.chapter-index a { display: grid; grid-template-columns: 42px minmax(0, 1fr) 20px; align-items: center; gap: 18px; padding: 20px 14px; min-height: 76px; border-bottom: 1px solid var(--line-bright); text-decoration: none; }
+.chapter-index a:hover { background: var(--surface-raised); }
+.chapter-number { color: var(--accent); font: 14px/1.6 var(--mono); }
+.chapter-index strong { display: block; font-size: 16px; line-height: 1.5; }
+.chapter-index small { display: block; margin-top: 5px; color: var(--muted); font: 11px/1.7 var(--mono); }
+.chapter-crumb { font-size: 12px; line-height: 1.8; padding-top: 8px; }
+.chapter-crumb + .guide-hero { padding-top: 18px; }
+.guide-body > .goal-box h2 { font-size: 22px; margin-bottom: 14px; }
+.guide-body > .goal-box:first-child { margin-top: 0; }
+.guide-body > .goal-box + .guide-section { margin-top: 40px; }
+.guide-body a, .guide-sidebar a, .table td { overflow-wrap: anywhere; }
+.guide-body .table th { overflow-wrap: anywhere; }
+.guide-sidebar > p { margin-top: 22px; font-size: 12px; }
+.guide-sidebar > p a { display: inline-flex; align-items: center; min-height: 44px; }
+@media (max-width: 540px) {
+  .chapter-index a { grid-template-columns: 28px minmax(0, 1fr) 14px; gap: 10px; padding-inline: 4px; }
+  .chapter-index strong { font-size: 15px; }
+  .chapter-index small { font-size: 10px; }
+  .chapter-crumb { font-size: 11px; }
+}
+@media print {
+  .chapter-index a, .chapter-index small, .chapter-number { color: black; }
+  .chapter-index a { break-inside: avoid; }
+  .guide-body .table-wrap { overflow: visible; }
+  .guide-body > .goal-box { break-inside: avoid; }
+}
+/* Provider hostnames and source identifiers must wrap even when not hyperlinks. */
+.guide-body p, .guide-body li, .guide-body dd { overflow-wrap: anywhere; }

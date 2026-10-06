@@ -50,14 +50,11 @@
 
   <main id="main" tabindex="-1">
     <div class="container-wide">
-      <aside class="preview-notice" aria-label="Website progress">
-        <span class="status-label">W2 / 3 OF 29 PAGES</span>
-        <p>Home, Install and Start are ready to review. Other guides, Privacy and the course are still upcoming.</p>
-        <a href="install.html">Need the app? Install first <span aria-hidden="true">→</span></a>
-      </aside>
+      <aside class="preview-notice" aria-label="Website review status"><span class="status-label">FULL-SITE REVIEW</span><p>All 29 pages are written. Required course device tests and publication are still pending.</p><a href="learn.html#review">Review status →</a></aside>
       <div class="guide-hero">
         <p class="eyebrow">02 / YOUR FIRST SESSION</p>
-        <h1>A small program.<br><span>A real beginning.</span></h1>
+        <h1>A small program.<br><span>A real beginning.</span>
+</h1>
         <p class="guide-lead">Start with C and HTML, right on your phone. Then explore terminal input and packages when you’re ready for the optional Linux environment.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#hello">Write your first C program <span aria-hidden="true">↓</span></a>
@@ -106,11 +103,13 @@
             <pre class="code-block" tabindex="0" aria-label="Hello world C source"><code>#include &lt;stdio.h&gt;
 
 int main(void) {
-    puts("Hello, CodeC!");
+    puts(&quot;Hello, CodeC!&quot;);
     return 0;
-}</code></pre>
+}</code>
+</pre>
             <p class="code-label">Expected program output</p>
-            <pre class="code-block output-block" tabindex="0" aria-label="Expected hello output"><code>Hello, CodeC!</code></pre>
+            <pre class="code-block output-block" tabindex="0" aria-label="Expected hello output"><code>Hello, CodeC!</code>
+</pre>
             <p><strong>Try a change:</strong> replace the greeting, wait for autosave and tap RUN again. You have just edited, compiled and executed a program.</p>
             <div class="mistake">
               <h3>If the first run does not work</h3>
@@ -125,9 +124,11 @@ int main(void) {
             <p>Return to your project’s file tree in <strong>Projects</strong>. Open the <strong>⋮ menu for hello.c → Run in Terminal</strong>. This hands the file to Terminal in the right folder and runs it. Once that finishes, reproduce the build yourself:</p>
             <p class="code-label">CodeC Terminal · enter one command per line</p>
             <pre class="code-block" tabindex="0" aria-label="Compile and run hello.c"><code>cc hello.c -o a.out
-./a.out</code></pre>
+./a.out</code>
+</pre>
             <p class="code-label">Expected program output</p>
-            <pre class="code-block output-block" tabindex="0" aria-label="Expected terminal greeting"><code>Hello, CodeC!</code></pre>
+            <pre class="code-block output-block" tabindex="0" aria-label="Expected terminal greeting"><code>Hello, CodeC!</code>
+</pre>
             <ul>
               <li><code>cc</code> is CodeC’s compiler front end, not a promise of desktop GCC compatibility.</li>
               <li>Keep the output option at the end: <code>-o a.out</code>.</li>
@@ -145,21 +146,24 @@ int main(void) {
 
 int main(void) {
     int number;
-    puts("Type a small whole number:");
-    if (scanf("%d", &amp;number) != 1) {
-        puts("That was not a number.");
+    puts(&quot;Type a small whole number:&quot;);
+    if (scanf(&quot;%d&quot;, &amp;number) != 1) {
+        puts(&quot;That was not a number.&quot;);
         return 1;
     }
-    printf("Twice that is %d\n", number * 2);
+    printf(&quot;Twice that is %d\n&quot;, number * 2);
     return 0;
-}</code></pre>
+}</code>
+</pre>
             <p>Wait for the save, then return to the Terminal session in the same project folder. Compile this file only and run it. When prompted, type <strong>21</strong> and press Enter:</p>
             <pre class="code-block" tabindex="0" aria-label="Compile and run interactive example"><code>cc double.c -o a.out
-./a.out</code></pre>
+./a.out</code>
+</pre>
             <p class="code-label">Expected interaction · 21 is what you type</p>
             <pre class="code-block output-block" tabindex="0" aria-label="Expected interactive session"><code>Type a small whole number:
 21
-Twice that is 42</code></pre>
+Twice that is 42</code>
+</pre>
             <p>A program waiting at <code>scanf</code> is waiting for input, not necessarily frozen. Finish the line with Enter. Compile each example separately: both files define their own <code>main</code>.</p>
           </section>
 
@@ -170,7 +174,8 @@ Twice that is 42</code></pre>
             <p>You can also install from CodeC’s terminal:</p>
             <p class="code-label">CodeC Terminal · Python package</p>
             <pre class="code-block" tabindex="0" aria-label="Install and check Python"><code>pkg install python
-python3 --version</code></pre>
+python3 --version</code>
+</pre>
             <p><strong>Expected result:</strong> installation completes, then a line beginning <code>Python 3.</code> reports the installed version. The exact version can change. Downloads need internet; once installed, local Python programs do not inherently need a connection.</p>
             <div class="mistake">
               <h3>Use CodeC’s package environment</h3>
@@ -184,18 +189,19 @@ python3 --version</code></pre>
             <p>In <strong>Projects → + → New Project</strong>, create <code>FirstWeb</code> with the <strong>Static Web</strong> template. It supplies <code>index.html</code>. Open that file and replace it with this complete page:</p>
             <p class="code-label">index.html · complete example</p>
             <pre class="code-block" tabindex="0" aria-label="Simple HTML source"><code>&lt;!doctype html&gt;
-&lt;html lang="en"&gt;
+&lt;html lang=&quot;en&quot;&gt;
 &lt;head&gt;
-  &lt;meta charset="utf-8"&gt;
-  &lt;meta name="viewport"
-        content="width=device-width, initial-scale=1"&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot;
+        content=&quot;width=device-width, initial-scale=1&quot;&gt;
   &lt;title&gt;Made on my phone&lt;/title&gt;
 &lt;/head&gt;
 &lt;body&gt;
   &lt;h1&gt;Hello from CodeC!&lt;/h1&gt;
   &lt;p&gt;My first local web page.&lt;/p&gt;
 &lt;/body&gt;
-&lt;/html&gt;</code></pre>
+&lt;/html&gt;</code>
+</pre>
             <p>Wait for autosave and tap <strong>RUN ▶</strong>. For HTML, RUN opens <strong>Web Preview</strong>, not a C compiler. Expect the heading “Hello from CodeC!” and the paragraph below it.</p>
             <p>The local server serves the project folder, so relative CSS, JavaScript and image paths work. Save an edit to see it in the live preview; reload if needed. No Linux download is needed for this static HTML example.</p>
             <details class="guide-details">
@@ -212,11 +218,16 @@ python3 --version</code></pre>
             <p class="eyebrow">YOUR POCKET MAP</p>
             <h2 id="tabs-title">Five tabs. One workspace.</h2>
             <dl class="tab-map">
-              <div><dt><span>01</span> Projects</dt><dd>Create, clone or import a ZIP. Tap a file for that file; use a project’s <strong>⋮ → Open in editor</strong> for the whole workspace. Export backups here too.</dd></div>
-              <div><dt><span>02</span> Editor</dt><dd>Write with syntax highlighting and autosave, use the file drawer and tap RUN for the active source or HTML page.</dd></div>
-              <div><dt><span>03</span> Terminal</dt><dd>Enter commands and interact with running programs. This is also where you opt into the Linux environment.</dd></div>
-              <div><dt><span>04</span> Packages</dt><dd>Browse available tools, install what you need and see what is already installed.</dd></div>
-              <div><dt><span>05</span> Settings</dt><dd>Adjust the app. About contains release/update information and the introduction replay. AI configuration is optional, not required for this guide.</dd></div>
+              <div><dt><span>01</span> Projects</dt><dd>Create, clone or import a ZIP. Tap a file for that file; use a project’s <strong>⋮ → Open in editor</strong> for the whole workspace. Export backups here too.</dd>
+</div>
+              <div><dt><span>02</span> Editor</dt><dd>Write with syntax highlighting and autosave, use the file drawer and tap RUN for the active source or HTML page.</dd>
+</div>
+              <div><dt><span>03</span> Terminal</dt><dd>Enter commands and interact with running programs. This is also where you opt into the Linux environment.</dd>
+</div>
+              <div><dt><span>04</span> Packages</dt><dd>Browse available tools, install what you need and see what is already installed.</dd>
+</div>
+              <div><dt><span>05</span> Settings</dt><dd>Adjust the app. About contains release/update information and the introduction replay. AI configuration is optional, not required for this guide.</dd>
+</div>
             </dl>
           </section>
 
@@ -225,14 +236,20 @@ python3 --version</code></pre>
             <h2 id="next-title">Keep building from here.</h2>
             <p>You have the path from a file to a running program—and from an HTML file to a local preview. Keep the projects, change one thing and try again.</p>
             <a class="btn btn-secondary" href="install.html#backup">Make your first project backup <span aria-hidden="true">→</span></a>
-            <p class="guide-caption">The following local pages are planned, not included in this W2 preview:</p>
+            <p class="guide-caption">Continue with a product guide or begin the complete 19-chapter reading path.</p>
             <ul class="next-links">
-              <li><a href="engines.html">Engines <span>W3 · upcoming</span></a></li>
-              <li><a href="packages.html">Packages guide <span>W3 · upcoming</span></a></li>
-              <li><a href="ai.html">Optional AI <span>W3 · upcoming</span></a></li>
-              <li><a href="faq.html">Troubleshooting &amp; FAQ <span>W3 · upcoming</span></a></li>
-              <li><a href="learn.html">19-chapter course <span>W4–W6 · upcoming</span></a></li>
-              <li><a href="privacy.html">Privacy <span>W3 · upcoming</span></a></li>
+              <li><a href="engines.html">Engines <span>Product guide</span></a>
+</li>
+              <li><a href="packages.html">Packages guide <span>Product guide</span></a>
+</li>
+              <li><a href="ai.html">Optional AI <span>Product guide</span></a>
+</li>
+              <li><a href="faq.html">Troubleshooting &amp; FAQ <span>Product guide</span></a>
+</li>
+              <li><a href="ch-01.html">Start Chapter 1 <span>19 chapters</span></a>
+</li>
+              <li><a href="privacy.html">Privacy <span>Product guide</span></a>
+</li>
             </ul>
             <p>Need more help now? The <a href="https://github.com/pabi277/CodeC#readme">repository README</a> and <a href="https://github.com/pabi277/CodeC/blob/main/docs/guides/TROUBLESHOOTING.md">troubleshooting guide</a> are available online. For connected features, read the <a href="https://github.com/pabi277/CodeC/blob/main/docs/guides/DATA_AND_PRIVACY.md">current data &amp; privacy guide</a>. Public bug reports belong in <a href="https://github.com/pabi277/CodeC/issues">GitHub Issues</a>; personal contact details stay in the app.</p>
           </section>
@@ -249,17 +266,20 @@ python3 --version</code></pre>
   <footer class="site-footer">
     <div class="container-wide">
       <div class="footer-top">
-        <div><a class="wordmark footer-wordmark" href="index.html"><img src="favicon.svg" alt="" width="34" height="34"><span>CodeC</span></a><p>Free &amp; open source C IDE for Android.<br>A little screen. A lot of possibility.</p></div>
+        <div><a class="wordmark footer-wordmark" href="index.html"><img src="favicon.svg" alt="" width="34" height="34"><span>CodeC</span></a>
+<p>Free &amp; open source C IDE for Android.<br>A little screen. A lot of possibility.</p>
+</div>
         <nav class="footer-links" aria-label="Project links">
           <a href="https://github.com/pabi277/CodeC">Repo <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC#readme">README <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC/releases">Releases <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC/issues">Issues <span aria-hidden="true">↗</span></a>
           <a href="https://github.com/pabi277/CodeC/blob/main/docs/journal/JOURNEY.md">Journey <span aria-hidden="true">↗</span></a>
-          <a href="privacy.html">Privacy <span class="footer-upcoming">(upcoming)</span></a>
+          <a href="privacy.html">Privacy</a>
         </nav>
       </div>
-      <div class="footer-bottom"><span>Built in the open. Nothing here tracks you.</span><a href="https://github.com/pabi277/CodeC">Site source: <code>website/</code> <span aria-hidden="true">↗</span></a><a href="#main">Back to top <span aria-hidden="true">↑</span></a></div>
+      <div class="footer-bottom"><span>Built in the open. Nothing here tracks you.</span><a href="https://github.com/pabi277/CodeC">Site source: <code>website/</code> <span aria-hidden="true">↗</span></a><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+</div>
     </div>
   </footer>
 </body>

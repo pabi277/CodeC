@@ -1,10 +1,17 @@
 # CodeC Website Phase W3 — Engines + Packages + FAQ + About
 
+> **Current batch status — 2026-10-07, D33: IMPLEMENTED FOR REVIEW.**
+> Owner authorized W3–W6 content together, then one commit/watch; separate start
+> commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
+> [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
+> [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
+> D31 download law retained. No device pass, PR, merge or public deployment implied.
+
 > **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
 > website and a direct GitHub download link in the final report. See
 > [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
 
-> **Current v2.3 — 2026-10-07.** **PLANNED / NOT STARTED** — awaits its own owner command after earlier phases.
+> **Current v2.3 — 2026-10-07.** **IMPLEMENTED FOR REVIEW** — combined batch authorized (D33), review/gates remain.
 
 Engines + Packages + FAQ + About + AI + Privacy. Six pages, product wing complete at 9/9. W3 depends on completed W2; do not run in parallel.
 

@@ -1,6 +1,13 @@
 # CodeC Website W3.5 — AI assistant (`ai.html`)
 
-**Status:** PLANNED, not started · **Cost:** static · **Effort:** M
+> **Current batch status — 2026-10-07, D33: IMPLEMENTED FOR REVIEW.**
+> Owner authorized W3–W6 content together, then one commit/watch; separate start
+> commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
+> [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
+> [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
+> D31 download law retained. No device pass, PR, merge or public deployment implied.
+
+**Status:** IMPLEMENTED FOR REVIEW · **Cost:** static · **Effort:** M
 **Depends:** W1–W2, W3.1–4; **blocks:** W3 product-wing completion with W3.6.
 **Scope:** v2.3 owner handoff (2026-10-06), recorded 2026-10-07.
 **Sources:** README §AI assistant first, then docs/guides/AI.md and

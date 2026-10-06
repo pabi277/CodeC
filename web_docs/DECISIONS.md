@@ -88,3 +88,17 @@ stay historical. No PR/merge/deploy implied. This is an additional phase-exit ga
 Owner: “Now start w2”. Install + Getting Started only, on the session branch,
 fresh implementation against current source and v2.3 amendments. W3–W6 remain
 separately gated. Public deployment preparation remains paused for ZIP review.
+
+
+## D33 — One remaining-site batch, retained device gates (2026-10-07)
+
+Owner: “No need to see the watch for now complete the full website in one go
+than a commit and watch because i think it's not that hard job”. Then selected
+**Keep device verification gates**: build remaining pages together; pause for
+owner device transcripts before calling the website complete; no deploy/PR/merge.
+This supersedes separate W3–W6 start commands and intermediate commits: verify
+W4.2 facts FIRST, build W3 + W4 + W5 + W6 content/polish in one batch, then one
+commit/push and CI watch. Do not cancel GitHub's existing W2 run. D31 full-site
+ZIP law remains: preserve cumulative W3/W4/W5 and final W6-review snapshots in
+the single batch, provide final full29page ZIP link. W5 ch08/W6 P1+P5 transcripts,
+O7 license and package-safe owner-authorized deployment remain open. No app edits.

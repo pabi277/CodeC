@@ -1,0 +1,25 @@
+{
+  "pages": 29,
+  "files": 31,
+  "local_links_and_anchors_checked": 1065,
+  "missing_links": 0,
+  "external_hrefs": [
+    "https://f-droid.org/packages/com.termux/",
+    "https://github.com/pabi277/CodeC",
+    "https://github.com/pabi277/CodeC#readme",
+    "https://github.com/pabi277/CodeC/actions",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/BETA.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/DATA_AND_PRIVACY.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/RELEASE_NOTES.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/TROUBLESHOOTING.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/journal/JOURNEY.md",
+    "https://github.com/pabi277/CodeC/issues",
+    "https://github.com/pabi277/CodeC/releases",
+    "https://github.com/pabi277/CodeC/releases/tag/app-v1.3.18",
+    "https://github.com/termux/termux-app/releases"
+  ],
+  "author_js": 0,
+  "package_roots": 33,
+  "bytes": 404036,
+  "status": "PASS"
+}

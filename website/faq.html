@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Known beta limitations, practical recovery and honest boundaries. Read the symptom before changing your environment.">
+  <meta name="theme-color" content="#0b100e">
+  <title>A useful answer, before a reinstall. — CodeC</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <!-- Shared header v2.3. Copy with footer; change only aria-current. See web_docs/chat-web4/W1_CHROME.md. -->
+  <header class="site-header">
+    <div class="container-wide header-inner">
+      <a class="wordmark" href="index.html" aria-label="CodeC home">
+        <img src="favicon.svg" alt="" width="38" height="38">
+        <span>CodeC<span class="wordmark-caption">THE POCKET IDE</span></span>
+      </a>
+      <nav class="desktop-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="install.html">Install</a>
+        <a href="start.html">Start</a>
+        <a href="engines.html">Engines</a>
+        <a href="packages.html">Packages</a>
+        <a href="ai.html">AI</a>
+        <a href="learn.html">Learn</a>
+        <a href="faq.html" aria-current="page">FAQ</a>
+        <a href="about.html">About</a>
+        <a class="nav-github" href="https://github.com/pabi277/CodeC">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+      <details class="mobile-menu">
+        <summary>Menu <span class="menu-symbol" aria-hidden="true"></span></summary>
+        <nav aria-label="Mobile navigation">
+          <a href="index.html">Home</a>
+          <a href="install.html">Install</a>
+          <a href="start.html">Start</a>
+          <a href="engines.html">Engines</a>
+          <a href="packages.html">Packages</a>
+          <a href="ai.html">AI</a>
+          <a href="learn.html">Learn</a>
+          <a href="faq.html" aria-current="page">FAQ</a>
+          <a href="about.html">About</a>
+          <a href="https://github.com/pabi277/CodeC">GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </details>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+<div class="container-wide">
+<aside class="preview-notice" aria-label="Website review status"><span class="status-label">FULL-SITE REVIEW</span><p>All 29 pages are written. Required course device tests and publication are still pending.</p><a href="learn.html#review">Review status →</a></aside>
+<div class="guide-hero">
+<p class="eyebrow">THE POCKET IDE / FAQ</p>
+<h1>A useful answer, before a reinstall.</h1>
+<p class="guide-lead">Known beta limitations, practical recovery and honest boundaries. Read the symptom before changing your environment.</p>
+</div>
+<div class="guide-layout">
+<aside class="guide-sidebar" aria-label="Guide navigation">
+<nav class="guide-toc" aria-label="On this page">
+<p class="eyebrow">ON THIS PAGE</p><a href="#folders"><span>01</span>B-1: a huge folder or import stalls</a><a href="#boot"><span>02</span>B-2: an older 32-bit tablet will not start</a><a href="#sleep"><span>03</span>B-3: a long command dies when the screen sleeps</a><a href="#credentials"><span>04</span>B-4: Git credentials are missing after restore</a><a href="#apk"><span>05</span>B-5: Android says the APK is invalid</a><a href="#long-lines"><span>06</span>B-6: a very long line looks wrong</a><a href="#crash"><span>07</span>B-7: the app closes at splash twice</a><a href="#abi"><span>08</span>B-8: no built-in compiler on 32-bit</a><a href="#compiler"><span>09</span>Compiler could not start / Permission denied / Exec format error</a><a href="#runtime"><span>10</span>Runtime libraries missing, or a program appears frozen</a><a href="#git"><span>11</span>Did COMMIT &amp; PUSH upload my work?</a><a href="#backup"><span>12</span>What does my backup include?</a><a href="#web"><span>13</span>Why can another phone not open my preview?</a><a href="#ai-cost"><span>14</span>Is AI free or unlimited?</a><a href="#ai-history"><span>15</span>Why did my AI history disappear?</a><a href="#privacy"><span>16</span>Can CodeC read or send my files?</a><a href="#updates"><span>17</span>How do I update safely?</a><a href="#report"><span>18</span>How do I report a problem?</a><a href="#sources"><span>19</span>Where these answers come from</a>
+</nav>
+</aside>
+<div class="guide-body">
+<section class="guide-section" id="folders" aria-labelledby="folders-title">
+<h2 id="folders-title">B-1: a huge folder or import stalls</h2>
+<p>Large trees are expensive to scan. Import a smaller source-only ZIP, excluding caches and dependencies where practical. If the tree stalls for 30 seconds or more, force-stop and reopen. Do not use the removed Open Folder feature; use New Project, Clone or Import ZIP.</p>
+</section>
+<section class="guide-section" id="boot" aria-labelledby="boot-title">
+<h2 id="boot-title">B-2: an older 32-bit tablet will not start</h2>
+<p>The universal APK includes native ABI lanes, but beta notes record install/boot failures on some older tablets. Report model, Android version, ABI and exact symptom. Do not promise that the arm64 toolchain can run on a 32-bit CPU.</p>
+</section>
+<section class="guide-section" id="sleep" aria-labelledby="sleep-title">
+<h2 id="sleep-title">B-3: a long command dies when the screen sleeps</h2>
+<p>Android battery restrictions may kill a job despite the foreground service/wake lock. Keep its notification and the app available; inspect battery restrictions. Terminal sessions or tmux do not make a process immortal.</p>
+</section>
+<section class="guide-section" id="credentials" aria-labelledby="credentials-title">
+<h2 id="credentials-title">B-4: Git credentials are missing after restore</h2>
+<p>Reconnect in Source Control → ⋮ → Git Credentials. Credentials do not ride the project backup. Never put a token in a URL, README, screenshot or issue; use the app’s credential form.</p>
+</section>
+<section class="guide-section" id="apk" aria-labelledby="apk-title">
+<h2 id="apk-title">B-5: Android says the APK is invalid</h2>
+<p>A partial download can cause a parse error. Download the signed universal APK again and compare the release checksum. The updater checks SHA256. Export projects before switching signing keys or uninstalling.</p>
+</section>
+<section class="guide-section" id="long-lines" aria-labelledby="long-lines-title">
+<h2 id="long-lines-title">B-6: a very long line looks wrong</h2>
+<p>Lines over roughly 10 KB can trigger the editor’s display guard. Split an unwieldy line into readable lines. The display substitute is not an edit to the file on disk.</p>
+</section>
+<section class="guide-section" id="crash" aria-labelledby="crash-title">
+<h2 id="crash-title">B-7: the app closes at splash twice</h2>
+<p>On the third launch, use Try starting without my settings. Safe mode bypasses onboarding/sample seeding for recovery; source projects remain. Preserve a backup and inspect crash-log text before sharing a report.</p>
+</section>
+<section class="guide-section" id="abi" aria-labelledby="abi-title">
+<h2 id="abi-title">B-8: no built-in compiler on 32-bit</h2>
+<p>Bundled TCC is arm64-v8a/x86_64 only. The arm64 Clang module is not a 32-bit fix. A compatible external fallback may help where supported, but device compatibility is not guaranteed.</p>
+</section>
+<section class="guide-section" id="compiler" aria-labelledby="compiler-title">
+<h2 id="compiler-title">Compiler could not start / Permission denied / Exec format error</h2>
+<p>Read the exact Output message. Permission denied may be Android W^X/noexec policy; Exec format error usually means an ABI mismatch. Keep projects in app-private storage, verify your device class, and use the automatic fallback guidance. There is no engine picker.</p>
+</section>
+<section class="guide-section" id="runtime" aria-labelledby="runtime-title">
+<h2 id="runtime-title">Runtime libraries missing, or a program appears frozen</h2>
+<p>Distinguish a compiler/runtime installation failure from your program’s error. Check the environment status and named missing tool. An interactive scanf program may simply await Terminal input; a loop may be infinite. Use Stop/Ctrl-C where available; do not invent universal timeout guarantees.</p>
+</section>
+<section class="guide-section" id="git" aria-labelledby="git-title">
+<h2 id="git-title">Did COMMIT &amp; PUSH upload my work?</h2>
+<p>A local commit is not a remote push. Read the result’s remote/branch and the unpushed indicator. Committed locally — NOT pushed means your work is still on the phone. Fix connectivity/credentials/remote and retry PUSH; do not delete the local commits.</p>
+</section>
+<section class="guide-section" id="backup" aria-labelledby="backup-title">
+<h2 id="backup-title">What does my backup include?</h2>
+<p>Export all projects creates a project backup ZIP. Save it outside app-private storage before uninstalling and restore with Import projects backup. Source projects are the backup scope, not the Linux prefix, app settings or tokens.</p>
+</section>
+<section class="guide-section" id="web" aria-labelledby="web-title">
+<h2 id="web-title">Why can another phone not open my preview?</h2>
+<p>The On this phone address is loopback: another device’s loopback points at itself. Enable LAN sharing deliberately, use Other devices/QR on the same Wi-Fi, keep the server alive and check network isolation. Share only non-sensitive project files.</p>
+</section>
+<section class="guide-section" id="ai-cost" aria-labelledby="ai-cost-title">
+<h2 id="ai-cost-title">Is AI free or unlimited?</h2>
+<p>No. It uses your provider key, terms, quota and bill. Gemini is the default; NVIDIA Build is a manual dev/test option. CodeC has no shared key, proxy or hosted model. App caps and provider rate limits both apply.</p>
+</section>
+<section class="guide-section" id="ai-history" aria-labelledby="ai-history-title">
+<h2 id="ai-history-title">Why did my AI history disappear?</h2>
+<p>Raw chat and drawer titles are in memory under D6, up to 20 conversations per project. App death clears them. Bounded task memory and undo preimages are separate local stores, not a transcript archive.</p>
+</section>
+<section class="guide-section" id="privacy" aria-labelledby="privacy-title">
+<h2 id="privacy-title">Can CodeC read or send my files?</h2>
+<p>With ONE storage approval the app can read shared files. AI Send starts a disclosed task whose bounded read follow-ups may send admitted text; edits and runs require separate taps. Provider retention is not zero. Read the full <a href="privacy.html">Privacy page</a>.</p>
+</section>
+<section class="guide-section" id="updates" aria-labelledby="updates-title">
+<h2 id="updates-title">How do I update safely?</h2>
+<p>Settings → About → Check for updates is user-triggered, numeric-version guarded and checksum verified. Missing checksum opens Releases. Changing from debug to a differently signed release may need a fresh install: export first.</p>
+</section>
+<section class="guide-section" id="report" aria-labelledby="report-title">
+<h2 id="report-title">How do I report a problem?</h2>
+<p>Record app version, Android/ABI, exact steps, expected/actual result and relevant Output/log text. Inspect and redact secrets before sharing. Use <a href="https://github.com/pabi277/CodeC/issues">GitHub Issues</a> publicly; personal contact details stay inside the app.</p>
+</section>
+<section class="guide-section" id="sources" aria-labelledby="sources-title">
+<h2 id="sources-title">Where these answers come from</h2>
+<p>B-1 through B-8 follow the beta guide, with newer source corrections for Git and 32-bit compiler advice. Other answers follow README, Troubleshooting, AI and Data &amp; Privacy. <a href="ch-17.html">Work through the troubleshooting chapter</a>.</p>
+</section>
+</div>
+</div>
+</div>
+</main>
+  <!-- Shared footer v2.3. Privacy appears on every page. -->
+  <footer class="site-footer">
+    <div class="container-wide">
+      <div class="footer-top">
+        <div><a class="wordmark footer-wordmark" href="index.html"><img src="favicon.svg" alt="" width="34" height="34"><span>CodeC</span></a>
+<p>Free &amp; open source C IDE for Android.<br>A little screen. A lot of possibility.</p>
+</div>
+        <nav class="footer-links" aria-label="Project links">
+          <a href="https://github.com/pabi277/CodeC">Repo <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC#readme">README <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC/releases">Releases <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC/issues">Issues <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/pabi277/CodeC/blob/main/docs/journal/JOURNEY.md">Journey <span aria-hidden="true">↗</span></a>
+          <a href="privacy.html">Privacy</a>
+        </nav>
+      </div>
+      <div class="footer-bottom"><span>Built in the open. Nothing here tracks you.</span><a href="https://github.com/pabi277/CodeC">Site source: <code>website/</code> <span aria-hidden="true">↗</span></a><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+</div>
+    </div>
+  </footer>
+</body>
+</html>

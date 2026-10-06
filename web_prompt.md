@@ -2,10 +2,10 @@
 
 > **Owner law D31:** every website phase ends with a verified full-site ZIP and a
 > direct GitHub download link in the final reply. [Required procedure](web_docs/REVIEW_DOWNLOAD_RULE.md).
-> **W2 authorized (D32)**; W3–W6 still need their own commands. No PR/merge/deploy.
+> **D33: remaining content authorized as one batch; device gates retained.** No PR/merge/deploy.
 
 > Scope supplied by the owner: **2026-10-06 v2.3**. Verified and updated for
-> **W1 + W2 on 2026-10-07**. This is the website workstream; app handoff is `prompt.md`.
+> **the full29page review on 2026-10-07**. This is the website workstream; app handoff is `prompt.md`.
 > Read the current-state correction below before trusting the original handoff's
 > historical claims. Living state is updated at every website phase gate.
 
@@ -19,7 +19,7 @@ the current git/PR/CI state before making any change:
 2. **web_docs/README.md** — website ground rules and file map.
 3. **web_docs/WEBSITE_PLAN.md** — master v2.3, page/chapter content (§3), content
    rules (§4), self-dependent law (§5), phases (§9), acceptance (§10).
-4. **web_docs/DECISIONS.md** — D1–D32, binding dated decisions and open items.
+4. **web_docs/DECISIONS.md** — D1–D33, binding dated decisions and open items.
 5. **web_docs/NEXT_STEPS.md** — current head and owner-command table.
 
 When a page needs facts: **README.md first**, then
@@ -28,31 +28,40 @@ When a page needs facts: **README.md first**, then
 
 ## Current verified state — 2026-10-07
 
-**W1 + W2 implemented; local web/ZIP checks PASS; not merged/deployed. W3–W6
-are NOT started.** W2 owner command: **“Now start w2”**. Additional owner law:
-**every phase ends with a downloadable ZIP link** (D31). It must be the entire
-current site, not just changed pages, and a direct GitHub link—not Arena-only.
-See `web_docs/REVIEW_DOWNLOAD_RULE.md` before any phase handoff.
+**All29 pages are written for review. Not fully accepted, merged or deployed.**
+Owner D33: finish the remaining website together, then **one commit and one CI
+watch**, with **device verification gates retained**. This supersedes separate
+W3–W6 start commands/intermediate commits, not W4.2 verification or device gates.
 
-Five files now exist in website/: index.html, install.html, start.html, style.css,
-favicon.svg. **3/29 pages.** Install covers current signed release/checksum,
-updater/backups/device limits/automatic fallback. Start covers intro/privacy/Arcade,
-optional Linux, five practical steps and tab map. Shared no-JS W1 chrome retained.
-Seven future paths still explicitly upcoming; no full-course/full-link sweep claim.
+**Current full ZIP:**
+[Download29page review](https://raw.githubusercontent.com/pabi277/CodeC/arena/8b8f8edc-codec/web_docs/chat-web6/review-zips/CodeC-website-W6-review.zip).
+31 files, all29 HTML pages + CSS + mark. Size/hash: chat-web6/W6_ARCHIVE.json.
+Final handoff pins the commit and checks GitHub uploaded bytes after push. D31
+requires this full-current-site direct link at every website phase/batch end.
 
-**Current review ZIP:**
-[Download W2](https://raw.githubusercontent.com/pabi277/CodeC/arena/8b8f8edc-codec/web_docs/chat-web5/CodeC-website-W2.zip).
-25,119B, all five files at root, SHA256 in `W2_ARCHIVE.json`. Import ZIP into CodeC
-→ open index.html → RUN. W1 archive stays historical. Final handoff must verify
-GitHub uploaded bytes and provide the commit-pinned direct link after push.
+**Source first:** chat-web4/VERIFIED_FACTS.md,43 row groups and33 package roots
+verified at8467ff8 (app/main d4231f0), recorded before course pages.
+**Records:** chat-web6/BATCH_SUMMARY.md, CONTENT_TRACE.md, CHECKS.md, static/browser/
+snippet reports, cumulative W3/W4/W5 snapshots. W1/W2 records and ZIPs historical.
+**Website:**9 product pages + course home +19 chapters. No missing final links,
+no runtime JS, remote assets or framework. Ch17→18→19→course; Privacy everywhere.
 
-**Records:** `web_docs/chat-web5/W2_{SUMMARY,SOURCES,CHECKS}.md`, archive/browser JSON,
-rerunnable checks outside website/. All three pages at320–1440 passed axe/keyboard/
-overflow, local-only resources, HTML validation and extracted offline/no-JS tests.
-No Android device or deployment acceptance claimed. Prior CI: W1 source0d16467
-run37518457228 success; archive follow-up47c09a6 run37524577493 success. The phase
-commit's automatic CI result must be observed after push, not pre-claimed here.
-W1 original authorization/implementation history stays in chat-web4 and WEB_JOURNEY.
+**Still required:** owner Chapter8 input/loops/pointers/converter and P1 calculator
++P5 device-automation transcripts. Follow chat-web6/DEVICE_TESTS.md; host C/Bash
+stubs and browser tests never substitute. P5 upgrades explicitly opt in and require
+YES; an untested portion is not a pass. W6.7 deployment held/no authorization;
+existing signed package /dev and /keys untouched. O7 course license still pending.
+
+The single batch commit triggers existing Build APK. Observe/report its run after
+push; this pre-push handoff does not invent a CI id/conclusion. Do not create an
+extra commit merely to store self-referential CI state. Final report must include
+tip/run/conclusion and verified pinned ZIP. Owner review comes before any merge.
+
+W2 source8467ff8 was pushed and its25,119B GitHub ZIP readback matched local bytes.
+Its run37528087517 was still running when the owner interrupted the watch; the
+watcher later did not exist after snapshot restoration. No GitHub run cancelled.
+Verify live GitHub state, don't infer the result. This batch started from a clean
+8467ff8 after fetch/reset --mixed restored stale snapshot git metadata, never hard.
 
 ### Why the supplied handoff needed reconciliation
 
@@ -118,7 +127,7 @@ branch, never switch/create another branch or force push. No app changes.
 |---|---|
 | rule.md | Branch/push discipline, no PR/merge without literal command, CI executor of record for app, fix red for cause never weaken assertions, invariants, same-commit docs |
 | web_docs/WEBSITE_PLAN.md | Source chain, shipped vs roadmap, banned privacy claim, self-dependent law, 29-page scope, refusals as features, phase/acceptance gates |
-| web_docs/DECISIONS.md | D3 stack, D7 location, D8 merge gate, D11 self-dependent, D23–28 v2.3 scope, D29 fresh W1/PR42 reference, D30 reconciliation/deployment safety, D31 mandatory ZIP, D32 W2 authorization |
+| web_docs/DECISIONS.md | D3 stack, D7 location, D8 merge gate, D11 self-dependent, D23–28 v2.3 scope, D29 fresh W1/PR42 reference, D30 reconciliation/deployment safety, D31 mandatory ZIP, D32 W2 authorization, D33 single remaining-site batch/device gates |
 | web_docs/README.md | No app/docs changes; preserve history; clean-room; no next phase without command |
 | docs/README.md; docs/getting-started/HOW_TO_CREATE_A_PHASE.md | Mirror evidence → design → numbered exits → implementation/check record; don't write app phase docs for website work |
 | docs/guides/DATA_AND_PRIVACY.md | Two claims, honest correction, permission/AI surface and named proving files; site cannot out-claim it |
@@ -133,9 +142,10 @@ branch, never switch/create another branch or force push. No app changes.
 
 ## Owner commands and phase queue
 
-Work one phase at a time **W1→W6**, strictly per its phase README + PART docs.
-W1 + W2 are implemented; next implementation requires **Start W3**. The owner may
-review the W2 ZIP and request corrections first. PR #42 supplies no authority.
+D33 authorized W3–W6 content in one batch after source verification; all29 pages
+are now written. The original phase scope below remains the acceptance map, not
+a queue to re-run. Next: review/device transcripts, then explicit PR/merge/deploy
+commands only. PR42 supplies no authority or implementation.
 
 - **W1** scaffold + Home: ten-link header incl AI, Privacy footer, original >_,
   shared styles/components, six cards incl file icons/LAN/AI/safe workflow,
@@ -144,17 +154,17 @@ review the W2 ZIP and request corrections first. PR #42 supplies no authority.
   22, checksum), updater guard, debug/release export/fresh install, automatic
   fallback; current intro → privacy acknowledgement → CodeC Arcade, optional
   userland, no old first-hour tiles/tour/install locks.
-- **W3** Engines, Packages, FAQ, About, **W3.5 AI**, **W3.6 Privacy**. Auto only;
+- **W3 (implemented)** Engines, Packages, FAQ, About, **W3.5 AI**, **W3.6 Privacy**. Auto only;
   package config source/sha; BETA B-1…B-8; export/backup/crash/Git/LAN/feedback;
   eight tools, approvals and limits; privacy honest correction and source files.
-  After W3 product wing **9/9**. Not parallel with W2.
-- **W4** **W4.2 verification gate FIRST**, then learn + ch-01…06. Committed
+  After W3 product wing **9/9**. Product pages are complete for review.
+- **W4 (implemented; gate recorded first)** **W4.2 verification gate FIRST**, then learn + ch-01…06. Committed
   Verified Facts Table re-checks README/package config/release/icon/backup/export/
   LAN/feedback/output/Git/AI and **Phase 46 removed Open Folder**. Lock 19-chapter
   teaching set; O6 owner scope already closed, don't re-ask count or silently cut.
-- **W5** ch-07…12: editor, TCC-safe C, shell, Python, honest Git, networking/LAN.
+- **W5 (content implemented; device gate OPEN)** ch-07…12: editor, TCC-safe C, shell, Python, honest Git, networking/LAN.
   **Ch-08 owner device pass required**, transcript, not replaced by browser tests.
-- **W6** ch-13…17, **W6.8 ch-18 + W6.9 ch-19 BEFORE W6.6 polish/W6.7 deploy**.
+- **W6 (content implemented; device/deploy gates OPEN)** ch-13…17, **W6.8 ch-18 + W6.9 ch-19 BEFORE W6.6 polish/W6.7 deploy**.
   **P1+P5 owner device pass required**. 29-page source/resource/offline/full-link
   verification before live, evidence in chat-web6. No deployment shortcut.
 
@@ -163,7 +173,7 @@ review the W2 ZIP and request corrections first. PR #42 supplies no authority.
 never replace package endpoints with a website-only artifact. Branch-source
 settings cannot serve arbitrary /website; plan a verified additive artifact
 approach without changing branches or APK/package workflows. If forbidden edits
-are needed, STOP and ask. No Pages configuration/publication in W1/W2; preparation remains paused for ZIP review.
+are needed, STOP and ask. No Pages configuration/publication in this batch; deployment remains held for review/device gates and explicit authorization.
 
 ## Laws — no exceptions
 
@@ -194,13 +204,13 @@ are needed, STOP and ask. No Pages configuration/publication in W1/W2; preparati
 Zero fetched external resources: no CDN, external fonts/JS/CSS/images, analytics,
 third-party embeds or remote runtime. Every loaded file in website/. System
 font stack. Plain static HTML/CSS; minimal vanilla JS only for a justified need
-(W1/W2 have none). No framework/build step/backend/CMS/database.
+(the complete review has none). No framework/build step/backend/CMS/database.
 Outbound hyperlinks allowed to stable repo/README/Releases/Issues/guides/package
 URLs, and F-Droid/GitHub where README links Termux. Course completable without
 opening repo; inline commands/examples/results. All pages render fully offline
 from a local copy, not merely a warmed cache. SVG namespace URL isn't a fetch.
 W6 sweeps src/link/@import/url and other fetch surfaces, browser network, offline
-render, every link/anchor. Record truthfully; W2 future paths are not passing links.
+render, every link/anchor. Record truthfully; all29 final paths now exist; historical intermediate ZIPs still disclose later paths.
 
 ## Facts that must not regress
 

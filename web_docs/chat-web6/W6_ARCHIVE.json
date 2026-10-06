@@ -1,0 +1,164 @@
+{
+  "archive": "web_docs/chat-web6/review-zips/CodeC-website-W6-review.zip",
+  "bytes": 134916,
+  "sha256": "312d6c1c62bece7c7b9f338c5c250b9c87e50e7e7affecc2db48270b20e2b289",
+  "uncompressed_bytes": 404036,
+  "files": [
+    {
+      "path": "about.html",
+      "bytes": 8812,
+      "sha256": "07da7245acdb9924f83f15127ceef832272812ac9afb4b88c53416677b706d78"
+    },
+    {
+      "path": "ai.html",
+      "bytes": 13211,
+      "sha256": "8a813c1c63c07b59290dc2af4a18da84b9c85764ab88f381fd3a0a86dd3230d6"
+    },
+    {
+      "path": "ch-01.html",
+      "bytes": 10344,
+      "sha256": "5d3ec8ece54a062d9f2af4979d0d75149b7ab2a371262c4ab6b5b063ad3a2ae6"
+    },
+    {
+      "path": "ch-02.html",
+      "bytes": 9684,
+      "sha256": "4a4594d2b584a41a12cd822fcbc2c0348aea24a01eb9678197893f57159cdb3a"
+    },
+    {
+      "path": "ch-03.html",
+      "bytes": 10827,
+      "sha256": "d8ba9d197f9083098e20fc1f01476206a66f72588579b8a6c68c7a703234c04b"
+    },
+    {
+      "path": "ch-04.html",
+      "bytes": 9973,
+      "sha256": "ba81885b984750589d37be4d1080f3a7ee4a1b382ba181e852933691fa0d509e"
+    },
+    {
+      "path": "ch-05.html",
+      "bytes": 9770,
+      "sha256": "7d9ef9178124d3e379bbac0724c9d529ed1fe633096b2a8089be4c5b5dc49c5e"
+    },
+    {
+      "path": "ch-06.html",
+      "bytes": 10124,
+      "sha256": "8a6756ee4b5364070b80accf8d3fd844dfc9b3dde23c48264d3f41dd25860d7d"
+    },
+    {
+      "path": "ch-07.html",
+      "bytes": 10334,
+      "sha256": "b86058d977e56f213321b1e4179b3fd80e9dea5500c1b5e3e3c472c3d5ebea56"
+    },
+    {
+      "path": "ch-08.html",
+      "bytes": 21847,
+      "sha256": "5e49630c244bf6929261f71ae1cc4db6016a412802d5b5d82cbc14acc3bea780"
+    },
+    {
+      "path": "ch-09.html",
+      "bytes": 10822,
+      "sha256": "9de6a01cacb1230dd30de150f96c1addd5970c7326b09f46f6ab99408b378b96"
+    },
+    {
+      "path": "ch-10.html",
+      "bytes": 10709,
+      "sha256": "f723b0dd6446c646b85df6974a4c57421fb625036de8f4ab51a75876cb720ba6"
+    },
+    {
+      "path": "ch-11.html",
+      "bytes": 10513,
+      "sha256": "0b4734fc5e0508e97f65198386a6bc62a39a1be3f88dee84586de91ea5f234e4"
+    },
+    {
+      "path": "ch-12.html",
+      "bytes": 10573,
+      "sha256": "b04ea5743955d591bf7d9ef33fcd0bec06391cb820b5173785630c097cb9d627"
+    },
+    {
+      "path": "ch-13.html",
+      "bytes": 13794,
+      "sha256": "767618cc0ea126692e204d6a2d37f8ccdb78ffad919739befb2e1382b2f7adf7"
+    },
+    {
+      "path": "ch-14.html",
+      "bytes": 12557,
+      "sha256": "aab62ea06c9cf89e3232d95270f705c139605f53c5b6869fdd4f15a81d8c9b2c"
+    },
+    {
+      "path": "ch-15.html",
+      "bytes": 13108,
+      "sha256": "ae1d550beac6ba65c5f799022f03f85e5fcf9bff9457216d972f72914f2aa41e"
+    },
+    {
+      "path": "ch-16.html",
+      "bytes": 19053,
+      "sha256": "ff3439a9e1a1d4f1c80b1cb30525346cb0b6e63df09bc2877b315ca9de38ca19"
+    },
+    {
+      "path": "ch-17.html",
+      "bytes": 11652,
+      "sha256": "fe303ac19d2411c43b8dce4a833b601216d0df44bb4c099dbd48ef627f4bfd5a"
+    },
+    {
+      "path": "ch-18.html",
+      "bytes": 12751,
+      "sha256": "2d555665d8b25f4409c3bd8dd6a44e4028b8d2260b73076c24fb39c078c530b2"
+    },
+    {
+      "path": "ch-19.html",
+      "bytes": 14396,
+      "sha256": "4e9ac943444853a87026e96318817a515870cfc37649a9da6957a6e21438e567"
+    },
+    {
+      "path": "engines.html",
+      "bytes": 8727,
+      "sha256": "b92416d9e0fd7befe7e53cf75e548fcac6ab6456ce77e23f00599d034423625c"
+    },
+    {
+      "path": "faq.html",
+      "bytes": 13345,
+      "sha256": "a22eea88194d3bc3a330e2f460250c878a415d555b390127d6b2809fd6f0cd81"
+    },
+    {
+      "path": "favicon.svg",
+      "bytes": 1682,
+      "sha256": "968d7fbf78502ef8807d52114f3114ad7acf0bbb97ddde0af130b8ef7e4bafc3"
+    },
+    {
+      "path": "index.html",
+      "bytes": 16023,
+      "sha256": "52c547a993c032e7b0f3e42fcc50978ecb14d26bd03af2489815530cb1a3980d"
+    },
+    {
+      "path": "install.html",
+      "bytes": 18207,
+      "sha256": "ad6cc5a0a4a4bb35741f4d20613d0ccc252fc3996b016d2d1a85e70f4cc9b63a"
+    },
+    {
+      "path": "learn.html",
+      "bytes": 12169,
+      "sha256": "accb174a9799280dc8790f3ca67348e914f87c94a5283f79cbd2e6007df7000f"
+    },
+    {
+      "path": "packages.html",
+      "bytes": 12203,
+      "sha256": "098385bf1a3dcc2a40c47dec08fd2038ce31942968234204639abbf09cc8012e"
+    },
+    {
+      "path": "privacy.html",
+      "bytes": 13765,
+      "sha256": "c29173bbd051de8083dff7837f5ce1c5307e4c768514f9be6f4072cadd021b11"
+    },
+    {
+      "path": "start.html",
+      "bytes": 20498,
+      "sha256": "5c6543f1b506a83d0bfbded600d34ee51dcc43ceca9fce83c8ffd7e7ab489a2a"
+    },
+    {
+      "path": "style.css",
+      "bytes": 32563,
+      "sha256": "9341da341eb1271a639f19f28779078e6522dc832a1b1d626e679306290c3df6"
+    }
+  ],
+  "crc_and_exact_tree_bytes": "PASS"
+}

@@ -1,6 +1,13 @@
 # CodeC Website W6.9 — Chapter 19: Agent, tools and approvals
 
-**Status:** PLANNED, not started · **Cost:** static · **Effort:** M
+> **Current batch status — 2026-10-07, D33: CONTENT IMPLEMENTED; DEVICE ACCEPTANCE OPEN.**
+> Owner authorized W3–W6 content together, then one commit/watch; separate start
+> commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
+> [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
+> [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
+> D31 download law retained. No device pass, PR, merge or public deployment implied.
+
+**Status:** CONTENT IMPLEMENTED; DEVICE ACCEPTANCE OPEN · **Cost:** static · **Effort:** M
 **Target:** website/ch-19.html · **Depends:** W6.8 + W4.2 verified AI facts.
 **Order:** before W6.6 polish and W6.7 deployment. Final chapter, **19 of 19**.
 Sources: README AI, AI.md, DATA_AND_PRIVACY.md, named proving files. v2.3 scope
