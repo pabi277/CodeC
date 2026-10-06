@@ -283,12 +283,23 @@ object AiToolRunner {
         val needle = call.query.orEmpty()
         if (needle.isEmpty()) return Outcome(false, "search_project needs a query.")
         val maxHits = call.max ?: AiToolLimits.MAX_SEARCH_HITS
+        // Phase 96 — the `list_files` scoping, here too: `path` and `ext`
+        // narrow the walk's own admitted list and can never widen it, so a
+        // question about one folder spends no read budget on the whole project.
+        val prefix = call.path?.let { "$it/" }
+        val scope = (if (call.path != null) " in ${call.path}/" else "") +
+            (if (call.ext != null) " *.${call.ext}" else "")
+        val scoped = paths.filter {
+            (prefix == null || it.startsWith(prefix)) &&
+                (call.ext == null ||
+                    it.substringAfterLast('.', "").equals(call.ext, ignoreCase = true))
+        }
         val hits = mutableListOf<String>()
         var filesScanned = 0
         var filesSkipped = 0
         var capped = false
         var stopped = false
-        for (relative in paths.sorted()) {
+        for (relative in scoped.sorted()) {
             if (shouldStop()) {
                 stopped = true
                 break
@@ -331,13 +342,13 @@ object AiToolRunner {
         if (hits.isEmpty()) {
             return Outcome(
                 true,
-                "SEARCH \"$needle\" — no match in $filesScanned files scanned" +
+                "SEARCH \"$needle\"$scope — no match in $filesScanned files scanned" +
                     (if (filesSkipped > 0) " ($filesSkipped skipped)" else "") +
                     (if (stopped) "." + STOP_NOTE else "."),
                 truncated = stopped
             )
         }
-        val header = "SEARCH \"$needle\" — ${hits.size} match" +
+        val header = "SEARCH \"$needle\"$scope — ${hits.size} match" +
             (if (hits.size == 1) "" else "es") +
             " in $filesScanned files scanned" +
             (if (filesSkipped > 0) " ($filesSkipped skipped)" else "")

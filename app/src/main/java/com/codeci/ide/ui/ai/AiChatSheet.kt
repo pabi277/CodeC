@@ -194,6 +194,36 @@ fun AiChatSheet(
         if (state.historyOpen && drawerState.isClosed) drawerState.open()
         else if (!state.historyOpen && drawerState.isOpen) drawerState.close()
     }
+    // Phase 96 — and the flag follows the drawer BACK. A tap on the scrim or a
+    // swipe past the edge closes the drawer without asking the app, which left
+    // `historyOpen` stuck true: ☰ and "+ New chat" only set that flag, so from
+    // then on the drawer never opened again until something else closed it. The
+    // settled value is the fact; `onCloseHistory` writes it into the state (an
+    // already-false flag costs nothing — the state is a data class, so an equal
+    // copy is never re-emitted).
+    LaunchedEffect(drawerState.currentValue) {
+        if (drawerState.currentValue == DrawerValue.Closed) onCloseHistory()
+    }
+    // Phase 96 — the New-chat confirm lives here, not in the header: the header's
+    // `+` and the drawer's pill start the SAME thing, so they must ask with the
+    // same sentence (D8) and neither can be patched without the other drifting.
+    var newChatConfirming by remember { mutableStateOf(false) }
+    if (newChatConfirming) {
+        AlertDialog(
+            onDismissRequest = { newChatConfirming = false },
+            title = { Text(AiCopy.NEW_CHAT_TITLE) },
+            text = { Text(AiCopy.NEW_CHAT_BODY) },
+            confirmButton = {
+                TextButton(onClick = { newChatConfirming = false; onNewChat() }) {
+                    Text(AiCopy.NEW_CHAT_CONFIRM)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { newChatConfirming = false }) { Text(AiCopy.NEW_CHAT_KEEP) }
+            }
+        )
+    }
+    val requestNewChat: () -> Unit = { newChatConfirming = true }
 
     val sheetSurface: @Composable () -> Unit = {
         Surface(
@@ -250,7 +280,7 @@ fun AiChatSheet(
                         }
                         Header(
                             state.provider, state.model, state.mode, full,
-                            onExpand, onMinimize, onNewChat, onToggleMode,
+                            onExpand, onMinimize, requestNewChat, onToggleMode,
                             onOpenHistory = {
                                 onOpenHistory()
                                 scope.launch { drawerState.open() }
@@ -297,11 +327,11 @@ fun AiChatSheet(
                     onSwitchChat(id)
                 },
                 onTogglePin = onToggleChatPin,
-                onNewChat = {
-                    onNewChat()
-                    scope.launch { drawerState.close() }
-                    onCloseHistory()
-                },
+                // Phase 96 — the pill is the header's `+` with the same one question
+                // (D8), and it LEAVES THE DRAWER OPEN: the whole point of archiving
+                // is that the owner sees the previous chat land in the list. The
+                // old code closed the drawer the tap had just filled.
+                onNewChat = requestNewChat,
                 onClose = {
                     scope.launch { drawerState.close() }
                     onCloseHistory()
@@ -320,29 +350,12 @@ private fun Header(
     full: Boolean,
     onExpand: () -> Unit,
     onMinimize: () -> Unit,
+    /** Phase 96: the sheet owns the confirm, so the header `+` and the drawer pill ask once, in the same words. */
     onNewChat: () -> Unit,
     onToggleMode: () -> Unit,
     onOpenHistory: () -> Unit
 ) {
     val simple = mode == AiChatMode.SIMPLE
-    // Phase 90: New chat is destructive to the conversation, so it asks first —
-    // and the dialog says the whole truth: nothing here is saved anywhere.
-    var confirming by remember { mutableStateOf(false) }
-    if (confirming) {
-        AlertDialog(
-            onDismissRequest = { confirming = false },
-            title = { Text(AiCopy.NEW_CHAT_TITLE) },
-            text = { Text(AiCopy.NEW_CHAT_BODY) },
-            confirmButton = {
-                TextButton(onClick = { confirming = false; onNewChat() }) {
-                    Text(AiCopy.NEW_CHAT_CONFIRM)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirming = false }) { Text(AiCopy.NEW_CHAT_KEEP) }
-            }
-        )
-    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -374,7 +387,7 @@ private fun Header(
         ) {
             Text(AiCopy.modeToggleLabel(simple), style = MaterialTheme.typography.labelMedium)
         }
-        IconButton(onClick = { confirming = true }) {
+        IconButton(onClick = onNewChat) {
             Icon(
                 Icons.Filled.Add,
                 contentDescription = AiCopy.NEW_CHAT,
@@ -1637,50 +1650,67 @@ private fun BottomBar(
  */
 @Composable
 private fun WelcomeCard(onAccept: () -> Unit) {
+    // Phase 96 round 2 (the owner's round: *"the apps welcoming page is open half
+    // screen. That is very unfriendly. I have to scroll down to click. I
+    // understand but for new user, it will be difficult"*) — the agreement is the
+    // **door**, so its handle is pinned outside the scrolling part: the four
+    // bullets scroll under it, and "I understand — start" is on screen at every
+    // sheet height, on every phone, with or without the keyboard. The sheet also
+    // opens FULL while the card is up ([AiSheetPolicy.needsFullRoom]) — this is
+    // the belt to that brace, because a first-run screen must never need a
+    // discovery to get through.
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(CodecTokens.space(Space.L)),
         verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))
     ) {
-        // Round sparkle icon, same brand mark as the header but bigger and in a
-        // soft circle — the ChatGPT screenshot's hero treatment.
-        Box(
+        Column(
             Modifier
-                .size(CodecTokens.space(Space.XXL))
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))
         ) {
-            Icon(
-                Icons.Filled.AutoFixHigh,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
-            )
-        }
-        Text(AiCopy.WELCOME_TITLE, style = MaterialTheme.typography.headlineSmall)
-        Text(AiCopy.WELCOME_SUBTITLE, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        HorizontalDivider()
-
-        Text(AiCopy.WELCOME_AGREEMENT_TITLE, style = MaterialTheme.typography.titleMedium)
-        AiCopy.WELCOME_AGREEMENT_BODY.forEach { line ->
-            Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+            // Round sparkle icon, same brand mark as the header but bigger and in
+            // a soft circle — the ChatGPT screenshot's hero treatment.
+            Box(
+                Modifier
+                    .size(CodecTokens.space(Space.XXL))
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    Icons.Filled.Check,
+                    Icons.Filled.AutoFixHigh,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .padding(top = CodecTokens.space(Space.XXS))
-                        .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                 )
-                Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            }
+            Text(AiCopy.WELCOME_TITLE, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                AiCopy.WELCOME_SUBTITLE,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
+            Text(AiCopy.WELCOME_AGREEMENT_TITLE, style = MaterialTheme.typography.titleMedium)
+            AiCopy.WELCOME_AGREEMENT_BODY.forEach { line ->
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(top = CodecTokens.space(Space.XXS))
+                            .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                    )
+                    Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                }
             }
         }
-
-        Spacer(Modifier.height(CodecTokens.space(Space.S)))
         Button(
             onClick = onAccept,
             modifier = Modifier.fillMaxWidth(),
@@ -1797,6 +1827,25 @@ private fun HistoryRow(
             .padding(horizontal = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Phase 96 — which row IS the conversation on screen. [AiChatSummary.current]
+        // was computed by the model and never drawn, so a drawer with four rows
+        // could not answer "where am I"; the tap that switches also had no
+        // visible landing point. One mark, and the blank beside the others keeps
+        // the titles lined up.
+        if (row.current) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = AiCopy.CURRENT_CHAT,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .padding(end = CodecTokens.space(Space.S))
+                    .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+            )
+        } else {
+            Spacer(Modifier.width(
+                CodecTokens.icon(CodecTokens.Icon.ACTION) + CodecTokens.space(Space.S)
+            ))
+        }
         Text(
             row.title,
             style = MaterialTheme.typography.bodyMedium,

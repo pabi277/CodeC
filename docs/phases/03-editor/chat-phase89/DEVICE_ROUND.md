@@ -8,6 +8,15 @@
 > **Open:** **T7** and **T10** on both models (not exercised), **B2** (no cut-off happened), the eight visual
 > checks and the two questions below (not reported this round), and the fix phases for **S2**, **T3-Gemini** and
 > **T4-NVIDIA** (owner's rule: a failed row becomes its own fix phase, then Level 12 repeats).
+
+> **2026-10-06 — CLOSED by the owner's verdict in chat: *"Pass"*.** That is the acceptance Level 12 was waiting for.
+> He did not re-run the rows the round never exercised (**T7**, **T10**, **B2**, the eight visual checks): they are
+> closed as **waived**, not as observed, and no cell above was altered for it. The three failed rows end as he
+> decided — **S2** carries [Phase 93 round 2 §6](../chat-phase93/README.md), which recovered the forgotten marker and
+> gave `Invalid` its **Rebuild proposal** button; **T3-Gemini** (cut off before any diff) and **T4-NVIDIA** (repeats
+> itself) get **no fix phase**, because his answer on the open list was *"No change"* and they stay recorded as
+> defects of those two models rather than work owed by this app. Formal device acceptance is no longer postponed:
+> **Level 12 is accepted on the owner's word, given in chat, 2026-10-06.**
 > **Build for this round:** head `58039cd` · Build APK run [`37185580349`](https://github.com/pabi277/CodeC/actions/runs/37185580349)
 > — **✅ green** (2026-10-04 07:22–07:35 UTC) · release APK **7 179 540 B** · debug APK **27 062 592 B** ·
 > R8 mapping **71 172 428 B** · release manifest: no `android:debuggable` flag.

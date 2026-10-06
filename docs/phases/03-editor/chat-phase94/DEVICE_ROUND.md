@@ -11,6 +11,11 @@
 > **Safety rows are the point of this phase.** If any of D4–D6 shows a credential, mark it FAILED and stop; the log is
 > the evidence.
 
+> **2026-10-06 — closed as SKIPPED, not as run.** The owner waived the device rounds for the AI line: *"I don't have any objection with the agent system right now so you can skip the device tests"*.
+> Parts of what this round was written to catch were in fact caught — [Phase 96](../chat-phase96/README.md) found six
+> defects by working these lists and Phase 95's against the code, which is the round's purpose served by a different
+> route — but this table itself was never filled on a phone, so it stays unrecorded rather than back-filled.
+
 | # | What to do | What MUST happen | Owner |
 |---|---|---|---|
 | D1 | Ask: *"which markdown files are in this project?"* | The timeline shows **`find_files "*.md"`** and the answer names real files — or says *"none of the N admitted files match"* in plain words. No error row. | ⬜ |

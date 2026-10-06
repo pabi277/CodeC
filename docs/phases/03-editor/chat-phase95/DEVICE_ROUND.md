@@ -1,5 +1,11 @@
 # Phase 95 — owner device round
 
+> **Status: SKIPPED by the owner — 2026-10-06, same blanket answer as [Phase 96's round](../chat-phase96/DEVICE_ROUND.md)**
+> (*"I don't have any objection with the agent system right now so you can skip the device tests"*). Eleven rows, none run, none ticked. The two safety rows this round exists to check are not left to
+> luck: **D10** (secret redaction) is held by `AiSecretScan`'s own cases plus the pin that `AiContextBuilder.fromRunOutput`
+> is scrubbed *before* the budget, and **D11** (nothing applies itself, a run waits for his **Run** tap) is held by
+> `AiToolRunnerTest` and `AiToolProtocolTest`. **D6** was corrected in place, not by a device: one chat is one row.
+
 Check these on your phone with a fresh install (so the welcome appears):
 
 ## Welcome + agreement
@@ -12,7 +18,7 @@ Check these on your phone with a fresh install (so the welcome appears):
 
 ## History drawer
 - [ ] **D5.** Tapping ☰ (top-left) slides in the drawer; you see "+ New chat" at the top, and (after one exchange lands) a **Recents** row with that question, clipped to one line.
-- [ ] **D6.** Ask a second question on a blank composer, get an answer, open the drawer → two Recents rows. Tapping the first row replaces the conversation with that exchange (whole — no merge with the second).
+- [ ] **D6.** Ask a second question on a blank composer, get an answer, open the drawer → **one** Recents row for this chat, holding both exchanges. Tapping another row replaces the conversation with that one whole (no merge). *(Row rewritten in Phase 96: the two-rows expectation above was the doc's error, not the app's — one chat is one row, and a new row starts at **+ New chat** or a project switch. See [P4](../chat-phase96/DEVICE_ROUND.md).)*
 - [ ] **D7.** Tapping the pin icon on a row moves it to a **Pinned** section at the top; it survives New chat. Unpin moves it back.
 - [ ] **D8.** The "+ New chat" pill (and the header +) asks once ("Start a new chat?" with "nothing here is saved to a file" — same sentence as before), then archives the current chat, opens an empty composer, and shows the drawer so you can see where it went.
 - [ ] **D9.** Switching projects (A → B → A): A's history is back when you return; B never shows A's chats.

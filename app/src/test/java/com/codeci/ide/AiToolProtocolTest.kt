@@ -188,6 +188,22 @@ class AiToolProtocolTest {
     }
 
     @Test
+    fun `search_project takes the list_files scoping and refuses a scope that names nothing`() {
+        val scoped = verdict(
+            "search_project", "query" to "malloc", "path" to "src", "ext" to ".c"
+        ) as AiToolVerdict.Allowed
+        assertEquals("src", scoped.call.path)
+        assertEquals("c", scoped.call.ext)
+        assertTrue(verdict("search_project", "query" to "malloc", "path" to "../secrets") is AiToolVerdict.Denied)
+        assertTrue(verdict("search_project", "query" to "malloc", "path" to "docs") is AiToolVerdict.Denied)
+        assertTrue(verdict("search_project", "query" to "malloc", "ext" to "..c") is AiToolVerdict.Denied)
+        assertEquals(
+            "search_project \"malloc\" in src/ *.c",
+            AiToolProtocol.describe(call("search_project", "query" to "malloc", "path" to "src", "ext" to "c"))
+        )
+    }
+
+    @Test
     fun `list_files validates its directory and extension`() {
         assertTrue(verdict("list_files") is AiToolVerdict.Allowed)
         assertTrue(verdict("list_files", "path" to "src") is AiToolVerdict.Allowed)

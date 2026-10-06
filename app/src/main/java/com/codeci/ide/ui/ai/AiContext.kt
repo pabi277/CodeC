@@ -261,9 +261,21 @@ object AiContextBuilder {
             .dropWhile { it.isBlank() }
             .dropLastWhile { it.isBlank() }
         if (!failed || cleaned.isEmpty()) return AiContextResult.Refused(AiContextProblem.NO_FAILED_RUN)
+        // Phase 96 — **the same value-level guard the tool route already has.**
+        // `read_run_output` redacts before the model sees a build line, while the
+        // *Explain last error* card handed the very same panel text over raw: the
+        // route the owner reaches by tapping was the weaker one. A run output is
+        // the app's pick, not the user's (a selection is his own and the preview
+        // shows it word-for-word), and a build line can carry a credential —
+        // `pip install https://user:token@host/…`, a test that printed an env
+        // value, a stack trace with a signed URL. [AiSecretScan] runs here,
+        // BEFORE the budget is measured, so the one-request ceiling still holds
+        // exactly and the preview is the sent bytes (D4); its `[withheld: N]`
+        // line travels with it, so the withholding is disclosed, not hidden.
+        val scrubbed = AiSecretScan.redact(cleaned.joinToString("\n")).text.split('\n')
 
-        var truncated = cleaned.size > AiLimits.MAX_OUTPUT_LINES
-        val kept = ArrayDeque(cleaned.takeLast(AiLimits.MAX_OUTPUT_LINES))
+        var truncated = scrubbed.size > AiLimits.MAX_OUTPUT_LINES
+        val kept = ArrayDeque(scrubbed.takeLast(AiLimits.MAX_OUTPUT_LINES))
         while (kept.size > 1 && kept.sumOf { it.length + 1 } > AiLimits.MAX_CONTEXT_CHARS) {
             kept.removeFirst()
             truncated = true

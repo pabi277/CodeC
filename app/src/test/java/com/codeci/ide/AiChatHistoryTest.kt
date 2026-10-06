@@ -82,10 +82,55 @@ class AiChatHistoryTest {
     }
 
     @Test fun `titleOf clips long questions and uses New-chat for an empty session`() {
-        assertEquals("New chat", AiChatHistory.titleOf(AiChatSession.EMPTY))
         val long = "a".repeat(AiChatHistoryLimits.MAX_TITLE_CHARS + 40)
         val t = AiChatHistory.titleOf(turn(long))
+        assertEquals("New chat", AiChatHistory.titleOf(AiChatSession.EMPTY))
         assertTrue("clipped: $t", t.endsWith("…"))
         assertTrue("length bounded ${t.length}", t.length <= AiChatHistoryLimits.MAX_TITLE_CHARS)
+    }
+
+    // ---- Phase 96: what the drawer draws ----------------------------------
+
+    @Test fun `summaries mark exactly one row current, and none after a new chat`() {
+        // The mark is how a drawer of four rows answers "where am I". It is a
+        // property of the history, never a stored flag on the row, so a switch
+        // moves it and nothing can leave two rows marked.
+        val alpha = AiChatHistory.EMPTY.withCurrent(turn("alpha"), false)
+        assertEquals(listOf(true), alpha.summaries().map { it.current })
+        val both = alpha.beginNew().withCurrent(turn("beta"), false)
+        assertEquals("newest first, and only it is current", listOf(true, false), both.summaries().map { it.current })
+        val back = both.switchTo(alpha.currentId!!)
+        assertEquals("the mark follows the switch", listOf(false, true), back.summaries().map { it.current })
+        assertTrue("a fresh chat marks nothing", both.beginNew().summaries().none { it.current })
+    }
+
+    @Test fun `archiving one chat never edits another`() {
+        // The ordering bug Phase 96 fixed showed up here as a legal-looking call:
+        // `withCurrent` may only touch the entry the history points at. If a
+        // settle ever ran with a different `currentId`, the previous
+        // conversation's last exchange would be appended to the chat being
+        // switched TO — the merge the drawer promises never to do.
+        val alpha = AiChatHistory.EMPTY.withCurrent(turn("alpha"), false)
+        val alphaId = alpha.currentId!!
+        val beta = alpha.beginNew().withCurrent(turn("beta"), false)
+        val betaId = beta.currentId!!
+        val settled = beta.withCurrent(turn("beta").addAssistant("answered", AiProviderId.GEMINI, "m"), true)
+        assertEquals("beta grew, alpha did not", 2, settled.entries.first { it.id == betaId }.session.turns.size)
+        assertEquals(1, settled.entries.first { it.id == alphaId }.session.turns.size)
+        assertEquals("alpha", settled.entries.first { it.id == alphaId }.title())
+    }
+
+    @Test fun `the drawer has a row as soon as the first exchange lands`() {
+        // Phase 96 round 2, the owner: *"when I started chat. It doesn't
+        // automatically create the chat history instantly. After opening a new
+        // chat, it creates the history so fix it."* The row is the settle's own
+        // doing — no New chat, no switch and no second question has to happen
+        // first. An empty conversation still draws nothing, so a project whose
+        // chat was never used keeps an empty drawer.
+        assertTrue("nothing asked, nothing to show", AiChatHistory.EMPTY.withCurrent(AiChatSession.EMPTY, false).summaries().isEmpty())
+        val asked = AiChatHistory.EMPTY.withCurrent(turn("what is onCreate"), taskCommitted = true)
+        assertEquals(1, asked.summaries().size)
+        assertEquals("what is onCreate", asked.summaries().first().title)
+        assertTrue("and it is the one on screen", asked.summaries().first().current)
     }
 }
