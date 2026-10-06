@@ -333,10 +333,14 @@ class Phase96WiringTest {
         for (i in lines.indices) {
             if (lines[i].trim() != "recordFinish()") continue
             stamped++
-            assertTrue(
-                "every terminal task is filed as well as measured",
-                lines.drop(i + 1).take(4).any { it.trim() == "commitFinishedTask()" }
-            )
+            // The NEXT STATEMENT, not the next few lines: this pin was first
+            // written as a four-line window and walked into its own comment, so
+            // CI read it as a failure. A comment must never be able to break a
+            // guard by getting longer.
+            val next = lines.drop(i + 1).firstOrNull {
+                val t = it.trim(); t.isNotEmpty() && !t.startsWith("//") && !t.startsWith("*")
+            }?.trim()
+            assertTrue("every terminal task is filed as well as measured", next == "commitFinishedTask()")
         }
         assertEquals("three terminal writes in the streaming and agent paths", 3, stamped)
     }
