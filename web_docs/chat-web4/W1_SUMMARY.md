@@ -93,3 +93,25 @@ chapter step validation remain W3.2/W4.2, not falsely completed during W1.
 Owner reviews W1. Fix W1 feedback if requested; otherwise **Start W2** authorizes
 Install + Start. No automatic phase advancement; no PR creation, merge, PR42
 closure or deployment without a separate command. Open O1/O2/O3/O5/O7 remain.
+
+## Phone-only review download — 2026-10-07 follow-up
+
+The owner's screenshot showed the archive in Arena's **changes list**, without
+a usable per-file download. Earlier direct sandbox URL also returned403: missing
+traffic access token. Do not ask the owner for a token or repeat that direct URL
+as a normal public preview. Existing code is unchanged; Pages preparation is
+**paused** on the owner's request to review downloaded files before merging.
+
+A small review artifact is now intentionally checked in alongside this record:
+[CodeC-website-W1.zip](CodeC-website-W1.zip) (11,400 bytes). It contains exactly
+index.html, style.css and favicon.svg at archive root, byte-for-byte from website/
+on W1 commit0d16467. CRC/readback checks passed; no app/repo contents included.
+Download from the session branch on GitHub (raw URL), then on phone:
+CodeC → Projects → + → Import ZIP → open index.html → RUN. No merge/deploy/server
+is needed. Only Home is implemented; the nine future page URLs remain deferred.
+
+Archive is a **W1 review snapshot**, not the canonical source or a build step.
+Future code edits must refresh it if offering it again, or label it historical.
+Review source CI37518457228 was re-verified success on0d16467. This archive/docs
+follow-up triggers normal branch CI automatically; no manual dispatch, no PR,
+merge, Pages setting/publication or app workflow change.

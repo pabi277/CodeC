@@ -73,6 +73,17 @@ Phase 96 PR #115 actually merged at **0edf4dd**, not its earlier main baseline
 Level 13 local/on-device model postponed, nothing scaffolded; Level 14 unauthorized.
 Next free app phase **97**. Re-check git/gh and app NEXT_STEPS before trusting this.
 
+### Phone-review follow-up — 2026-10-07
+
+Owner paused deployment preparation and wants a download before merge. Raw sandbox
+preview requires a traffic-access header; never offer it as an unauthenticated
+public link or ask for tokens. Mobile Arena showed the ZIP only in the changes
+list. A review copy of website/ is therefore stored at
+`web_docs/chat-web4/CodeC-website-W1.zip` on the session branch for a direct GitHub
+download: three files at ZIP root, import in CodeC → index.html → RUN. Snapshot
+matches W1 source0d16467 (CI37518457228 success). No site/app code changed.
+No PR/merge/deploy authorized; wait for review feedback.
+
 ## What we are building
 
 Public website for CodeC Android C IDE, two wings:

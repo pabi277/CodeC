@@ -12,6 +12,16 @@
 > [Reconciliation](chat-web3/SUMMARY.md) · [W1 record](chat-web4/W1_SUMMARY.md) ·
 > [checks](chat-web4/W1_CHECKS.md) · [chrome](chat-web4/W1_CHROME.md).
 
+## Phone review update — 2026-10-07
+
+**Deployment preparation PAUSED.** The owner wants to review downloads before
+merge. Arena's raw sandbox URL requires a traffic-access header, and the phone
+changes panel didn't expose an individual ZIP download. Use the GitHub-hosted
+[W1 review ZIP](chat-web4/CodeC-website-W1.zip): just index/style/favicon, no code
+changes; import ZIP into CodeC and RUN index.html. Canonical source remains website/.
+The snapshot matches **0d16467**, whose Build APK **37518457228 is success**.
+No PR/merge/publish authorization; the earlier preparation-only choice is paused.
+
 ## Verified GitHub baseline (re-check before next work)
 
 - Remote main/checkout base **d4231f0**; PR #116 merged, release app-v1.3.18 published.

@@ -212,3 +212,15 @@ claim. Source ledger, chrome pattern and detailed checks in
 [W1_CHROME.md](chat-web4/W1_CHROME.md), [W1_CHECKS.md](chat-web4/W1_CHECKS.md).
 Session push runs existing app CI; actual run state belongs to NEXT_STEPS/final
 report. **No PR, merge or deployment; next phase waits for StartW2.**
+
+
+**23. Phone review without merging (2026-10-07).** The direct sandbox link failed
+with403/missing traffic token. Repeated Arena attachment presentation didn't give
+the owner a download: his screenshot shows only the changes list. He chose
+preparation-only for a possible Pages preview, then paused that to review a local
+copy. Solution: publish the 11,400-byte W1 review ZIP as an ordinary **session-branch
+file** in chat-web4, not a Release or Pages deployment. Its three entries exactly
+match website/ at0d16467; ZIP CRC/readback checked, CI37518457228 success for that
+source. Download raw file from GitHub → CodeC Import ZIP → index.html → RUN.
+No source/app/workflow change, no PR/merge/deployment. The archive is explicitly
+a W1 snapshot; future site changes must not silently present it as current.
