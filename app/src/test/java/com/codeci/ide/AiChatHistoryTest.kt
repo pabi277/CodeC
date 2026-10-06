@@ -119,4 +119,18 @@ class AiChatHistoryTest {
         assertEquals(1, settled.entries.first { it.id == alphaId }.session.turns.size)
         assertEquals("alpha", settled.entries.first { it.id == alphaId }.title())
     }
+
+    @Test fun `the drawer has a row as soon as the first exchange lands`() {
+        // Phase 96 round 2, the owner: *"when I started chat. It doesn't
+        // automatically create the chat history instantly. After opening a new
+        // chat, it creates the history so fix it."* The row is the settle's own
+        // doing — no New chat, no switch and no second question has to happen
+        // first. An empty conversation still draws nothing, so a project whose
+        // chat was never used keeps an empty drawer.
+        assertTrue("nothing asked, nothing to show", AiChatHistory.EMPTY.withCurrent(AiChatSession.EMPTY, false).summaries().isEmpty())
+        val asked = AiChatHistory.EMPTY.withCurrent(turn("what is onCreate"), taskCommitted = true)
+        assertEquals(1, asked.summaries().size)
+        assertEquals("what is onCreate", asked.summaries().first().title)
+        assertTrue("and it is the one on screen", asked.summaries().first().current)
+    }
 }

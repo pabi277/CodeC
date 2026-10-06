@@ -21,6 +21,14 @@ Six fixes and one read-power change, all of them things a screenshot cannot show
 - [ ] **P10.** Ask something that names a folder, e.g. *"find every place `malloc` appears in src/, ignore markdown"*. In the agent's step timeline the row reads `search_project "malloc" in src/ *.md` (or whatever you asked to narrow to) — **the scope is shown, not hidden** — and the answer it quotes back comes only from that folder.
 - [ ] **P11.** Ask for a scope the project does not have (`in docs/`). The step shows a **refusal naming the reason** (`docs/ holds no code or text file in this project`), not an empty result — the model is told the folder is missing rather than concluding your code is absent. A plain search with no scope behaves exactly as in Phase 94.
 
+## Round 2 — the three first-run rows he reported
+- [ ] **R1.** Uninstall and reinstall (or bump the welcome version) so the welcome card shows again. Open the AI: the card must come up on the **whole screen**, and **"I understand — start" must be visible without scrolling**. The four bullets may run long on a small phone — they scroll under the button; the button never does.
+- [ ] **R2.** Tap "I understand — start". The chat opens at the **same full height** — no small strip above dead space. The composer, the chips and the hint are all on screen at once.
+- [ ] **R3.** Ask one question and wait for the answer. **Open the drawer before doing anything else** — the row for this chat must already be there, titled with your question, with the ✓ on it. No New chat, no project switch, no second question first.
+- [ ] **R4.** Tap ⌄ (or drag the handle down) to HALF, then ask a second question: the answer still shares the screen with the code the way Phase 77 decided — the full-height rule is only about *opening* with nothing beside you, and your own gesture always wins.
+- [ ] **R5.** Stop a streaming answer mid-reply (⏹/Stop). The question and the part that arrived are in the conversation **and** the drawer row exists for it.
+- [ ] **R6.** Search scoping on the phone: ask *"where is `malloc` used in src/, ignore markdown"* and check the step row says `search_project "malloc" in src/ *.md`.
+
 ## Safety untouched
 - [ ] **P12.** A proposed edit still arrives as a diff card with Apply / Reject, nothing applies itself, and a run request still waits for your **Run** tap.
 - [ ] **P13.** The welcome card still appears on a fresh install and hides the composer until *I understand — start*; the *Grant access* row still appears under a refused write even before you accept the welcome.

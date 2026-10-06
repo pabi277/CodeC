@@ -1650,50 +1650,67 @@ private fun BottomBar(
  */
 @Composable
 private fun WelcomeCard(onAccept: () -> Unit) {
+    // Phase 96 round 2 (the owner's round: *"the apps welcoming page is open half
+    // screen. That is very unfriendly. I have to scroll down to click. I
+    // understand but for new user, it will be difficult"*) — the agreement is the
+    // **door**, so its handle is pinned outside the scrolling part: the four
+    // bullets scroll under it, and "I understand — start" is on screen at every
+    // sheet height, on every phone, with or without the keyboard. The sheet also
+    // opens FULL while the card is up ([AiSheetPolicy.needsFullRoom]) — this is
+    // the belt to that brace, because a first-run screen must never need a
+    // discovery to get through.
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(CodecTokens.space(Space.L)),
         verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))
     ) {
-        // Round sparkle icon, same brand mark as the header but bigger and in a
-        // soft circle — the ChatGPT screenshot's hero treatment.
-        Box(
+        Column(
             Modifier
-                .size(CodecTokens.space(Space.XXL))
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))
         ) {
-            Icon(
-                Icons.Filled.AutoFixHigh,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
-            )
-        }
-        Text(AiCopy.WELCOME_TITLE, style = MaterialTheme.typography.headlineSmall)
-        Text(AiCopy.WELCOME_SUBTITLE, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        HorizontalDivider()
-
-        Text(AiCopy.WELCOME_AGREEMENT_TITLE, style = MaterialTheme.typography.titleMedium)
-        AiCopy.WELCOME_AGREEMENT_BODY.forEach { line ->
-            Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+            // Round sparkle icon, same brand mark as the header but bigger and in
+            // a soft circle — the ChatGPT screenshot's hero treatment.
+            Box(
+                Modifier
+                    .size(CodecTokens.space(Space.XXL))
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    Icons.Filled.Check,
+                    Icons.Filled.AutoFixHigh,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .padding(top = CodecTokens.space(Space.XXS))
-                        .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
                 )
-                Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            }
+            Text(AiCopy.WELCOME_TITLE, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                AiCopy.WELCOME_SUBTITLE,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
+            Text(AiCopy.WELCOME_AGREEMENT_TITLE, style = MaterialTheme.typography.titleMedium)
+            AiCopy.WELCOME_AGREEMENT_BODY.forEach { line ->
+                Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(top = CodecTokens.space(Space.XXS))
+                            .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                    )
+                    Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                }
             }
         }
-
-        Spacer(Modifier.height(CodecTokens.space(Space.S)))
         Button(
             onClick = onAccept,
             modifier = Modifier.fillMaxWidth(),

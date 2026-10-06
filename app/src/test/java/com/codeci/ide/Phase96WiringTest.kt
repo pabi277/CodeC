@@ -282,6 +282,65 @@ class Phase96WiringTest {
         assertTrue("the header names the scope it applied", search.contains(dollar + "scope —"))
     }
 
+    // ---- round 2: the room the first screens need ---------------------------
+
+    @Test
+    fun `the welcome card pins its button outside the scrolling copy`() {
+        val card = between(src("AiChatSheet.kt"), "private fun WelcomeCard", "// ---- Phase 95: the history drawer")
+        assertEquals("one scroll area, and it holds only the copy", 1, card.split("verticalScroll(").size - 1)
+        assertTrue("the copy column gives way to the button", card.contains(".weight(1f)"))
+        assertTrue(
+            "the accept button is drawn after the scroll area closes",
+            card.indexOf("Button(") > card.indexOf("verticalScroll(")
+        )
+    }
+
+    @Test
+    fun `the sheet asks the policy for its room, in the ViewModel and on accept`() {
+        val vm = src("AiViewModel.kt")
+        val open = between(vm, "fun openSheet(", "fun sheetEvent(")
+        assertTrue(
+            "opening hands the policy both facts it decides on",
+            open.contains("s.welcomeAccepted, s.session.turns.size")
+        )
+        assertTrue(
+            "accepting the agreement does not drop him back into a strip",
+            vm.contains("AiSheetPolicy.needsFullRoom(true, it.session.turns.size)")
+        )
+        val policy = src("AiSheetPolicy.kt")
+        assertTrue("one rule, in the policy — not a second model", policy.contains("fun needsFullRoom(welcomeAccepted: Boolean, turns: Int)"))
+        assertTrue(
+            "a conversation with turns still answers the Phase 77 variants",
+            policy.contains("conflict == AiOutputConflict.REPLACE_OUTPUT -> AiSheetState.HALF to true")
+        )
+    }
+
+    /**
+     * The drawer row used to appear only when something *looked* for the settled
+     * task (✕, New chat, a switch, the next Send). Now every terminal phase write
+     * files it, so the pins are about the shape of that set: five bare calls, and
+     * every measured end of a task is also a filing.
+     */
+    @Test
+    fun `a settled task is filed where it settles, not when the next question needs it`() {
+        val lines = src("AiViewModel.kt").lines()
+        assertEquals(
+            "finishAgent, finalizeStop, send, stop and clear each file the task",
+            5,
+            lines.count { it.trim() == "commitFinishedTask()" }
+        )
+        var stamped = 0
+        for (i in lines.indices) {
+            if (lines[i].trim() != "recordFinish()") continue
+            stamped++
+            assertTrue(
+                "every terminal task is filed as well as measured",
+                lines.drop(i + 1).take(4).any { it.trim() == "commitFinishedTask()" }
+            )
+        }
+        assertEquals("three terminal writes in the streaming and agent paths", 3, stamped)
+    }
+
     /**
      * The tool list is written twice — the sentence the model is taught and the
      * sentence the owner previews — and validated in a third place. A tool that

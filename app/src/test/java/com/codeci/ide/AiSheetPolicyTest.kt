@@ -77,6 +77,40 @@ class AiSheetPolicyTest {
         }
     }
 
+    // ---- Phase 96 round 2: the room a first-run chat needs ------------------
+
+    @Test
+    fun `the agreement and an empty chat take the whole room`() {
+        // The owner's round: the welcome was in a half sheet he had to scroll to
+        // accept, and the chat it handed over sat in a strip above dead space.
+        // A conversation with turns is the Phase 77 rule, untouched.
+        assertTrue(AiSheetPolicy.needsFullRoom(welcomeAccepted = false, turns = 0))
+        assertTrue(AiSheetPolicy.needsFullRoom(welcomeAccepted = false, turns = 5))
+        assertTrue(AiSheetPolicy.needsFullRoom(welcomeAccepted = true, turns = 0))
+        assertFalse(AiSheetPolicy.needsFullRoom(welcomeAccepted = true, turns = 1))
+    }
+
+    @Test
+    fun `opening with nothing to share the room is FULL in both Output variants`() {
+        for (c in AiOutputConflict.values()) {
+            assertEquals(
+                "an agreement is never half on screen",
+                AiSheetState.FULL to false,
+                AiSheetPolicy.openWithOutput(c, outputOpen = false, welcomeAccepted = false)
+            )
+            assertEquals(
+                "an empty chat is never a strip",
+                AiSheetState.FULL to false,
+                AiSheetPolicy.openWithOutput(c, outputOpen = true, turns = 0)
+            )
+        }
+        assertEquals(
+            "a real conversation still shares the screen (variant A)",
+            AiSheetState.HALF to true,
+            AiSheetPolicy.openWithOutput(AiOutputConflict.REPLACE_OUTPUT, outputOpen = true, turns = 2)
+        )
+    }
+
     @Test
     fun `the Output panel is off screen while the sheet is up and returns when it is put away`() {
         assertTrue(AiSheetPolicy.outputVisible(outputExpanded = true, sheet = AiSheetState.HIDDEN))

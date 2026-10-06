@@ -105,12 +105,36 @@ object AiSheetPolicy {
     }
 
     /**
+     * Phase 96 round 2 (the owner's device round: *"the apps welcoming page is
+     * open half screen. That is very unfriendly. I have to scroll down to
+     * click… it opens at very small space app above the house screen, and below
+     * Nothing"*) — the room a chat needs **before there is anything to compare it
+     * with**. HALF exists so the code on screen stays visible beside an answer;
+     * while the agreement is on screen, or while the conversation has no turns
+     * yet, there is nothing beside it, and a card the owner has to scroll to
+     * accept is a door, not a welcome. So those two states take the whole room.
+     *
+     * This decides only how a closed sheet **opens** and what accepting the
+     * agreement lands on: his own ⤢/▾/handle drag always wins afterwards, and a
+     * conversation with turns keeps the Phase 77 rule untouched.
+     */
+    fun needsFullRoom(welcomeAccepted: Boolean, turns: Int): Boolean =
+        !welcomeAccepted || turns <= 0
+
+    /**
      * Opening while the Output panel is [outputOpen]. With it closed the
-     * answer is always HALF, in either variant.
+     * answer is always HALF, in either variant — unless [needsFullRoom] says the
+     * sheet has nothing to share the screen with.
      * Returns the sheet state to open in, and whether the Output panel must
      * make room (be hidden while the sheet is up; it returns on minimize).
      */
-    fun openWithOutput(conflict: AiOutputConflict, outputOpen: Boolean): Pair<AiSheetState, Boolean> = when {
+    fun openWithOutput(
+        conflict: AiOutputConflict,
+        outputOpen: Boolean,
+        welcomeAccepted: Boolean = true,
+        turns: Int = 1
+    ): Pair<AiSheetState, Boolean> = when {
+        needsFullRoom(welcomeAccepted, turns) -> AiSheetState.FULL to false
         !outputOpen -> AiSheetState.HALF to false
         conflict == AiOutputConflict.REPLACE_OUTPUT -> AiSheetState.HALF to true
         else -> AiSheetState.FULL to false

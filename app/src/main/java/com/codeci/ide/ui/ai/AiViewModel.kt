@@ -328,7 +328,15 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     fun openSheet(outputOpen: Boolean) {
         _state.update { s ->
             if (s.sheet != AiSheetState.HIDDEN) s
-            else s.copy(sheet = AiSheetPolicy.openWithOutput(s.outputConflict, outputOpen).first)
+            else s.copy(
+                // Phase 96 round 2 — the welcome card and an empty chat take the
+                // whole room (the owner: *"I have to scroll down to click"*, *"it
+                // opens at very small space app above the house screen, and below
+                // Nothing"*). HALF is for a conversation with code beside it.
+                sheet = AiSheetPolicy.openWithOutput(
+                    s.outputConflict, outputOpen, s.welcomeAccepted, s.session.turns.size
+                ).first
+            )
         }
     }
 
@@ -636,7 +644,18 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
     fun acceptWelcome() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { store.acceptWelcome() }
-            _state.update { it.copy(welcomeAccepted = true) }
+            _state.update {
+                it.copy(
+                    welcomeAccepted = true,
+                    // The card he just left was drawn in that half slot; the
+                    // empty chat must not stay in it (round 2, same rule).
+                    sheet = if (AiSheetPolicy.needsFullRoom(true, it.session.turns.size)) {
+                        AiSheetState.FULL
+                    } else {
+                        it.sheet
+                    }
+                )
+            }
         }
     }
 
@@ -1979,6 +1998,11 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         }
         // Phase 89: the agent task is complete — stamp the numbers.
         recordFinish()
+        // Phase 96 round 2 — a task that is terminal is filed NOW, into the
+        // conversation and into the drawer. It used to be filed only when ✕,
+        // New chat, a project switch or the next Send looked for it, so the
+        // drawer stayed empty while a finished answer sat on screen.
+        commitFinishedTask()
         // Phase 93c — **the wall that made the agent look unable to write.**
         //
         // A `modify` can only be diffed against content the parse already holds,
@@ -2128,6 +2152,11 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         // complete — a stopped task is measured, not erased (the Level 12 matrix
         // has a Stop row). The numbers still die with the next Send (D6).
         recordFinish()
+        // Phase 96 round 2 — a task that is terminal is filed NOW, into the
+        // conversation and into the drawer. It used to be filed only when ✕,
+        // New chat, a project switch or the next Send looked for it, so the
+        // drawer stayed empty while a finished answer sat on screen.
+        commitFinishedTask()
     }
 
     /** The only path to a helper request: the user pressed Send on a preview. */
@@ -2261,6 +2290,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             }
             // Phase 89: the request is over — total time and one heap sample.
             recordFinish()
+            // Phase 96 round 2 — filed the moment it settles, not on the next
+            // question (the owner's round: no history row until a new chat).
+            commitFinishedTask()
         }
     }
 
@@ -2308,6 +2340,9 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+        // Phase 96 round 2 — what arrived before a Stop is a real exchange, and
+        // it belongs in the conversation and the drawer as soon as it is there.
+        commitFinishedTask()
     }
 
     /** "Try again" goes back through the preview: every request is confirmed (D4). */
