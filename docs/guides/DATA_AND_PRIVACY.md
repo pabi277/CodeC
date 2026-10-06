@@ -56,7 +56,7 @@ not blocked. **Settings → About → Replay the CodeC introduction** shows the 
 again on the next launch. The full permission table and
 the implementation behind every claim remain below.
 
-## CodeC AI (Phases 76–86 / 82B) — what it sends, where, and what it keeps
+## CodeC AI (Phases 76–96 / 82B) — what it sends, where, and what it keeps
 
 AI is optional, set up in ✨ home and used in the floating button's chat sheet.
 **Your own** provider key is required. Gemini is the default; NVIDIA Build is an
@@ -138,6 +138,32 @@ adult/terms confirmation. There is no bundled/shared key or remote proxy.
   Google `AIza…` / NVIDIA `nvapi-…` shapes from included log/crash text. No key
   is placed in AiUiState, URLs, prompts, project files or app logs. Reports still
   leave only when you choose to share them; inspect before sharing.
+- **Drawer and first-run agreement — in memory, titles only (Phase 95).**
+  `ui/ai/AiChatHistory.kt` keeps up to 20 conversations **per project, this
+  session**: a drawer row is an `AiChatSummary` — a title clipped to 48
+  characters plus a pin flag, no message text — and the whole map dies with the
+  process. The first-run agreement (`AiCopy.WELCOME_AGREEMENT_BODY`, shown once
+  per `AiKeyStore.WELCOME_VERSION`, its button `AiCopy.WELCOME_AGREE` pinned
+  outside the scrolling copy) is a UI agreement, **not** a permission: Send is
+  still the only road out, and D6 is unchanged — no file, no store, no log, no
+  backup.
+- **The *Explain last error* route redacts before it sends (Phase 96).**
+  `AiContextBuilder.fromRunOutput` now runs the same `ui/ai/AiSecretScan.kt`
+  guard the `read_run_output` tool runs, **before** the character budget, with
+  its `[withheld: N]` line surviving the tail-keep — so the route reached by
+  tapping is no longer the weaker one, and the preview shows the text that is
+  actually sent (D4).
+- **Scoped project search (Phase 96).** `search_project(query, max?, path?,
+  ext?)` takes `list_files`' scoping keys and validates them the same way —
+  `safeDirectoryPath`, the shared `EXT_PATTERN`, the admitted-path check — then
+  applies them to the walk's own admitted list, so a scope can only *narrow* it;
+  a scope that names nothing is refused rather than answered "not in your
+  project" (`ui/ai/AiTools.kt`, pinned by `Phase96WiringTest`).
+- **Preflight — the preview is the request (D4).** `AiViewModel.preview()`
+  builds the exact `AiPrompt` and renders it before anything is sent; the two
+  strings it shows are the two strings `GeminiRequest.body` sends. A changed
+  request needs a fresh preview and another Send: there is no hidden send path,
+  and the tool runner serves only what the policy admits (`AiToolRunner.kt`).
 
 Phase 86 adds the owner-authorized, bounded task-memory exception described
 above. Source implementation is on the session branch; local host pre-validation
@@ -148,6 +174,20 @@ provider/optimization state; [Phase 86](../phases/03-editor/chat-phase86/README.
 is the task-memory implementation and verification ledger. This does not claim
 successful Keystore/live-vendor/device acceptance or production NVIDIA
 entitlement.
+
+**Status update (2026-10-06, Phase 96):** the AI line is closed and on `main` —
+`ui/ai/` is free of `TODO`s, **3 436 unit tests / 0 failed** on CI, the owner
+**accepted Level 12** in chat (`"Pass"`) and **waived the device rounds**
+(`"skip the device tests"`); the safety rows those rounds carried are held by
+tests instead (`AiSecretScan`, the scrub-before-budget pin, the approval-path
+cases in `AiToolRunnerTest`/`AiToolProtocolTest`). The reversibles are unchanged
+on his `"No change"`: `read_diagnostics` declined, the read window default 400,
+history session-only under **D6**. The **on-device / local model (Level 13) is
+postponed as a future update** by his command — nothing scaffolded for it, and
+D6 is the first thing its future phase must settle; Level 14 stays
+unauthorized. Record: [`chat-phase96/README.md`](../phases/03-editor/chat-phase96/README.md)
+§7–§8, [`docs/roadmaps/ai-integration/13_OPTIONAL_ON_DEVICE_MODEL.md`](../roadmaps/ai-integration/13_OPTIONAL_ON_DEVICE_MODEL.md).
+The assistant ships to the release channel in **app-v1.3.18**.
 
 ## Permissions — every one, why, and the code that uses it
 

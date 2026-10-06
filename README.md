@@ -274,6 +274,50 @@ bridge UI — the engine is fully automatic): when a build actually needs the
 fallback, the Output Panel prints these same four steps
 ([TROUBLESHOOTING.md §27](docs/guides/TROUBLESHOOTING.md)).
 
+## AI assistant (your key, your rules)
+
+CodeC carries an **optional** AI assistant (Phases 76–96 / AI Levels 1–12). It
+stays idle until you bring your own provider key, and it is read-first by
+design.
+
+- **What it is.** A chat sheet you open from the ✨ rail slot or the floating ✨
+  button (`app/src/main/java/com/codeci/ide/ui/ai/AiHome.kt`,
+  `AiChatSheet.kt`). Google Gemini is the default provider; **NVIDIA Build** is
+  a manual selection labelled dev/test only (`AiProviders.kt`). CodeC hosts no
+  model, has no shared key and runs no proxy: each request leaves *your* phone
+  with *your* key, under that provider's terms.
+- **What it can read.** Only the project you have open, and only through
+  CodeC's own filter (`AiProjectFiles.kt`, `AiProjectReader.kt`). The agent's
+  tools are `list_files`, `search_project`, `read_file` and `read_files` (up to
+  8 files), plus the read-only structure results `find_files`, `outline_file`
+  and `read_run_output` (`AiTools.kt`). `search_project` takes `list_files`'
+  own scoping keys — `max`, `path`, `ext` — and can only narrow what the walk
+  already admitted. `.env`, `.npmrc`, private keys, `.git/`, `.codec/`, build
+  output and symlink escapes are refused before anything is sent.
+- **No write tool and no exec tool, by design.** `ui/ai/` contains zero direct
+  file writes and zero command execution. An edit arrives as a
+  `<<<CODEC_EDIT>>>` proposal drawn as a **diff you review**; only your
+  **Apply** writes it, through `ui/projects/AiEditApplier.kt`. A run request
+  reaches CodeC's normal **RUN ▶** pipeline only after you tap **Run** on the
+  approval card — Skip runs nothing (`AiToolRunner.kt`).
+- **Nothing is sent until you tap Send**, on a preview that shows the exact
+  strings the request will carry — and those two strings are what goes over the
+  wire (`AiViewModel.preview()` → `AiPrompt` → `GeminiRequest.body`). Raw chat
+  text is **never** written to a file, a store, a log or a backup (D6):
+  conversations and the drawer's rows live in memory, so **history is this
+  session only** (`AiChatHistory.kt`). Agents run under hard caps — 12 model
+  turns, 24 tool calls, 2 runs, 24 000-char reads, 8 000-char results, 8
+  batched reads (`AiAgentLoop.kt`, `AiTools.kt`) — and the nine controls in the
+  AI panel only tune *inside* those caps (`AiOptionsPolicy.kt`).
+- **What it costs you: your key, your bill, your provider.** The key is
+  encrypted with Android Keystore (AES-256-GCM) under `no_backup/ai/`, never
+  uploaded to CodeC and never carried by a backup (`AiKeyStore.kt`); support
+  exports scrub key-shaped strings (`AiSecretScan.kt`).
+
+How to use it, step by step: [docs/guides/AI.md](docs/guides/AI.md). What
+leaves the phone, where it goes and what is kept:
+[docs/guides/DATA_AND_PRIVACY.md](docs/guides/DATA_AND_PRIVACY.md).
+
 ## Troubleshooting
 
 > **New-chat prompt (paste this first):** [prompt.md](prompt.md).  

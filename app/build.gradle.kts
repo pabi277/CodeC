@@ -28,12 +28,12 @@ android {
     // `app-v<X.Y.Z>` must name this versionName, and the publish step refuses
     // a versionCode that is not strictly greater than every shipped one
     // (.github/workflows/build-apk.yml + docs/guides/RELEASE_NOTES.md).
-    versionCode = 21
+    versionCode = 22
     // The device round kept tripping over WHICH apk was installed (three
     // crash reports pasted from a stale build). The CI run number (or a
     // local timestamp) rides in versionName so Settings → About / app info
-    // answers it at a glance: "1.3.17 (340xxxx)".
-    versionName = "1.3.17" + (System.getenv("GITHUB_RUN_NUMBER")?.let { " ($it)" } ?: "")
+    // answers it at a glance: "1.3.18 (340xxxx)".
+    versionName = "1.3.18" + (System.getenv("GITHUB_RUN_NUMBER")?.let { " ($it)" } ?: "")
     // Phase 42.3 — the About row's BUILD date + provenance: a tester asking
     // "which build is this?" answers it from Settings → About, next to the
     // version name. UTC date: stable per day, no clock lies.
