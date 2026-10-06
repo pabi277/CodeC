@@ -1,5 +1,13 @@
 # Phase 96 — owner device round
 
+> **Status: SKIPPED by the owner — closed in chat 2026-10-06.** His answer to the round, verbatim: *"I don't have any objection with the agent system right now so you can skip the device tests"*.
+> Nothing below was run, so nothing below is ticked: this file's own law is that a row is either answered or empty,
+> and a waiver is not an observation. What stands in place of the round is the test suite — CI's
+> `:app:testDebugUnitTest`, **3 436 tests / 0 failed** on `d984697`, the 17 source pins in `Phase96WiringTest` for the
+> wiring no unit test can reach, `AiSheetPolicyTest` for the sheet rule and `AiChatHistoryTest` for the filing — plus
+> the green APK build with *no `android:debuggable`*. The read-power rows (P10, P11, R6) and the three round-2 shape
+> rows (R1–R3) are therefore **unverified on a phone by his choice**, not by oversight.
+
 Six fixes and one read-power change, all of them things a screenshot cannot show. Check them on the phone you already have (no reinstall needed); the Phase 95 round still stands for everything else. Empty by design — nothing here is pre-ticked.
 
 ## Project switch and history (the two ordering bugs)

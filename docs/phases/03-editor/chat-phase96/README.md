@@ -81,3 +81,18 @@ The round-2 pins: `AiSheetPolicyTest` 13→15 (the truth table, and that both Ou
 - No new permission, dependency, store key or Settings control. The welcome hub, the AI home and the one-arrow flow are untouched.
 - The local/on-device model plan stays **parked** — nothing was scaffolded for it.
 - No PR, no merge, no `main` push: the device round comes first.
+
+## 7. The owner's answers, 2026-10-06 — how this phase closed
+
+He answered the open list in chat, four lines, and every one of them is a decision rather than a bug report:
+
+| His answer | What it closed | Where it is written |
+|---|---|---|
+| *"I don't have any objection with the agent system right now so you can skip the device tests"* | **P1–P14, R1–R6 and Phase 95's D1–D11 are closed as waived** — not ticked, because they were not run; the rounds' headers now say so. Phase 94's table, never filled, is closed the same way. | [DEVICE_ROUND.md](DEVICE_ROUND.md), [../chat-phase95/DEVICE_ROUND.md](../chat-phase95/DEVICE_ROUND.md), [../chat-phase94/DEVICE_ROUND.md](../chat-phase94/DEVICE_ROUND.md) |
+| *"Pass"* | **Level 12 is accepted** — S2's fix rides Phase 93 §6, and T3-Gemini / T4-NVIDIA get no fix phase. Formal device acceptance is no longer postponed. | [../chat-phase89/DEVICE_ROUND.md](../chat-phase89/DEVICE_ROUND.md), [../chat-phase93/README.md](../chat-phase93/README.md) |
+| *"Wait"* | **No PR, no merge, no `main` push.** The branch stays as it is — `186d5ff`, CI green at `d984697` — until he says otherwise. One word opens it. | `rule.md` §3 |
+| *"No change"* | Every reversible stays as decided: `read_diagnostics` declined, the tool-list sentence stays hand-written with `Phase96WiringTest` comparing the three places, the read-window default stays **400**, history stays session-only under **D6**. | §3, §4, §6 |
+
+**And one thing moved forward:** the **local / on-device model** plan is **postponed as a future update** (*"the local llm phase will be a future update so postponed now"*) — recorded on [Level 13 of the roadmap](../../../roadmaps/ai-integration/13_OPTIONAL_ON_DEVICE_MODEL.md). It was already unbuilt; now it is also explicitly *not next*. Nothing in this phase, or anywhere in `ui/ai/`, loads, downloads, stubs or mentions a model file.
+
+**What is left in the AI line after these answers: the PR, and only the PR.** No code item is open — the six fixes and the three shape fixes are in and CI-green; the level acceptance is closed by his word; the parked and declined items stay parked and declined by his "No change". The next free phase number is **97** and it is unassigned: no phase is briefed, so the line is idle until he names the next thing.

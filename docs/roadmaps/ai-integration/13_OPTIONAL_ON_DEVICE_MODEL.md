@@ -2,6 +2,17 @@
 
 **Status: proposed; separate technical investigation required. Offline inference is optional.**
 
+> **POSTPONED by the owner, 2026-10-06 — a future update, not this one.** His words: *"the local llm phase will be a
+> future update so postponed now"*. The standing instruction from the same day keeps its full force until he lifts
+> it: **no in-device model loading, no weight download, no inference, no `llama.cpp` / MediaPipe-LLM / tflite
+> generation work, no model-file management, no download UI, no inference stubs** — and nothing in the app is
+> scaffolded toward any of that, so this level remains a document. His dependency is now satisfied — Level 12 was
+> accepted in chat on 2026-10-06 — so the only thing between this line and a phase is his command to open one.
+> When that day comes, **D6 is the first thing to settle** (a model file is not chat text, but where weights live,
+> who downloads them, how many gigabytes the user is asked to spend, and what happens on a lost download are owner
+> decisions, never defaults), followed by the storage, battery and first-token-latency questions this file already
+> lists as requiring a separate technical investigation.
+
 > **Renumbered 2026-10-02** from Level 6 → **Level 13**. The owner directed that the proposed agentic
 > optimization ([Levels 6–12](00_AGENTIC_MAP_AND_SECURITY_RULES.md)) be placed immediately after the
 > completed levels, with the not-yet-started levels moved after them. Content is unchanged; only the

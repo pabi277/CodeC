@@ -219,3 +219,6 @@ chat etc options"*.
    [`DEVICE_ROUND.md`](DEVICE_ROUND.md).
 4. **No PR, no merge, no `main` push** — unchanged; Level 12 acceptance is the owner's call, and this report is
    evidence, not a verdict.
+5. **2026-10-06 — the verdict came.** Answering the open list, the owner wrote **"Pass"** for Level 12: accepted, in
+   chat, without re-running anything. This file stays exactly the transcript it was — evidence, and now a verdict on
+   the same page.

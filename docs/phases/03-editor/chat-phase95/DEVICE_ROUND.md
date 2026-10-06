@@ -1,5 +1,11 @@
 # Phase 95 — owner device round
 
+> **Status: SKIPPED by the owner — 2026-10-06, same blanket answer as [Phase 96's round](../chat-phase96/DEVICE_ROUND.md)**
+> (*"I don't have any objection with the agent system right now so you can skip the device tests"*). Eleven rows, none run, none ticked. The two safety rows this round exists to check are not left to
+> luck: **D10** (secret redaction) is held by `AiSecretScan`'s own cases plus the pin that `AiContextBuilder.fromRunOutput`
+> is scrubbed *before* the budget, and **D11** (nothing applies itself, a run waits for his **Run** tap) is held by
+> `AiToolRunnerTest` and `AiToolProtocolTest`. **D6** was corrected in place, not by a device: one chat is one row.
+
 Check these on your phone with a fresh install (so the welcome appears):
 
 ## Welcome + agreement
