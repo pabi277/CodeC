@@ -17,28 +17,40 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,7 +59,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -103,6 +117,13 @@ fun AiChatSheet(
     onClear: () -> Unit,
     /** Phase 90 — start a fresh conversation: the task and the transcript both clear. */
     onNewChat: () -> Unit = {},
+    /** Phase 95 — the history drawer (menu icon, Pinned/Recents rows, New chat pill). */
+    onOpenHistory: () -> Unit = {},
+    onCloseHistory: () -> Unit = {},
+    onSwitchChat: (Long) -> Unit = {},
+    onToggleChatPin: (Long) -> Unit = {},
+    /** Phase 95 — the welcome + agreement one-tap accept. */
+    onAcceptWelcome: () -> Unit = {},
     /** Phase 91 — the simple/technical face. Display state only (D6). */
     onToggleMode: () -> Unit = {},
     /** Phase 92 — the self-check: five scripted checks, judged by the app, reported as text. */
@@ -164,81 +185,131 @@ fun AiChatSheet(
             .height(with(density) { (basePx - dragPx).coerceIn(0f, screenPx * AiSheetPolicy.LIVE_DRAG_MAX).toDp() })
     }
 
-    Surface(
-        modifier = modifier.then(sizeModifier),
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        shape = if (full) RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XS))
-        else RoundedCornerShape(
-            topStart = CodecTokens.radius(CodecTokens.Radius.L),
-            topEnd = CodecTokens.radius(CodecTokens.Radius.L)
-        ),
-        shadowElevation = CodecTokens.elevation(CodecTokens.Elevation.SHEET)
-    ) {
-        Column(Modifier.fillMaxSize()) {
-            // Handle + header are ONE drag target (72 dp tall): drag up → FULL, down → put away.
-            Column(
-                Modifier.pointerInput(basePx, screenPx) {
-                    detectVerticalDragGestures(
-                        onDragStart = { dragPx = 0f },
-                        onDragEnd = {
-                            val fraction = AiSheetPolicy.heightFractionAfterDrag(basePx, dragPx, screenPx)
-                            dragPx = 0f
-                            onDragEnd(fraction)
-                        },
-                        onDragCancel = { dragPx = 0f },
-                        onVerticalDrag = { change, dy ->
-                            change.consume()
-                            dragPx += dy
+    // Phase 95 — the history drawer state. ModalNavigationDrawer owns its own
+    // DrawerState, but open/close also flow through AiUiState.historyOpen so the
+    // header menu button and New-chat archiving can both open it without racing.
+    val drawerState = rememberDrawerState(if (state.historyOpen) DrawerValue.Open else DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(state.historyOpen) {
+        if (state.historyOpen && drawerState.isClosed) drawerState.open()
+        else if (!state.historyOpen && drawerState.isOpen) drawerState.close()
+    }
+
+    val sheetSurface: @Composable () -> Unit = {
+        Surface(
+            modifier = modifier.then(sizeModifier),
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            shape = if (full) RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XS))
+            else RoundedCornerShape(
+                topStart = CodecTokens.radius(CodecTokens.Radius.L),
+                topEnd = CodecTokens.radius(CodecTokens.Radius.L)
+            ),
+            shadowElevation = CodecTokens.elevation(CodecTokens.Elevation.SHEET)
+        ) {
+            // Phase 95 — the welcome + agreement. Until it is tapped the sheet
+            // shows one card and no composer: nothing is sent, no preview is built,
+            // and every action that would touch the network is still gated at
+            // Send (D4). Accept is one tap, this version only.
+            if (!state.welcomeAccepted) {
+                WelcomeCard(onAccept = onAcceptWelcome)
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    // Handle + header are ONE drag target (72 dp tall): drag up → FULL, down → put away.
+                    Column(
+                        Modifier.pointerInput(basePx, screenPx) {
+                            detectVerticalDragGestures(
+                                onDragStart = { dragPx = 0f },
+                                onDragEnd = {
+                                    val fraction = AiSheetPolicy.heightFractionAfterDrag(basePx, dragPx, screenPx)
+                                    dragPx = 0f
+                                    onDragEnd(fraction)
+                                },
+                                onDragCancel = { dragPx = 0f },
+                                onVerticalDrag = { change, dy ->
+                                    change.consume()
+                                    dragPx += dy
+                                }
+                            )
                         }
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(CodecTokens.space(Space.L) + CodecTokens.space(Space.XS))
+                                .semantics { contentDescription = AiCopy.DRAG_HANDLE },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                Modifier
+                                    .width(CodecTokens.space(Space.XXL))
+                                    .height(CodecTokens.space(Space.XS))
+                                    .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XS)))
+                                    .background(MaterialTheme.colorScheme.outlineVariant)
+                            )
+                        }
+                        Header(
+                            state.provider, state.model, state.mode, full,
+                            onExpand, onMinimize, onNewChat, onToggleMode,
+                            onOpenHistory = {
+                                onOpenHistory()
+                                scope.launch { drawerState.open() }
+                            }
+                        )
+                    }
+                    HorizontalDivider()
+                    Conversation(
+                        state, hasSelection, question, onCancelGather,
+                        onProposeEdits, onToggleEditFile, onApplyEdits, onRejectProposal,
+                        onUndoEdits, onDismissUndoConflict,
+                        onApproveRun, onSkipRun, onContinue, onAcceptBudget, onDeclineBudget,
+                        onAcceptBackup, onDeclineBackup, onRequestReview, lastRunCommand, runBusy,
+                        onSelfCheckNext = onSelfCheckNext,
+                        onSelfCheckStop = onSelfCheckStop,
+                        onSelfCheckReport = onSelfCheckReport,
+                        onSelfCheckLive = onSelfCheckLive,
+                        onGrantAccess = onGrantAccess,
+                        modifier = Modifier.weight(1f)
+                    )
+                    HorizontalDivider()
+                    BottomBar(
+                        state, hasSelection, question, onQuestionChange,
+                        onExplainSelection, onExplainError, onAskProject, onProposeEdits,
+                        onCancelGather, onSend, onCancelPreview,
+                        onStop, onRetry, onClear, onDismissNotice, onContinue,
+                        onSelfCheckStart = onSelfCheckStart,
+                        onGrantAccess = onGrantAccess
                     )
                 }
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(CodecTokens.space(Space.L) + CodecTokens.space(Space.XS))
-                        .semantics { contentDescription = AiCopy.DRAG_HANDLE },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        Modifier
-                            .width(CodecTokens.space(Space.XXL))
-                            .height(CodecTokens.space(Space.XS))
-                            .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XS)))
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    )
-                }
-                Header(
-                    state.provider, state.model, state.mode, full,
-                    onExpand, onMinimize, onNewChat, onToggleMode
-                )
             }
-            HorizontalDivider()
-            Conversation(
-                state, hasSelection, question, onCancelGather,
-                onProposeEdits, onToggleEditFile, onApplyEdits, onRejectProposal,
-                onUndoEdits, onDismissUndoConflict,
-                onApproveRun, onSkipRun, onContinue, onAcceptBudget, onDeclineBudget,
-                onAcceptBackup, onDeclineBackup, onRequestReview, lastRunCommand, runBusy,
-                onSelfCheckNext = onSelfCheckNext,
-                onSelfCheckStop = onSelfCheckStop,
-                onSelfCheckReport = onSelfCheckReport,
-                onSelfCheckLive = onSelfCheckLive,
-                onGrantAccess = onGrantAccess,
-                modifier = Modifier.weight(1f)
-            )
-            HorizontalDivider()
-            BottomBar(
-                state, hasSelection, question, onQuestionChange,
-                onExplainSelection, onExplainError, onAskProject, onProposeEdits,
-                onCancelGather, onSend, onCancelPreview,
-                onStop, onRetry, onClear, onDismissNotice, onContinue,
-                onSelfCheckStart = onSelfCheckStart,
-                onGrantAccess = onGrantAccess
-            )
         }
     }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = state.welcomeAccepted,
+        drawerContent = {
+            HistoryDrawer(
+                summaries = state.history.summaries(),
+                onSwitch = { id ->
+                    scope.launch { drawerState.close() }
+                    onCloseHistory()
+                    onSwitchChat(id)
+                },
+                onTogglePin = onToggleChatPin,
+                onNewChat = {
+                    onNewChat()
+                    scope.launch { drawerState.close() }
+                    onCloseHistory()
+                },
+                onClose = {
+                    scope.launch { drawerState.close() }
+                    onCloseHistory()
+                }
+            )
+        },
+        content = sheetSurface
+    )
 }
 
 @Composable
@@ -250,7 +321,8 @@ private fun Header(
     onExpand: () -> Unit,
     onMinimize: () -> Unit,
     onNewChat: () -> Unit,
-    onToggleMode: () -> Unit
+    onToggleMode: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     val simple = mode == AiChatMode.SIMPLE
     // Phase 90: New chat is destructive to the conversation, so it asks first —
@@ -274,15 +346,17 @@ private fun Header(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = CodecTokens.space(Space.L)),
+            .padding(horizontal = CodecTokens.space(Space.S)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            Icons.Filled.AutoFixHigh,
-            contentDescription = null,
-            modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
-        )
-        Spacer(Modifier.width(CodecTokens.space(Space.S)))
+        // Phase 95 — the drawer menu, in the corner like the ChatGPT screenshot.
+        IconButton(onClick = onOpenHistory, modifier = Modifier.semantics { contentDescription = AiCopy.DRAWER_OPEN }) {
+            Icon(
+                Icons.Filled.Menu,
+                contentDescription = AiCopy.DRAWER_OPEN,
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+            )
+        }
         Text(
             // Phase 91 — the simple face names who answers, without the model id.
             if (simple) AiCopy.sheetTitleSimple(provider) else AiCopy.sheetTitle(provider, model),
@@ -1548,6 +1622,195 @@ private fun BottomBar(
                     onDismissNotice, onExplainSelection, onAskProject
                 )
             }
+        }
+    }
+}
+
+// ---- Phase 95: Welcome + agreement ----------------------------------------
+
+/**
+ * The welcome screen that shows when the owner opens the AI for the first time
+ * after install (or after the agreement copy is bumped). One tap to accept,
+ * one tap to close the sheet. Nothing leaves the device before Accept and
+ * before Send (D4), and the composer is not drawn until after Accept — so the
+ * agreement cannot be scrolled past, and it cannot be confused with a permission.
+ */
+@Composable
+private fun WelcomeCard(onAccept: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(CodecTokens.space(Space.L)),
+        verticalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.M))
+    ) {
+        // Round sparkle icon, same brand mark as the header but bigger and in a
+        // soft circle — the ChatGPT screenshot's hero treatment.
+        Box(
+            Modifier
+                .size(CodecTokens.space(Space.XXL))
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.AutoFixHigh,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV))
+            )
+        }
+        Text(AiCopy.WELCOME_TITLE, style = MaterialTheme.typography.headlineSmall)
+        Text(AiCopy.WELCOME_SUBTITLE, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        HorizontalDivider()
+
+        Text(AiCopy.WELCOME_AGREEMENT_TITLE, style = MaterialTheme.typography.titleMedium)
+        AiCopy.WELCOME_AGREEMENT_BODY.forEach { line ->
+            Row(horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(Space.S))) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(top = CodecTokens.space(Space.XXS))
+                        .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+                )
+                Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            }
+        }
+
+        Spacer(Modifier.height(CodecTokens.space(Space.S)))
+        Button(
+            onClick = onAccept,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) { Text(AiCopy.WELCOME_AGREE) }
+    }
+}
+
+// ---- Phase 95: the history drawer -----------------------------------------
+
+/**
+ * Pinned / Recents rows and a New-chat pill, in the same shape the owner
+ * screenshot'd. The rows carry titles only — never message text (a drawer row
+ * is a title, not a transcript), and a tap replaces the conversation whole.
+ */
+@Composable
+private fun HistoryDrawer(
+    summaries: List<AiChatSummary>,
+    onSwitch: (Long) -> Unit,
+    onTogglePin: (Long) -> Unit,
+    onNewChat: () -> Unit,
+    onClose: () -> Unit
+) {
+    ModalDrawerSheet(
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
+        drawerContentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            // Header: title + close + new-chat pill.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(CodecTokens.space(Space.M)),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    AiCopy.HISTORY,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Filled.Close, contentDescription = AiCopy.DRAWER_CLOSE)
+                }
+            }
+            // The Chat-shaped "New chat" pill: white outline, always at the top,
+            // exactly one tap.
+            OutlinedButton(
+                onClick = onNewChat,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = CodecTokens.space(Space.M))
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)))
+                Spacer(Modifier.width(CodecTokens.space(Space.S)))
+                Text(AiCopy.NEW_CHAT)
+            }
+            Spacer(Modifier.height(CodecTokens.space(Space.M)))
+
+            if (summaries.isEmpty()) {
+                Box(Modifier.fillMaxWidth().padding(CodecTokens.space(Space.L)), contentAlignment = Alignment.Center) {
+                    Text(
+                        AiCopy.HISTORY_EMPTY,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val pinned = summaries.filter { it.pinned }
+                val recents = summaries.filterNot { it.pinned }
+                LazyColumn(Modifier.weight(1f)) {
+                    if (pinned.isNotEmpty()) {
+                        item {
+                            SectionLabel(AiCopy.PINNED)
+                        }
+                        items(pinned, key = { it.id }) { row -> HistoryRow(row, onSwitch, onTogglePin) }
+                    }
+                    if (recents.isNotEmpty()) {
+                        item {
+                            SectionLabel(AiCopy.RECENTS)
+                        }
+                        items(recents, key = { it.id }) { row -> HistoryRow(row, onSwitch, onTogglePin) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(
+            start = CodecTokens.space(Space.L),
+            end = CodecTokens.space(Space.L),
+            top = CodecTokens.space(Space.M),
+            bottom = CodecTokens.space(Space.S)
+        )
+    )
+}
+
+@Composable
+private fun HistoryRow(
+    row: AiChatSummary,
+    onSwitch: (Long) -> Unit,
+    onTogglePin: (Long) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSwitch(row.id) }
+            .padding(horizontal = CodecTokens.space(Space.S)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            row.title,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(vertical = CodecTokens.space(Space.S))
+        )
+        IconButton(onClick = { onTogglePin(row.id) }) {
+            Icon(
+                Icons.Filled.PushPin,
+                contentDescription = if (row.pinned) AiCopy.HISTORY_UNPIN else AiCopy.HISTORY_PIN,
+                tint = if (row.pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION))
+            )
         }
     }
 }

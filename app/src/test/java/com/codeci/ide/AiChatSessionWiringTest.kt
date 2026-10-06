@@ -102,15 +102,18 @@ class AiChatSessionWiringTest {
     }
 
     @Test
-    fun `New chat clears the conversation, and clear keeps it`() {
+    fun `New chat archives the conversation and starts an empty one`() {
         val model = src("AiViewModel.kt")
         assertTrue("newChat exists", model.contains("fun newChat()"))
+        // Phase 95 — New chat now ARCHIVES the conversation into the drawer
+        // (that is what a history option means), then starts an empty one, and
+        // opens the drawer so the user can see where it went. The reset still
+        // clears the self-check: a brand-new conversation means a brand-new check.
         assertTrue(
-            // Phase 92 added the self-check to the same reset: a brand-new
-            // conversation means a brand-new check.
-            "newChat empties the session after clearing the task",
-            model.contains("fun newChat() {") &&
-                model.contains("it.copy(session = AiChatSession.EMPTY, taskCommitted = false, selfCheck = null)")
+            "newChat archives via withCurrent and then begins empty",
+            model.contains("s.history.withCurrent(s.session, s.taskCommitted).beginNew()") &&
+                model.contains("session = AiChatSession.EMPTY") &&
+                model.contains("selfCheck = null")
         )
         assertTrue(
             "clear commits the settled task instead of dropping it",
@@ -123,20 +126,24 @@ class AiChatSessionWiringTest {
     }
 
     @Test
-    fun `a project switch keeps each project's own transcript, in memory`() {
+    fun `a project switch keeps each project's own history, in memory`() {
         val model = src("AiViewModel.kt")
-        // Phase 93 — item 5, the owner: "per project, one history". The leak guard
-        // is unchanged in the way that matters (B can only ever draw B's session),
-        // but A's conversation is now remembered while the app is open (D6: in
-        // memory, no file, no store) and restored when A is reopened.
-        assertTrue("the memory is a map, keyed by project", model.contains("private val chatsByProject = LinkedHashMap<String, ProjectChat>()"))
+        // Phase 95 — the map now holds an AiChatHistory per project (multiple
+        // conversations), and D6 still holds: nothing is written. A switch saves
+        // the current chat into the history before it replaces the session,
+        // whole, so B can never draw A's turns.
+        assertTrue("the memory is a map of histories, keyed by project",
+            model.contains("private val historiesByProject = LinkedHashMap<String, AiChatHistory>()"))
         assertTrue("the leaving project is saved", model.contains("rememberChatForCurrentProject()"))
-        assertTrue("and the arriving one restored", model.contains("val remembered = chatForProject(name)"))
-        assertTrue("into the session", model.contains("session = remembered.session, taskCommitted = remembered.taskCommitted"))
-        assertTrue("New chat clears only this project", model.contains("project?.let { chatsByProject.remove(it) }"))
+        assertTrue("and the arriving one restored", model.contains("val remembered = historyForProject(name)"))
+        assertTrue("into both history and session",
+            model.contains("history = remembered") &&
+                model.contains("session = remembered.session()") &&
+                model.contains("taskCommitted = remembered.taskCommitted()"))
+        assertTrue("a switch closes the drawer", model.contains("historyOpen = false"))
         // D6 does not move: the memory is process state, never written anywhere.
-        assertFalse("no file", model.contains("File(chatsByProject"))
-        assertFalse("no store", model.contains("chatsByProject") && model.contains("SharedPreferences"))
+        assertFalse("no file", model.contains("File(historiesByProject"))
+        assertFalse("no store", model.contains("historiesByProject") && model.contains("SharedPreferences"))
         listOf("writeText(", "dataStore", "noBackupFilesDir, \"chat").forEach { banned ->
             assertFalse("nothing persists the chat: $banned", model.contains(banned))
         }

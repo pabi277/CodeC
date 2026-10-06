@@ -172,7 +172,21 @@ data class AiUiState(
      * the sheet can offer the one tap that fixes it ([AiCopy.GRANT_ACCESS]) rather
      * than a sentence and a shrug. Display state only, in memory (D6).
      */
-    val storageProblem: Boolean = false
+    val storageProblem: Boolean = false,
+    /**
+     * Phase 95 — true once the welcome + agreement screen has been accepted for
+     * the current [AiKeyStore.WELCOME_VERSION]. Loaded from disk on start; the
+     * sheet gates send on it the same way it gates on a saved key.
+     */
+    val welcomeAccepted: Boolean = false,
+    /** Phase 95 — whether the history drawer is open. Display state only, in memory (D6). */
+    val historyOpen: Boolean = false,
+    /**
+     * Phase 95 — history (multiple conversations per project, this session only).
+     * Keyed by project name exactly like Phase 93's single-chat map, and still
+     * D6: nothing is written, nothing survives the process.
+     */
+    val history: AiChatHistory = AiChatHistory.EMPTY
 )
 
 /** Phase 80 — the AI's pending run request, as the approval card renders it. */
@@ -292,8 +306,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             val show = withContext(Dispatchers.IO) { store.showBubble() }
             val conflict = withContext(Dispatchers.IO) { store.outputConflict() }
             val options = withContext(Dispatchers.IO) { store.options() }
+            val welcomed = withContext(Dispatchers.IO) { store.welcomeAccepted() }
             _state.update {
-                it.copy(keySaved = ready, model = model, bubble = bubble, showBubble = show, outputConflict = conflict, options = options, configuring = false)
+                it.copy(
+                    keySaved = ready, model = model, bubble = bubble, showBubble = show,
+                    outputConflict = conflict, options = options, welcomeAccepted = welcomed,
+                    configuring = false
+                )
             }
         }
     }
@@ -487,23 +506,27 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      * The leak guard is unchanged in the way that matters: project B's sheet can
      * only ever draw B's session, because the restore replaces the whole value.
      */
-    private data class ProjectChat(val session: AiChatSession, val taskCommitted: Boolean)
-
-    private val chatsByProject = LinkedHashMap<String, ProjectChat>()
+    /**
+     * Phase 95 — one history per project, **in memory only** (D6): the owner
+     * asked for a history drawer; D6 still says nothing is written to disk, so
+     * this map lives and dies with the process exactly like the transcript it
+     * holds. A history switch replaces the whole [AiUiState.session], so a
+     * different conversation can never leak another one's turns.
+     */
+    private val historiesByProject = LinkedHashMap<String, AiChatHistory>()
 
     private fun rememberChatForCurrentProject() {
         val name = project ?: return
         val s = _state.value
-        if (s.session.isEmpty()) chatsByProject.remove(name)
-        else chatsByProject[name] = ProjectChat(s.session, s.taskCommitted)
+        historiesByProject[name] = s.history.withCurrent(s.session, s.taskCommitted)
     }
 
-    private fun chatForProject(name: String?): ProjectChat =
-        name?.let { chatsByProject[it] } ?: ProjectChat(AiChatSession.EMPTY, false)
+    private fun historyForProject(name: String?): AiChatHistory =
+        name?.let { historiesByProject[it] } ?: AiChatHistory.EMPTY
 
     /**
      * D6: a different project never sees the previous project's exchange — and
-     * (Phase 93) each project's own conversation is put back when it is reopened,
+     * (Phase 93/95) each project's own history is put back when it is reopened,
      * from memory only.
      */
     fun onProjectChanged(name: String?) {
@@ -515,11 +538,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         agent = null
         clear()
         closeSheet()
-        val remembered = chatForProject(name)
+        val remembered = historyForProject(name)
         _state.update {
             it.copy(
                 undoSummary = null, undoConflictPaths = emptyList(),
-                session = remembered.session, taskCommitted = remembered.taskCommitted,
+                history = remembered,
+                session = remembered.session(), taskCommitted = remembered.taskCommitted(),
+                historyOpen = false,
                 // A self-check is about the conversation that was on screen, so it
                 // never follows a switch — the checks that already ran stay in the
                 // remembered transcript.
@@ -537,6 +562,66 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
                     if (project == name) s.copy(undoSummary = summary) else s
                 }
             }
+        }
+    }
+
+    // ---- Phase 95: the history drawer + welcome agreement -------------------
+
+    fun openHistory() { _state.update { it.copy(historyOpen = true) } }
+    fun closeHistory() { _state.update { it.copy(historyOpen = false) } }
+
+    /**
+     * New chat: archives the conversation in front of you into the drawer and
+     * starts an empty one. This is what a history option *must* mean — New chat
+     * used to delete the conversation, which is exactly what a history must not
+     * do.
+     */
+    fun newChat() {
+        clear()
+        val name = project ?: return
+        val s = _state.value
+        val updated = s.history.withCurrent(s.session, s.taskCommitted).beginNew()
+        historiesByProject[name] = updated
+        _state.update {
+            it.copy(
+                history = updated, session = AiChatSession.EMPTY, taskCommitted = false,
+                selfCheck = null, historyOpen = true
+            )
+        }
+    }
+
+    fun switchChat(id: Long) {
+        val name = project ?: return
+        val s = _state.value
+        val saved = s.history.withCurrent(s.session, s.taskCommitted).switchTo(id)
+        historiesByProject[name] = saved
+        clear()
+        _state.update {
+            it.copy(
+                history = saved,
+                session = saved.session(), taskCommitted = saved.taskCommitted(),
+                selfCheck = null, historyOpen = false
+            )
+        }
+    }
+
+    fun toggleChatPin(id: Long) {
+        val name = project ?: return
+        val s = _state.value
+        val saved = s.history.withCurrent(s.session, s.taskCommitted).togglePin(id)
+        historiesByProject[name] = saved
+        _state.update { it.copy(history = saved) }
+    }
+
+    /**
+     * Phase 95 — accept the welcome/agreement once per version. Persisted as
+     * non-secret metadata (same file as bubble position and provider terms); the
+     * body of the agreement itself lives in code, not in user data.
+     */
+    fun acceptWelcome() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { store.acceptWelcome() }
+            _state.update { it.copy(welcomeAccepted = true) }
         }
     }
 
@@ -878,7 +963,13 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
             _state.update { it.copy(taskCommitted = true) }
             return s.session
         }
-        _state.update { it.copy(session = session, taskCommitted = true) }
+        // Phase 95 — as a task settles, the conversation in front of you is
+        // written back into the per-project history so the drawer shows it and a
+        // switch cannot lose it.
+        val name = project
+        val updated = (name?.let { historiesByProject[it] } ?: s.history).withCurrent(session, taskCommitted = true)
+        name?.let { historiesByProject[it] = updated }
+        _state.update { it.copy(session = session, taskCommitted = true, history = updated) }
         return session
     }
 
@@ -891,16 +982,6 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
         _state.update {
             it.copy(mode = if (it.mode == AiChatMode.SIMPLE) AiChatMode.TECHNICAL else AiChatMode.SIMPLE)
         }
-    }
-
-    fun newChat() {
-        clear()
-        // Phase 93 — New chat clears THIS project's conversation (and its memory
-        // of it); every other project keeps its own.
-        project?.let { chatsByProject.remove(it) }
-        // Phase 92: the self-check's follow-up step reads the conversation, so a
-        // brand-new conversation means a brand-new check — never a stale verdict.
-        _state.update { it.copy(session = AiChatSession.EMPTY, taskCommitted = false, selfCheck = null) }
     }
 
     /**

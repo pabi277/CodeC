@@ -1250,12 +1250,22 @@ fun EditorScreen(
             onExplainError = aiExplainError,
             onAskProject = aiAskProject,
             onCancelGather = aiViewModel::cancelGather,
-            onSend = aiViewModel::send,
+            // Phase 95 — after Send the composer clears, so the owner's next
+            // question starts on a blank line rather than sitting over the
+            // answer. The value is only display state (rememberSaveable in this
+            // composable); nothing changes about what was sent (D4).
+            onSend = { aiQuestion = ""; aiViewModel.send() },
             onCancelPreview = aiViewModel::cancelPreview,
             onStop = aiViewModel::stop,
             onRetry = aiViewModel::retry,
             onClear = aiViewModel::clear,
             onNewChat = aiViewModel::newChat,
+            // Phase 95 — the history drawer + welcome/agreement.
+            onOpenHistory = aiViewModel::openHistory,
+            onCloseHistory = aiViewModel::closeHistory,
+            onSwitchChat = aiViewModel::switchChat,
+            onToggleChatPin = aiViewModel::toggleChatPin,
+            onAcceptWelcome = aiViewModel::acceptWelcome,
             // Phase 91 — the simple/technical face (the owner's Phase 90 round).
             onToggleMode = aiViewModel::toggleMode,
             // Phase 92 — the self-check (the owner: "give some command and I will run").

@@ -656,4 +656,40 @@ object AiCopy {
         AiContextProblem.PROJECT_TOO_LARGE -> PROJECT_TOO_LARGE
         AiContextProblem.EMPTY_EDIT_QUESTION -> EDIT_QUESTION_REQUIRED
     }
+
+    // ---- Phase 95: welcome, agreement and the history drawer -----------------
+
+    /** Shown once per welcome-version, the first time the sheet is opened on a ready key. */
+    const val WELCOME_TITLE = "Welcome to CodeC AI"
+    const val WELCOME_SUBTITLE =
+        "Your on-device code helper. A fresh screen — your key, your project, your choice."
+
+    /**
+     * The agreement the owner asked for: small work only, the API key is his own,
+     * the creator is not responsible. This is a UI agreement — not a legal
+     * document, not a permission — so it sits in the sheet and is tapped once per
+     * version before anything is sent. It cannot be misread as a grant: the model
+     * still sees nothing until the owner taps Send (D4), and write/run still need
+     * their own approvals (D1).
+     */
+    const val WELCOME_AGREEMENT_TITLE = "Before you ask"
+    val WELCOME_AGREEMENT_BODY = listOf(
+        "Small work only. This helper is for short questions, explanations and small, reviewable edits — not for writing whole apps, large refactors, or code you have not read.",
+        "Your API key, your bill, your rate limits. CodeC does not host a model and does not pay for requests. Calls leave your phone with the key you saved, under the provider's own terms.",
+        "Always review before you apply. Proposed edits are shown as a diff, and Apply is your tap — never automatic. Nothing runs on your device without your tap either.",
+        "The creator is not responsible for what the model writes, for charges you incur through your own key, or for code you run on your own device."
+    )
+    const val WELCOME_AGREE = "I understand — start"
+    const val WELCOME_DISAGREE = "Not now"
+
+    /** The history drawer: Pinned / Recents / New chat, the same shape the owner screenshot'd. */
+    const val HISTORY = "History"
+    const val HISTORY_PIN = "Pin"
+    const val HISTORY_UNPIN = "Unpin"
+    const val PINNED = "Pinned"
+    const val RECENTS = "Recents"
+    const val HISTORY_EMPTY = "No chats yet in this project."
+    const val DRAWER_CLOSE = "Close history"
+    const val DRAWER_OPEN = "Open history"
+    const val CURRENT_CHAT = "Current chat"
 }
