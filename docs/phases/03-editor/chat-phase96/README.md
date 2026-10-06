@@ -95,4 +95,6 @@ He answered the open list in chat, four lines, and every one of them is a decisi
 
 **And one thing moved forward:** the **local / on-device model** plan is **postponed as a future update** (*"the local llm phase will be a future update so postponed now"*) — recorded on [Level 13 of the roadmap](../../../roadmaps/ai-integration/13_OPTIONAL_ON_DEVICE_MODEL.md). It was already unbuilt; now it is also explicitly *not next*. Nothing in this phase, or anywhere in `ui/ai/`, loads, downloads, stubs or mentions a model file.
 
+This closure commit (`eaea09a`, docs only) is green on CI too: [`37490458684`](https://github.com/pabi277/CodeC/actions/runs/37490458684), 9m46s, release universal **7 217 532 B** — the number moves a few bytes between runs of identical sources, which is R8's, not the app's.
+
 **What is left in the AI line after these answers: the PR, and only the PR.** No code item is open — the six fixes and the three shape fixes are in and CI-green; the level acceptance is closed by his word; the parked and declined items stay parked and declined by his "No change". The next free phase number is **97** and it is unassigned: no phase is briefed, so the line is idle until he names the next thing.
