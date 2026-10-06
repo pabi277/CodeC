@@ -531,13 +531,21 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun onProjectChanged(name: String?) {
         if (name == project) return
+        // Phase 96 — **the order is the fix.** `clear()` settles the task that
+        // just finished (`commitFinishedTask`) and that commit files the
+        // conversation under `project`. Running it AFTER the pointer moved filed
+        // an uncommitted answer into the ARRIVING project's history slot — on top
+        // of the leaving project's own list, when the arriving one had no list
+        // yet — so B drew A's chats and A lost its last exchange. Both D9 rows
+        // ("A's history is back when you return", "B never shows A's chats")
+        // lived on this line's order, and the leak guard with them.
+        clear()
+        closeSheet()
         rememberChatForCurrentProject()
         project = name
         pendingBaselines = emptyMap()
         pendingExistingPaths = emptySet()
         agent = null
-        clear()
-        closeSheet()
         val remembered = historyForProject(name)
         _state.update {
             it.copy(
@@ -592,10 +600,17 @@ class AiViewModel(application: Application) : AndroidViewModel(application) {
 
     fun switchChat(id: Long) {
         val name = project ?: return
+        // Phase 96 — settle and archive BEFORE the tapped row becomes current.
+        // `clear()` → `commitFinishedTask()` files a settled-but-uncommitted task
+        // into the entry named by `currentId`; with the switch applied first that
+        // entry was the chat being switched TO, so the previous conversation's
+        // last exchange was appended to it — the merge the drawer promises never
+        // to do, and it reached the stored history, not just the screen.
+        // `newChat()` already settles before it archives; this now matches it.
+        clear()
         val s = _state.value
         val saved = s.history.withCurrent(s.session, s.taskCommitted).switchTo(id)
         historiesByProject[name] = saved
-        clear()
         _state.update {
             it.copy(
                 history = saved,

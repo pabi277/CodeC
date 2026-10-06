@@ -126,12 +126,18 @@ data class AiChatHistory(
          * A drawer row's title: the first question, one line, clipped. Derived
          * when the drawer is drawn, never stored — a stored title would be a
          * second copy of chat text to keep in step with the transcript.
+         *
+         * Phase 96 — the whitespace pattern is a value, not a call-site literal:
+         * [summaries] runs on every recomposition of the drawer (up to
+         * [AiChatHistoryLimits.MAX_CHATS] rows each), and `Regex(...)` compiles.
          */
+        private val WHITESPACE = Regex("\\s+")
+
         fun titleOf(session: AiChatSession): String {
-        val line = session.turns.firstOrNull { it.role == AiChatRole.YOU }?.text
-            ?: session.turns.firstOrNull()?.text
-            ?: return "New chat"
-            val flat = line.replace(Regex("\\s+"), " ").trim()
+            val line = session.turns.firstOrNull { it.role == AiChatRole.YOU }?.text
+                ?: session.turns.firstOrNull()?.text
+                ?: return "New chat"
+            val flat = line.replace(WHITESPACE, " ").trim()
             if (flat.length <= AiChatHistoryLimits.MAX_TITLE_CHARS) return flat
             return flat.take(AiChatHistoryLimits.MAX_TITLE_CHARS - 1).trimEnd() + "…"
         }

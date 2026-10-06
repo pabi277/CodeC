@@ -122,6 +122,25 @@ class AiToolRunnerTest {
     }
 
     @Test
+    fun `search scopes to a folder and an extension exactly like list_files`() {
+        tree()
+        val scoped = AiToolRunner.execute(
+            call(AiToolName.SEARCH_PROJECT, query = "int", path = "src", ext = "c"), root, admitted
+        )
+        assertTrue(scoped.text.contains("SEARCH \"int\" in src/ *.c"))
+        assertTrue(scoped.text.contains("src/main.c:1"))
+        assertTrue(scoped.text.contains("src/util.c:1"))
+        assertFalse(scoped.text.contains("README.md"))
+        // A scope the walk cannot satisfy still says so: 0 files scanned tells
+        // the model the filter ran, instead of leaving it to guess whether the
+        // project is empty.
+        val none = AiToolRunner.execute(
+            call(AiToolName.SEARCH_PROJECT, query = "int", ext = "py"), root, admitted
+        )
+        assertTrue(none.text.contains("no match in 0 files scanned"))
+    }
+
+    @Test
     fun `search honours its max and marks the cut`() {
         tree()
         File(root, "src/many.c").writeText((1..50).joinToString("\n") { "int hit$it; // needle" })

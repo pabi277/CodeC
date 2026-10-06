@@ -109,7 +109,8 @@ object AiToolProtocol {
     const val INSTRUCTIONS: String =
         "To inspect the project, answer with one or more tool blocks and nothing else:\n" +
             "<<<CODEC_TOOL name=\"read_file\">>>\npath: relative/path.ext\nstart: 1\nend: 60\n<<<END_CODEC_TOOL>>>\n" +
-            "Tools: list_files(path?, ext?), search_project(query, max?), read_file(path, start?, end?), read_files(paths), " +
+            "Tools: list_files(path?, ext?), search_project(query, max?, path?, ext?), " +
+            "read_file(path, start?, end?), read_files(paths), " +
             "find_files(pattern, max?), outline_file(path), read_run_output(lines?), request_run(target?).\n" +
             "read_files reads several files in one round trip — paths: a.kt, b.kt:10-40, c.kt (comma-separated, each with an optional :start-end). " +
             "Every path is checked on its own, so one refused path never blocks the others.\n" +
@@ -210,7 +211,8 @@ object AiToolProtocol {
         AiToolName.READ_FILE -> "read_file ${call.path}" +
             (if (call.start != null && call.end != null) " (lines ${call.start}-${call.end})" else "")
         AiToolName.READ_FILES -> "read_files " + (call.reads?.joinToString(", ") { it.path }.orEmpty())
-        AiToolName.SEARCH_PROJECT -> "search_project \"${call.query}\""
+        AiToolName.SEARCH_PROJECT -> "search_project \"${call.query}\"" +
+            (call.path?.let { " in $it/" } ?: "") + (call.ext?.let { " *.$it" } ?: "")
         AiToolName.LIST_FILES -> "list_files" +
             (call.path?.let { " $it/" } ?: "") + (call.ext?.let { " *.$it" } ?: "")
         AiToolName.FIND_FILES -> "find_files \"${call.pattern}\""
@@ -230,7 +232,9 @@ object AiToolProtocol {
             "read_file $path$range"
         }
         AiToolName.READ_FILES -> "read_files " + request.args["paths"].orEmpty()
-        AiToolName.SEARCH_PROJECT -> "search_project \"${request.args["query"].orEmpty()}\""
+        AiToolName.SEARCH_PROJECT -> "search_project \"${request.args["query"].orEmpty()}\"" +
+            (request.args["path"]?.let { " in $it/" } ?: "") +
+            (request.args["ext"]?.let { " *.$it" } ?: "")
         AiToolName.LIST_FILES -> {
             val path = request.args["path"]
             val ext = request.args["ext"]
@@ -333,6 +337,9 @@ object AiToolLimits {
 
 object AiToolPolicy {
 
+    /** What counts as an `ext`, for every tool that scopes by extension. */
+    private val EXT_PATTERN = Regex("^[a-z0-9]{1,8}$")
+
     /**
      * Turns one raw request into either a typed, safe call or a refusal with a
      * reason the model can act on. Nothing here touches the disk; existence is
@@ -370,7 +377,7 @@ object AiToolPolicy {
         )
         val allowedKeys = when (name) {
             AiToolName.LIST_FILES -> setOf("path", "ext")
-            AiToolName.SEARCH_PROJECT -> setOf("query", "max")
+            AiToolName.SEARCH_PROJECT -> setOf("query", "max", "path", "ext")
             AiToolName.READ_FILE -> setOf("path", "start", "end")
             AiToolName.READ_FILES -> setOf("paths")
             AiToolName.FIND_FILES -> setOf("pattern", "max")
@@ -387,7 +394,7 @@ object AiToolPolicy {
         return when (name) {
             AiToolName.READ_FILE -> validateRead(request, view, window)
             AiToolName.READ_FILES -> validateReadFiles(request, window)
-            AiToolName.SEARCH_PROJECT -> validateSearch(request)
+            AiToolName.SEARCH_PROJECT -> validateSearch(request, view)
             AiToolName.LIST_FILES -> validateList(request, view)
             AiToolName.FIND_FILES -> validateFind(request)
             AiToolName.OUTLINE_FILE -> validateOutline(request, view)
@@ -464,7 +471,15 @@ object AiToolPolicy {
         )
     }
 
-    private fun validateSearch(request: AiToolRequest): AiToolVerdict {
+    /**
+     * Phase 96 — `search_project` takes the same `path` / `ext` scoping
+     * `list_files` has, so a question about one folder spends no read budget on
+     * the rest of the project. Both keys are optional and neither can widen what
+     * the walk admitted: the scope is applied to the admitted list, and a scope
+     * that names nothing is refused with the reason rather than answered with an
+     * empty result the model would read as "not in this project".
+     */
+    private fun validateSearch(request: AiToolRequest, view: AiToolProjectView): AiToolVerdict {
         val query = request.args["query"]?.trim().orEmpty()
         if (query.length < AiToolLimits.MIN_QUERY_CHARS) {
             return AiToolVerdict.Denied(request, "search_project needs a query of at least ${AiToolLimits.MIN_QUERY_CHARS} characters")
@@ -476,12 +491,26 @@ object AiToolPolicy {
             return AiToolVerdict.Denied(request, "search_project max must be a whole number")
         } else AiToolLimits.MAX_SEARCH_HITS
         if (max < 1) return AiToolVerdict.Denied(request, "search_project max must be at least 1")
+        val rawPath = request.args["path"]?.trim()?.takeIf { it.isNotEmpty() && it != "." && it != "./" }
+        val path = if (rawPath == null) null else safeDirectoryPath(rawPath)
+        if (rawPath != null && path == null) {
+            return AiToolVerdict.Denied(request, "search_project refused the path \"$rawPath\"")
+        }
+        if (path != null && view.existingPaths.none { it.startsWith("$path/") }) {
+            return AiToolVerdict.Denied(request, "$path/ holds no code or text file in this project")
+        }
+        val ext = request.args["ext"]?.trim()?.lowercase()?.removePrefix(".")?.takeIf { it.isNotEmpty() }
+        if (ext != null && !EXT_PATTERN.matches(ext)) {
+            return AiToolVerdict.Denied(request, "search_project ext must be a plain extension such as c or py")
+        }
         return AiToolVerdict.Allowed(
             AiToolCall(
                 name = AiToolName.SEARCH_PROJECT,
                 rawName = request.rawName,
                 query = query,
-                max = max.coerceAtMost(AiToolLimits.MAX_SEARCH_HITS)
+                max = max.coerceAtMost(AiToolLimits.MAX_SEARCH_HITS),
+                path = path,
+                ext = ext
             )
         )
     }
@@ -496,7 +525,7 @@ object AiToolPolicy {
             return AiToolVerdict.Denied(request, "$path/ holds no code or text file in this project")
         }
         val ext = request.args["ext"]?.trim()?.lowercase()?.removePrefix(".")?.takeIf { it.isNotEmpty() }
-        if (ext != null && !Regex("^[a-z0-9]{1,8}$").matches(ext)) {
+        if (ext != null && !EXT_PATTERN.matches(ext)) {
             return AiToolVerdict.Denied(request, "list_files ext must be a plain extension such as c or py")
         }
         return AiToolVerdict.Allowed(
