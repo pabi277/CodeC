@@ -1,0 +1,57 @@
+[
+  {
+    "phase": "W3",
+    "pages": 9,
+    "crc_hash_paths_local_assets": "PASS",
+    "expected_later_page_targets": [
+      "ch-02.html",
+      "ch-04.html",
+      "ch-05.html",
+      "ch-07.html",
+      "ch-10.html",
+      "ch-12.html",
+      "ch-15.html",
+      "ch-17.html",
+      "ch-18.html",
+      "ch-19.html",
+      "learn.html"
+    ],
+    "status": "Historical pre-polish snapshot, not final full-site acceptance"
+  },
+  {
+    "phase": "W4",
+    "pages": 16,
+    "crc_hash_paths_local_assets": "PASS",
+    "expected_later_page_targets": [
+      "ch-07.html",
+      "ch-08.html",
+      "ch-09.html",
+      "ch-10.html",
+      "ch-11.html",
+      "ch-12.html",
+      "ch-13.html",
+      "ch-14.html",
+      "ch-15.html",
+      "ch-16.html",
+      "ch-17.html",
+      "ch-18.html",
+      "ch-19.html"
+    ],
+    "status": "Historical pre-polish snapshot, not final full-site acceptance"
+  },
+  {
+    "phase": "W5",
+    "pages": 22,
+    "crc_hash_paths_local_assets": "PASS",
+    "expected_later_page_targets": [
+      "ch-13.html",
+      "ch-14.html",
+      "ch-15.html",
+      "ch-16.html",
+      "ch-17.html",
+      "ch-18.html",
+      "ch-19.html"
+    ],
+    "status": "Historical pre-polish snapshot, not final full-site acceptance"
+  }
+]

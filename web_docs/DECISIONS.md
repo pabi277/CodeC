@@ -30,7 +30,36 @@ proposed by the agent and adopted without objection.
 | D21 | 2026-09-12 | **Phase 43 Planned (affects ch-06 + FAQ + About).** 43.1 "Open folder" cannot crash: SAF copy today plain recursion copyDocumentChildren no visited set, no depth/file/byte budget, no cancellation, opens every file stream serially, caller catches only Exception — provider returning parent as own child is StackOverflowError (Error not Exception) kills app (owner second sentence). Replaced with iterative walk planned by pure TreeWalkPolicy, budgets, progress + cancel, per-provider failure as message, Throwable at boundary, grant persisted takePersistableUriPermission never called today. ZIP path already guarded MAX_ZIP_ENTRIES 10k, MAX_ZIP_ENTRY_BYTES 128 MB, total-bytes cap, path-escape check. 43.2 open folder as project via ProjectLink(projectName, treeUri, …) + pure ProjectLinkPolicy.decide (take / refuse-with-reason / re-pick when grant gone), honest limitation: emulated storage mounted noexec so linked project runs from internal mirror (sync in on open/save, push-set on save-back excludes CodeC own outputs) while user's folder stays source of truth — 39.1 must land first or mirror would push build artifacts into folder user owns. All-files-access open in place variant considered and rejected as default (four reasons + one per-project flag may still earn place). | Agent (from app Phase 43 docs, planned) |
 | D22 | 2026-09-12 | **Website spec v2.2 sync.** WEBSITE_PLAN.md bumped v2.1 → v2.2 to incorporate Phases 21–43 facts: install channel now universal APK 6.6 MB signed SHA256 + updater version guard + debug vs release + export-all + backup include-list + crash-loop guard; engines page Auto only no picker no Termux card (fallback automatic error-path); Home cards include file icons, LAN server, safe features; FAQ includes BETA B-1…B-8 + debug/release + signature change + backup + crash-loop + export-all + huge folder + 32-bit TCC null; About includes >_ mark + Settings trim + feedback hardcoded + export-all + backup + crash-loop + LAN + file icons + outputs temporary + GitHub truth; chapters 01–17 enriched (ch-04 Auto, ch-06 safe walk + ProjectLink + export-all, ch-07 editor with Seti icons + typing feel + ghost + strip + snippets 29 packs + Emmet + TextMate + 50 items, ch-08 TCC-safe law, ch-11 GitReadiness + push truth + publish, ch-12 LAN server + QR + open-in-browser, ch-13 8 scripts, ch-15 export-all + backup + crash-loop + feedback, ch-17 BETA + crash-log + feedback). W4.2 verification gate must re-verify new facts. Open item O8 added: should website show hardcoded feedback contact or keep in-app only? | Agent (sync) |
 
-## Open (pending owner)
+## v2.3 reconciliation — 2026-10-07
+
+The owner's supplied handoff dated 2026-10-06 described D23–D28, but those rows
+were absent at base `d4231f0`. The following records that supplied scope **now**;
+it does not claim a missing October 6 commit existed. D1–D22 above remain history.
+
+| # | Date recorded | Decision | By |
+|---|---|---|---|
+| D23 | 2026-10-07 | Reconcile website specs to shipped Phases 1–96 / app-v1.3.18, not cancelled Phase 43 plans. Release independently verified: 7 217 532 B, versionCode 22. R8 -74% is historical v1.3.17, never the v1.3.18 size. W1→W6 sequential, closes O4; W4.2 first inside W4, W6.8/9 before polish/deploy. | Owner v2.3 handoff (dated Oct 6), recorded from repo/GitHub evidence |
+| D24 | 2026-10-07 | Add AI product page (W3.5) and header nav: Home · Install · Start · Engines · Packages · AI · Learn · FAQ · About · GitHub. BYOK, eight bounded tools, no write/exec tool, Apply/Run taps, D6/S9/caps are content law. | Owner handoff |
+| D25 | 2026-10-07 | Add Privacy product page W3.6, link every footer and Install/About/AI/FAQ. DATA_AND_PRIVACY.md sets claim strength, honest correction, provider recipients, task follow-ups and storage facts. Never claim code cannot leave the device. Product wing 9 pages. | Owner handoff |
+| D26 | 2026-10-07 | Source chain extends README → TROUBLESHOOTING → BETA → AI → DATA_AND_PRIVACY → RELEASE_NOTES → JOURNEY. AI/privacy claims trace to those guides; roadmap is not shipped. All source files read-only. | Owner handoff |
+| D27 | 2026-10-07 | Contacts stay in the app; no personal WhatsApp number/email in website copy, site uses GitHub Issues. Closes O8; overrides old contact-display suggestions without deleting history. | Owner handoff |
+| D28 | 2026-10-07 | Course scope is 19 chapters: add ch-18 Ask about your code and ch-19 Agent, tools and approvals. Total 29 pages; completion moves from ch-17 to ch-19. O6's owner scope decision closed; W4.2 still verifies and locks implementation facts, never silently cuts chapters. | Owner handoff |
+| D29 | 2026-10-07 | W1 authorized: “You can watch the pr 42 for reference but you have build it with updated docs and more powerful website”. Read PR #42 at 6f6a3cf; do not import it, switch branches, close it, or claim its W2/deploy authority. Fresh Home, six cards, original textual code example (not screenshot), accessible native menu, source-backed release/AI/course story. No unapproved screenshots, new stack or W2 pages. | Owner + Agent implementation interpretation |
+| D30 | 2026-10-07 | Record concrete reconciliation findings: v2.2 still on main; 35 docs before this sync, 39 after (6 + 33), not a three-string 37→39 fix. Existing Pages serves package repo; W6 must verify deployment ownership and preserve /dev and /keys. Relative .html paths support project Pages and offline files. W1 preview labels unbuilt guides/course honestly. Record W0.4 in chat-web3 and W1 in chat-web4/W1_* without overwriting actual chat-web2 history. | Agent, from checkout and PR #42 evidence |
+
+## Current open items
+
+- **O1** — Screenshots (owner supplies/approves); no screenshots in W1.
+- **O2 CLOSED (D34)** — Owner selected https://pabi277.github.io/CodeC/ for the initial public address; no deployment yet.
+- **O3** — Copy tone; W1 uses concise, friendly-technical copy as a reviewable proposal.
+- **O5** — In-app site link; separate app-workstream authorization needed.
+- **O7** — Course license; do not invent an MIT course grant before the answer.
+
+**Closed scope:** O4 (order), O6 (19 chapters), O8 (contacts in-app only).
+W4.2 is still a technical gate, not another request for the owner's chapter-count answer.
+
+## Historical open list — v2.2 (superseded above)
+
 
 - O1 — Screenshots on Home/chapters: wanted or not? (Owner supplies/approves images.)
 - O2 — Custom domain vs. GitHub Pages URL.
@@ -43,3 +72,130 @@ proposed by the agent and adopted without objection.
 
 Open items map 1:1 to `WEBSITE_PLAN.md` §11.
 
+
+
+## D31 — Mandatory downloadable website ZIP at every phase end (2026-10-07)
+
+Owner: “Now make this a hardcore rule every phase end the download able zip link
+provide.” Binding implementation: [REVIEW_DOWNLOAD_RULE.md](REVIEW_DOWNLOAD_RULE.md).
+Every phase delivers the entire current website as a tested ZIP committed outside
+website/, pushed to the session branch, with a direct GitHub download link in the
+final reply. Arena-only attachments do not satisfy phone review. Historical ZIPs
+stay historical. No PR/merge/deploy implied. This is an additional phase-exit gate.
+
+## D32 — W2 specifically authorized (2026-10-07)
+
+Owner: “Now start w2”. Install + Getting Started only, on the session branch,
+fresh implementation against current source and v2.3 amendments. W3–W6 remain
+separately gated. Public deployment preparation remains paused for ZIP review.
+
+
+## D33 — One remaining-site batch, retained device gates (2026-10-07)
+
+Owner: “No need to see the watch for now complete the full website in one go
+than a commit and watch because i think it's not that hard job”. Then selected
+**Keep device verification gates**: build remaining pages together; pause for
+owner device transcripts before calling the website complete; no deploy/PR/merge.
+This supersedes separate W3–W6 start commands and intermediate commits: verify
+W4.2 facts FIRST, build W3 + W4 + W5 + W6 content/polish in one batch, then one
+commit/push and CI watch. Do not cancel GitHub's existing W2 run. D31 full-site
+ZIP law remains: preserve cumulative W3/W4/W5 and final W6-review snapshots in
+the single batch, provide final full29page ZIP link. W5 ch08/W6 P1+P5 transcripts,
+O7 license and package-safe owner-authorized deployment remain open. No app edits.
+
+
+## D34 — Clean public copy, organized folders and factual SEO (2026-10-07)
+
+Owner accepted the tested site and asked to remove FULL-SITE REVIEW, the pending
+course-test/publication message and Review status; organize project folders and
+improve Google/other search discovery, including Termux-related searches. Selected
+**GitHub Pages URL** `https://pabi277.github.io/CodeC/` for metadata/sitemap, explicitly
+not publication. Closes O2's initial-address choice; a future custom domain is a
+separate change. Required course device checks passed in owner rounds1–3.
+
+Implementation: preserve existing look,19 chapters and lesson code; move guides,
+chapters, about/legal and assets into folders; keep explicit relative .html links
+for offline import. Add one original useful CodeC/Termux comparison (30 pages
+rather than29), contextual links, unique metadata, canonicals, local social image,
+non-executable JSON-LD, sitemap and documented robots scope. No guaranteed ranking,
+keyword stuffing, false affiliation, reviews/ratings or copied Termux website code.
+No deployment, search-property credentials/submission, workflow/app edit, PR or
+merge authorized. Existing package /dev and /keys remain untouched. D31 requires
+an updated full-tree ZIP/pinned direct download after checks and session-branch
+push. Old flat ZIPs and historical checks remain historical.
+
+
+## D35 — Professional root README and AI artwork (2026-10-07)
+
+Owner explicitly requested a professional root README redesign with AI-generated
+images. This authorizes README.md and necessary illustration assets/provenance,
+plus delivery records; it does not authorize app, app-doc, website-source, signing,
+package or workflow edits. Two optimized conceptual illustrations use the existing
+CodeC brand mark, and are disclosed as artwork, not actual screenshots. Public
+copy must reflect shipped behavior, supported ABIs, optional AI/data transfer and
+release/debug signing differences; no invented license or public-site claim.
+The owner's corrected APK report confirms a successful release-to-release update,
+not a signing defect to fix. No keys or secrets need changing.
+
+Validate GitHub-compatible rendering, local links, mobile/desktop light/dark
+layout and a simple host C example; push only the current session branch and watch
+its normal CI. Keep D31's existing verified website ZIP in the final reply because
+website bytes are unchanged. No repeat device gates, PR, merge or deployment.
+[Delivery record](chat-web8/SUMMARY.md). O7 and other owner-gated work remain open.
+
+
+## D36 — Owner delegates course licensing and authorizes merge (2026-10-07)
+
+Owner: “Course-content license - i don't know you give it” and “Complete docs
+and merged to main”. O7 is resolved by the delegated selection: CC BY 4.0 for
+original course lessons/exercises/diagrams, MIT for original copyable code and
+shell examples. Full texts and precise scope/attribution notice ship offline in
+website/learn/licenses/. No global app/repository license is inferred; third-party
+material, website implementation, non-course material and marks remain excluded.
+Recipients may reuse commercially under the applicable terms; compliant grants
+are not revocable. Existing course examples and owner device evidence are unchanged.
+This is authority for this work's PR/merge, not unrelated old PRs or future phases.
+
+## D37 — Website deployment explicitly authorized (2026-10-07)
+
+Owner: “Yes you have to diploy the website too”. Publish at the selected
+https://pabi277.github.io/CodeC/ after the required checks and merge. Preserve
+the existing signed package repository and public keys at dev/ and keys/. No
+app release, package rebuild, re-signing, key rotation, host-root robots change
+or search-engine ownership submission is implied.
+
+Pages uses workflow deployment; main is already an allowed environment branch.
+Last successful package deployment:33669069048 (2026-09-02); retained artifacts
+are no longer available. Preparation therefore downloads the public tree, verifies
+its signatures with the pinned public key, follows only signed package indexes,
+verifies every package hash and retains original metadata/key bytes. Website
+composition refuses collisions/symlinks and reserved paths. A shared Pages lock
+and a small package-publisher composition step prevent competing replacements
+and retain the site during future package publications. Missing/mismatched files
+abort, never publish an empty replacement.
+
+The new workflow publishes only main; branch runs are read-only preparation.
+Future merges affecting website/deployment paths trigger that configured workflow;
+this does not authorize the agent to initiate future edits or merges. Full public
+HTTP/byte checks follow deployment. Historical held-deployment/unknown-O7 entries
+are superseded for this task, not deleted. [Current record](chat-web9/SUMMARY.md).
+
+
+## D38 — Test-only corrections and current-session PR exception (2026-10-07)
+
+Owner selected **“Yes—finish safely”** to the explicit question permitting only
+the two stale package tests to be corrected and one PR for this session despite
+older PR42/83 remaining open. Leave app behavior, signing keys and those old PRs
+untouched; merge/deploy only after green checks. This is a narrow exception, not
+a new blanket permission to edit package runtime or create parallel-work PRs.
+
+Source investigation refined the initial cancellation diagnosis: piped stdin is
+supported by the current confirmation function. The abort test actually failed
+BEFORE the prompt because its mock treated the automatic first-use `apt update`
+as a forbidden install mutation (exit99). Allow only that non-install refresh
+in the mock; retain the rejecting mutation branch and assert prompt/abort/cleanup.
+The other test now permits refresh, fails the actual download with exit100 and
+asserts the streamed original APT error, current guidance, exact exit status and
+transaction cleanup. No runtime edit and no weakened protection assertion.
+Local corrected suite:94 tests,0 failures,4 signer-dependent skips;14 deployment
+safety tests pass. CI is still the executor for the complete runner environment.

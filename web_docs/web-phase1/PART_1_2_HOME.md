@@ -1,5 +1,45 @@
 # CodeC Website Phase W1.2 — Home page
 
+> **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
+> Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below
+> before the retained prior design. They supersede conflicting old facts and exits:
+> **29 pages / 9 product / 19 chapters**; app-v1.3.18 **7 217 532 B, versionCode 22**;
+> AI in header, Privacy every footer; contacts in-app only; README then AI/privacy
+> guides; Phases 1–96 shipped except cancelled proposals, 97+ roadmap. Never pair
+> current APK size with historical -74%. No picker, Open Folder, ProjectLink,
+> first-hour tiles, mandatory tour or automatic userland setup in visitor teaching.
+> Earlier session-folder references are historical: preserve existing records;
+> W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
+
+**Current status:** W1 implemented; static/browser checks recorded in [W1_CHECKS](../chat-web4/W1_CHECKS.md).
+
+## Current v2.3 implementation requirements
+
+Fresh design, not PR #42 import. Hero may use a short editorial headline but
+must immediately identify CodeC as a C IDE for Android. Primary CTA is exactly
+Get the APK on GitHub → Releases; README secondary. Six cards = built-in C,
+editor, terminal/web/LAN, signed packages, AI, safe workflow (export/backup/
+crash recovery/updater/honest Git). AI is BYOK, no write/exec tool, Apply/Run,
+session-only history. Code example is explicitly illustrative, never an app
+screenshot or live compiler. Release is v1.3.18, 7 217 532 B / 7.22 MB decimal,
+versionCode 22; offline TCC ABI qualifier visible. Course = 19 chapters planned;
+preview cannot promise unbuilt pages are available. Source trace and checks go
+in chat-web4/W1_SUMMARY.md and W1_CHECKS.md. Six cards + learning banner +
+footnote retained; all imported legacy feature prose is re-verified.
+
+## Current acceptance additions (binding)
+
+1. Follow the current requirements above and the master plan, not superseded UI/copy.
+2. Preserve each non-conflicting numbered exit below, including device gates.
+3. Record source file/line/sha, responsive checks and self-dependent sweep; use 19-chapter crumbs where applicable.
+4. No app/workflow changes or phase expansion; update web living docs and stop at merge gate.
+
+---
+
+## Prior design detail — retained v2.2 record
+
+**Historical reference, not authority for superseded facts or exit counts.**
+
 **Status:** 📋 **PLANNED** · **Cost:** `[static]` · **Effort:** M
 · **Depends on:** W1.1 (chrome + stylesheet)
 · **Target file:** `website/index.html` (replaces the W1.1 skeleton main)

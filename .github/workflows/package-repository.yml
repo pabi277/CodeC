@@ -241,6 +241,10 @@ jobs:
 
   publish-dev:
     name: Publish development repository
+    # Serialize with website-pages.yml so neither publisher replaces a newer snapshot.
+    concurrency:
+      group: codec-pages
+      cancel-in-progress: false
     if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.publish == true && needs.plan.result == 'success' && needs.host-tests.result == 'success' && (needs.build.result == 'success' || (inputs.source_run_id != '' && needs.build.result == 'skipped')) }}
     needs: [plan, host-tests, build]
     runs-on: ubuntu-latest
@@ -383,6 +387,9 @@ jobs:
           test -f packages/dev/CODEC-REPOSITORY
           test -s packages/dev/dists/stable/InRelease
           test -s packages/dev/dists/stable/Release.gpg
+
+      - name: Keep the product website in the package Pages artifact
+        run: python3 web_docs/deploy/compose_site.py website packages
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

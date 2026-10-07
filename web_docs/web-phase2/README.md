@@ -1,5 +1,32 @@
 # CodeC Website Phase W2 — Install Guide + Getting Started
 
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
+> **Current v2.3 — 2026-10-07.** **IMPLEMENTED / LOCAL CHECKS PASS** — owner explicitly said “Now start w2” (D32).
+
+Install + Start (3/29 total). app-v1.3.18 universal 7 217 532 B, versionCode 22; updater guard/checksum, export-all, current introduction + Arcade and opt-in Linux setup.
+
+[W2 delivery + full-site ZIP](../chat-web5/W2_SUMMARY.md) ·
+[source ledger](../chat-web5/W2_SOURCES.md) · [checks](../chat-web5/W2_CHECKS.md).
+Three HTML pages now implemented; GitHub upload/readback + final link close D31.
+No owner review, app device pass, PR, merge or deployment implied. W3 awaits command.
+
+**2 parts in this phase.** The six phases contain **39 docs (6 READMEs + 33 PART docs)**.
+
+Read [master plan v2.3](../WEBSITE_PLAN.md) and the binding v2.3 block at the top
+of every PART doc. Current requirements override the retained prior design below:
+29 pages, 19 chapters, AI nav, Privacy footer, release v1.3.18, contacts in-app
+only, no deleted UI or cancelled proposals taught. W1→W6 strictly sequential.
+Use [NEXT_STEPS](../NEXT_STEPS.md) for status, not old session-folder assumptions.
+
+---
+
+## Prior phase brief — historical v2.2 context
+
+The earlier status, counts and session pointers below are superseded above.
+
 **Status:** 📋 **PLANNED** — not yet started. Awaiting owner's "Start W2".
 · **Cost:** `[static]` — two new files in `website/`; zero app code
 · **Depends on:** W1 (chrome)

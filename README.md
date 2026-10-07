@@ -1,398 +1,297 @@
 <p align="center">
-  <img src="docs/brand/icon/codec-512.png" width="112" alt="CodeC — the >_ mark">
+  <img src="assets/readme/hero.jpg" width="1200" alt="CodeC — Your phone. Your next idea. AI-generated conceptual artwork of a phone-based coding workspace, not an app screenshot.">
 </p>
 
-# CodeC IDE
+<h1 align="center">CodeC IDE</h1>
 
-> **CodeC — write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup.**
+<p align="center">
+  <strong>A real coding workspace. On your Android phone.</strong><br>
+  Write C offline. Work with projects and a terminal. Preview the web.<br>
+  Add Python, JavaScript and optional AI when you need them.
+</p>
 
-An Android IDE for your phone: a built-in C compiler (TCC) that works offline
-with no download, Python and Node runtimes you install from the **Packages**
-tab, an in-app VT/ANSI terminal with a signed `pkg` repository, and an HTML
-preview served by a local loopback server. Write code in projects or as single
-files and tap **RUN**.
+<p align="center">
+  <a href="https://github.com/pabi277/CodeC/releases"><strong>Download the APK</strong></a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#learn-and-explore">Learn</a> ·
+  <a href="docs/guides/AI.md">AI guide</a> ·
+  <a href="https://github.com/pabi277/CodeC/issues">Report an issue</a>
+</p>
 
-> **🔒 STANDING RULE (owner, 2026-08-26):** agents/session branches must
-> **not open a PR or merge anything without the owner's explicit command** in
-> chat. Committing to and pushing the session branch is fine; PR creation and
-> merging wait for the owner.
->
-> **Future updates (owner, 2026-09-01):** **all phases are complete.** The
-> agent waits for the owner to report a bug — it listens carefully, finds the
-> underlying code problem, and solves it; it does not start new work on its
-> own. The owner merges to `main`. Operating manual: [`rule.md`](rule.md) —
-> start there.
+<p align="center">
+  <strong>Android 7+ minimum</strong> &nbsp; / &nbsp;
+  <strong>Free to download</strong> &nbsp; / &nbsp;
+  <strong>Source on GitHub</strong> &nbsp; / &nbsp;
+  <strong>Beta</strong>
+</p>
 
-## Current UI work and next-chat plan
+<p align="center"><sub>Custom AI-generated illustrations on this page are conceptual artwork—not screenshots of the app.</sub></p>
 
-[Phase 64 delivery](docs/phases/09-onboarding-setup/chat-phase64/HANDOFF.md) removes the installation UI
-locks and guide while keeping installation safety, progress and retry. The
-[full UI review and ten chat briefs](docs/journal/UI_POLISH_REVIEW_20260927.md) record the
-owner's direction: keep the current look, discuss Projects/files next, and keep
-progress in Terminal/Output. Later polish parts require an agreed scope before
-implementation; they are not a batch of automatically approved changes.
+---
 
-## Install the APK from GitHub
+## Built for the work you can do today
 
-**The release channel (Phase 42.1)** — for anyone who just wants the app:
+CodeC brings an editor, compiler, terminal and project tools into one Android app. Start with a small C program, explore a web project, or build your own command-line workflow—without needing an AI account to get started.
 
-1. Open https://github.com/pabi277/CodeC/releases and pick the newest
-   **CodeC IDE** release (`app-v…` tag).
-2. Download **`CodeC-IDE-<version>-universal.apk`** — the only APK, and
-   always the right one (per-ABI variants were measured and reverted in
-   Phase 42.2). The release notes carry `sha256:` lines if you want to
-   verify the download first.
-3. On your phone: download the APK → allow **Install unknown apps** → install.
+**C works offline with the bundled TCC compiler on arm64-v8a and x86_64 devices.** Optional Linux tools and additional runtimes need setup and downloads. The universal APK supports installation across multiple ABIs, but that does **not** mean the bundled C compiler runs on every architecture. See [device limitations](docs/guides/BETA.md).
 
-**Developer / branch builds:** push a branch (or merge to `main`) → GitHub
-Actions builds the APKs → **Actions** → the **Build APK** run → **Artifacts**
-→ `CodeC-IDE-debug` (unsigned-key debug build; updates only over other debug
-builds) and `CodeC-IDE-release` (signed with the upload key). **A release is
-published only from an `app-v<X.Y.Z>` tag** — the tag must equal
-`versionName`, and `versionCode` must exceed every shipped one (the publish
-step checks both before attaching anything).
+| Write with less friction | Build beyond a single file |
+|---|---|
+| **A capable editor** — tabs, autosave, find/replace, formatting, diagnostics, TextMate highlighting, snippets and Emmet. | **Projects that stay yours** — create a project, clone a Git repository or import a ZIP. Work with a file tree or individual files. |
+| **Offline C** — bundled TCC on supported 64-bit devices; automatic compiler selection, not a settings puzzle. | **A real terminal** — VT/ANSI sessions, extra keys, keyboard shortcuts and optional Linux tools from CodeC’s signed repository. |
+| **Local web preview** — serve a whole HTML/CSS/JS project locally, inspect its console and reload on save. | **Git with clear status** — stage, commit, manage branches and push. A local commit is never presented as a successful upload. |
 
-In the app: **Settings → About → Check for updates** looks only at `app-v*`
-releases, compares versions numerically ("up to date" / a named refusal when
-older), verifies the `sha256:` line before installing, and opens the Releases
-page instead whenever the release publishes no checksum. It never installs a
-`userland-*` bootstrap as an app and never phones home by itself.
+**Your workspace:** Projects → Editor → Terminal → Packages → Settings.
 
-Direct releases page: https://github.com/pabi277/CodeC/releases
+<details>
+<summary><strong>More of the everyday details</strong></summary>
 
-## Run C on the phone
+- Your phone keyboard is the default; CodeC Keys is optional. **Tab** accepts a suggestion; **Enter** inserts a newline.
+- TextMate highlighting and bundled snippets cover many file types. Syntax support does not mean every language runtime is installed.
+- Returning launches resume your last file. The editor keeps the caret visible when its available space changes.
+- The Projects **+** menu offers New Project, Clone Git Repo and Import ZIP. The old Open Folder action is no longer part of this workflow.
+- Project **⋮ → Open in editor** opens the whole project; tapping a file opens that file.
+- Generated run artifacts are kept separate from source. Explicitly named compiler outputs stay where you request them; repository-local Git exclusions respect your `.gitignore`.
+- Web Preview supports relative assets, local `fetch()` and ES modules. LAN sharing is opt-in; other devices on that network may be able to access the served files.
+- Back navigation respects open menus, project trees and web-page history before leaving the current context.
 
-1. Install the APK, open the editor, tap **RUN**. That's it.
+</details>
 
-CodeC ships with a **built-in C compiler** (TCC, Tiny C Compiler — the same approach as
-apps like Coding C / C4droid): a static musl toolchain is embedded in the APK for
-**arm64-v8a** and **x86_64** devices, so compiling works **offline, instantly, with no
-downloads, no Termux and no setup**. Programs are compiled to fully static executables.
+## Download and update
 
-### Compiler engines (automatic — the picker left in Phase 21)
+### For everyday use
 
-There is nothing to pick: every RUN uses **Auto** — built-in TCC first
-(offline, instant); if that's unavailable, the Clang module from
-**Packages**; and if Android blocks the downloaded compiler (Android 10+
-W^X policy, noexec storage, CPU mismatch, broken toolchain), CodeC
-compiles and runs through a compatible terminal app's **Termux Clang**
-automatically. The four setup steps for that last fallback appear in the
-Output Panel exactly when they are needed — see
-[TROUBLESHOOTING.md §27](docs/guides/TROUBLESHOOTING.md).
+1. Open [GitHub Releases](https://github.com/pabi277/CodeC/releases) and choose the newest **CodeC app release**, tagged `app-v…`.
+2. Download **`CodeC-IDE-<version>-universal.apk`**. There is one universal release APK—no ABI guessing.
+3. Check the release’s SHA-256 value if desired, allow Android’s **Install unknown apps** permission for your download source, then install.
 
-The bundled Clang module (optional) must be **arm64**; an x86 emulator can't run it — but
-the built-in TCC covers x86_64 emulators automatically.
+The published [v1.3.18 release](https://github.com/pabi277/CodeC/releases/tag/app-v1.3.18) is **7.22 MB** (7,217,532 bytes), versionCode **22**. Check Releases for newer versions rather than treating this snapshot as an automatic update check.
 
-### In-app terminal & Package Manager (Mini-Termux)
+In CodeC, **Settings → About → Check for updates** checks the app release channel, compares versions and verifies the published checksum before installation. A `userland-*` release is Linux setup data, **not** the CodeC app.
 
-CodeC ships a real **VT/ANSI terminal** (Canvas grid + PTY via JNI `openpty`):
+### Release or debug—which should you install?
 
-1. Open the **Term** tab, or tap the terminal icon in the editor toolbar.
-2. A login shell starts under `$PREFIX` (`/data/data/com.codeci.ide/files/usr`).
-3. `cc` is the built-in TCC. Type **one command per line**, Enter each time:
+| Download | Intended use | Update compatibility |
+|---|---|---|
+| `CodeC-IDE-release` Actions artifact / universal release APK | Normal app use and release testing | Uses the configured release signing key. Keep the same signing identity for updates. |
+| `CodeC-IDE-debug` Actions artifact / `*-universal-debug.apk` | Development and debugging | Uses the repository’s pinned debug key; it is a different signing channel. |
 
-   ```
-   cc hello.c -o a.out
-   ```
+> **Protect your projects:** debug and release are not interchangeable update channels. If Android rejects an update, check the APK/channel first—do not immediately uninstall. Export valuable projects before any reinstall or channel change. Keep signing keys and passwords private; never include them in a bug report.
 
-   ```
-   ./a.out
-   ```
+Developer builds are under [Actions → Build APK → Artifacts](https://github.com/pabi277/CodeC/actions/workflows/build-apk.yml). A normal branch push builds artifacts; it does **not** publish an app release. Publishing is gated to the `app-v*` release flow with version/signing checks.
 
-   The `./` is required (cwd is not on `PATH`). Projects live in app-private storage so `./a.out` is executable.
-4. Programs that use `scanf` / `getchar` must run in **Term**, not the editor RUN button (RUN has no keyboard into the process).
-5. `pkg` is a guarded CodeC-only frontend for the Phase 3 apt/dpkg repository
-   (`https://pabi277.github.io/CodeC/dev`). The app installs the Phase 3
-   bootstrap release `userland-v2-dev` (SHA-256 verified, staged, atomic) and
-   provides 25+ packages including `git`, `python`, `clang`, `nano`, `make`, `ripgrep`, `tmux`, and more.
+## Quick start
 
-#### Optional Linux tools — only when you ask for them
+### 1 · Open your workspace
 
-CodeC does **not** download its Linux userland on first launch. C runs with the
-built-in compiler and HTML previews locally, so the first project works without
-setup or a network connection. Start a userland download from the Terminal only
-when you want Linux commands or a language toolchain that needs it; progress,
-retry and recovery belong to that install flow, not first-run onboarding. Setup
-and package work do not lock editor navigation. If an install is interrupted,
-the next launch repairs the staged prefix before the Terminal needs it.
+On a fresh install, you can skip the educational introduction, then acknowledge the privacy summary. CodeC opens an editable **Arcade** web project with Snake, Block Party and Tic-Tac-Toe. Run it, inspect its files, or create your own project instead. This is not a mandatory coding exercise.
 
-#### Installation does not lock navigation
+### 2 · Write a small C program
 
-Userland setup and language/package installation keep their progress and retry
-controls, but do **not** dim or lock the other tabs, the editor drawer, or Run.
-You can browse projects, edit files, and reach Settings while an install runs.
-The existing runner still prevents a second job on the same runner, and actions
-that require unavailable Linux tools explain that requirement. Package-operation
-serialization, checksum/signature verification, and interrupted-install recovery
-remain in place.
+Create a C project from **Projects → + → New Project**, then open `main.c`:
 
-#### First launch — a quick intro, then CodeC Arcade
+```c
+#include <stdio.h>
 
-A fresh install gets CodeC's branded Android splash, then a short, animated
-three-step introduction: what the mobile IDE does, a preview of **CodeC
-Arcade**, and a plain-language privacy summary. Users can skip straight to the
-acknowledgement; there are no permission prompts or account setup during
-onboarding. The last step requires one explicit acknowledgement of the privacy
-summary before entering the editor. It is not presented as a separate Terms of
-Service.
+int main(void) {
+    puts("Hello from CodeC!");
+    puts("Made on my phone.");
+    return 0;
+}
+```
 
-After acknowledgement, CodeC seeds a modular, offline web project and opens
-its `index.html` in the editor. Tap **RUN ▶** to open the arena: **Snake**,
-**Block Party** (an original block-placement puzzle), and **Tic-Tac-Toe**.
-The HTML, CSS, and JavaScript are separate, ordinary project files to inspect
-and edit. The starter is created once and never overwrites user edits; deleting
-it stays deleted. Existing projects and all other user data remain untouched.
-Returning launches still resume the file the user last had open. The
-introduction can be replayed from **Settings → About**. Design research and
-verification notes:
-[`FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md`](docs/research/FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md).
+Tap **RUN**. On a supported built-in-TCC device, this example needs no compiler download.
 
-### Package & Command Hub (Packages tab)
+Expected output:
 
-The **Packages** tab provides a visual 1-tap package manager and command hub:
-- **1-Tap Install & Run:** Tap **INSTALL** or **RUN** on any package (`git`, `nano`, `python3`, `clang`, `make`, etc.) to execute the command directly in the live terminal.
-- **Quick System Actions:** 1-tap buttons for `pkg update`, `pkg upgrade -y`, `codec-setup-storage`, `pkg status`, `pkg heal`, and `pkg repair`.
-- **Live Status Badges:** Checks real-time installation status in `$PREFIX/bin` (`INSTALLED ✓` / `AVAILABLE`).
-- **Interactive Command Runner:** Execute custom commands directly from the UI.
+```
+Hello from CodeC!
+Made on my phone.
+```
 
-The extra-keys row (ESC, TAB, CTRL, ALT, arrows) and custom macros in Settings make mobile keyboard input seamless. Smooth 60fps pinch-to-zoom and long-press selection with word boundary detection and copy/paste contextual menu are fully supported.
+### 3 · Try the terminal workflow
 
-## Editor, Projects & Web preview
+From the folder containing `main.c` in **CodeC Terminal**, run one command at a time:
 
-Since Phases 8–9 (all device-accepted, 2026-08-29) CodeC is a full little IDE around that
-terminal — and since Phases 15–17 (device-accepted, merged 2026-08-31) it wears a
-Spck-grade skin:
+```sh
+cc main.c -o hello
+./hello
+```
 
-- **Projects Hub**: the Projects tab is a card list (type mark, `⌥ branch · N
-  files · age`, change badge, amber **↑N** when commits never reached the
-  remote) with filter chips + search and ONE `+` sheet —
-  New Project / Clone Git Repo / Import ZIP. (The old fourth row, "Open
-  Folder", was removed completely in Phase 46 — import a folder by zipping it
-  and using Import ZIP.)
-- **Projects vs single files (Phase 46)**: tapping a file in a project opens
-  **that one file** — one tab, its real path (`~proj/<project>/<file>`) in the
-  status bar, full editing/saving/autosave, no project chrome. The card's
-  **⋮ → Open in editor** is the whole-project action (launch default → newest
-  source file).
-- **Nothing hides behind the keyboard (Phase 48)**: when the keyboard, CodeC
-  Keys, the output panel, the status bar or the keys row changes the editor's
-  size, the caret is brought back into view — a suggestion accepted on the
-  last line keeps the caret on screen instead of hiding it under the
-  keyboard. Scrolling away to read is never punished: the view only follows
-  the caret when the editor's box actually changed.
-- **Back does the obvious thing, everywhere (Phase 49)**: one rule table for
-  every screen — unsaved changes ask first, then the editor drawer, the hub's
-  project tree (**back closes the tree, never the app**), open sheets, the
-  find bar, and the output panel. In Web Preview, both system Back and the
-  toolbar arrow traverse WebView page history one step at a time before
-  returning to the editor; the IME and open menus/dialogs keep their own Back
-  behavior. At a root tab the exit prompt appears on every device (the
-  decision comes from where you are, not from the navigation stack), and
-  Settings → Feedback & Support → **"Tell us before you go"** opens the same
-  dialog any time — even on phones whose home swipe never sends a back event.
-- **Spck-style editor**: nav-drawer file tree with in-tree git status letters,
-  tabs in the app bar (dirty dot, close), a snippet/extra-keys row above the
-  status bar, and a Source Control sheet with per-file stage toggle. The app
-  **opens straight into the file you left in** after the first-run intro (new installs → CodeC Arcade),
-  and edits **autosave** ~2 s after you stop typing.
-- **Switch Branch**: branch list (local + remote, plus **New branch…**) with
-  Spck's promise — dirty work is stashed and restored when you come back.
-- **Honest git**: conflicts are grouped in purple with **Mark Resolved** and
-  block the commit; a branch with no upstream is published on first push
-  (`--set-upstream`); and a failed push never looks like a successful one —
-  the sheet says **"Committed locally ✓ — NOT pushed: …"** and offers a
-  **PUSH** retry.
-- **Bottom bar**: Projects · Editor · **Terminal (middle)** · Packages ·
-  Settings.
-- **RUN ▶** builds & runs C/Python (or launches your web page); on an HTML
-  file it **is** the preview — no separate preview button. Build outputs
-  (`a.out`, `bin/`, `dist/`, …) are kept out of git automatically (repo-local
-  ignore; your `.gitignore` is never touched).
+The `./` matters: the current directory is deliberately **not** on `PATH`. For the course’s interactive `scanf` exercises, use Terminal so you can type answers and inspect the complete session. CodeC also has interactive run/input paths; it is not accurate to say every editor RUN lacks input support.
 
-The earlier foundations:
+<p align="center">
+  <img src="assets/readme/workflow.jpg" width="1100" loading="lazy" alt="AI-generated conceptual illustration: a document, a processor and a terminal connected by a green path, representing write, compile and inspect.">
+  <br><sub>Write → compile → inspect. Conceptual artwork, not application UI.</sub>
+</p>
 
-- **Projects**: private project folders (`files/CodeC/projects/<name>`) with a hierarchical
-  tree, SAF file/ZIP import & export, breadcrumbs, per-project run configuration,
-  and **"Run in terminal"** on any `.c` file straight from the tree.
-- **Editor foundation**: multi-file tabs (per-tab undo/redo + dirty state, save-all,
-  reload), undo/redo with typing-burst coalescing, find & replace (literal + regex,
-  highlights, replace-all), Format (`clang-format` bridge with built-in C-indenter
-  fallback), bracket matching, compiler-error squiggles with tap-to-inspect and a
-  missing-`;` quick fix, and a Ln/Col status bar.
-- **VS Code colour (Phase 29)**: syntax highlighting runs on the same TextMate
-  engine VS Code uses (sora `language-textmate`), with MIT grammar files for
-  C, C++, Python, JavaScript/TypeScript, HTML, CSS, JSON, Shell, Markdown, Go,
-  Rust, PHP, Ruby, Lua, XML and YAML. The default editor theme is **VS Code
-  Dark+** (real `dark_plus` token colors); Monokai, Dracula and GitHub Dark
-  remain in Settings. Grammars load once per process, lazily per language,
-  off the UI thread.
-- **Snippets, Emmet & suggestions (Phase 30)**: completions come from **29 MIT
-  [friendly-snippets](https://github.com/rafamadriz/friendly-snippets) packs**
-  bundled in the APK — C, C++, Python, JavaScript / TypeScript / React, HTML,
-  CSS, Go, Rust, PHP, Ruby, Lua, Markdown and Shell, with no download and no
-  server — so typing `for`, `#inc`, `def` or `main` offers the real snippet and
-  parks the caret at its first hole. HTML, CSS and JSX also understand
-  **Emmet** (clean-room, built in): `ul>li*3`, `div.card>p{Hello}` or `!` on a
-  fresh line expands into full markup; `m10`, `d:f`, `p10-20` expand into CSS
-  declarations. Up to **50 candidates** per keystroke — 8 chips above the
-  keyboard, **⌄ more** for the rest, plus the inline ghost (**TAB ▸** accepts;
-  **Enter always inserts a newline**, it never accepts). Accepting replaces
-  exactly what you typed (`#in` → `#include <stdio.h>`). The built-in
-  **CodeC Keys** keyboard (Settings → CodeC Keys; **off by default** since
-  Phase 47 — your phone's keyboard is the default) auto-closes
-  `()` `[]` `{}` `""` `''` — `{` + Enter leaves you on an indented line with
-  `}` below it.
-- **Single files without a project**: the editor's file sheet treats the shared
-  single-files folder as a first-class context — new file, open, run, delete, and
-  "Save to project…" when a file graduates.
-- **Open a project from the editor**: folder button / breadcrumb → Files & Projects
-  sheet → *Change* folder picker (projects ⇄ single files); tabs re-key and the terminal
-  follows.
-- **Web preview**: HTML files preview in-app served by a loopback HTTP server over the
-  whole project folder, so relative CSS/JS, `fetch("data.json")` and ES modules work;
-  live reload on save. Console output shows under the page. System and toolbar Back
-  move through the page's own history before leaving the preview.
+## Add tools when you need them
 
-To rebuild the embedded TCC bundles (e.g. to add more ABIs), run `scripts/build-tcc.sh`
-with a musl cross toolchain — the script is self-contained and CI-ready.
+CodeC does **not** download the Linux environment on first launch. Built-in C on supported ABIs and local static HTML preview are available without it. Start the optional setup from Terminal when you need package tools or another runtime; progress and recovery stay in that flow without locking the rest of the editor.
 
-To use the optional Termux engine, install **Termux 0.109+** from
-[F-Droid](https://f-droid.org/packages/com.termux/) or
-[GitHub](https://github.com/termux/termux-app/releases) (the Play Store version is outdated
-and does not support this), then in Termux run:
+| What you want to run | What it needs |
+|---|---|
+| C | Bundled TCC on arm64-v8a/x86_64; compatible toolchain or fallback on other setups. |
+| C++ / a Clang toolchain | Optional Clang module, subject to architecture and Android execution restrictions. |
+| Python | Optional Linux setup and the `python` package; command: `python3`. |
+| JavaScript outside a web page | Optional Linux setup and `nodejs`; command: `node`. |
+| HTML, CSS and browser JavaScript | A local web project. Open `index.html` and tap RUN. |
 
-```bash
+Once Linux setup is complete, examples in **CodeC Terminal** include:
+
+```sh
+pkg install python
+pkg install nodejs
+pkg install git
+```
+
+The **Packages** tab also provides install/run controls and command tools. CodeC uses its own signed package metadata and app-specific prefix. **Do not add official Termux repositories, mix their installed packages into CodeC, replace `cc` with a Clang symlink, or put `.` on `PATH`.**
+
+### CodeC and Termux
+
+CodeC is an integrated Android IDE; Termux is a terminal-first Linux environment. They are separate projects, not interchangeable package installations. CodeC can use a compatible Termux Clang setup as an **automatic fallback** when needed. There is no manual compiler-engine picker.
+
+Read the [CodeC/Termux comparison](website/guides/codec-vs-termux.html) or the [compiler guide](website/guides/engines.html) for the workflow and architecture differences. These links open checked-in website source. The public documentation address is [pabi277.github.io/CodeC](https://pabi277.github.io/CodeC/).
+
+<details>
+<summary><strong>Set up optional Termux fallback—only if CodeC asks for it</strong></summary>
+
+Use a compatible **Termux 0.109+** installation from the sources listed in the [official Termux project](https://github.com/termux/termux-app#installation), such as its [GitHub releases](https://github.com/termux/termux-app/releases) or [F-Droid package](https://f-droid.org/packages/com.termux/). Follow the Output Panel’s guidance when fallback is needed.
+
+Run these commands in **Termux itself**, **not CodeC**:
+
+```sh
 echo "allow-external-apps=true" >> ~/.termux/termux.properties
 termux-reload-settings
 pkg update && pkg install clang
 ```
 
-and grant CodeC the **"Run commands in Termux environment"** permission
-(Android Settings → Apps → CodeC IDE → Permissions → Additional permissions).
-There is no Settings card for this any more (Phase 38.2 removed the Termux
-bridge UI — the engine is fully automatic): when a build actually needs the
-fallback, the Output Panel prints these same four steps
-([TROUBLESHOOTING.md §27](docs/guides/TROUBLESHOOTING.md)).
+Then allow **Run commands in Termux environment** for CodeC in Android’s app permissions. Labels vary by device. Retry the build; CodeC chooses the available engine automatically.
 
-## AI assistant (your key, your rules)
+The bundled TCC covers arm64-v8a and x86_64. The optional Clang module’s arm64 build is not an x86 compiler. Never assume that a universal APK gives every device the same available toolchains.
 
-CodeC carries an **optional** AI assistant (Phases 76–96 / AI Levels 1–12). It
-stays idle until you bring your own provider key, and it is read-first by
-design.
+</details>
 
-- **What it is.** A chat sheet you open from the ✨ rail slot or the floating ✨
-  button (`app/src/main/java/com/codeci/ide/ui/ai/AiHome.kt`,
-  `AiChatSheet.kt`). Google Gemini is the default provider; **NVIDIA Build** is
-  a manual selection labelled dev/test only (`AiProviders.kt`). CodeC hosts no
-  model, has no shared key and runs no proxy: each request leaves *your* phone
-  with *your* key, under that provider's terms.
-- **What it can read.** Only the project you have open, and only through
-  CodeC's own filter (`AiProjectFiles.kt`, `AiProjectReader.kt`). The agent's
-  tools are `list_files`, `search_project`, `read_file` and `read_files` (up to
-  8 files), plus the read-only structure results `find_files`, `outline_file`
-  and `read_run_output` (`AiTools.kt`). `search_project` takes `list_files`'
-  own scoping keys — `max`, `path`, `ext` — and can only narrow what the walk
-  already admitted. `.env`, `.npmrc`, private keys, `.git/`, `.codec/`, build
-  output and symlink escapes are refused before anything is sent.
-- **No write tool and no exec tool, by design.** `ui/ai/` contains zero direct
-  file writes and zero command execution. An edit arrives as a
-  `<<<CODEC_EDIT>>>` proposal drawn as a **diff you review**; only your
-  **Apply** writes it, through `ui/projects/AiEditApplier.kt`. A run request
-  reaches CodeC's normal **RUN ▶** pipeline only after you tap **Run** on the
-  approval card — Skip runs nothing (`AiToolRunner.kt`).
-- **Nothing is sent until you tap Send**, on a preview that shows the exact
-  strings the request will carry — and those two strings are what goes over the
-  wire (`AiViewModel.preview()` → `AiPrompt` → `GeminiRequest.body`). Raw chat
-  text is **never** written to a file, a store, a log or a backup (D6):
-  conversations and the drawer's rows live in memory, so **history is this
-  session only** (`AiChatHistory.kt`). Agents run under hard caps — 12 model
-  turns, 24 tool calls, 2 runs, 24 000-char reads, 8 000-char results, 8
-  batched reads (`AiAgentLoop.kt`, `AiTools.kt`) — and the nine controls in the
-  AI panel only tune *inside* those caps (`AiOptionsPolicy.kt`).
-- **What it costs you: your key, your bill, your provider.** The key is
-  encrypted with Android Keystore (AES-256-GCM) under `no_backup/ai/`, never
-  uploaded to CodeC and never carried by a backup (`AiKeyStore.kt`); support
-  exports scrub key-shaped strings (`AiSecretScan.kt`).
+## Optional AI. Your key. Your approval.
 
-How to use it, step by step: [docs/guides/AI.md](docs/guides/AI.md). What
-leaves the phone, where it goes and what is kept:
-[docs/guides/DATA_AND_PRIVACY.md](docs/guides/DATA_AND_PRIVACY.md).
+Use AI for explanations, focused questions and small, reviewable code changes—not as a prerequisite for writing or running a program.
 
-## Troubleshooting
+- **Bring your own key.** Gemini is the default provider. NVIDIA Build is a manual dev/test option, not a production recommendation. CodeC provides no shared key, model-hosting service or remote proxy.
+- **Preview before sending.** You choose the provider and inspect the request. Sending a project task can authorize bounded, filtered read-only follow-ups without a new tap for each file read.
+- **Review before changing anything.** Edits arrive as proposals. Files change only through your **Apply** action; a requested run needs its own **Run** approval. The assistant has no direct write or execution tool.
+- **Know what is retained.** Raw chat history is session-only. Separate bounded task-memory/undo stores are not chat transcripts. Provider retention is governed by the provider’s terms—not a promise that nothing is stored remotely.
+- **Your key, your bill.** Provider usage, limits and charges remain yours. Keys are encrypted through Android Keystore and excluded from app backups.
 
-> **New-chat prompt (paste this first):** [prompt.md](prompt.md).  
+<details>
+<summary><strong>Tool boundaries and hard limits</strong></summary>
 
-### "The built-in compiler could not start"
+The eight tools are `list_files`, `search_project`, `read_file`, `read_files`, `find_files`, `outline_file`, `read_run_output` and `request_run`. The last one requests approval; it does not execute a command itself.
 
-Only possible when the APK's TCC binary doesn't match the device CPU (an exotic ABI, or a
-corrupted install). Reinstall the app; the Auto engine falls back to the Clang module /
-Termux in the meantime.
+Task ceilings include **12 model turns**, **24 tool calls**, **2 approved runs**, **24,000 read characters**, **8,000 characters per tool result** and **8 files per batch**. AI controls operate inside those ceilings. Secret-like paths, Git internals, build output and symlink escapes are filtered; inspect the request and results rather than assuming a filter is infallible.
 
-### "Permission denied" when compiling — Android blocks the downloaded compiler
+There is no shipped autonomous agent or on-device/local-model feature implied here.
 
-This error has two real causes:
+</details>
 
-1. **Android 10+ (API 29+) W^X policy.** Since Android 10, the system refuses `exec()`
-   of downloaded binaries stored in an app's own data directory **when the app targets
-   API 29 or higher** (see the [Android 10 behavior change](https://developer.android.com/about/versions/10/behavior-changes-10#execute-permission)).
-   This affects *real phones*, not only emulators — the old build of CodeC targeted
-   API 34, so on any Android 10+ phone the downloaded Clang was blocked with
-   "Permission denied". The new builds use the same **targetSdk 28 compatibility mode
-   that Termux uses**, which keeps downloaded binaries executable.
-2. **noexec app storage.** Some emulators, cloud phones and managed devices mount app
-   storage with the `noexec` flag. No app-side change can fix that — nothing can execute
-   there, Termux included.
+**Read before enabling:** [AI guide](docs/guides/AI.md) · [Data and privacy](docs/guides/DATA_AND_PRIVACY.md).
 
-**Fixes, in order:**
+## Privacy and your work
 
-1. **Update CodeC** to the latest APK (Settings → Install APK from GitHub). The new
-   builds don't use the downloaded Clang at all by default: **Auto** engine compiles with
-   the **built-in TCC compiler** that ships inside the APK and runs from the native
-   library directory, which Android allows at any targetSdk — no module, no Termux, no
-   network. If the error persists after updating, **uninstall and reinstall the app
-   once** — Android labels the sandbox at install time and an in-place update may keep the
-   old restriction.
-2. **Switch the engine to Termux** (Settings → Compiler Engine → Termux, setup above).
-   Termux's own storage is exempt, so this works even when the bundled compiler is
-   blocked.
-3. **Use Termux directly** — see [docs/guides/TROUBLESHOOTING.md](docs/guides/TROUBLESHOOTING.md) for a
-   complete step-by-step C workflow in Termux.
-4. On a truly `noexec` device (cloud phones, some enterprise ROMs) no local compiler can
-   run; use a real phone or an online compiler.
+- No ads, analytics, tracking SDK or automatic crash-report uploads.
+- Network actions include the package, Git, update, AI and sharing workflows you choose. **“Your code never leaves the device” would be an inaccurate promise.**
+- Shared-storage access requires Android permission; that grant can allow subsequent file access without asking again for each file.
+- Projects live in app-private storage by default. Export important work outside the app before uninstalling or changing signing channels.
+- Project backup/export is not a backup of the entire Linux environment, installed packages, settings or credentials.
+- LAN sharing is opt-in. Serve only files you intend other network users to access.
 
-If you still see this error, open **Logs** (Settings → Developer Options) and include the
-"Device: …" line (ABI + app storage mount flags) in a bug report.
+Read the full [permissions and data guide](docs/guides/DATA_AND_PRIVACY.md) and [backup/beta guidance](docs/guides/BETA.md).
 
-### "Exec format error" when compiling
+## Learn and explore
 
-CPU mismatch. CodeC ships an ARM64 compiler, so **x86/x86_64 emulators and 32-bit devices
-can't run it directly**. Use a real ARM64 phone, or switch **Settings → Compiler Engine →
-Termux** — Termux ships a native Clang for x86_64 and 32-bit ARM too. On an ARM64 phone,
-reinstall the module (Uninstall → Download) to rule out a corrupted download.
+The **19-chapter CodeC course** covers a first C program, terminal basics, the editor, shell scripting, Python, Git, web projects, device APIs and optional AI. Examples are included locally; you do not need an AI subscription to follow the course.
 
-### "Runtime libraries missing" when compiling
+**[Download the complete website and course ZIP](https://raw.githubusercontent.com/pabi277/CodeC/main/web_docs/chat-web9/CodeC-website-licensed.zip)** → import it as a **new CodeC project** → keep its folders → open root `index.html` → RUN.
 
-The toolchain is incomplete or corrupted. Open **Modules** → **Uninstall** → **Download**
-again (the download is checksum-verified, so this usually means the install was
-interrupted), or switch to the Termux engine.
+**Read online:** [CodeC website](https://pabi277.github.io/CodeC/) · [19-chapter course](https://pabi277.github.io/CodeC/learn/). The same content is available in the offline ZIP and [checked-in source](website/).
 
-### Install or compile hangs
+**Course license:** original lessons and exercises are **CC BY 4.0**; original code examples are **MIT**. See the [scope and attribution notice](website/learn/licenses/SCOPE.txt), [CC BY 4.0 terms](website/learn/licenses/CC-BY-4.0.txt) and [MIT example-code license](website/learn/licenses/MIT-EXAMPLES.txt). This does not change the app’s license or cover third-party material, logos or README artwork.
 
-Compilation is capped at 30s and program execution at 10s; both are killed
-automatically. A compile that "hangs" for exactly 30s usually means the
-toolchain can't start — check the error text above.
+| Looking for… | Start here |
+|---|---|
+| Help with a compiler, terminal or setup issue | [Troubleshooting](docs/guides/TROUBLESHOOTING.md) |
+| Known limitations and reporting guidance | [Beta guide](docs/guides/BETA.md) |
+| Optional AI setup, tools and limits | [AI guide](docs/guides/AI.md) |
+| Permissions, network use and retained data | [Data and privacy](docs/guides/DATA_AND_PRIVACY.md) |
+| What changed between releases | [Release notes](docs/guides/RELEASE_NOTES.md) |
+| Project documentation and development history | [Documentation index](docs/README.md) · [Journey](docs/journal/JOURNEY.md) |
 
-Editor **RUN** on a program that calls `scanf` will hit the 10s cap (exit 124).
-That is waiting for input, not an infinite loop. Run it in **Term** with `./a.out`.
+## Troubleshooting essentials
 
-## Build locally
+| What you see | First thing to check |
+|---|---|
+| APK will not update the installed app | Release versus debug signing channel, version and download integrity. Export first; do not start with an uninstall. |
+| `Permission denied` or `Exec format error` | The selected toolchain’s ABI and Android execution restrictions. Follow Output Panel remediation; there is no engine picker to switch. |
+| Missing runtime or package | Complete the optional setup if needed, then check the package’s actual installation result. |
+| A program appears to wait forever | Check whether it is waiting for input. Use Terminal for the interactive lesson workflow and inspect the actual output/exit status. |
+| A long-running job stops in the background | Android battery/background restrictions and the foreground notification. Device behavior varies. |
+| `cc --version` prints a version then complains about `main` | The current `cc` frontend still adds link objects for this probe. This alone does not mean a normal source compilation failed. |
 
-Android Studio: open this folder and run the `app` debug configuration.
+CodeC is in **beta**. Android 7 is the declared minimum, not certification that every Android 7 device, emulator or 32-bit tablet works. Keep useful backups and include your exact environment when reporting an issue.
 
-Command line (needs JDK 17; the checked-in Gradle wrapper downloads the AGP-compatible Gradle 9.3.1):
+<details>
+<summary><strong>Send a useful, safe bug report</strong></summary>
 
-```bash
+Open [GitHub Issues](https://github.com/pabi277/CodeC/issues) with:
+
+- CodeC version/build from About, Android version and device/ABI if known.
+- The smallest steps and source example that reproduce the problem.
+- Expected behavior, actual output and exit/error text.
+- A screenshot when a layout or keyboard problem is involved.
+
+Remove private source, API keys, GitHub tokens, signing passwords and keystore material. Review logs before sharing them. Personal contact options, where available, stay in the app’s Feedback & Support section—not this public README.
+
+</details>
+
+## Build and contribute
+
+Use **JDK 17**, the project-pinned Android SDK/NDK/CMake configuration, and the checked-in Gradle wrapper. Android Studio can open the repository directly.
+
+```sh
 ./gradlew :app:assembleDebug
 ```
 
-The APK is written to `app/build/outputs/apk/debug/`.
+Debug APK output: `app/build/outputs/apk/debug/`. The wrapper pins **Gradle 9.3.1**; do not substitute an arbitrary system Gradle. CI is defined in [Build APK](.github/workflows/build-apk.yml).
+
+Release builds use the existing private upload key and configured environment variables. **Do not generate a new key merely to rebuild an APK.** Signing keys/passwords never belong in Git or chat. [Signing guidance](docs/guides/UPLOAD_KEY_SETUP.md) includes historical setup/recovery notes; preserve the current signing identity for normal updates.
+
+<details>
+<summary><strong>Repository map and contributor rules</strong></summary>
+
+| Path | Purpose |
+|---|---|
+| `app/` | Android application |
+| `codec-packages/` | CodeC package recipes, repository tooling and public trust material |
+| `docs/` | App guides, source-backed decisions and implementation history |
+| `website/` | Self-contained HTML/CSS product site and course |
+| `web_docs/` | Website plans, checks, device evidence and downloadable snapshots |
+| `assets/readme/` | Optimized README illustrations and provenance |
+| `scripts/` | Build, verification and maintenance helpers |
+
+Start with [rule.md](rule.md). App handoff: [prompt.md](prompt.md). Website handoff: [web_prompt.md](web_prompt.md).
+
+**Owner approval is required before creating a PR or merging.** Agents work only on their assigned session branch; committing/pushing that branch does not authorize a merge, release or deployment. Work begins from an owner-reported issue or requested change, not an automatically resumed phase plan.
+
+Preserve signed package metadata, CodeC’s `cc` TCC frontend, the real shell binaries and private signing material. Keep the `-o <output>` pair last in course compiler commands. Do not put `.` on `PATH`, import official Termux packages into CodeC, or use `build-package.sh -I`. Agent-side Android/Gradle testing belongs in the existing CI workflow; device acceptance must come from actual owner reports.
+
+For the UI’s historical design context, see the [Phase 64 handoff](docs/phases/09-onboarding-setup/chat-phase64/HANDOFF.md), [UI review](docs/journal/UI_POLISH_REVIEW_20260927.md) and [first-run research](docs/research/FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md). These records are history, not permission to restart completed work.
+
+</details>
+
+---
+
+<p align="center">
+  <strong>Small screen. Real possibilities.</strong><br>
+  <a href="https://github.com/pabi277/CodeC/releases">Get CodeC</a> ·
+  <a href="https://github.com/pabi277/CodeC/issues">Share feedback</a> ·
+  <a href="docs/guides/DATA_AND_PRIVACY.md">Read the privacy guide</a>
+</p>

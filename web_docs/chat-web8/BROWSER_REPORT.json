@@ -1,0 +1,256 @@
+{
+  "scope": "GitHub Markdown API output + local GitHub markdown CSS; not the full live GitHub page",
+  "browser": "153.0.8010.0",
+  "cases": [
+    {
+      "scheme": "light",
+      "width": 320,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    },
+    {
+      "scheme": "light",
+      "width": 360,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    },
+    {
+      "scheme": "light",
+      "width": 768,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    },
+    {
+      "scheme": "light",
+      "width": 1440,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    },
+    {
+      "scheme": "dark",
+      "width": 320,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    },
+    {
+      "scheme": "dark",
+      "width": 360,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    },
+    {
+      "scheme": "dark",
+      "width": 768,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    },
+    {
+      "scheme": "dark",
+      "width": 1440,
+      "documentOverflow": 0,
+      "images": "2 loaded",
+      "keyboardDisclosures": "5 opened",
+      "quickStartAnchor": "PASS"
+    }
+  ],
+  "errors": [],
+  "accessibility": [
+    {
+      "scheme": "light",
+      "width": 360,
+      "violations": [
+        {
+          "id": "scrollable-region-focusable",
+          "impact": "serious",
+          "nodes": [
+            [
+              "markdown-accessiblity-table:nth-child(20) > table"
+            ],
+            [
+              "details:nth-child(46) > .highlight-source-shell > pre"
+            ]
+          ]
+        }
+      ],
+      "manualReviewRules": []
+    },
+    {
+      "scheme": "light",
+      "width": 1440,
+      "violations": [],
+      "manualReviewRules": []
+    },
+    {
+      "scheme": "dark",
+      "width": 360,
+      "violations": [
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "nodes": [
+            [
+              "p:nth-child(10) > a[href$=\"BETA.md\"]"
+            ],
+            [
+              "li:nth-child(1) > a"
+            ],
+            [
+              "p:nth-child(17) > a"
+            ],
+            [
+              "p:nth-child(22) > a"
+            ],
+            [
+              "p:nth-child(45) > a:nth-child(1)"
+            ],
+            [
+              "a[href$=\"engines.html\"]"
+            ],
+            [
+              "p:nth-child(2) > a:nth-child(2)"
+            ],
+            [
+              "p:nth-child(2) > a:nth-child(3)"
+            ],
+            [
+              "p:nth-child(2) > a[rel=\"nofollow\"]"
+            ],
+            [
+              "p:nth-child(51) > a[href$=\"AI.md\"]"
+            ],
+            [
+              "p:nth-child(51) > a:nth-child(3)"
+            ],
+            [
+              "a[href$=\"website/\"]"
+            ],
+            [
+              "p:nth-child(67) > a"
+            ],
+            [
+              "p:nth-child(68) > a"
+            ],
+            [
+              "a[href$=\"rule.md\"]"
+            ],
+            [
+              "a[href$=\"prompt.md\"]:nth-child(2)"
+            ],
+            [
+              "a[href$=\"web_prompt.md\"]"
+            ],
+            [
+              "p:nth-child(6) > a:nth-child(1)"
+            ],
+            [
+              "p:nth-child(6) > a:nth-child(2)"
+            ],
+            [
+              "p:nth-child(6) > a:nth-child(3)"
+            ]
+          ]
+        },
+        {
+          "id": "scrollable-region-focusable",
+          "impact": "serious",
+          "nodes": [
+            [
+              "markdown-accessiblity-table:nth-child(20) > table"
+            ],
+            [
+              "details:nth-child(46) > .highlight-source-shell > pre"
+            ]
+          ]
+        }
+      ],
+      "manualReviewRules": []
+    },
+    {
+      "scheme": "dark",
+      "width": 1440,
+      "violations": [
+        {
+          "id": "link-in-text-block",
+          "impact": "serious",
+          "nodes": [
+            [
+              "p:nth-child(10) > a[href$=\"BETA.md\"]"
+            ],
+            [
+              "li:nth-child(1) > a"
+            ],
+            [
+              "p:nth-child(17) > a"
+            ],
+            [
+              "p:nth-child(22) > a"
+            ],
+            [
+              "p:nth-child(45) > a:nth-child(1)"
+            ],
+            [
+              "a[href$=\"engines.html\"]"
+            ],
+            [
+              "p:nth-child(2) > a:nth-child(2)"
+            ],
+            [
+              "p:nth-child(2) > a:nth-child(3)"
+            ],
+            [
+              "p:nth-child(2) > a[rel=\"nofollow\"]"
+            ],
+            [
+              "p:nth-child(51) > a[href$=\"AI.md\"]"
+            ],
+            [
+              "p:nth-child(51) > a:nth-child(3)"
+            ],
+            [
+              "a[href$=\"website/\"]"
+            ],
+            [
+              "p:nth-child(67) > a"
+            ],
+            [
+              "p:nth-child(68) > a"
+            ],
+            [
+              "a[href$=\"rule.md\"]"
+            ],
+            [
+              "a[href$=\"prompt.md\"]:nth-child(2)"
+            ],
+            [
+              "a[href$=\"web_prompt.md\"]"
+            ],
+            [
+              "p:nth-child(6) > a:nth-child(1)"
+            ],
+            [
+              "p:nth-child(6) > a:nth-child(2)"
+            ],
+            [
+              "p:nth-child(6) > a:nth-child(3)"
+            ]
+          ]
+        }
+      ],
+      "manualReviewRules": []
+    }
+  ]
+}

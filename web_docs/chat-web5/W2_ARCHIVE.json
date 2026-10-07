@@ -1,0 +1,34 @@
+{
+  "archive": "web_docs/chat-web5/CodeC-website-W2.zip",
+  "bytes": 25119,
+  "sha256": "29bc163b428c92a766c7c5407516676de9b154f42e3e5888504681df5ec42b89",
+  "uncompressed_bytes": 87177,
+  "files": [
+    {
+      "path": "favicon.svg",
+      "bytes": 1682,
+      "sha256": "968d7fbf78502ef8807d52114f3114ad7acf0bbb97ddde0af130b8ef7e4bafc3"
+    },
+    {
+      "path": "index.html",
+      "bytes": 16086,
+      "sha256": "3436c296c552e9959abb962adf675198f181dec0ae66a987531bdf83c54e357b"
+    },
+    {
+      "path": "install.html",
+      "bytes": 18307,
+      "sha256": "78c25ee58840a31eb57ac1c53ae0d08e250b0083e81855b10e6ed632dfaee3eb"
+    },
+    {
+      "path": "start.html",
+      "bytes": 20526,
+      "sha256": "ba93bbbd7fcf04604b14c99bfeb9522d921563e381ffd7bb1161282bcb150775"
+    },
+    {
+      "path": "style.css",
+      "bytes": 30576,
+      "sha256": "1c4eeadcd7748f481ed73936c2d91babb2b2867b150932d74924b4ae5d1f9ff8"
+    }
+  ],
+  "crc_and_exact_tree_bytes": "PASS"
+}

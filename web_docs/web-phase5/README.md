@@ -1,5 +1,39 @@
 # CodeC Website Phase W5 — Learning Wing II: Chapters 07–12
 
+> **Owner rounds1–3: required device checks PASSED.**
+> [Evidence](../chat-web6/DEVICE_ROUND_1.md): Chapter8/P1/P5 including audible speech;
+> Android16 / aarch64, CodeC “latest” (exact build unspecified). No retest needed.
+> Review/license and explicit PR/merge/deploy authorization are separate.
+
+> **Current batch status — 2026-10-07, D33: CONTENT IMPLEMENTED; REQUIRED DEVICE CHECKS PASSED.**
+> Owner authorized W3–W6 content together, then one commit/watch; separate start
+> commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
+> [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
+> [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
+> D31 download law retained. Device pass recorded above; no PR, merge or deployment implied.
+
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
+> **Current v2.3 — 2026-10-07.** **CONTENT IMPLEMENTED; REQUIRED DEVICE CHECKS PASSED** — combined batch authorized (D33), review/gates remain.
+
+Ch-07…12. Editor, TCC-safe C, shell, Python, Git truth, networking/LAN. Ch-08 owner device transcript remains required.
+
+**6 parts in this phase.** The six phases contain **39 docs (6 READMEs + 33 PART docs)**.
+
+Read [master plan v2.3](../WEBSITE_PLAN.md) and the binding v2.3 block at the top
+of every PART doc. Current requirements override the retained prior design below:
+29 pages, 19 chapters, AI nav, Privacy footer, release v1.3.18, contacts in-app
+only, no deleted UI or cancelled proposals taught. W1→W6 strictly sequential.
+Use [NEXT_STEPS](../NEXT_STEPS.md) for status, not old session-folder assumptions.
+
+---
+
+## Prior phase brief — historical v2.2 context
+
+The earlier status, counts and session pointers below are superseded above.
+
 **Status:** 📋 **PLANNED** — not yet started. Awaiting owner's "Start W5".
 · **Cost:** `[static]` — six new files in `website/`; zero app code
 · **Depends on:** W4 (template, crumb count, verified-facts table)

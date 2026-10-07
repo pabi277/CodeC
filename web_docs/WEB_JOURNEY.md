@@ -168,3 +168,242 @@ Key facts extracted for website:
 
 *Next entry: W1 (scaffold + Home) — after the owner's implementation command, now with v2.2 facts.*
 
+
+## W0.4 — Reconcile the supplied v2.3 scope (2026-10-07)
+
+**19. Verify before trusting the handoff.** The owner supplied a v2.3 handoff dated
+October 6. Actual main/base `d4231f0` still had v2.2, D1–D22 and 35 phase docs;
+chat-web3 and the four new specs were missing. The checkout was clean/shallow,
+remote main agreed, PR116/release app-v1.3.18 verified (one universal APK
+7 217 532 B, versionCode22; main37505147370/tag37505175304 green). PR115's real
+merge was 0edf4dd, not earlier baseline1c6f910. Open PR42 held old unmerged W1+W2;
+PR83 app bookkeeping also open. None changed. This is an October7 reconciliation,
+not a claim of a missing October6 commit. Record: [chat-web3](chat-web3/SUMMARY.md).
+
+**20. Restore the missing plan without rewriting history.** Master v2.3 now
+covers 9 product pages and course home +19 chapters =29. Added AI/Privacy/ch18/ch19
+specs: **39 docs, 6 READMEs +33 PARTs**, not37. D23–28 record supplied decisions;
+D29–30 record this session's authorization/facts. Existing phase docs retain
+historical bodies under prominent superseding v2.3 requirements. Corrected
+release size, first run intro/Arcade, optional userland, deleted Open Folder,
+Auto-only engines, contacts in-app, AI/D6/S9/privacy scope. W4.2 first, W6.8/9
+before polish, W5/W6 device transcripts still due. PR42's warning that Pages
+already serves signed packages is preserved for W6; no deployment touched.
+
+## W1 — Fresh scaffold and Home (2026-10-07)
+
+**21. The owner authorizes the fresh build.** “You can watch the pr 42 for reference
+but you have build it with updated docs and more powerful website.” Declared
+Build website=StartW1, one phase only. Read PR42 body/Home at6f6a3cf via gh;
+no import or branch change, no inherited W2/merge/deploy authority. Fresh static
+Home: dark green editorial design, original >_ mark, native keyboard-operable
+mobile menu, six current feature cards including AI and safe workflow, precisely
+labelled illustrative C example, 19-chapter course preview, release metadata and
+honest AI consent note. Only index.html/style.css/favicon.svg; no JS or external
+resources, no screenshot invented, no app/docs/workflow changes.
+
+**22. Verify the actual three-file page.** Browser widths360/390/768/1100/1440,
+no page overflow/script errors; native menu keyboard checks; axe WCAG A/AA zero
+violations; fresh offline file render with networking+JS off; only local resources;
+six unique outbound links GET200. Nine final internal targets are deliberately
+unbuilt and visibly upcoming, not counted as a full link pass. No device/Pages
+claim. Source ledger, chrome pattern and detailed checks in
+[chat-web4/W1_SUMMARY.md](chat-web4/W1_SUMMARY.md),
+[W1_CHROME.md](chat-web4/W1_CHROME.md), [W1_CHECKS.md](chat-web4/W1_CHECKS.md).
+Session push runs existing app CI; actual run state belongs to NEXT_STEPS/final
+report. **No PR, merge or deployment; next phase waits for StartW2.**
+
+
+**23. Phone review without merging (2026-10-07).** The direct sandbox link failed
+with403/missing traffic token. Repeated Arena attachment presentation didn't give
+the owner a download: his screenshot shows only the changes list. He chose
+preparation-only for a possible Pages preview, then paused that to review a local
+copy. Solution: publish the 11,400-byte W1 review ZIP as an ordinary **session-branch
+file** in chat-web4, not a Release or Pages deployment. Its three entries exactly
+match website/ at0d16467; ZIP CRC/readback checked, CI37518457228 success for that
+source. Download raw file from GitHub → CodeC Import ZIP → index.html → RUN.
+No source/app/workflow change, no PR/merge/deployment. The archive is explicitly
+a W1 snapshot; future site changes must not silently present it as current.
+
+## W2 — Install + Getting Started (2026-10-07)
+
+**24. A mandatory download, every phase.** After the GitHub branch ZIP solved phone
+review, the owner said “Now make this a hardcore rule every phase end the download
+able zip link provide”. D31 and REVIEW_DOWNLOAD_RULE make the whole-current-site
+ZIP, byte checks, session-branch upload and final direct link a mandatory exit.
+All six phase READMEs/master acceptance/handoff carry it. Arena-only attachments
+are not sufficient. W1 ZIP stays historical; no merge/deployment is needed.
+
+**25. W2 specifically authorized.** “Now start w2” (D32), not W3–W6 or PR/merge.
+Reverified current branch47c09a6 (prior ZIP follow-up CI37524577493 success), main
+d4231f0, open PR42/83 untouched, app-v1.3.18 universal7,217,532B/versionCode22 and
+published digest. README/guides then current UI source—not PR42 implementation.
+
+**26. Two complete guides in the existing chrome.** Install includes release,
+developer and update paths, SHA256, export before signing-channel change, API/ABI
+limits and Termux-only optional fallback instructions. Start follows current
+intro/privacy/Arcade, opt-in Linux, five examples, five-tab map and HTML/LAN safety.
+Home now links to working Start; shared guide CSS is local, no JS. Validator found
+small semantic markup issues; fixed causes (including W1 figcaption order) without
+suppressing rules. Three of29 pages, seven future link targets honestly disclosed.
+
+**27. Verify the whole review snapshot.** Three pages ×320–1440: no page overflow,
+zero axe violations, native keyboard controls/skip, reduced motion, zero external
+resource requests. HTML Validate clean; both C examples pass host syntax/output
+preflight (not Android/TCC);11 GitHub destinations GET200. F-Droid direct TLS EOF,
+page-fetch retrieval successful. Full W2 ZIP25,119B/5files, exact website bytes,
+CRC/safe paths and extracted offline/no-JS browser checks PASS. Records in
+[chat-web5/W2_SUMMARY.md](chat-web5/W2_SUMMARY.md),
+[W2_SOURCES.md](chat-web5/W2_SOURCES.md), [W2_CHECKS.md](chat-web5/W2_CHECKS.md).
+Phase push/CI/readback/final direct link follows these local checks; do not confuse
+local verification with a future uploaded-file or app-CI pass. No PR/merge/deploy;
+W3 waits for its own owner command.
+
+
+## Remaining website batch — W3–W6 content/review (2026-10-07)
+
+**28. Owner combined the remaining work, retained device gates.** The owner asked
+for the full website in one go, then a commit/watch, and chose “Keep device
+verification gates”. D33 supersedes separate phase-start/intermediate-commit
+ceremony only. W2's old watch was not resumed; no GitHub run was cancelled.
+Baseline8467ff8 and read-only app/main d4231f0 were verified. No PR/merge/deploy.
+
+**29. Facts first, then the complete product/course text.** W4.2's43 source groups
+and33 configured package roots were recorded BEFORE course authoring. Six product
+guides, course home and19 chapters now make29 pages. Current automatic engines,
+removed folder UI, deferred OpenSSH, actual APIs/Git/settings, AI tools/caps/consent
+and storage distinctions replace old assumptions. Ch18/19 precede polish; chapter
+path17→18→19→course, Privacy/footer and existing accessible static design retained.
+Original source trace and every phase's batch-status note updated together.
+
+**30. Test the final site, not just the new pages.** Static checks cover1,065
+internal targets with0 missing. HTML Validate passes all29.49 host/stub checks
+pass; the final Chromium sweep passes116 responsive/axe cases and29 extracted
+ZIP offline/no-JS pages, plus3 runnable web-example scenarios. HTML escaping and
+320px hostname overflow were real failures fixed before the final run; no weakened
+assertions. No browser/host result substitutes for Android transcripts.
+[Detailed evidence](chat-web6/CHECKS.md).
+
+**31. Full review ZIP and honest remaining gates.** Preserved cumulative W3/W4/W5
+pre-polish snapshots; the current31-file ZIP is134,916B, exact-source bytes and CRC
+verified, SHA256312d6c1c62bece7c7b9f338c5c250b9c87e50e7e7affecc2db48270b20e2b289.
+[Download/summary](chat-web6/BATCH_SUMMARY.md). One batch commit/push follows local
+checks; watch its automatic Build APK and verify uploaded bytes before the final
+commit-pinned download handoff. This pre-push history does not invent a future CI
+conclusion. Owner Chapter8/P1/P5 transcripts and O7 license remain open; W6.7
+public deployment is HELD. No app/package/workflow change, PR, merge or release.
+
+
+**32. Owner device round1 — actual partial pass (2026-10-07).** After the agent
+supplied complete test files and commands, the owner pasted aarch64 CodeC Terminal
+results. Input/ten-row loop/pointer swap passed. Converter45°C→113°F and calculator
+44+33→77 /5×67→335 /quit passed; opposite conversion and calculator error cases
+were not run. Battery84% and speech request returned successfully; audibility is
+not confirmed. Owner explicitly entered YES and the ncurses/sed maintenance
+transaction completed, followed by battery/speech and exit0. Do not repeat that
+mutating test. `cc --version` printed TCC metadata then missing-main: source shows
+the wrapper unconditionally adds startup objects; this does not invalidate the
+successful compilations. App remains read-only. [Evidence](chat-web6/DEVICE_ROUND_1.md).
+Batch802532d's CI37533980679 success reverified; no new commit/push/CI/deploy for
+this evidence-only follow-up. W5/W6 acceptance remains partial, no blanket pass.
+
+
+**33. Owner device round2 — remaining C cases passed (2026-10-07).** The owner
+pasted the requested follow-up:212°F→100.00°C, calculator zero-division refusal,
+unsupported-operation recovery and both exit0. Together with round1 this evidences
+Chapter8/P1 functional checks; no need to repeat those tests. P5 audible voice and
+CodeC/Android version context are still unconfirmed. The successful consented
+package-maintenance run is not repeated. [Evidence](chat-web6/DEVICE_ROUND_1.md).
+Only device records/living summaries changed; no app/website/ZIP/workflow change,
+commit/push/CI/PR/merge or deployment, and no inferred overall acceptance.
+
+
+**34. Owner confirms audible speech — device gates passed (2026-10-07).** Owner
+answered “Yes” to hearing the Good morning voice, CodeC version “latest”, Android
+“16”. Combined with rounds1–2, required Chapter8/P1/P5 device checks PASS, including
+the deliberately approved package-maintenance path. Exact installed CodeC build
+remains unspecified; do not infer a release/versionCode from “latest”. No repeat
+requested. [Evidence](chat-web6/DEVICE_ROUND_1.md). Review/O7 license and explicit
+PR/merge/deploy authority remain separate. Only evidence/living records changed;
+no website/ZIP/app/workflow edit, new commit/push/CI, merge or deployment.
+
+
+**35. Owner requests visitor cleanup, folders and SEO (2026-10-07).** After
+confirming the device tests, owner said all good and asked to remove the review
+banner/status, organize files into subfolders and strengthen search discovery,
+including Termux-related queries. Chose https://pabi277.github.io/CodeC/ as planned
+base, not publication. D34 records the path/SEO change and initial O2 choice.
+
+**36. Organize without breaking offline teaching.** Original29 pages moved into
+guides/, learn/chapters/, about/ and legal/; CSS/images into assets/. All original
+preformatted examples match802532d byte-for-byte. Added an original factual
+CodeC/Termux comparison and contextual links (30 pages total), titles/descriptions,
+self-canonicals, social metadata/local card, non-executable JSON-LD,30-URL sitemap
+and robots stanza with host-root caveat. No keywords spam, fake affiliation,
+ratings or ranking guarantees. Website metadata prepared, not deployed/indexed.
+
+**37. Verify the whole new tree.**1,105 internal targets,0 missing/orphan pages;
+HTML validation clean;49 host/example checks; final120 responsive/axe cases and
+30 extracted offline/no-JS pages;3 web fixtures;35 local canonical/asset routes
+all HTTP200 with exact source bytes. Initial asset-test harness import error fixed
+and full sweep rerun, no weakened assertion.35-file ZIP200,433B/SHA256
+3a6395737e0d6d38a5c4a430dc88268a7494cad00a4a8facda2a84f43ebfb636.
+[Current record](chat-web7/SUMMARY.md). One follow-up commit/push/readback and
+new automatic CI watch follow these local checks; final handoff records actual
+remote results. No app/workflow/package/README-root edits, PR, merge or deployment.
+
+
+**38. Owner-authorized README redesign (2026-10-07, D35).** Rebuilt the root
+README around a branded hero, clear installation/quick start, optional tools/AI,
+privacy and concise contributor guidance. Added two matching optimized AI concept
+illustrations (158,311B total), preserving the original app mark and disclosing
+that the images are not actual screenshots. Corrected historical engine-picker,
+ABI, interactive-input and debug-signing claims against current source. No app,
+website, package, signing or workflow changes. Existing website ZIP and owner
+device evidence remain valid; no license/publication authority inferred.
+
+GitHub Markdown API render and local targets passed; eight responsive light/dark
+no-JS cases passed. Four axe scans record standalone host-fixture limitations,
+not a blanket accessibility pass. Host C90 example compile/output passed, not a
+new Android device claim. [Delivery and checks](chat-web8/SUMMARY.md). Normal
+branch CI follows push; actual commit/run/conclusion belong in the final handoff.
+
+
+**39. Course licensing and merge/publication authorized (2026-10-07).** Owner
+delegated the license choice and asked to finish docs and merge to main, then
+explicitly added website deployment. D36 selects CC BY 4.0 lessons/MIT examples
+with narrow scope and local full legal texts. D37 prepares additive Pages delivery,
+preserving signed package/key bytes instead of replacing the repository. No app
+license, runtime behavior or signing change. The licensed ZIP supersedes chat-web7
+for current downloads; old ZIPs/evidence remain historical.
+
+Preflight:30 pages/38 files,1,139 local links/anchors,120 browser/axe cases,30 offline
+no-JS pages and38 local HTTP exact-byte routes pass. Fourteen deployment-safety
+tests pass. The unchanged broader package suite exposes two baseline expectation
+failures (interactive cancellation via piped stdin and an obsolete error hint);
+four GPG-dependent tests skip without the sandbox's absent gpg signer. No tests
+weakened or app changes made. New CI, PR/merge and actual deployment remain pending
+that boundary resolution. [Evidence and handoff](chat-web9/SUMMARY.md).
+
+
+**40. Narrow boundary approval and corrected test diagnosis (2026-10-07, D38).**
+Owner approved test-only fixes and one session PR, leaving PR42/83 untouched.
+The earlier entry39 cancellation explanation was provisional and is superseded:
+stdin piping is supported; the abort mock rejected the automatic first-use APT
+index refresh before reaching confirmation. The fixture now permits update only,
+retains the mutation-fails guard and asserts the prompt, refusal and clean marker.
+The missing-package fixture now fails the download, preserves exit100 and checks
+both original streamed error and current guidance plus cleanup. All94 package
+tests complete without failure locally (4 GPG-signer skips);14 deployment tests
+pass. Application and package runtime/signing remain byte-identical to baseline.
+
+
+**41. Remote preflight and documentation closeout.** On7254304, package
+CI37589923026 passed without a package build/publication; Pages preflight
+37589923128 recovered and verified the real signed repository and composed the
+website byte-safely, with branch deployment correctly skipped. ZIP209,200B read
+back exactly through GitHub. PR117 opened under D38, leaving PR42/83 untouched.
+Living handoffs now use the licensed ZIP, resolved O7, authorized publication and
+current safety procedure instead of historical held-deployment state. Actual final
+PR/main CI/merge/deployment results are retained in PR117's delivery record, not
+fabricated into this pre-merge narrative. Website/ZIP bytes unchanged by closeout.

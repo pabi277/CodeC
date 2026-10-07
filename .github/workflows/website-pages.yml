@@ -1,0 +1,103 @@
+name: Website and preserved package Pages
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "website/**"
+      - "web_docs/deploy/**"
+      - "web_docs/chat-web9/checks/**"
+      - "web_docs/chat-web9/SITE_MAP.json"
+      - ".github/workflows/website-pages.yml"
+      - ".github/workflows/package-repository.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Shared with package-repository.yml's publishing job. Never cancel a publisher.
+concurrency:
+  group: codec-pages
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Verify website and preserve signed packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Deployment safety and course-license tests
+        run: python3 -m unittest discover -s web_docs/deploy -p 'test_*.py' -v
+      - name: Static site, links, metadata and unchanged lesson examples
+        run: python3 web_docs/chat-web9/checks/check_site.py
+      - name: Preserve the live signed repository without rebuilding or re-signing
+        run: |
+          python3 web_docs/deploy/preserve_packages.py "$RUNNER_TEMP/codec-pages" \
+            --report "$RUNNER_TEMP/package-preservation.json"
+      - name: Compose the website without changing any package or key bytes
+        run: python3 web_docs/deploy/compose_site.py website "$RUNNER_TEMP/codec-pages"
+      - name: Save preservation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-preservation
+          path: ${{ runner.temp }}/package-preservation.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload combined Pages artifact (main only)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/codec-pages
+
+  deploy:
+    name: Deploy and verify public website and package endpoints
+    if: github.ref == 'refs/heads/main'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-preservation
+          path: ${{ runner.temp }}/preservation
+      - name: Refuse to publish over a concurrently changed package repository
+        run: |
+          python3 - "$RUNNER_TEMP/preservation/package-preservation.json" <<'PY'
+          import hashlib, json, sys
+          sys.path.insert(0, 'web_docs/deploy')
+          from preserve_packages import download
+          report = json.load(open(sys.argv[1]))
+          for row in report['files']:
+              if row['path'] in ('dev/dists/stable/InRelease', 'dev/repository.json') or row['path'].startswith('keys/'):
+                  if hashlib.sha256(download(row['path'])).hexdigest() != row['sha256']:
+                      raise SystemExit('Live package metadata/key changed since preparation; refusing deployment')
+          PY
+      - uses: actions/configure-pages@v5
+      - name: Deploy combined website and unchanged repository
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verify all public website and protected package bytes
+        run: |
+          python3 web_docs/deploy/verify_live.py \
+            "$RUNNER_TEMP/preservation/package-preservation.json" \
+            "$RUNNER_TEMP/live-verification.json"
+      - name: Save public verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-live-verification
+          path: ${{ runner.temp }}/live-verification.json
+          if-no-files-found: warn
+          retention-days: 30

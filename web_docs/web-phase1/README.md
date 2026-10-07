@@ -1,5 +1,27 @@
 # CodeC Website Phase W1 — Scaffold + Home Page
 
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
+> **Current v2.3 — 2026-10-07.** **IMPLEMENTED** — evidence in [W1_SUMMARY](../chat-web4/W1_SUMMARY.md); not merged or deployed.
+
+Scaffold + Home (1/29 pages). Shared 10-link header including AI and Privacy footer; six cards, 19-chapter course preview, release facts. Only index.html/style.css/favicon.svg.
+
+**2 parts in this phase.** The six phases contain **39 docs (6 READMEs + 33 PART docs)**.
+
+Read [master plan v2.3](../WEBSITE_PLAN.md) and the binding v2.3 block at the top
+of every PART doc. Current requirements override the retained prior design below:
+29 pages, 19 chapters, AI nav, Privacy footer, release v1.3.18, contacts in-app
+only, no deleted UI or cancelled proposals taught. W1→W6 strictly sequential.
+Use [NEXT_STEPS](../NEXT_STEPS.md) for status, not old session-folder assumptions.
+
+---
+
+## Prior phase brief — historical v2.2 context
+
+The earlier status, counts and session pointers below are superseded above.
+
 **Status:** 📋 **PLANNED** — not yet started. Awaiting owner's explicit
 "Start W1" (or "Build the website") command.
 · **Cost:** `[static]` — new files inside `website/` only; **zero app code,

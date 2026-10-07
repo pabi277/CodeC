@@ -1,0 +1,26 @@
+[
+  {
+    "phase": "W3",
+    "path": "web_docs/chat-web6/review-zips/CodeC-website-W3.zip",
+    "pages": 9,
+    "bytes": 50024,
+    "sha256": "e6ded900c2e0670a33b5b267c1e5d22b18ed2764b10b4e6b4f05bf3afb02e973",
+    "files": 11
+  },
+  {
+    "phase": "W4",
+    "path": "web_docs/chat-web6/review-zips/CodeC-website-W4.zip",
+    "pages": 16,
+    "bytes": 75466,
+    "sha256": "bbd051d49dca7cf8b6d833fc8b0553fd2352dfe2cb4670aa00a840fce8072bc4",
+    "files": 18
+  },
+  {
+    "phase": "W5",
+    "path": "web_docs/chat-web6/review-zips/CodeC-website-W5.zip",
+    "pages": 22,
+    "bytes": 100126,
+    "sha256": "0706383c5bcc60a41c066a45d9ae741c4d7a738f4fe2a1eacb23b21207a12fe8",
+    "files": 24
+  }
+]

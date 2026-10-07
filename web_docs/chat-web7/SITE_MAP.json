@@ -1,0 +1,617 @@
+{
+  "base_url": "https://pabi277.github.io/CodeC/",
+  "routes": [
+    {
+      "legacy": "about.html",
+      "path": "about/index.html",
+      "title": "About CodeC | Open-Source C Programming IDE for Android",
+      "description": "Meet CodeC, an open-source Android IDE with a code editor, offline C compiler, terminal, projects and local web preview. Learn its capabilities and limits.",
+      "label": "A little screen. A real workspace.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "A little screen. A real workspace.",
+          "path": "about/index.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ai.html",
+      "path": "guides/ai.html",
+      "title": "AI Coding Help on Android: Your Key, Your Approval | CodeC",
+      "description": "Use optional AI in CodeC with your own provider key. Understand read tools, reviewed edits, run approval, usage limits and privacy before sending code.",
+      "label": "Ask. Review. Stay in control.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Ask. Review. Stay in control.",
+          "path": "guides/ai.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-01.html",
+      "path": "learn/chapters/01-getting-started.html",
+      "title": "Getting Started | CodeC Android Course",
+      "description": "Install, meet the workspace and save a first file—without turning optional setup into a barrier.",
+      "label": "Getting Started",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Getting Started",
+          "path": "learn/chapters/01-getting-started.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-02.html",
+      "path": "learn/chapters/02-first-c-program.html",
+      "title": "Your First C Program | CodeC Android Course",
+      "description": "A source file becomes a program in two steps: compile it, then execute it.",
+      "label": "Your First C Program",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Your First C Program",
+          "path": "learn/chapters/02-first-c-program.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-03.html",
+      "path": "learn/chapters/03-android-terminal.html",
+      "title": "The CodeC Terminal | CodeC Android Course",
+      "description": "Learn a small command vocabulary, keep your bearings and give running programs input.",
+      "label": "The CodeC Terminal",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "The CodeC Terminal",
+          "path": "learn/chapters/03-android-terminal.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-04.html",
+      "path": "learn/chapters/04-compiler-engines.html",
+      "title": "Compiler Engines | CodeC Android Course",
+      "description": "Use the automatic compiler path and recognize a platform failure before rewriting correct C.",
+      "label": "Compiler Engines",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Compiler Engines",
+          "path": "learn/chapters/04-compiler-engines.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-05.html",
+      "path": "learn/chapters/05-package-manager.html",
+      "title": "Package Manager | CodeC Android Course",
+      "description": "Install a useful tool, understand its status and leave trust verification intact.",
+      "label": "Package Manager",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Package Manager",
+          "path": "learn/chapters/05-package-manager.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-06.html",
+      "path": "learn/chapters/06-files-and-projects.html",
+      "title": "Files & Projects | CodeC Android Course",
+      "description": "Keep source in projects, understand what RUN creates and make a backup you can actually restore.",
+      "label": "Files & Projects",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Files & Projects",
+          "path": "learn/chapters/06-files-and-projects.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-07.html",
+      "path": "learn/chapters/07-code-editor.html",
+      "title": "The Editor | CodeC Android Course",
+      "description": "Use fewer taps without giving up control of what enters your file.",
+      "label": "The Editor",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "The Editor",
+          "path": "learn/chapters/07-code-editor.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-08.html",
+      "path": "learn/chapters/08-c-programming-basics.html",
+      "title": "C Programming Basics | CodeC Android Course",
+      "description": "From a variable to a small interactive program, using conservative C you can inspect and test.",
+      "label": "C Programming Basics",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "C Programming Basics",
+          "path": "learn/chapters/08-c-programming-basics.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-09.html",
+      "path": "learn/chapters/09-shell-scripting.html",
+      "title": "Shell Scripting | CodeC Android Course",
+      "description": "Turn a few commands into a repeatable, readable workflow—with explicit success and failure.",
+      "label": "Shell Scripting",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Shell Scripting",
+          "path": "learn/chapters/09-shell-scripting.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-10.html",
+      "path": "learn/chapters/10-python.html",
+      "title": "Python in CodeC | CodeC Android Course",
+      "description": "Install Python when you need it, then write a utility with a clear input and result.",
+      "label": "Python in CodeC",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Python in CodeC",
+          "path": "learn/chapters/10-python.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-11.html",
+      "path": "learn/chapters/11-git-and-github.html",
+      "title": "Git & GitHub | CodeC Android Course",
+      "description": "A saved file, a local commit and a successful push are three different milestones.",
+      "label": "Git & GitHub",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Git & GitHub",
+          "path": "learn/chapters/11-git-and-github.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-12.html",
+      "path": "learn/chapters/12-networking.html",
+      "title": "Networking & SSH | CodeC Android Course",
+      "description": "Fetch deliberately, understand loopback and share a local preview without promising an unshipped SSH client.",
+      "label": "Networking & SSH",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Networking & SSH",
+          "path": "learn/chapters/12-networking.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-13.html",
+      "path": "learn/chapters/13-device-apis.html",
+      "title": "Device APIs | CodeC Android Course",
+      "description": "Talk to the device through named, bounded commands—not a hidden permission bypass.",
+      "label": "Device APIs",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Device APIs",
+          "path": "learn/chapters/13-device-apis.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-14.html",
+      "path": "learn/chapters/14-web-projects.html",
+      "title": "Web Projects | CodeC Android Course",
+      "description": "Build a local four-file website with styles, behavior and data—then inspect the result.",
+      "label": "Web Projects",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Web Projects",
+          "path": "learn/chapters/14-web-projects.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-15.html",
+      "path": "learn/chapters/15-advanced-tools.html",
+      "title": "Custom Setup & Advanced Tools | CodeC Android Course",
+      "description": "Make repetitive work easier with shortcuts, a Makefile, search and organized terminal sessions.",
+      "label": "Custom Setup & Advanced Tools",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Custom Setup & Advanced Tools",
+          "path": "learn/chapters/15-advanced-tools.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-16.html",
+      "path": "learn/chapters/16-real-world-projects.html",
+      "title": "Real World Projects | CodeC Android Course",
+      "description": "Five projects that combine the course skills into something you can keep, inspect and improve.",
+      "label": "Real World Projects",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Real World Projects",
+          "path": "learn/chapters/16-real-world-projects.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-17.html",
+      "path": "learn/chapters/17-troubleshooting.html",
+      "title": "Troubleshooting | CodeC Android Course",
+      "description": "Collect one good clue, choose the smallest safe repair and protect the source before a reset.",
+      "label": "Troubleshooting",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Troubleshooting",
+          "path": "learn/chapters/17-troubleshooting.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-18.html",
+      "path": "learn/chapters/18-ai-code-help.html",
+      "title": "Ask about your code | CodeC Android Course",
+      "description": "Ask one small question about harmless code, and inspect the exact request before sending it.",
+      "label": "Ask about your code",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Ask about your code",
+          "path": "learn/chapters/18-ai-code-help.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "ch-19.html",
+      "path": "learn/chapters/19-ai-tools-and-approvals.html",
+      "title": "Agent, tools and approvals | CodeC Android Course",
+      "description": "Understand what the assistant may read, what it must ask for and why some requests are refused.",
+      "label": "Agent, tools and approvals",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Learn",
+          "path": "learn/index.html"
+        },
+        {
+          "name": "Agent, tools and approvals",
+          "path": "learn/chapters/19-ai-tools-and-approvals.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "engines.html",
+      "path": "guides/engines.html",
+      "title": "Android C Compilers: TCC, Clang & Termux Fallback | CodeC",
+      "description": "Understand CodeC’s automatic compiler selection: offline TCC, optional Clang and Termux fallback. Check Android architecture limits and setup steps.",
+      "label": "One RUN. Automatic choices.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "One RUN. Automatic choices.",
+          "path": "guides/engines.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "faq.html",
+      "path": "guides/faq.html",
+      "title": "CodeC FAQ | Android C Compiler, Terminal & Troubleshooting",
+      "description": "Answers about CodeC’s Android C compiler, terminal, packages, Git, backups and optional AI. Find practical fixes and understand device limitations.",
+      "label": "A useful answer, before a reinstall.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "A useful answer, before a reinstall.",
+          "path": "guides/faq.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "index.html",
+      "path": "index.html",
+      "title": "CodeC — Offline C Compiler & Android IDE",
+      "description": "Write, compile and run C on Android with CodeC: an offline compiler, code editor, terminal and 19-chapter course. Explore its optional Termux fallback.",
+      "label": "Big ideas.Small screen.Real code.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "install.html",
+      "path": "guides/install.html",
+      "title": "Download CodeC for Android | Install & Update Guide",
+      "description": "Download the CodeC Android APK from GitHub Releases. Check device support, verify updates and set up optional Termux compiler fallback only when needed.",
+      "label": "One APK.Your next workspace.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "One APK.Your next workspace.",
+          "path": "guides/install.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "learn.html",
+      "path": "learn/index.html",
+      "title": "Learn C & Coding on Android | Free 19-Chapter CodeC Course",
+      "description": "Learn Android coding with 19 CodeC chapters: C basics, terminal commands, shell, Python, Git, web projects and optional AI. Complete local examples included.",
+      "label": "Master CodeC from Zero to Advanced",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Master CodeC from Zero to Advanced",
+          "path": "learn/index.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "packages.html",
+      "path": "guides/packages.html",
+      "title": "Android Terminal Packages & Linux Tools | CodeC",
+      "description": "Explore CodeC’s signed package repository, optional Linux setup and command-line tools. Learn package names, installation basics and repository safety.",
+      "label": "Add tools. Keep the boundary.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Add tools. Keep the boundary.",
+          "path": "guides/packages.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "privacy.html",
+      "path": "legal/privacy.html",
+      "title": "CodeC Privacy | Android Permissions, AI & Data",
+      "description": "Understand CodeC’s Android permissions, local storage, backups and optional AI data sharing. Learn what leaves your device and which approvals are required.",
+      "label": "Your files deserve a plain answer.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "Your files deserve a plain answer.",
+          "path": "legal/privacy.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "start.html",
+      "path": "guides/start.html",
+      "title": "Run Your First Program on Android | CodeC Getting Started",
+      "description": "Start coding on Android with CodeC. Create a project, run C and HTML examples, find the terminal and learn when optional Linux tools are needed.",
+      "label": "A small program.A real beginning.",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "A small program.A real beginning.",
+          "path": "guides/start.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    },
+    {
+      "legacy": "termux.html",
+      "path": "guides/codec-vs-termux.html",
+      "title": "CodeC vs Termux | C Programming & Terminal Tools on Android",
+      "description": "Compare CodeC and Termux for coding on Android: offline C, editor workflows, terminal packages and optional compiler fallback. Choose the right tool for you.",
+      "label": "CodeC and Termux: two ways to code on Android",
+      "breadcrumbs": [
+        {
+          "name": "Home",
+          "path": "index.html"
+        },
+        {
+          "name": "CodeC and Termux: two ways to code on Android",
+          "path": "guides/codec-vs-termux.html"
+        }
+      ],
+      "last_modified": "2026-10-07"
+    }
+  ]
+}

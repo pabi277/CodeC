@@ -1,5 +1,39 @@
 # CodeC Website Phase W3 — Engines + Packages + FAQ + About
 
+> **Current batch status — 2026-10-07, D33: IMPLEMENTED FOR REVIEW.**
+> Owner authorized W3–W6 content together, then one commit/watch; separate start
+> commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
+> [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
+> [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
+> D31 download law retained. No device pass, PR, merge or public deployment implied.
+
+> **Mandatory phase-exit law (D31):** deliver a verified ZIP of the entire current
+> website and a direct GitHub download link in the final report. See
+> [REVIEW_DOWNLOAD_RULE](../REVIEW_DOWNLOAD_RULE.md). No PR/merge/deploy implied.
+
+> **Current v2.3 — 2026-10-07.** **IMPLEMENTED FOR REVIEW** — combined batch authorized (D33), review/gates remain.
+
+Engines + Packages + FAQ + About + AI + Privacy. Six pages, product wing complete at 9/9. W3 depends on completed W2; do not run in parallel.
+
+**6 parts in this phase.** The six phases contain **39 docs (6 READMEs + 33 PART docs)**.
+
+Read [master plan v2.3](../WEBSITE_PLAN.md) and the binding v2.3 block at the top
+of every PART doc. Current requirements override the retained prior design below:
+29 pages, 19 chapters, AI nav, Privacy footer, release v1.3.18, contacts in-app
+only, no deleted UI or cancelled proposals taught. W1→W6 strictly sequential.
+Use [NEXT_STEPS](../NEXT_STEPS.md) for status, not old session-folder assumptions.
+
+| Added part | Spec |
+|---|---|
+| W3.5 AI | [PART_3_5_AI.md](PART_3_5_AI.md) |
+| W3.6 Privacy | [PART_3_6_PRIVACY.md](PART_3_6_PRIVACY.md) |
+
+---
+
+## Prior phase brief — historical v2.2 context
+
+The earlier status, counts and session pointers below are superseded above.
+
 **Status:** 📋 **PLANNED** — not yet started. Awaiting owner's "Start W3"
 (can run in parallel with W2 — both only depend on W1).
 · **Cost:** `[static]` — four new files in `website/`; zero app code

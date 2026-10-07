@@ -1,4 +1,66 @@
+> **D37 update — 2026-10-07:** owner now explicitly authorizes website deployment
+> after docs/green CI/merge. O7 resolved by D36; prior required device gates passed.
+> Package-safe workflow implementation and local checks: [current record](../chat-web9/SUMMARY.md).
+> PR117 and its main-only workflow record actual publication results. Historical
+> HELD text below is superseded; local preparation is not itself a deploy result.
+
 # CodeC Website Phase W6.7 — Deploy (GitHub Pages) + verification + link sweep
+
+> **D34 follow-up:**30 pages, organized folders and SEO; old29page/flat counts
+> below are historical scope. [Current ZIP/checks](../chat-web7/SUMMARY.md).
+> Initial Pages URL selected, but publication still requires explicit authority;
+> preserve signed package /dev and /keys and heed the host-root robots limitation.
+
+> **Owner rounds1–3: required device checks PASSED.**
+> [Evidence](../chat-web6/DEVICE_ROUND_1.md): Chapter8/P1/P5 including audible speech;
+> Android16 / aarch64, CodeC “latest” (exact build unspecified). No retest needed.
+> Review/license and explicit PR/merge/deploy authorization are separate.
+
+> **Current batch status — 2026-10-07, D33: HELD / NOT STARTED — NO DEPLOYMENT AUTHORIZATION.**
+> Owner authorized W3–W6 content together, then one commit/watch; separate start
+> commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
+> [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
+> [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
+> D31 download law retained. Device pass recorded above; no PR, merge or deployment implied.
+
+> **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
+> Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below
+> before the retained prior design. They supersede conflicting old facts and exits:
+> **29 pages / 9 product / 19 chapters**; app-v1.3.18 **7 217 532 B, versionCode 22**;
+> AI in header, Privacy every footer; contacts in-app only; README then AI/privacy
+> guides; Phases 1–96 shipped except cancelled proposals, 97+ roadmap. Never pair
+> current APK size with historical -74%. No picker, Open Folder, ProjectLink,
+> first-hour tiles, mandatory tour or automatic userland setup in visitor teaching.
+> Earlier session-folder references are historical: preserve existing records;
+> W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
+
+**Historical pre-D37 status:** HELD / NOT STARTED — NO DEPLOYMENT AUTHORIZATION; owner-authorized combined batch (D33).
+
+## Current v2.3 implementation requirements
+
+No deployment until W6.6, W6.8 and W6.9 plus owner device passes are complete.
+Re-verify Pages/package-repo ownership; PR #42 identified /dev and /keys at the
+same Pages site. NEVER replace the signed package repo with website-only artifact.
+GitHub cannot directly serve arbitrary /website as a branch-source folder; use
+verified additive artifact deployment without creating/switching another branch.
+If safe coordination needs forbidden workflow edits, STOP for authorization.
+Keep APK/package workflows untouched. Preflight offline/self-dependent/full
+link sweep for all 29 pages in chat-web6; commit evidence BEFORE live. Then
+owner-authorized merge/deploy, Pages green, 29 live URL + package endpoints
+verified, root README one-line link and web living docs updated. No deploy in W1.
+
+## Current acceptance additions (binding)
+
+1. Follow the current requirements above and the master plan, not superseded UI/copy.
+2. Preserve each non-conflicting numbered exit below, including device gates.
+3. Record source file/line/sha, responsive checks and self-dependent sweep; use 19-chapter crumbs where applicable.
+4. No app/workflow changes or phase expansion; update web living docs and stop at merge gate.
+
+---
+
+## Prior design detail — retained v2.2 record
+
+**Historical reference, not authority for superseded facts or exit counts.**
 
 > **v2.2 update (2026-09-12):** synced with app Phases 21–43 — universal APK 6.6 MB signed SHA256, Auto engine only picker deleted Termux card deleted fallback automatic error-path Output Panel, >_ mark icon, official file icons Seti MIT, typing feel, terminal multi-session + LAN server opt-in 0.0.0.0 two URLs QR ZXing open-in-browser keep-alive, outputs temporary RunArtifacts+RepoHygiene ~60 patterns .codec/ user .gitignore wins, GitHub truth GitReadiness+PushOutcome+Publish POST /user/repos, feedback hardcoded +91 62967 46606 / email + FeedbackScreen + exit survey + crash-log header-first + OpenInBrowser no telemetry, backup include-list-only FullBackupContent law crash-loop guard safe mode 3rd launch export-all over both roots 11 privacy rows RELEASE_NOTES template {{SHA256_LINES}}, safe walk Throwable-safe TreeWalkPolicy ProjectLink persisted SAF grant noexec mirror, BETA B-1…B-8, TCC null on armeabi-v7a/x86.
 

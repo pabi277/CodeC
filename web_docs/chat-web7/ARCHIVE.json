@@ -1,0 +1,184 @@
+{
+  "archive": "web_docs/chat-web7/CodeC-website-organized-SEO.zip",
+  "bytes": 200433,
+  "sha256": "3a6395737e0d6d38a5c4a430dc88268a7494cad00a4a8facda2a84f43ebfb636",
+  "uncompressed_bytes": 568549,
+  "files": [
+    {
+      "path": "about/index.html",
+      "bytes": 11706,
+      "sha256": "f6be9cbe6e9ba383061505f503e8c251fd536e0ce71151a19af6bb27b8b5a60f"
+    },
+    {
+      "path": "assets/css/style.css",
+      "bytes": 32787,
+      "sha256": "bed42753217a571b8963c0f53bcae7302590d2c47e89ef43632eb94146168326"
+    },
+    {
+      "path": "assets/images/favicon.svg",
+      "bytes": 1682,
+      "sha256": "968d7fbf78502ef8807d52114f3114ad7acf0bbb97ddde0af130b8ef7e4bafc3"
+    },
+    {
+      "path": "assets/images/social-card.png",
+      "bytes": 54311,
+      "sha256": "3a721d441f287d675bf44eb95b26e9057e48548b528aa58fde74e76b0789e7a9"
+    },
+    {
+      "path": "guides/ai.html",
+      "bytes": 16068,
+      "sha256": "b4b34f97343618f466c753b6fba368360bb8d2a1d5561296051fad186e156b69"
+    },
+    {
+      "path": "guides/codec-vs-termux.html",
+      "bytes": 14048,
+      "sha256": "43cc724c0132ed07ff932a9a2b14a36e7eb3c6bb91ada559687b1ce77d468c43"
+    },
+    {
+      "path": "guides/engines.html",
+      "bytes": 11812,
+      "sha256": "79689dc358b49ed177e2173b43ce40a3bd6a7b7892051bae72cfdeb502569c47"
+    },
+    {
+      "path": "guides/faq.html",
+      "bytes": 16375,
+      "sha256": "54385df0f4b54c3b49b3dd18c98abcde6e7858b275f0197e3eb1a2defb1a9a92"
+    },
+    {
+      "path": "guides/install.html",
+      "bytes": 21163,
+      "sha256": "581b6aa65a0e14c79dc66e2342ba29c4b3be511f997befa1a28e15817344c1b9"
+    },
+    {
+      "path": "guides/packages.html",
+      "bytes": 15287,
+      "sha256": "72b537d0dd03095a4e3b08e963be59533703d1dd7a19d760de805636bb31a522"
+    },
+    {
+      "path": "guides/start.html",
+      "bytes": 23252,
+      "sha256": "1e3e06174afaf040f604ddc8420869ddcb1fa5e71e9b0173bf0ef8cf0a6a5a24"
+    },
+    {
+      "path": "index.html",
+      "bytes": 19317,
+      "sha256": "9cba056acd59ca1642dff453bacc6625daaa731162321b6c495cbc5ddfdcb345"
+    },
+    {
+      "path": "learn/chapters/01-getting-started.html",
+      "bytes": 13412,
+      "sha256": "28690c74bee96c5c8cd56bd05234e461c477fbbede34e69388f24f6acda20c08"
+    },
+    {
+      "path": "learn/chapters/02-first-c-program.html",
+      "bytes": 12730,
+      "sha256": "219ae66b0711d2d891d23a871c3e0722d8c09d111a7af2b7b33c6275fb85558b"
+    },
+    {
+      "path": "learn/chapters/03-android-terminal.html",
+      "bytes": 13888,
+      "sha256": "7f8c1631cc26b6a17ec9295cd243cb351c20359968397dd67456d197be9f83b7"
+    },
+    {
+      "path": "learn/chapters/04-compiler-engines.html",
+      "bytes": 13059,
+      "sha256": "6e6b16edaa8993b5ce149355e6a5351a45783c4e4ec3222d1d9e67ae53769aca"
+    },
+    {
+      "path": "learn/chapters/05-package-manager.html",
+      "bytes": 12801,
+      "sha256": "ecc204bd4e1384c9e50ffa27b52bb923de61f69752c1a8ba6a78915db94c5f01"
+    },
+    {
+      "path": "learn/chapters/06-files-and-projects.html",
+      "bytes": 13217,
+      "sha256": "23a66f0ae5a50b90a1cdbe82c017c4cfca5a41cfbadb7b66135cee73eb9da00d"
+    },
+    {
+      "path": "learn/chapters/07-code-editor.html",
+      "bytes": 13258,
+      "sha256": "86fe13258d0312fee6421fbe414c167efff526eef63f231ab123de0f198741bf"
+    },
+    {
+      "path": "learn/chapters/08-c-programming-basics.html",
+      "bytes": 24866,
+      "sha256": "e9d9f8ad8d060ec121f861424b677481132d10327aa65de5b255b83563b7a18a"
+    },
+    {
+      "path": "learn/chapters/09-shell-scripting.html",
+      "bytes": 13868,
+      "sha256": "18630f70d0c37f4a779cd23ed678f4c7472292ea0e3440b17ba8312d59c69d7c"
+    },
+    {
+      "path": "learn/chapters/10-python.html",
+      "bytes": 13668,
+      "sha256": "1981b0a5ddd78712bd87c2c30dc3e885fbe0d48e0d9cc14d79c17028b2c02afc"
+    },
+    {
+      "path": "learn/chapters/11-git-and-github.html",
+      "bytes": 13506,
+      "sha256": "9a86bd90765b577f4b082b41351fc1283b9b099bf2d19448eb0d7852f6e8bece"
+    },
+    {
+      "path": "learn/chapters/12-networking.html",
+      "bytes": 13645,
+      "sha256": "83b567519336c2688c8787bbd84d4ee63c88c53de2b9751b55de0fab9da52203"
+    },
+    {
+      "path": "learn/chapters/13-device-apis.html",
+      "bytes": 16761,
+      "sha256": "0e8d61e65055d432812a4225fc8a98b748c2483b01b083ec6e292e9b035fb680"
+    },
+    {
+      "path": "learn/chapters/14-web-projects.html",
+      "bytes": 15554,
+      "sha256": "def6cbf1d2480238333a3e5dfea6b9f6978a3e662a304706d79063df79dc6ad9"
+    },
+    {
+      "path": "learn/chapters/15-advanced-tools.html",
+      "bytes": 16240,
+      "sha256": "9f18f5985a5b0aa005303f70e7d34374e61a433fc34bf261134aaa957b9ce08c"
+    },
+    {
+      "path": "learn/chapters/16-real-world-projects.html",
+      "bytes": 22165,
+      "sha256": "2aae2d6bb88f2b4a07dd4e94ae1981c395a841fd21afcf5ac7ddee3fb5f81a9b"
+    },
+    {
+      "path": "learn/chapters/17-troubleshooting.html",
+      "bytes": 14716,
+      "sha256": "74c459224ba504e9f6302480bb0215ecc9339984b34c93cae7c5f325cb0a7cc3"
+    },
+    {
+      "path": "learn/chapters/18-ai-code-help.html",
+      "bytes": 15816,
+      "sha256": "6e48a5639ecc440f2c2ad612de2daa681ce6efccf25d1e9d1512112fe01711dc"
+    },
+    {
+      "path": "learn/chapters/19-ai-tools-and-approvals.html",
+      "bytes": 17478,
+      "sha256": "bc1d23ba496ee447ebaba248180fbfc2e8da33065d901906e423d49c846b18f9"
+    },
+    {
+      "path": "learn/index.html",
+      "bytes": 19189,
+      "sha256": "427f242729a296cc323aa58ba415a7cfd9772d72ed383faa05dc6b2f7dc8e2c8"
+    },
+    {
+      "path": "legal/privacy.html",
+      "bytes": 16693,
+      "sha256": "0c9ac522694f03d785aa4d9baae3aee2a5cfbc346c8aafb172099d60cb1781d4"
+    },
+    {
+      "path": "robots.txt",
+      "bytes": 257,
+      "sha256": "d55c263df8fae4ab6503a879d53b9c37cacb651278c91f4021c998d5acdb6a3e"
+    },
+    {
+      "path": "sitemap.xml",
+      "bytes": 3954,
+      "sha256": "67a5b06206a272bcaf94b6701b63eff4b1725df61cdfc42a4ce1d056dfced03e"
+    }
+  ],
+  "crc_and_exact_tree_bytes": "PASS"
+}
