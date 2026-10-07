@@ -92,6 +92,16 @@ class SettingsManager(private val context: Context) {
         // false = fresh install or an explicit replay requested in About.
         val FIRST_LAUNCH_COMPLETE = booleanPreferencesKey("first_launch_complete")
 
+        // Phase 97 — the post-agreement setup flow's gate. true = the flow was
+        // shown and finished (or skipped with "Skip setup").
+        //
+        // Deliberately the ONLY key the flow stores. The user's choice already
+        // lives on disk *as the project itself* — its folder name, its type,
+        // its entry file — so a "what did you pick" key would duplicate state
+        // the hub already shows, and a key nothing reads is exactly what the
+        // Phase 38.2 audit deleted.
+        val SETUP_FLOW_COMPLETE = booleanPreferencesKey("setup_flow_complete")
+
         // Phase 41 follow-up (round 1) — the exit survey prompt
         // (owner-requested for the testing phase; see ui/support/ExitSurvey).
         // Default ON. This is a UI preference about a dialog, NOT attachment
@@ -178,6 +188,12 @@ class SettingsManager(private val context: Context) {
     // Phase 33.1 — first-run welcome flag (default false = welcome not yet seen).
     val firstLaunchCompleteFlow: Flow<Boolean> = context.dataStore.data.map { it[FIRST_LAUNCH_COMPLETE] ?: false }
     suspend fun setFirstLaunchComplete(v: Boolean) { context.dataStore.edit { it[FIRST_LAUNCH_COMPLETE] = v } }
+
+    // Phase 97 — the setup-flow gate (default false = the flow has not run).
+    // Read by MainApp's first-run branch; an install upgrading from any earlier
+    // build has first_launch_complete = true and therefore never sees the flow.
+    val setupFlowCompleteFlow: Flow<Boolean> = context.dataStore.data.map { it[SETUP_FLOW_COMPLETE] ?: false }
+    suspend fun setSetupFlowComplete(v: Boolean) { context.dataStore.edit { it[SETUP_FLOW_COMPLETE] = v } }
 
     // Phase 41 follow-up — the exit survey prompt (testing-phase default ON).
     val feedbackExitPromptEnabledFlow: Flow<Boolean> =

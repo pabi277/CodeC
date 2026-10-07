@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeC — beginner-friendliness wireframe appendix</title>
+<style>
+  :root{
+    --bg:#101113; --panel:#181a1d; --chrome:#1c1b1f; --card:#212327; --card2:#26282d;
+    --line:#2c2f35; --text:#e6e8ea; --muted:#9aa0a6; --subtle:#8b949e;
+    --green:#3ddc84; --green-ink:#0b3; --blue:#64b5f6; --amber:#e6b33c;
+    --red:#ef5350; --red-text:#ff5555; --teal:#33bbee; --verm:#cc3311;
+    --accent:#66bb6a; --accent-dim:#2e7d32; --panelcode:#121212; --code:#1e1e1e;
+    --newtag:#7c4deb;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1480px;margin:0 auto;padding:40px 28px 80px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:14px}
+  .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 12px;letter-spacing:-.01em}
+  .lead{max-width:900px;color:var(--muted);font-size:15px;line-height:1.6;margin:0 0 10px}
+  .rules{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px}
+  .rule{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;color:var(--muted);background:#15171a}
+  .rule b{color:var(--text);font-weight:600}
+  h2.section{font-size:19px;margin:44px 0 6px;letter-spacing:-.01em}
+  p.section-note{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0 0 22px;max-width:900px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:26px}
+  .cassette{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+  .cas-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .tag{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;padding:3px 7px;border-radius:6px}
+  .tag.new{background:#2a1f4f;color:#c4b5fd;border:1px solid #3b2f6b}
+  .tag.as-is{background:#1f2b22;color:#9be7b4;border:1px solid #2d4134}
+  .tag.do{background:#152b33;color:#8fd8ef;border:1px solid #234750}
+  .cas-title{font-size:14.5px;font-weight:650}
+  .cas-sub{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0}
+  .phone{
+    width:340px;max-width:100%;margin:0 auto;background:var(--chrome);
+    border:1px solid #34373d;border-radius:22px;overflow:hidden;position:relative;
+    box-shadow:0 18px 40px rgba(0,0,0,.5);
+  }
+  .statusbar{display:flex;justify-content:space-between;font-size:10.5px;color:var(--subtle);padding:9px 14px 5px}
+  .appbar{display:flex;align-items:center;gap:8px;height:44px;padding:0 10px;background:var(--chrome);border-bottom:1px solid var(--line)}
+  .appbar .grow{flex:1;min-width:0}
+  .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:var(--muted);font-size:13px;flex:none}
+  .ic.on{color:var(--green)}
+  .filename{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dot-file{width:15px;height:15px;border-radius:4px;background:#e34c26;display:inline-block;flex:none}
+  .code{background:var(--code);padding:10px 0;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.75}
+  .cl{display:flex;gap:10px;padding:0 14px;white-space:pre}
+  .ln{color:#6a7178;width:16px;text-align:right;flex:none;user-select:none}
+  .k{color:#569cd6}.s{color:#ce9178}.c{color:#6a9955}.f{color:#dcdcaa}.t{color:#4ec9b0}.v{color:#9cdcfe}
+  .hl{background:#2a2d34;box-shadow:inset 3px 0 0 var(--teal)}
+  .cursor{display:inline-block;width:1.5px;height:13px;background:#aeafad;vertical-align:-2px;margin-left:1px}
+  .strip{background:#17191c;border-top:1px solid var(--line);padding:7px 8px;display:flex;gap:6px;flex-wrap:nowrap;overflow:hidden}
+  .key{min-width:34px;height:30px;border-radius:7px;background:#22252a;border:1px solid #2f3339;display:grid;place-items:center;font-size:11.5px;color:#cdd2d7;flex:none}
+  .key.wide{min-width:52px}
+  .key.run{background:#153a25;border-color:#1f6b41;color:var(--green);font-weight:700;min-width:74px;gap:4px}
+  .key.acc{background:#1c2a3a;border-color:#2b445c;color:#9fd0f5}
+  .statusline{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);padding:6px 12px;background:var(--chrome);border-top:1px solid var(--line);font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+  .outpanel{background:var(--panelcode);border-top:1px solid var(--line);padding:10px 12px 14px}
+  .out-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .chip{font-size:10.5px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:#191b1e}
+  .chip.ok{color:#8ee2a8;border-color:#2a4a34;background:#16241a}
+  .chip.err{color:#ffb3b3;border-color:#5a2a2a;background:#2a1616}
+  .chip.info{color:#9fd0f5;border-color:#2b445c;background:#152431}
+  .out-state{font-size:12.5px;font-weight:650}
+  .out-state.ok{color:#8ee2a8}.out-state.err{color:#ffb3b3}
+  .stepdots{display:flex;gap:4px;align-items:center}
+  .stepdot{width:16px;height:4px;border-radius:2px;background:#3a3f46}
+  .stepdot.done{background:#4ade80}
+  .logline{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:10.8px;color:#c9ced3;line-height:1.65;white-space:pre-wrap}
+  .logline .err{color:var(--red-text)}
+  .logline .dim{color:#6f767d}
+  .plainbox{margin:8px 0 6px;border:1px solid #3b4a3f;background:#17211b;border-radius:10px;padding:9px 11px}
+  .plainbox .pt{font-size:12.4px;line-height:1.5;color:#d7f0dd}
+  .plainbox .pa{margin-top:7px;display:flex;gap:7px;flex-wrap:wrap}
+  .btn-mini{font-size:11.5px;padding:6px 10px;border-radius:8px;border:1px solid #2f3339;background:#22252a;color:#dfe3e7}
+  .btn-mini.primary{background:#1d3b2a;border-color:#2c6a45;color:#b8f0cd}
+  .cardrow{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin:9px 0}
+  .tile{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;font-size:15px;font-weight:700}
+  .tile.c{background:#2e7d32;color:#fff}
+  .tile.py{background:#35699f;color:#fff}
+  .tile.web{background:#b45309;color:#fff}
+  .tile.vio{background:#7c4deb;color:#fff}
+  .t-main{font-size:13px;font-weight:600}
+  .t-sub{font-size:11.6px;color:var(--muted);line-height:1.45;margin-top:2px}
+  .t-next{font-size:11px;color:#8fd8ef;margin-top:3px}
+  .menu{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:6px;margin:8px 0}
+  .menu .mi{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:12.6px;color:#dfe3e7}
+  .menu .mi .mic{width:16px;text-align:center;color:var(--muted);font-size:12px}
+  .menu .mi.hi{background:#241f3a;box-shadow:inset 0 0 0 1px #453974}
+  .menu .mi.hi .mic{color:#c4b5fd}
+  .menu .mi.newbadge::after{content:"new row";margin-left:auto;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#c4b5fd;background:#2a1f4f;border:1px solid #453974;border-radius:5px;padding:2px 5px}
+  .explrow{border:1px solid var(--line);border-radius:11px;background:var(--card);overflow:hidden;margin:9px 0}
+  .explhead{display:flex;gap:9px;align-items:center;padding:10px 11px;font-size:12.8px}
+  .explhead .q{width:20px;height:20px;border-radius:50%;border:1px solid #454a52;display:grid;place-items:center;font-size:11.5px;color:#9fd0f5;flex:none}
+  .explbody{padding:0 12px 11px 40px;font-size:11.9px;color:#c9d4cf;line-height:1.55;border-top:1px dashed #2e333a;padding-top:9px;margin-top:0}
+  .explbody .more{color:#8fd8ef;font-size:11.3px}
+  .divider{height:1px;background:var(--line);margin:10px 0}
+  .label-mini{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--subtle);margin:2px 0 6px}
+  .callout{border-left:3px solid var(--accent);background:#141b16;border-radius:8px;padding:10px 12px;font-size:12.4px;color:#cfe8d6;line-height:1.55}
+  .footer-note{margin-top:54px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:12.5px;line-height:1.6}
+  .swatches{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .sw{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#15171a}
+  .sw i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:760px){ .two{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="kicker">Research artifact · no app code changed · 2026-10-07</p>
+  <h1>Beginner-friendliness wireframe appendix</h1>
+  <p class="lead">Companion to <b>docs/research/BEGINNER_UX_AUDIT_20261007.md</b>. Each cassette is a phone-sized drawing of a proposal (or of what exists today, where the existing design is the thing to build on). Nothing here is a tour, an overlay, a coach mark or a lock — every frame is made of wording, ordering, and doors to things CodeC already has.</p>
+  <div class="rules">
+    <span class="rule"><b>Tokens only</b> · 4-based space ladder, 48 dp targets</span>
+    <span class="rule"><b>One sentence per idea</b> · ≤25 words</span>
+    <span class="rule"><b>Explain in place</b> · never over content</span>
+    <span class="rule"><b>Raw compiler output kept</b> · summary sits above it</span>
+    <span class="rule"><b>Present tense, active voice</b> · COGA</span>
+    <span class="rule"><b>No scores, no XP</b></span>
+  </div>
+  <div class="swatches">
+    <span class="sw"><i style="background:#3ddc84"></i>Run green #3DDC84</span>
+    <span class="sw"><i style="background:#64b5f6"></i>Info blue #64B5F6</span>
+    <span class="sw"><i style="background:#e6b33c"></i>Warning #E6B33C</span>
+    <span class="sw"><i style="background:#ef5350"></i>Danger fill #EF5350</span>
+    <span class="sw"><i style="background:#ff5555"></i>Error text #FF5555</span>
+    <span class="sw"><i style="background:#9aa0a6"></i>Muted #9AA0A6</span>
+  </div>
+</header>
+
+<h2 class="section">A · Running a program — the loop a beginner must win</h2>
+<p class="section-note">The run loop already works and already tells the truth (state word, exit code, error counts, Stop, Open in Terminal). The beginner work is <em>signage</em>: name the steps that just happened, and put a run control inside the thumb zone without moving the reference-locked ▶.</p>
+
+<div class="grid">
+
+  <!-- A1 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag do">Do</span><span class="cas-title">A1 · The run, as it exists today</span></div>
+    <p class="cas-sub">48 dp top bar · auto-opened Output panel · honest state word. Keep all of it.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar">
+        <span class="ic">☰</span><span class="dot-file"></span>
+        <span class="filename grow">main.c</span>
+        <span class="ic">⌕</span><span class="ic on">▶</span>
+      </div>
+      <div class="code">
+        <div class="cl"><span class="ln">1</span><span><span class="c">#include &lt;stdio.h&gt;</span></span></div>
+        <div class="cl"><span class="ln">2</span><span></span></div>
+        <div class="cl"><span class="ln">3</span><span><span class="t">int</span> <span class="f">main</span>(<span class="t">void</span>) {</span></div>
+        <div class="cl"><span class="ln">4</span><span>    <span class="f">puts</span>(<span class="s">"Hello from CodeC!"</span>);</span></div>
+        <div class="cl"><span class="ln">5</span><span>    <span class="k">return</span> <span class="v">0</span>;</span></div>
+        <div class="cl hl"><span class="ln">6</span><span>}<span class="cursor"></span></span></div>
+      </div>
+      <div class="strip">
+        <span class="key">Tab</span><span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span><span class="key">"</span><span class="key">{}</span><span class="key wide">»</span>
+      </div>
+      <div class="outpanel">
+        <div class="out-head">
+          <span class="out-state ok">Done</span><span class="chip">exit 0</span>
+          <span class="chip">Copy</span><span class="chip">Terminal</span>
+        </div>
+        <div class="logline">Hello from CodeC!
+<span class="dim">Hello from CodeC!</span></div>
+      </div>
+      <div class="statusline"><span>Ln 6, Col 2</span><span>C</span></div>
+    </div>
+  </div>
+
+  <!-- A2 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">A2 · Name the three steps, once each</span></div>
+    <p class="cas-sub">A single 14-px step row above the log — same words the app already uses (Building · Running · Done). Nothing new happens; the app just stops being silent about what it did.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar">
+        <span class="ic">☰</span><span class="dot-file"></span>
+        <span class="filename grow">main.c</span>
+        <span class="ic">⌕</span><span class="ic on">▶</span>
+      </div>
+      <div class="code">
+        <div class="cl"><span class="ln">3</span><span><span class="t">int</span> <span class="f">main</span>(<span class="t">void</span>) {</span></div>
+        <div class="cl"><span class="ln">4</span><span>    <span class="f">puts</span>(<span class="s">"Hello from CodeC!"</span>);</span></div>
+        <div class="cl hl"><span class="ln">5</span><span>    <span class="k">return</span> <span class="v">0</span>;<span class="cursor"></span></span></div>
+        <div class="cl"><span class="ln">6</span><span>}</span></div>
+      </div>
+      <div class="outpanel">
+        <div class="out-head">
+          <span class="stepdots">
+            <span class="stepdot done"></span><span class="stepdot done"></span><span class="stepdot done"></span>
+          </span>
+          <span class="out-state ok">Done</span><span class="chip">exit 0</span>
+        </div>
+        <div class="label-mini">Compiled · Ran · Finished</div>
+        <div class="logline">Hello from CodeC!
+<span class="dim">Process finished with exit code 0</span></div>
+      </div>
+      <div class="statusline"><span>Ln 5, Col 12</span><span>C</span></div>
+    </div>
+    <p class="cas-sub"><b>Why:</b> the Output header already derives these facts from one place (<code>OutputPanelStatus</code>); this is a second, beginner-readable rendering of the same truth. Pin it with the existing header tests.</p>
+  </div>
+
+  <!-- A3 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">A3 · P1-3 · A run key in the thumb zone</span></div>
+    <p class="cas-sub">The coding strip already carries run keys. Make the first cell <b>RUN</b> — same green as the reference-locked ▶ in the top bar, ≥48 dp, present in peek mode too. The top ▶ does not move.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar">
+        <span class="ic">☰</span><span class="dot-file"></span>
+        <span class="filename grow">main.c</span>
+        <span class="ic">⌕</span><span class="ic on">▶</span>
+      </div>
+      <div class="code">
+        <div class="cl"><span class="ln">1</span><span><span class="c">#include &lt;stdio.h&gt;</span></span></div>
+        <div class="cl"><span class="ln">2</span><span></span></div>
+        <div class="cl"><span class="ln">3</span><span><span class="t">int</span> <span class="f">main</span>(<span class="t">void</span>) {</span></div>
+        <div class="cl hl"><span class="ln">4</span><span>    <span class="f">puts</span>(<span class="s">"Hello!"</span>);<span class="cursor"></span></span></div>
+        <div class="cl"><span class="ln">5</span><span>    <span class="k">return</span> <span class="v">0</span>;</span></div>
+        <div class="cl"><span class="ln">6</span><span>}</span></div>
+      </div>
+      <div class="strip">
+        <span class="key run">▶ RUN</span>
+        <span class="key">Tab</span><span class="key">;</span><span class="key">"</span><span class="key">{}</span><span class="key">()</span><span class="key acc">#</span><span class="key wide">»</span>
+      </div>
+      <div class="statusline"><span>Ln 4, Col 18</span><span>Spaces: 4</span></div>
+    </div>
+    <p class="cas-sub"><b>Why:</b> ~49% of phone use is one-handed and the top-right corner is the worst reach; the strip is CodeC's own surface (the reference lock governs the top bar).</p>
+  </div>
+
+</div>
+
+<h2 class="section">B · Errors that teach — without lying about the compiler</h2>
+<p class="section-note">The evidence is deliberately modest: enhanced messages improve confidence and reduce repeated errors, but do not reliably improve fix-rate. So the design promise is <em>one plain sentence, one action, raw output preserved underneath</em> — and "Explain with AI" visible from the first diagnostic instead of appearing only after a failure.</p>
+
+<div class="grid">
+
+  <!-- B1 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">B1 · P0-5 · The beginner line above the log</span></div>
+    <p class="cas-sub">Four lines maximum: what went wrong in words, where, the one next action, and a door to the explanation. The compiler's own words stay, dimmed and intact, below.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar">
+        <span class="ic">☰</span><span class="dot-file"></span>
+        <span class="filename grow">main.c *</span>
+        <span class="ic">⌕</span><span class="ic on">▶</span>
+      </div>
+      <div class="code">
+        <div class="cl"><span class="ln">3</span><span><span class="t">int</span> <span class="f">main</span>(<span class="t">void</span>) {</span></div>
+        <div class="cl hl"><span class="ln">4</span><span style="color:#ffb3b3">    <span class="f">printf</span>(<span class="s">"Hello"</span>)</span></div>
+        <div class="cl"><span class="ln">5</span><span>    <span class="k">return</span> <span class="v">0</span>;</span></div>
+        <div class="cl"><span class="ln">6</span><span>}</span></div>
+      </div>
+      <div class="outpanel">
+        <div class="out-head">
+          <span class="out-state err">Build failed</span>
+          <span class="chip err">1 error</span>
+        </div>
+        <div class="plainbox">
+          <div class="pt"><b>The statement on line 4 has no ending.</b> C statements end with <code>;</code> — add one after the closing bracket.</div>
+          <div class="pa">
+            <span class="btn-mini primary">Add “;” on line 4</span>
+            <span class="btn-mini">Explain this error</span>
+            <span class="btn-mini">Chapter 02 ▸</span>
+          </div>
+        </div>
+        <div class="label-mini">Compiler output</div>
+        <div class="logline"><span class="dim">main.c:4:18: <span class="err">error:</span> expected ';' after expression
+    4 |     printf("Hello")
+      |                  ^
+1 error generated.</span></div>
+      </div>
+      <div class="statusline"><span>Ln 4, Col 18</span><span>C</span></div>
+    </div>
+    <p class="cas-sub"><b>Why:</b> Becker et al. (2016) — structure and placement beat length; NN/g heuristic 9 — plain language, precise problem, constructive solution, placed next to the cause. Existing pieces to reuse: the diagnostics parser, the jump target, and the single remedy chip that today exists only for the semicolon.</p>
+  </div>
+
+  <!-- B2 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">B2 · The pure table behind B1</span></div>
+    <p class="cas-sub">A host-testable table, ~20 first-week C errors (plus Python/JS where the app can see them). Every row: one sentence, one action, one chapter. No AI needed; the AI door is an option, not the mechanism.</p>
+    <div style="background:#15171a;border:1px solid var(--line);border-radius:12px;padding:12px">
+      <div class="label-mini">BeginnerDiagnostics (pure, host-tested)</div>
+      <div class="logline" style="color:#cfe8d6">expected ';'            → “A statement is missing its ending.”
+expected declaration     → “Something is spelled wrong, or a { } is unbalanced.”
+implicit declaration     → “This function needs its #include at the top.”
+format '%d' expects int  → “%d prints whole numbers; use %f for decimals.”
+uninitialized variable   → “This value is read before anything is put in it.”
+segmentation fault       → “The program used memory it does not own (often a bad index).”
+…
+</div>
+      <div class="divider"></div>
+      <div class="callout">Every explanation goes through one wording check: present tense, active voice, ≤25 words, no word a beginner has not met yet — or the jargon itself bracketed in plain words (COGA).</div>
+    </div>
+    <p class="cas-sub"><b>Honesty clause for the phase doc:</b> this improves comprehension and confidence, not necessarily fix-rate. Write it that way.</p>
+  </div>
+
+</div>
+
+<h2 class="section">C · Doors — the material that already exists has no entrance</h2>
+<p class="section-note">The Templates library and the 19-chapter course are the two largest beginner assets in the repository. Neither is reachable from the app. Both doors below are one row each — no new tab (Phase 56), no overlay (Phase 64).</p>
+
+<div class="grid">
+
+  <!-- C1 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">C1 · P0-1 · The Templates door, in the hub menu</span></div>
+    <p class="cas-sub">One row in the menu the user already opens. The library stays a page over the editor, like every other destination since Phase 56.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar">
+        <span class="ic">☰</span><span class="filename grow">Projects</span>
+        <span class="ic">⌕</span><span class="ic">⋮</span>
+      </div>
+      <div style="padding:12px">
+        <div class="menu">
+          <div class="mi"><span class="mic">＋</span>New project…</div>
+          <div class="mi"><span class="mic">⇄</span>Clone from GitHub…</div>
+          <div class="mi"><span class="mic">⇩</span>Import ZIP…</div>
+          <div class="mi hi newbadge"><span class="mic">▦</span>Learn from a template</div>
+          <div class="mi"><span class="mic">⤓</span>Back up all projects</div>
+        </div>
+        <div class="cardrow" style="background:#181c1a">
+          <div class="tile vio">▦</div>
+          <div>
+            <div class="t-main">5 templates · Level 1–3</div>
+            <div class="t-sub">Hello World · Calculator · Loops · Arrays · Files · Functions — each one explains the idea it uses, in the file, as comments.</div>
+          </div>
+        </div>
+      </div>
+      <div class="strip" style="border-top:1px solid var(--line)"><span class="key run">▶</span><span class="key">Tab</span><span class="key">⌫</span><span class="key">?</span></div>
+    </div>
+    <p class="cas-sub"><b>Fix before exposing:</b> today <code>onUseTemplate</code> writes into a project named <i>default</i>. Ask “Save to which project?” with a default of “New project: Hello World”.</p>
+  </div>
+
+  <!-- C2 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">C2 · P0-2 · The course door</span></div>
+    <p class="cas-sub">One row in Settings → About, and one line in the hub’s empty state. Chapter chips deep-link into the existing 19-chapter course. If offline chapters are later vendored into assets, the same row opens them in-app with the existing Markdown renderer.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar">
+        <span class="ic">‹</span><span class="filename grow">About</span><span class="ic">⌕</span><span class="ic">⋮</span>
+      </div>
+      <div style="padding:12px">
+        <div class="cardrow">
+          <div class="tile c">▤</div>
+          <div>
+            <div class="t-main">Learn CodeC — 19 short chapters</div>
+            <div class="t-sub">First C program · the terminal · packages · Git · web projects · using the AI safely.</div>
+            <div class="t-next">Opens in your browser · nothing about you is sent</div>
+          </div>
+        </div>
+        <div class="label-mini">Start here</div>
+        <div class="menu">
+          <div class="mi"><span class="mic">1</span>Getting started</div>
+          <div class="mi"><span class="mic">2</span>Your first C program</div>
+          <div class="mi"><span class="mic">7</span>The editor</div>
+        </div>
+        <div class="callout" style="border-left-color:#64b5f6;background:#141a1e;color:#cfe4f0">
+          Copy rule: the same sentence appears in <b>DATA_AND_PRIVACY.md</b> — “opening a link leaves the app; the page cannot see your projects.”
+        </div>
+      </div>
+    </div>
+    <p class="cas-sub"><b>Licence note:</b> CodeC’s own course is CC BY 4.0 (prose) + MIT (examples), so CodeC may vendored chapters freely, with the attribution block the repository already ships (<code>website/learn/licenses/SCOPE.txt</code>).</p>
+  </div>
+
+  <!-- C3 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">C3 · Hub empty state, with the reading path</span></div>
+    <p class="cas-sub">The three starter tiles stay the primary action; the course is the quiet second door. No pressure, no "tour", no modal.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar"><span class="ic">☰</span><span class="filename grow">Projects</span><span class="ic">⌕</span><span class="ic">⋮</span></div>
+      <div style="padding:14px 12px">
+        <div style="text-align:center;font-size:15px;font-weight:650;margin-bottom:4px">Welcome to CodeC</div>
+        <div style="text-align:center;font-size:11.8px;color:var(--muted);line-height:1.5;margin-bottom:12px">
+          Write, run and debug code on your phone — C, Python, web, or a project of your own. Pick a starter below and it is ready to run in one tap.
+        </div>
+        <div class="cardrow"><div class="tile c">C</div><div><div class="t-main">C</div><div class="t-sub">Works offline — built-in TCC compiler, no setup</div><div class="t-next">Creates C Starter and opens main.c — ready to run straight away</div></div></div>
+        <div class="cardrow"><div class="tile py">Py</div><div><div class="t-main">Python</div><div class="t-sub">Run scripts with python3 — installs once on first run</div></div></div>
+        <div class="cardrow"><div class="tile web">&lt;/&gt;</div><div><div class="t-main">HTML</div><div class="t-sub">A web page you edit and preview live</div></div></div>
+        <div style="text-align:center;font-size:11.6px;color:#8fd8ef;margin-top:6px">Prefer to read first? <u>Open the 19-chapter beginner course</u></div>
+      </div>
+    </div>
+    <p class="cas-sub"><b>Why here:</b> the hub empty state is the first screen after onboarding and NN/g names empty states as teaching moments. The sentence above the tiles is already in <code>strings.xml</code> — this frame only adds the last line.</p>
+  </div>
+
+</div>
+
+<h2 class="section">D · Words and devices — explanations in place, one name per thing</h2>
+<p class="section-note">Jargon arrives before grammar in the first minutes ("userland", "packages", "repository", "toolchain"). The fix is a reusable inline explanation — never floating over content — plus a single vocabulary (Appendix C of the dossier) applied everywhere.</p>
+
+<div class="grid">
+
+  <!-- D1 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">D1 · P0-4 · ExplanationRow, closed and open</span></div>
+    <p class="cas-sub">One control, two states. Closed: the jargon word itself. Open: one sentence, one "more", and nothing moves except this row — the user never loses their place.</p>
+    <div class="two">
+      <div>
+        <div class="label-mini" style="text-align:center">Closed</div>
+        <div class="explrow">
+          <div class="explhead"><span class="q">?</span><span>Packages</span><span style="margin-left:auto;color:var(--subtle)">▾</span></div>
+        </div>
+        <div class="explrow">
+          <div class="explhead"><span class="q">?</span><span>C standard</span><span style="margin-left:auto;color:var(--subtle)">▾</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="label-mini" style="text-align:center">Open (one at a time)</div>
+        <div class="explrow">
+          <div class="explhead"><span class="q" style="border-color:#2f6b8a">?</span><span style="font-weight:600">Packages</span><span style="margin-left:auto;color:var(--subtle)">▴</span></div>
+          <div class="explbody">Extra tools CodeC can download once, like Python or a bigger C compiler. C already works with nothing installed.<br><span class="more">More in the course ▸</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="cas-sub"><b>Rules:</b> ≤25 words · present tense · names the thing in its first clause · never a dialog · disappears once the related install exists (the help does not become furniture).</p>
+  </div>
+
+  <!-- D2 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">D2 · P1-5 · Packages grouped by intent</span></div>
+    <p class="cas-sub">Same screen, same data (<code>PackageCategory</code>), one question answered at the top: "do I need this?" Languages first; Unix tools folded away with one sentence.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar"><span class="ic">☰</span><span class="filename grow">Packages</span><span class="ic">⌕</span><span class="ic">⋮</span></div>
+      <div style="padding:10px 12px">
+        <div class="label-mini">Add a language or compiler</div>
+        <div class="cardrow" style="margin:6px 0"><div class="tile py">Py</div><div><div class="t-main">Python 3</div><div class="t-sub">Runs .py files · downloads once · about 40 MB</div></div><span class="btn-mini primary" style="margin-left:auto">Install</span></div>
+        <div class="cardrow" style="margin:6px 0"><div class="tile c">C</div><div><div class="t-main">Clang / LLVM</div><div class="t-sub">Bigger C compiler for real projects · optional — the built-in one already works offline</div></div><span class="btn-mini" style="margin-left:auto">Install</span></div>
+        <div class="divider"></div>
+        <div class="explrow">
+          <div class="explhead"><span class="q">▸</span><span>Unix tools (for the terminal)</span><span style="margin-left:auto;color:var(--subtle)">17</span></div>
+          <div class="explbody">Terminal programs like <code>git</code>, <code>nano</code>, <code>ripgrep</code>. You only need these if you already use a command line.</div>
+        </div>
+      </div>
+    </div>
+    <p class="cas-sub"><b>Evidence:</b> PHONE_UX_ANALYSIS §13 (2026-09) asked for exactly this split; NN/g’s progressive-disclosure rule says hide the rare, never the frequent.</p>
+  </div>
+
+  <!-- D3 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">D3 · P1-1 · Say the peek out loud</span></div>
+    <p class="cas-sub">Tapping a file in the hub opens a one-file view with no tree and no Git. Today nothing says so. One sentence plus the existing action, using the chip the editor already has for scratch state.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar"><span class="ic">☰</span><span class="dot-file"></span><span class="filename grow">index.html</span><span class="ic">⌕</span><span class="ic on">▶</span></div>
+      <div style="padding:10px 12px 0">
+        <div class="cardrow" style="background:#1c1f24;margin-top:0">
+          <div class="tile" style="background:#2f3339;color:#cfd4da">▤</div>
+          <div>
+            <div class="t-main">Single-file view</div>
+            <div class="t-sub">You opened one file from the project list. Open the project to see every file and Git.</div>
+          </div>
+          <span class="btn-mini" style="margin-left:auto;white-space:nowrap">Open project</span>
+        </div>
+      </div>
+      <div class="code">
+        <div class="cl"><span class="ln">1</span><span><span class="t">&lt;!DOCTYPE</span> <span class="v">html</span><span class="t">&gt;</span></span></div>
+        <div class="cl"><span class="ln">2</span><span><span class="t">&lt;html</span> <span class="v">lang</span>=<span class="s">"en"</span><span class="t">&gt;</span></span></div>
+        <div class="cl hl"><span class="ln">3</span><span>  <span class="t">&lt;head&gt;</span><span class="cursor"></span></span></div>
+      </div>
+      <div class="outpanel" style="border-top:1px solid var(--line)">
+        <div class="out-head"><span class="out-state ok">Ready</span><span class="chip info">Run ▶ opens the web preview</span></div>
+      </div>
+    </div>
+    <p class="cas-sub"><b>Why:</b> an unexplained mode change is the classic source of "the app lost my files". The sentence uses the existing <code>EditorEmptyState</code> chip slot; the mode itself is untouched (Phase 46.2).</p>
+  </div>
+
+  <!-- D4 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">New</span><span class="cas-title">D4 · Colour-blind-safe diff, behind the same switch</span></div>
+    <p class="cas-sub">~8% of men have some red–green colour-vision deficiency, and Git diffs are the most red/green-coded surface an IDE has. One optional theme variant — added/removed keep a redundant <b>+ / −</b> and a word, never hue alone.</p>
+    <div class="two">
+      <div>
+        <div class="label-mini" style="text-align:center">Default</div>
+        <div style="background:#121212;border:1px solid var(--line);border-radius:10px;padding:9px;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.7">
+          <div style="background:#12261a;color:#8ee2a8">+ faster = 2</div>
+          <div style="background:#2a1414;color:#ffb3b3">− faster = 5</div>
+        </div>
+      </div>
+      <div>
+        <div class="label-mini" style="text-align:center">Colour-safe (teal / vermillion)</div>
+        <div style="background:#121212;border:1px solid var(--line);border-radius:10px;padding:9px;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.7">
+          <div style="background:#0f2630;color:#7fd8ee">+ faster = 2  <span style="opacity:.7">added</span></div>
+          <div style="background:#2a1712;color:#ffab8f">− faster = 5  <span style="opacity:.7">removed</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="cas-sub"><b>Why:</b> Modus (Emacs) ships deuteranopia and tritanopia variants for exactly this reason; the <code>+ / −</code> gutter keeps meaning when hue collapses.</p>
+  </div>
+
+</div>
+
+<h2 class="section">E · The practice loop, drawn small on purpose</h2>
+<p class="section-note">Worked examples, Parsons problems and PRIMM all say the same thing: novices learn fastest by <em>reading, predicting, running, and changing</em> code that already works. CodeC already ships the perfect subject (the Arcade sample). This is a content card, not an XP system.</p>
+
+<div class="grid">
+  <!-- E1 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">Proposal</span><span class="cas-title">E1 · P2-1 · Predict → run → change</span></div>
+    <p class="cas-sub">Attachment <b>before</b> the first run, not a separate mode. Two questions and one edit; state lives in a JSON next to the project; no scores, no streaks, no pressure.</p>
+    <div class="phone">
+      <div class="statusbar"><span>12:41</span><span>5G · 86%</span></div>
+      <div class="appbar"><span class="ic">☰</span><span class="dot-file"></span><span class="filename grow">snake.js</span><span class="ic">⌕</span><span class="ic on">▶</span></div>
+      <div class="outpanel" style="border-top:1px solid var(--line)">
+        <div class="out-head"><span class="out-state ok">Ready</span><span class="chip info">Level: First hour</span></div>
+        <div class="plainbox" style="border-color:#3b4a5f;background:#161d24">
+          <div class="pt" style="color:#d6e7f2"><b>Before you run:</b> the snake starts at 3 segments. What happens if you press ▶?</div>
+          <div class="pa">
+            <span class="btn-mini">It moves on its own</span>
+            <span class="btn-mini">It waits for me</span>
+            <span class="btn-mini primary">I'll just try it</span>
+          </div>
+        </div>
+        <div class="plainbox">
+          <div class="pt"><b>Now change something.</b> Line 42 sets <code>speed = 6</code>. Make the snake faster and run again.</div>
+          <div class="pa">
+            <span class="btn-mini primary">Show me line 42</span>
+            <span class="btn-mini">Next idea</span>
+          </div>
+        </div>
+      </div>
+      <div class="statusline"><span>Ln 42, Col 3</span><span>JS</span></div>
+    </div>
+    <p class="cas-sub"><b>What it is NOT:</b> not a lesson track, not a quiz, no stars. If the owner prefers, the same content works as <i>comments in the sample</i> plus one line in the drawer — but the research says an explicit predict step is where the learning is.</p>
+  </div>
+
+  <!-- E2 -->
+  <div class="cassette">
+    <div class="cas-head"><span class="tag new">Proposal</span><span class="cas-title">E2 · P1-2 / P1-6 · Two small, high-yield devices</span></div>
+    <p class="cas-sub">Left: every drag has a visible twin (panel height has ▲/▼ next to the handle; the handle keeps working). Right: AI presets that keep the learner in charge — "Simple" stays the default, nothing applies itself.</p>
+    <div class="two">
+      <div>
+        <div class="label-mini" style="text-align:center">Drag alternative</div>
+        <div style="background:var(--panelcode);border:1px solid var(--line);border-radius:10px;padding:10px">
+          <div class="out-head" style="margin-bottom:6px">
+            <span class="out-state ok" style="font-size:12px">Output</span>
+            <span style="margin-left:auto;display:flex;gap:6px">
+              <span class="btn-mini" style="padding:3px 9px">▲</span>
+              <span class="btn-mini" style="padding:3px 9px">▼</span>
+            </span>
+          </div>
+          <div style="height:4px;border-radius:2px;background:#3a3f46;margin:6px 0 10px"></div>
+          <div style="font-size:10.5px;color:var(--muted)">Tap ▲/▼ to set the height; the handle still drags.</div>
+        </div>
+      </div>
+      <div>
+        <div class="label-mini" style="text-align:center">AI presets (existing sheet)</div>
+        <div class="menu" style="margin-top:0">
+          <div class="mi"><span class="mic">?</span>Explain this line</div>
+          <div class="mi"><span class="mic">◔</span>Give me a hint, not the answer</div>
+          <div class="mi"><span class="mic">≠</span>What changed, and why?</div>
+        </div>
+        <div style="font-size:10.5px;color:var(--muted)">Agreement line: “The AI suggests; you decide. Nothing changes your files until you tap Apply.”</div>
+      </div>
+    </div>
+    <p class="cas-sub"><b>Evidence:</b> WCAG 2.2 · 2.5.7 (dragging alternatives); Kazemitabaar et al. (novices benefit from AI *with* guardrails; single-prompt use predicts the worst retention).</p>
+  </div>
+</div>
+
+<div class="footer-note">
+  <b>Reading this appendix honestly.</b> These frames were drawn from source at revision <code>ccae8d46</code>; they are proposals, not screenshots, and no device round was run. The measured facts behind each frame (strings, tokens, panel geometry, reachability studies, licence terms) are cited in <b>docs/research/BEGINNER_UX_AUDIT_20261007.md</b>, which is the authoritative half of this pair. Nothing here authorises implementation; Phase 64's ban on tours, overlays and locks is respected throughout.
+</div>
+
+</div>
+</body>
+</html>

@@ -1047,6 +1047,35 @@ fun SettingsScreen(
                     )
                 }
             }
+            // Phase 97 — the learning door the owner asked for (2026-10-08:
+            // "add this somewhere the learning of the direct link of the
+            // website"). The 19-chapter course already exists and is published;
+            // this row is the app's way in. The subtitle states the one fact a
+            // first-time reader needs: it opens in the browser and nothing about
+            // them is sent — the same sentence DATA_AND_PRIVACY.md carries
+            // (pinned by LearningLinksTest).
+            SettingsLinkRow(
+                title = com.codeci.ide.ui.setup.LearningLinks.LEARN_TITLE,
+                subtitle = com.codeci.ide.ui.setup.LearningLinks.LEARN_SUBTITLE,
+                actionText = "OPEN",
+                onClick = {
+                    com.codeci.ide.ui.support.CodecLinks.open(
+                        context,
+                        com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                    )
+                }
+            )
+            SettingsLinkRow(
+                title = com.codeci.ide.ui.setup.LearningLinks.FAQ_TITLE,
+                subtitle = "Answers about compiling, storage and the AI",
+                actionText = "OPEN",
+                onClick = {
+                    com.codeci.ide.ui.support.CodecLinks.open(
+                        context,
+                        com.codeci.ide.ui.setup.LearningLinks.FAQ_URL,
+                    )
+                }
+            )
             // Replay the first-run introduction on the next launch without
             // interrupting the current Settings session.
             SettingsAction(
@@ -1678,6 +1707,40 @@ fun SettingsItem(title: String, subtitle: String, onClick: (() -> Unit)? = null)
 }
 
 @Composable
+/**
+ * Phase 97 — a Settings row that opens an address: a title, the one-line
+ * promise, and the action word. [SettingsItem] carries no action and
+ * [SettingsAction] carries no subtitle; the learning doors the owner asked for
+ * (2026-10-08) need both, so this is the third shape - same paddings, same
+ * two-line hierarchy, same visibility rule as its siblings.
+ */
+@Composable
+fun SettingsLinkRow(title: String, subtitle: String, actionText: String, onClick: () -> Unit) {
+    if (!settingsRowVisible(title)) return
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
+        Text(
+            text = actionText,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
 fun SettingsAction(title: String, actionText: String, onClick: () -> Unit) {
     if (!settingsRowVisible(title)) return
     Row(

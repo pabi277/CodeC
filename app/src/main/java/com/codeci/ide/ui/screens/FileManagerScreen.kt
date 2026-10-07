@@ -2266,6 +2266,7 @@ private fun EmptyProjectsState(
     onCreate: () -> Unit,
     onStarter: (WelcomeStarter) -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -2307,6 +2308,27 @@ private fun EmptyProjectsState(
         Spacer(Modifier.height(CodecTokens.space(Space.M)))
         // The full create / clone / import sheet is still one tap away.
         TextButton(onClick = onCreate) { Text(stringResource(R.string.hub_create_first)) }
+        // Phase 97 — the reading door the owner asked for. One quiet line, not
+        // a tile: it competes with nothing, and it is the only place the empty
+        // hub mentions the 19-chapter course. Opens in the browser through the
+        // app's single outbound helper (CodecLinks), so the privacy sentence in
+        // LearningLinks.LEARN_SUBTITLE stays true.
+        Spacer(Modifier.height(CodecTokens.space(Space.S)))
+        TextButton(
+            onClick = {
+                com.codeci.ide.ui.support.CodecLinks.open(
+                    context,
+                    com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                )
+            },
+        ) {
+            Text(
+                text = "${com.codeci.ide.ui.setup.LearningLinks.HUB_LEARN_LINE} " +
+                    "Open the 19-chapter course",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

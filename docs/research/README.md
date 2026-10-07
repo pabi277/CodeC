@@ -11,6 +11,8 @@ Research records evidence and options. It does not authorize implementation. New
 
 ## Existing research
 
+- [Beginner-friendliness audit — every inch of the UI](BEGINNER_UX_AUDIT_20261007.md)
+- [Post-agreement setup — CodeC's answer to Pydroid's carousel](ONBOARDING_PERSONALISATION_DESIGN_20261008.md) — owner-requested design for the flow that follows the privacy agreement: 4 screens (2 taps minimum, 1-tap path = today's behaviour), every answer mapped to a shipped system or settings key, the Pydroid screen-by-screen comparison, tests, risks and open questions. Wireframes: [beginner-ux-mockups/onboarding.html](beginner-ux-mockups/onboarding.html). **Implemented as [Phase 97](../../phases/09-onboarding-setup/chat-phase97/PART_97_SETUP_FLOW.md)** (owner-authorised 2026-10-08); that document lists the four deliberate deviations and the honest gaps. — owner-requested research-only pass at `ccae8d46`: full as-shipped walkthrough, a friction inventory with severities, external evidence (learning science, error messages, a11y standards, onboarding, licences), what the other phone IDEs do, and ranked recommendations with the test that would pin each one. Companion visual appendix: [beginner-ux-mockups/index.html](beginner-ux-mockups/index.html). No code authorized.
 - [First-run experience and CodeC Arcade](FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md)
 - [Editor mobile research](EDITOR_MOBILE_RESEARCH.md)
 - [Open-source editor replacements](OSS_REPLACEMENT_RESEARCH.md)

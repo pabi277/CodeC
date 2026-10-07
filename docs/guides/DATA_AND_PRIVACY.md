@@ -189,6 +189,24 @@ unauthorized. Record: [`chat-phase96/README.md`](../phases/03-editor/chat-phase9
 §7–§8, [`docs/roadmaps/ai-integration/13_OPTIONAL_ON_DEVICE_MODEL.md`](../roadmaps/ai-integration/13_OPTIONAL_ON_DEVICE_MODEL.md).
 The assistant ships to the release channel in **app-v1.3.18**.
 
+## Opening the website (Phase 97) — the app's only links, and what they are not
+
+CodeC has no in-app browser. Every address the app offers — the 19-chapter
+course, the FAQ — opens in **your** browser through one Android `ACTION_VIEW`
+intent (`ui/support/CodecLinks.kt`), and the addresses live in one file
+(`ui/setup/LearningLinks.kt`, asserted https-only and same-host by
+`LearningLinksTest`). Three sentences that keep the claims above true:
+
+1. **Nothing about you is sent with the link.** The intent carries a URL and
+   nothing else — no project name, no file, no device id, no query string
+   identifying you. Whatever the website can see, it sees the same as any
+   other visitor typing the address.
+2. **Nothing about your projects leaves the browser's own boundary.** Opening
+   the course does not upload, sync, or list anything local.
+3. **The website is not part of the app's network surface.** It is not fetched
+   by CodeC, not cached by CodeC, and no CodeC feature depends on it being
+   reachable: the course door simply fails to open on a device with no browser.
+
 ## Permissions — every one, why, and the code that uses it
 
 | Permission (short name) | Why it exists (one line) | Reader in `app/src/main/java` |

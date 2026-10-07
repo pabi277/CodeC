@@ -54,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -801,8 +802,14 @@ fun MainApp(
     // privacy acknowledgement. A Settings reset is read only on the NEXT launch.
     val settingsManager = remember { SettingsManager(activity) }
     var firstLaunchComplete by remember { mutableStateOf<Boolean?>(null) }
+    // Phase 97 — the setup flow's gate, read beside the intro's own gate. An
+    // install upgrading from an earlier build has first_launch_complete = true,
+    // so it never sees the flow; a fresh install sees it once, after the
+    // privacy agreement.
+    var setupFlowCompleteStored by remember { mutableStateOf(true) }
     LaunchedEffect(settingsManager) {
         firstLaunchComplete = settingsManager.firstLaunchCompleteFlow.first()
+        setupFlowCompleteStored = settingsManager.setupFlowCompleteFlow.first()
     }
     // Only this first-run gate participates in routing. Package/userland work
     // never holds the first frame or the splash open.
@@ -818,6 +825,23 @@ fun MainApp(
     }
     var firstFrameReported by remember { mutableStateOf(false) }
 
+    // Phase 97 — the setup flow's own state. `setupFinished` means the user
+    // reached *Start coding* (or *Skip setup*), not that the disk work is done:
+    // the effect below still has to create the project before the shell shows.
+    var setupFinished by remember { mutableStateOf(false) }
+    // The build failed and the user chose to leave: complete the gates and land
+    // on the hub, with no project forced on them and no sample seeded.
+    var setupAbandoned by remember { mutableStateOf(false) }
+    var setupChoice by remember { mutableStateOf(com.codeci.ide.ui.setup.SetupFlowPolicy.defaultChoice()) }
+    var setupPicks by remember { mutableStateOf(com.codeci.ide.ui.setup.SetupPicks()) }
+    var firstOpenRoute by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // The flow's own theme writer: the S4 control re-themes the app the moment
+    // it is tapped, so the change is shown rather than described (Phase 97's
+    // "never draw what the app can show"). Reading the same DataStore the
+    // shell's ThemeManager reads keeps one source of truth.
+    val setupThemeManager = remember { com.codeci.ide.ui.theme.ThemeManager(activity) }
+    val setupScope = rememberCoroutineScope()
+
     // Preserve the crash-recovery escape hatch: safe mode does not seed sample
     // files or keep the user behind first-run UI after a crash loop.
     LaunchedEffect(firstLaunchComplete) {
@@ -829,35 +853,82 @@ fun MainApp(
         firstRunAccepted = false
     }
 
-    // The intro is the first-run UI, not a second splash. On explicit
-    // acknowledgement, seed the offline multi-game arena on IO, save its
-    // launch path BEFORE completing the preference, and then reveal the normal
-    // shell. A seed failure still exits the gate into the normal fallback or
-    // the returning user's saved resume route.
-    LaunchedEffect(firstRunAccepted, firstLaunchComplete) {
+    // Phase 97 — the first-run setup flow, or the truth that replaces it.
+    //
+    // On explicit acknowledgement the app shows the seven-beat setup flow (the
+    // owner's brief, 2026-10-08): pick the first project, name it, tune the
+    // editor, watch the files land. *Skip setup* is the app as every build
+    // before this phase left it — the CodeC Arcade sample, seeded and opened.
+    //
+    // The disk work stays the same shape it had before: run it on IO, save the
+    // launch path BEFORE completing the preference, then reveal the shell. A
+    // failure still exits the gate into the normal fallback or the returning
+    // user's saved resume route.
+    LaunchedEffect(firstRunAccepted, firstLaunchComplete, setupFinished) {
         if (!firstRunAccepted || firstLaunchComplete != false || com.codeci.ide.ui.crash.SafeMode.active) {
             return@LaunchedEffect
         }
+        // A fresh install that has not finished the flow keeps the flow on
+        // screen; only an upgrade (its gate already stored) skips straight on.
+        if (!setupFinished && !setupFlowCompleteStored) return@LaunchedEffect
         firstRunPreparing = true
-        val sampleIsLaunchable = withContext(Dispatchers.IO) {
-            runCatching {
-                val root = ProjectManager(activity).projectsRoot()
-                GameArenaSample.ensure(root) { assetPath ->
-                    activity.assets.open("${GameArenaSample.ASSET_DIRECTORY}/$assetPath")
-                        .bufferedReader(Charsets.UTF_8)
-                        .use { it.readText() }
-                }
-                java.io.File(root, GameArenaSample.NAME + "/" + GameArenaSample.ENTRY_FILE).isFile
-            }.getOrDefault(false)
+        if (setupAbandoned) {
+            // Nothing was built and the user asked for the hub. Complete the
+            // gates so the flow never reappears, and launch nothing.
+            withContext(Dispatchers.IO) { settingsManager.setSetupFlowComplete(true) }
+            settingsManager.setFirstLaunchComplete(true)
+            firstLaunchComplete = true
+            firstRunPreparing = false
+            firstRunAccepted = false
+            setupFinished = false
+            setupAbandoned = false
+            return@LaunchedEffect
         }
-        if (sampleIsLaunchable) {
-            EditorLaunchState.save(activity, GameArenaSample.NAME, GameArenaSample.ENTRY_FILE)
+        val choice = if (setupFinished) setupChoice else com.codeci.ide.ui.setup.SetupFlowPolicy.skipChoice()
+        val plan = com.codeci.ide.ui.setup.SetupFlowPolicy.planFor(choice)
+        val readArenaAsset: (String) -> String = { assetPath ->
+            activity.assets.open("${GameArenaSample.ASSET_DIRECTORY}/$assetPath")
+                .bufferedReader(Charsets.UTF_8)
+                .use { it.readText() }
+        }
+        val createdProject = withContext(Dispatchers.IO) {
+            runCatching {
+                com.codeci.ide.ui.setup.SetupSeeding.apply(activity, choice, readArenaAsset)
+            }.getOrNull()
+        }
+        if (createdProject != null) {
+            EditorLaunchState.save(activity, createdProject, plan.entryFile)
+            firstOpenRoute = createdProject to plan.entryFile
             firstOpenSample = true
+        } else if (plan.projectName == GameArenaSample.NAME) {
+            // The skip path's own verifiable promise, unchanged from before.
+            val sampleIsLaunchable = withContext(Dispatchers.IO) {
+                java.io.File(ProjectManager(activity).projectsRoot(), GameArenaSample.NAME + "/" + GameArenaSample.ENTRY_FILE).isFile
+            }
+            if (sampleIsLaunchable) {
+                EditorLaunchState.save(activity, GameArenaSample.NAME, GameArenaSample.ENTRY_FILE)
+                firstOpenRoute = GameArenaSample.NAME to GameArenaSample.ENTRY_FILE
+                firstOpenSample = true
+            }
+        }
+        if (setupFinished) {
+            // The answers, written once, into the keys Settings already owns.
+            withContext(Dispatchers.IO) {
+                settingsManager.setFontSize(setupPicks.textSize.fontSp)
+                settingsManager.setTerminalFontSize(setupPicks.textSize.fontSp)
+                settingsManager.setLineNumbers(setupPicks.lineNumbers)
+                settingsManager.setWordWrap(setupPicks.wordWrap)
+                settingsManager.setCompletionGhost(setupPicks.hints)
+                settingsManager.setSetupFlowComplete(true)
+            }
+        } else {
+            withContext(Dispatchers.IO) { settingsManager.setSetupFlowComplete(true) }
         }
         settingsManager.setFirstLaunchComplete(true)
         firstLaunchComplete = true
         firstRunPreparing = false
         firstRunAccepted = false
+        setupFinished = false
     }
 
     if (firstLaunchComplete == null) {
@@ -880,11 +951,72 @@ fun MainApp(
                 onFirstFrame("first-run-intro")
             }
         }
-        FirstRunIntroScreen(
-            preparing = firstRunPreparing,
-            onStart = { if (!firstRunPreparing) firstRunAccepted = true },
-            logoRemainingMs = firstRunLogoRemainingMs,
-        )
+        if (!firstRunAccepted) {
+            FirstRunIntroScreen(
+                preparing = firstRunPreparing,
+                onStart = { if (!firstRunPreparing) firstRunAccepted = true },
+                logoRemainingMs = firstRunLogoRemainingMs,
+            )
+            return
+        }
+        // Phase 97 — the seven beats the owner asked for. Shown once, right
+        // after the agreement, and only on a fresh install: the stored gate
+        // takes an upgraded app straight past it, and the intro's own replay
+        // row in Settings does not resurrect it (no reset switch).
+        if (!setupFinished && !setupFlowCompleteStored) {
+            com.codeci.ide.ui.setup.SetupFlowScreen(
+                initialChoice = setupChoice,
+                existingProjectNames = remember(setupFlowCompleteStored) {
+                    runCatching {
+                        ProjectManager(activity).listProjects().map { it.name }
+                    }.getOrDefault(emptyList())
+                },
+                onSkip = {
+                    setupChoice = com.codeci.ide.ui.setup.SetupFlowPolicy.skipChoice()
+                    setupFinished = true
+                },
+                onThemePicked = { theme ->
+                    setupScope.launch {
+                        setupThemeManager.setAppTheme(
+                            when (theme) {
+                                com.codeci.ide.ui.setup.SetupTheme.DARK ->
+                                    com.codeci.ide.ui.theme.AppThemeMode.DARK
+                                com.codeci.ide.ui.setup.SetupTheme.LIGHT ->
+                                    com.codeci.ide.ui.theme.AppThemeMode.LIGHT
+                                com.codeci.ide.ui.setup.SetupTheme.AUTO ->
+                                    com.codeci.ide.ui.theme.AppThemeMode.SYSTEM
+                            },
+                        )
+                        setupThemeManager.setEditorTheme(
+                            when (theme) {
+                                com.codeci.ide.ui.setup.SetupTheme.LIGHT ->
+                                    com.codeci.ide.ui.theme.EditorThemeType.GITHUB_DARK
+                                else -> com.codeci.ide.ui.theme.EditorThemeType.VS_CODE_DARK_PLUS
+                            },
+                        )
+                    }
+                },
+                onOpenLink = { url -> CodecLinks.open(activity, url) },
+                onBuild = { choice, onFileWritten ->
+                    val assets = activity.assets
+                    com.codeci.ide.ui.setup.SetupSeeding.apply(activity, choice, { assetPath ->
+                        assets.open("${GameArenaSample.ASSET_DIRECTORY}/$assetPath")
+                            .bufferedReader(Charsets.UTF_8)
+                            .use { it.readText() }
+                    }, onFileWritten)
+                },
+                onFinish = { choice, picks ->
+                    setupChoice = choice
+                    setupPicks = picks
+                    setupFinished = true
+                },
+                onAbandon = {
+                    setupAbandoned = true
+                    setupFinished = true
+                },
+            )
+            return
+        }
         return
     }
     // "Open where I left off": the saved file remains the source of truth for
@@ -931,13 +1063,16 @@ fun MainApp(
     }
     // Keep the start route decided once, as Phase 44's setup wiring requires;
     // the resume offer is derived from the same one-shot launch facts.
-    val startDestination = remember(launchState, firstOpenSample) {
+    val startDestination = remember(launchState, firstOpenSample, firstOpenRoute) {
         when {
             // A fresh user who accepted the intro lands in the editor on the
-            // ready-to-run CodeC Arcade project. This branch stays above the
-            // resume offer so first-run state cannot send them to the hub first.
-            firstOpenSample ->
-                Screen.Editor.createRoute(GameArenaSample.ENTRY_FILE, GameArenaSample.NAME)
+            // project they chose in the setup flow (Phase 97), or on the
+            // ready-to-run CodeC Arcade sample when they skipped. This branch
+            // stays above the resume offer so first-run state cannot send them
+            // to the hub first.
+            firstOpenSample -> firstOpenRoute?.let { (project, file) ->
+                Screen.Editor.createRoute(file, project)
+            } ?: Screen.Editor.createRoute(GameArenaSample.ENTRY_FILE, GameArenaSample.NAME)
             resumeOffer == com.codeci.ide.ui.projects.ResumeOffer.CONTINUE_IN_PLACE ->
                 launchState?.let { Screen.Editor.createRoute(it.fileName, it.projectName) }
                     ?: Screen.FileManager.route

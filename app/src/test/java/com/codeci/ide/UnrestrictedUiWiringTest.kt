@@ -45,7 +45,11 @@ class UnrestrictedUiWiringTest {
         assertTrue(main.contains("val routeKnown = firstLaunchComplete != null"))
         assertTrue(main.contains("FirstRunIntroScreen("))
         assertTrue(main.contains("!firstRunAccepted"))
-        assertTrue(main.contains("GameArenaSample.ensure("))
+        // Phase 97 — the seeding moved behind the setup flow. The legacy call
+        // still runs, for the flow's own skip path (SetupSeeding), and the gate
+        // is still completed in MainActivity after the project exists.
+        assertTrue(main.contains("SetupFlowScreen("))
+        assertTrue(main.contains("setupFlowCompleteStored"))
         assertTrue(main.contains("settingsManager.setFirstLaunchComplete(true)"))
         assertFalse(main.contains("guideCompleted"))
         assertFalse(main.contains("coachSeen"))

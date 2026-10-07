@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeC — 7-screen setup flow, wireframes v2</title>
+<style>
+  :root{
+    --page:#0B0C0E; --ink:#101418; --screen:#101418;
+    --card:#191D22; --card2:#1F242A; --hair:#252A31;
+    --text:#E8ECEF; --muted:#9AA0A6; --subtle:#8B949E;
+    --mint:#3DDC84; --mint-ink:#06220F; --mint-dim:#2A6B45;
+    --amber:#E6B33C; --blue:#64B5F6; --red:#FF5555;
+    --k:#569CD6; --s:#CE9178; --c:#6A9955; --f:#DCDCAA; --t:#4EC9B0; --v:#9CDCFE;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  .wrap{max-width:1560px;margin:0 auto;padding:44px 28px 90px}
+  .kicker{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  h1{font-size:34px;line-height:1.15;margin:0 0 14px;letter-spacing:-.02em;font-weight:680}
+  .lead{max-width:980px;color:#B6BCC2;font-size:15.5px;line-height:1.62;margin:0 0 12px}
+  header.top{border-bottom:1px solid var(--hair);padding-bottom:26px;margin-bottom:16px}
+  .rules{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 4px}
+  .rule{font-size:12px;border:1px solid var(--hair);border-radius:999px;padding:7px 12px;color:#AEB4BA;background:#141719}
+  .rule b{color:var(--text);font-weight:640}
+  h2.section{font-size:21px;margin:52px 0 6px;letter-spacing:-.015em;font-weight:660}
+  p.section-note{color:#9AA0A6;font-size:13.5px;line-height:1.6;margin:0 0 26px;max-width:1000px}
+  /* flow grid */
+  .flow{display:grid;grid-template-columns:repeat(auto-fill,minmax(392px,1fr));gap:30px}
+  .step{background:#131619;border:1px solid var(--hair);border-radius:22px;padding:18px 18px 20px;display:flex;flex-direction:column;gap:14px}
+  .step-head{display:flex;align-items:center;gap:10px}
+  .stepnum{width:26px;height:26px;border-radius:9px;background:rgba(61,220,132,.12);border:1px solid rgba(61,220,132,.35);color:var(--mint);display:grid;place-items:center;font-size:12.5px;font-weight:700;flex:none}
+  .step-title{font-size:15px;font-weight:660}
+  .tags{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .tag{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;padding:3px 7px;border-radius:6px;border:1px solid}
+  .tag.modern{color:#9FD8F5;border-color:#274353;background:#12202A}
+  .tag.auth{color:#C4B5FD;border-color:#3B2F6B;background:#1D1830}
+  .tag.do{color:#9BE7B4;border-color:#2D4134;background:#14211A}
+  .step-sub{font-size:12.6px;color:var(--muted);line-height:1.55;margin:0}
+  /* phone */
+  .phone{width:352px;max-width:100%;margin:0 auto;background:#0D1013;border:1px solid #2A2F35;border-radius:28px;overflow:hidden;position:relative;box-shadow:0 34px 70px -28px rgba(0,0,0,.9)}
+  .screen{background:var(--screen);position:relative;min-height:620px;display:flex;flex-direction:column}
+  .glow::before{content:"";position:absolute;inset:-40px -20px auto -20px;height:280px;
+    background:radial-gradient(60% 60% at 50% 30%, rgba(61,220,132,.20), rgba(61,220,132,.05) 55%, transparent 75%);
+    pointer-events:none}
+  .sbar{display:flex;justify-content:space-between;font-size:10.5px;color:#6E767E;padding:10px 18px 4px;position:relative;z-index:2}
+  .segs{display:flex;gap:6px;padding:8px 18px 0;position:relative;z-index:2}
+  .segs i{height:3px;flex:1;border-radius:2px;background:#242A31}
+  .segs i.on{background:var(--mint)}
+  .body{padding:16px 22px 20px;display:flex;flex-direction:column;flex:1;position:relative;z-index:2}
+  .backrow{display:flex;align-items:center;height:34px;margin-bottom:6px}
+  .back{color:#8B949E;font-size:17px;width:30px}
+  .h{font-size:26px;line-height:1.18;font-weight:680;letter-spacing:-.03em;margin:2px 0 8px}
+  .h.small{font-size:22px}
+  .sub{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 18px}
+  /* mark + plan */
+  .mark{width:58px;height:58px;border-radius:18px;background:var(--ink);border:1px solid #262C33;display:grid;place-items:center;box-shadow:0 0 34px -6px rgba(61,220,132,.45);margin:16px 0 22px}
+  .mark span{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;color:var(--mint);font-size:20px;font-weight:700;letter-spacing:-1px}
+  .plan{display:flex;flex-direction:column;gap:14px;margin:6px 0 18px}
+  .plan .p{display:flex;gap:13px;align-items:flex-start}
+  .plan .n{width:22px;height:22px;border-radius:50%;border:1px solid #2E343B;color:#8B949E;display:grid;place-items:center;font-size:11px;flex:none;margin-top:1px}
+  .plan .pt{font-size:13.6px}
+  .plan .pd{font-size:11.8px;color:var(--subtle);margin-top:2px}
+  /* option cards */
+  .opt{display:flex;gap:13px;align-items:center;border:1px solid var(--hair);border-radius:18px;padding:13px 14px;margin-bottom:10px;
+    background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,0));position:relative}
+  .opt.sel{border-color:rgba(61,220,132,.55);background:linear-gradient(180deg,rgba(61,220,132,.10),rgba(61,220,132,.03));
+    box-shadow:0 0 0 1px rgba(61,220,132,.22), 0 14px 30px -18px rgba(61,220,132,.45)}
+  .opt .ic{width:38px;height:38px;border-radius:12px;flex:none;display:grid;place-items:center;font-size:13px;font-weight:700;background:#20262C;color:#9AA0A6;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+  .opt.sel .ic{background:rgba(61,220,132,.14);color:var(--mint)}
+  .opt .txt{flex:1;min-width:0}
+  .opt .ot{font-size:14px;font-weight:640}
+  .opt .oc{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:11px;color:#9AA0A6;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .opt.sel .oc{color:#B7E7CA}
+  .opt .od{font-size:11.4px;color:var(--subtle);margin-top:4px;line-height:1.4}
+  .check{width:22px;height:22px;border-radius:50%;border:1.5px solid #333940;flex:none}
+  .opt.sel .check{background:var(--mint);border-color:var(--mint);color:var(--mint-ink);display:grid;place-items:center;font-size:12.5px;font-weight:800}
+  /* chips, segments, fields */
+  .door{display:flex;align-items:center;gap:9px;border:1px dashed #2E343B;border-radius:14px;padding:11px 13px;font-size:12.6px;color:#C7CDD3;margin-top:2px}
+  .door .dv{margin-left:auto;color:var(--mint);font-size:11.5px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .chip{font-size:11.5px;padding:7px 11px;border-radius:999px;border:1px solid var(--hair);background:#1B2025;color:#C7CDD3}
+  .chip.on{border-color:rgba(61,220,132,.5);background:rgba(61,220,132,.12);color:#B9EFCF}
+  .chip .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#3B4147;margin-right:6px;vertical-align:1px}
+  .chip .dot.d1{background:#4FBF7A}.chip .dot.d2{background:var(--amber)}.chip .dot.d3{background:#E0704A}
+  .field{border:1px solid rgba(61,220,132,.45);border-radius:14px;background:#141A16;padding:14px 14px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:15px;color:#DDE6E1;display:flex;align-items:center}
+  .caret{width:1.6px;height:17px;background:var(--mint);margin-left:2px;display:inline-block}
+  .crumb{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:11.5px;color:#8FA79A;margin-top:9px}
+  .lbl{display:flex;align-items:baseline;margin:0 0 8px}
+  .lbl .l{font-size:13.4px;font-weight:620}
+  .lbl .r{margin-left:auto;font-size:11.4px;color:var(--subtle)}
+  .seg{display:flex;gap:6px;margin-bottom:16px}
+  .seg span{flex:1;text-align:center;font-size:12.6px;padding:12px 0;border-radius:12px;border:1px solid var(--hair);background:#1A1F24;color:#C7CDD3}
+  .seg span.on{background:rgba(61,220,132,.13);border-color:rgba(61,220,132,.5);color:#C9F5D9;font-weight:640}
+  .sw{width:46px;height:27px;border-radius:999px;background:#2A3037;position:relative;flex:none}
+  .sw i{position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#8B949E;transition:.2s}
+  .sw.on{background:rgba(61,220,132,.28);border:1px solid rgba(61,220,132,.5)}
+  .sw.on i{left:22px;background:var(--mint)}
+  .setrow{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid #1E2329}
+  .setrow:last-child{border-bottom:0}
+  .setrow .st{font-size:13.2px}
+  .setrow .sd{font-size:11.4px;color:var(--subtle);margin-top:2px}
+  .setrow .right{margin-left:auto;display:flex;gap:6px}
+  /* editor mirror */
+  .mirror{border:1px solid var(--hair);border-radius:16px;overflow:hidden;background:#0F1216;margin-bottom:18px}
+  .mtop{display:flex;align-items:center;gap:8px;padding:8px 11px;background:#171B20;border-bottom:1px solid #1E2329}
+  .mtop .g{color:#6E767E;font-size:12.5px}
+  .mtop .bc{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:11px;color:#9FD8F5;background:#12202A;border:1px solid #23414F;border-radius:7px;padding:3px 7px}
+  .mtop .run{margin-left:auto;color:var(--mint);font-size:13px}
+  .mcode{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:12px;line-height:1.85;padding:9px 0}
+  .mline{display:flex;gap:11px;padding:0 11px;white-space:pre}
+  .mline .ln{color:#4E565E;width:13px;text-align:right;flex:none}
+  .mstat{display:flex;justify-content:space-between;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:10px;color:#6E767E;padding:6px 11px;background:#171B20;border-top:1px solid #1E2329}
+  .big{font-size:14.2px !important;line-height:1.95 !important}
+  /* output sample */
+  .out{border:1px solid #2E343B;border-radius:14px;background:#12171A;padding:12px 13px;margin:4px 0 16px}
+  .out .plain{font-size:12.6px;color:#D6EEDC;line-height:1.5}
+  .out .raw{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:11px;color:#8B949E;margin-top:8px;padding-top:8px;border-top:1px dashed #242A31;white-space:pre-wrap}
+  .out .raw b{color:var(--red);font-weight:600}
+  /* build list */
+  .file{display:flex;align-items:center;gap:11px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:12.4px;padding:9px 0;color:#CFD6DB}
+  .file .tick{width:20px;height:20px;border-radius:50%;background:rgba(61,220,132,.14);border:1px solid rgba(61,220,132,.45);color:var(--mint);display:grid;place-items:center;font-size:11px;flex:none}
+  .dl{display:flex;gap:13px;align-items:center;margin-top:8px;border-top:1px dashed #242A31;padding-top:14px}
+  .ring{width:38px;height:38px;border-radius:50%;flex:none;background:conic-gradient(var(--amber) 30%, #242A31 0);display:grid;place-items:center}
+  .ring::after{content:"";width:26px;height:26px;border-radius:50%;background:var(--screen)}
+  .dl .dt{font-size:13px;font-weight:620}
+  .dl .dd{font-size:11.4px;color:var(--subtle);margin-top:2px}
+  .ghost{align-self:flex-start;font-size:12.4px;padding:11px 13px;border-radius:12px;border:1px solid rgba(61,220,132,.45);background:rgba(61,220,132,.10);color:#C9F5D9;margin-top:12px}
+  /* receipt */
+  .rcpt{border:1px solid var(--hair);border-radius:18px;padding:16px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0))}
+  .rhead{display:flex;gap:13px;align-items:center}
+  .rlogo{width:40px;height:40px;border-radius:13px;background:#151A1E;border:1px solid #262C33;display:grid;place-items:center;font-family:"JetBrains Mono",monospace;color:var(--mint);font-weight:700;font-size:15px;flex:none}
+  .rn{font-size:15.6px;font-weight:660}
+  .rf{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:11.6px;color:#8FA79A;margin-top:3px}
+  .bigtick{width:54px;height:54px;border-radius:50%;background:rgba(61,220,132,.13);border:1px solid rgba(61,220,132,.5);display:grid;place-items:center;color:var(--mint);font-size:24px;box-shadow:0 0 40px -8px rgba(61,220,132,.55);margin:14px 0 16px}
+  /* cta */
+  .cta{margin-top:auto;background:linear-gradient(180deg,#48E790,#31C877);color:var(--mint-ink);border-radius:16px;height:54px;display:grid;place-items:center;font-size:15.5px;font-weight:690;letter-spacing:-.01em;box-shadow:0 16px 34px -16px rgba(61,220,132,.7)}
+  .quiet{margin-top:11px;text-align:center;font-size:12.6px;color:#8B949E}
+  /* comparison + laws */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media (max-width:900px){ .two{grid-template-columns:1fr} }
+  .cmpbox{background:#131619;border:1px solid var(--hair);border-radius:20px;padding:20px}
+  .cmpbox h4{margin:0 0 6px;font-size:13.5px;letter-spacing:-.01em}
+  .cmpbox p{margin:0;font-size:12.6px;color:var(--muted);line-height:1.6}
+  .artrow{display:flex;align-items:center;gap:16px;margin:16px 0 6px}
+  .emojihero{width:92px;height:92px;border-radius:50%;background:#F2F3F4;display:grid;place-items:center;font-size:40px;flex:none;box-shadow:0 12px 26px -14px rgba(0,0,0,.8)}
+  .codehero{flex:1;border:1px solid var(--hair);border-radius:14px;background:#0F1216;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:11.6px;line-height:1.85;padding:10px 12px;min-width:0}
+  .codehero .d{color:#4E565E}
+  .law{background:#131619;border:1px solid var(--hair);border-radius:20px;padding:18px 20px}
+  .law h4{margin:0 0 8px;font-size:13.5px}
+  .law ul{margin:0;padding-left:18px;font-size:12.6px;color:#B6BCC2;line-height:1.65}
+  .law li{margin-bottom:5px}
+  .law b{color:var(--text)}
+  .footer-note{margin-top:60px;border-top:1px solid var(--hair);padding-top:20px;color:#8B949E;font-size:12.6px;line-height:1.65;max-width:1000px}
+  code{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:.92em;color:#B7E7CA}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="kicker">Research artifact · revision 2 · no app code changed · 2026-10-08</p>
+  <h1>Seven screens, a project you choose, and a CodeC that looks like itself</h1>
+  <p class="lead">The owner's corrections, honoured: <b>all 7 beats stay</b>, the <b>first project is chosen and named by the user</b> (the arena becomes one option, not an imposition), and the visual language is <b>modern and authentic</b>. Modern, here, is air, contrast and one loud element per screen — not decoration. Authentic is a single rule that makes the flow unmistakably CodeC's: <b>never draw what the app can show.</b></p>
+  <div class="rules">
+    <span class="rule"><b>7 beats</b> · every one does work</span>
+    <span class="rule"><b>You pick your first project</b> · and name it</span>
+    <span class="rule"><b>Real code as the art</b> · no emoji, no stock</span>
+    <span class="rule"><b>Ink <span style="color:#3DDC84">#101418</span> + mint <span style="color:#3DDC84">#3DDC84</span></b></span>
+    <span class="rule"><b>One loud element per screen</b></span>
+    <span class="rule"><b>Skip ≡ today's behaviour</b></span>
+    <span class="rule"><b>No profiles, no crowns, no scores</b></span>
+  </div>
+</header>
+
+<h2 class="section">A · Authenticity: never draw what the app can show</h2>
+<p class="section-note">The reference flow illustrates with emoji inside white circles. Emoji render differently on every OEM, and a waving hand teaches nothing about code. CodeC's hero art is always the product: the real first line of the file you are about to create, your own project name in the breadcrumb, the actual compiler output, the real file list. That is what "authentic" means here — and it is cheaper than illustration, because the assets already exist.</p>
+
+<div class="two">
+  <div class="cmpbox">
+    <h4>Illustration hero <span style="color:#8B949E;font-weight:400">(the pattern we are not copying)</span></h4>
+    <div class="artrow">
+      <div class="emojihero">🎯</div>
+      <div class="codehero" style="border-style:dashed;color:#6E767E">
+        An emoji or stock illustration in a circle.<br>Renders per OEM. Says nothing about the code.<br>Decorative by nature — and it shows.
+      </div>
+    </div>
+    <p>Also true of: crowns, sparkle bursts, progress bars over nothing, and feature lists with checkmarks for things the user has not met.</p>
+  </div>
+  <div class="cmpbox">
+    <h4>Product hero <span style="color:#3DDC84;font-weight:400">(CodeC)</span></h4>
+    <div class="artrow">
+      <div class="codehero">
+        <span class="d">// the file this choice creates</span><br>
+        <span class="k">const</span> snake = {<br>
+        &nbsp;&nbsp;speed: <span class="s">6</span>,<br>
+        &nbsp;&nbsp;segments: <span class="s">3</span><br>
+        };
+      </div>
+    </div>
+    <p>Real code, syntax-coloured by the shipped theme, in the mono face the editor uses. It cannot go stale, it cannot look dated, and it tells the truth about what you are choosing.</p>
+  </div>
+</div>
+
+<h2 class="section">B · The flow, screen by screen</h2>
+<p class="section-note">Six hairline segments under the status bar track S1–S6 (S7 is the payoff, no progress bar). Cards are 18 dp glass — hairline border, a 3 % white top highlight — selected state is a mint border plus a check, never a colour flood. The CTA is 56 dp, sentence case, thumb-height.</p>
+
+<div class="flow">
+
+  <!-- S1 -->
+  <div class="step">
+    <div class="step-head"><span class="stepnum">1</span><span class="step-title">Set up your workspace</span>
+      <span class="tags"><span class="tag modern">modern</span><span class="tag do">honest</span></span>
+    </div>
+    <p class="step-sub">Replaces the reference's logo-and-slogan welcome with a <b>plan and an honest cost</b>: three lines, "about 40 seconds", one button, one quiet exit. No slogan, no marketing sentence.</p>
+    <div class="phone"><div class="screen glow">
+      <div class="sbar"><span>12:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="segs"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="body" style="padding-top:8px">
+        <div class="mark"><span>&gt;_</span></div>
+        <div class="h">Set up your<br>workspace</div>
+        <p class="sub">Three things and you’re coding.<br>About 40 seconds.</p>
+        <div class="plan">
+          <div class="p"><span class="n">1</span><div><div class="pt">Pick your first project</div><div class="pd">A game, C, Python or a web page</div></div></div>
+          <div class="p"><span class="n">2</span><div><div class="pt">Make the editor yours</div><div class="pd">Size, theme, and how errors read</div></div></div>
+          <div class="p"><span class="n">3</span><div><div class="pt">Watch CodeC build it</div><div class="pd">Then press ▶ to run</div></div></div>
+        </div>
+        <div class="cta">Let’s go</div>
+        <div class="quiet">Skip setup — start with the sample game</div>
+      </div>
+    </div></div>
+    <p class="step-sub"><b>Modern:</b> the mint glow behind the <code>&gt;_</code> mark is the only decoration, at ≤20 % alpha, blurred to nothing. <b>Authentic:</b> the mark is the app's own vector (<code>app_mark.xml</code>), not a new logo. <b>Law:</b> "Skip setup" is today's behaviour, word for word.</p>
+  </div>
+
+  <!-- S2 -->
+  <div class="step">
+    <div class="step-head"><span class="stepnum">2</span><span class="step-title">What do you want to make first?</span>
+      <span class="tags"><span class="tag auth">the real picker</span></span>
+    </div>
+    <p class="step-sub">The reference's "goal" question, but the answer <b>creates your project</b>. Each card previews the actual first line of the file it will write — the most authentic picture a code app can offer.</p>
+    <div class="phone"><div class="screen">
+      <div class="sbar"><span>12:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="segs"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      <div class="body" style="padding-top:10px">
+        <div class="h small">What do you want<br>to make first?</div>
+        <p class="sub">Pick one — CodeC creates it and opens it.</p>
+
+        <div class="opt sel">
+          <span class="ic">▦</span>
+          <div class="txt">
+            <div class="ot">CodeC Arcade</div>
+            <div class="oc">{ "title": "Snake" }</div>
+            <div class="od">A finished game you can play, then take apart. Offline.</div>
+          </div>
+          <span class="check">✓</span>
+        </div>
+        <div class="opt">
+          <span class="ic">C</span>
+          <div class="txt">
+            <div class="ot">C</div>
+            <div class="oc">#include &lt;stdio.h&gt;</div>
+            <div class="od">The classic first program. Built-in compiler, offline.</div>
+          </div>
+          <span class="check"></span>
+        </div>
+        <div class="opt">
+          <span class="ic">Py</span>
+          <div class="txt">
+            <div class="ot">Python</div>
+            <div class="oc">print("Hello!")</div>
+            <div class="od">Scripts and small tools. Downloads once · about 40 MB.</div>
+          </div>
+          <span class="check"></span>
+        </div>
+        <div class="opt">
+          <span class="ic">&lt;/&gt;</span>
+          <div class="txt">
+            <div class="ot">Web page</div>
+            <div class="oc">&lt;!DOCTYPE html&gt;</div>
+            <div class="od">A page you can preview as you type.</div>
+          </div>
+          <span class="check"></span>
+        </div>
+        <div class="door"><span>▸</span><span>5 more C templates · Level 1–3</span><span class="dv">open</span></div>
+        <div class="cta" style="margin-top:14px">Continue</div>
+      </div>
+    </div></div>
+    <p class="step-sub"><b>Consumption answer:</b> the templates library (built but currently unreachable — audit P0-1) gets its first door here. <b>Says the cost out loud:</b> offline vs one download, per option, because that is the only thing a beginner cannot discover alone.</p>
+  </div>
+
+  <!-- S3 -->
+  <div class="step">
+    <div class="step-head"><span class="stepnum">3</span><span class="step-title">Name your project</span>
+      <span class="tags"><span class="tag auth">ownership</span><span class="tag do">reuses the app's validator</span></span>
+    </div>
+    <p class="step-sub">The new beat the owner asked for: the sample stops being your first project. A pre-filled, editable name with suggestion chips and the app's own <code>ProjectNameCheck</code> verdict — so a taken name is refused <i>in the field</i>, before the tap.</p>
+    <div class="phone"><div class="screen">
+      <div class="sbar"><span>12:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+      <div class="body" style="padding-top:10px">
+        <div class="backrow"><span class="back">‹</span></div>
+        <div class="h small">Name your project</div>
+        <p class="sub">Start from:</p>
+        <div class="chips" style="margin:0 0 18px">
+          <span class="chip on">Snake</span><span class="chip">Block Party</span><span class="chip">Tic-Tac-Toe</span>
+        </div>
+        <div class="field">MyFirstGame<span class="caret"></span></div>
+        <div class="crumb">MyFirstGame / index.html · js/games/snake.js</div>
+        <div class="chips">
+          <span class="chip">My Snake</span><span class="chip">Playground</span><span class="chip">Test Run</span>
+        </div>
+        <div class="cta">Continue</div>
+      </div>
+    </div></div>
+    <p class="step-sub"><b>Variants that exist:</b> Arcade → the three shipped games; C → the five templates (Hello World L1 · Calculator L1 · Array Sorting L2 · File I/O L2 · Linked List L3, each with its <code>concepts</code> in plain words); Python and Web show no variant row rather than a fake one. <b>Side effect:</b> the audit's "templates write into a project called <i>default</i>" bug dies here — the project is the one you just named.</p>
+  </div>
+
+  <!-- S4 -->
+  <div class="step">
+    <div class="step-head"><span class="stepnum">4</span><span class="step-title">Make the editor yours</span>
+      <span class="tags"><span class="tag modern">live mirror</span></span>
+    </div>
+    <p class="step-sub">The mirror is not a picture — it is the same chrome components, carrying <b>your</b> project name, re-rendered on every tap. The reference explained three settings in sixty words; this one performs two changes in none.</p>
+    <div class="phone"><div class="screen">
+      <div class="sbar"><span>12:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+      <div class="body" style="padding-top:10px">
+        <div class="backrow"><span class="back">‹</span></div>
+        <div class="h small">Make the editor yours</div>
+        <p class="sub">These change right here.</p>
+        <div class="mirror">
+          <div class="mtop"><span class="g">☰</span><span class="bc">MyFirstGame / index.html</span><span class="run">▶</span></div>
+          <div class="mcode big">
+            <div class="mline"><span class="ln">1</span><span><span class="t">&lt;!DOCTYPE</span> <span class="v">html</span><span class="t">&gt;</span></span></div>
+            <div class="mline"><span class="ln">2</span><span><span class="t">&lt;canvas</span> <span class="v">id</span>=<span class="s">"game"</span><span class="t">&gt;&lt;/canvas&gt;</span></span></div>
+            <div class="mline"><span class="ln">3</span><span><span class="k">const</span> speed = <span class="s">6</span>;</span></div>
+          </div>
+          <div class="mstat"><span>Ln 3, Col 14</span><span>HTML · UTF-8</span></div>
+        </div>
+        <div class="lbl"><span class="l">Text size</span><span class="r">Code and terminal</span></div>
+        <div class="seg"><span>S</span><span class="on">M</span><span>L</span></div>
+        <div class="lbl"><span class="l">Theme</span><span class="r">Your whole app</span></div>
+        <div class="seg"><span class="on">Dark</span><span>Light</span><span>Auto</span></div>
+        <div class="cta">Continue</div>
+      </div>
+    </div></div>
+    <p class="step-sub"><b>Authentic:</b> the breadcrumb shows the project name typed one screen ago — the flow's own continuity is the proof that the choice was real. <b>Modern:</b> segmented controls at 48 dp, metric-aligned, no drop shadows inside the mirror.</p>
+  </div>
+
+  <!-- S5 -->
+  <div class="step">
+    <div class="step-head"><span class="stepnum">5</span><span class="step-title">How CodeC helps you</span>
+      <span class="tags"><span class="tag auth">consequence, not confession</span></span>
+    </div>
+    <p class="step-sub">The reference asked four levels and changed nothing. This asks four switches and shows the future: the plain-language error line sits above the real compiler output, exactly as it will after your first failed build.</p>
+    <div class="phone"><div class="screen">
+      <div class="sbar"><span>12:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+      <div class="body" style="padding-top:10px">
+        <div class="backrow"><span class="back">‹</span></div>
+        <div class="h small">How CodeC helps you</div>
+        <p class="sub">Everything here is changeable later.</p>
+        <div class="lbl"><span class="l">When a build fails</span></div>
+        <div class="seg" style="margin-bottom:14px"><span class="on">Plain words</span><span>Raw text</span></div>
+        <div class="out">
+          <div class="plain">The statement on line 4 has no ending.</div>
+          <div class="raw">main.c:4:18: <b>error:</b> expected ';' after expression</div>
+        </div>
+        <div class="setrow">
+          <div><div class="st">Typing hints</div><div class="sd">Grey suggestions — Tab accepts</div></div>
+          <div class="right"><span class="sw on"><i></i></span></div>
+        </div>
+        <div class="setrow">
+          <div><div class="st">Line numbers</div><div class="sd">C error lines point at numbers</div></div>
+          <div class="right"><span class="sw on"><i></i></span></div>
+        </div>
+        <div class="setrow">
+          <div><div class="st">Word wrap long lines</div><div class="sd">Nothing scrolls sideways</div></div>
+          <div class="right"><span class="sw"><i></i></span></div>
+        </div>
+        <div class="quiet" style="text-align:left;margin-top:14px">The AI helper stays off — <span style="color:#9FD8F5">Settings ▸ AI</span> when you want it.</div>
+        <div class="cta" style="margin-top:14px">Continue</div>
+      </div>
+    </div></div>
+    <p class="step-sub"><b>Writes:</b> plain-word errors (ships with audit P0-5) · <code>completion_ghost</code> · <code>line_numbers</code> · <code>word_wrap</code>. <b>If the owner wants the reference's literal level screen,</b> Appendix D of the design note swaps this screen for a three-answer version whose consequences are exactly these defaults — never a self-label that does nothing.</p>
+  </div>
+
+  <!-- S6 -->
+  <div class="step">
+    <div class="step-head"><span class="stepnum">6</span><span class="step-title">Building your project</span>
+      <span class="tags"><span class="tag do">real work only</span></span>
+    </div>
+    <p class="step-sub">The reference's sparkle-and-bar screen, made true: rows appear <b>as the files are written</b>, in the real order, and the only download in the flow shows real bytes with a way out that lands on a working C program.</p>
+    <div class="phone"><div class="screen">
+      <div class="sbar"><span>12:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="segs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      <div class="body" style="padding-top:10px">
+        <div class="h small">Building MyFirstGame</div>
+        <p class="sub">Your game is being copied in — this is the real file list.</p>
+        <div class="file"><span class="tick">✓</span>index.html</div>
+        <div class="file"><span class="tick">✓</span>js/games/snake.js</div>
+        <div class="file"><span class="tick">✓</span>js/main.js</div>
+        <div class="file"><span class="tick">✓</span>.codec/project.json</div>
+        <div class="dl">
+          <span class="ring"></span>
+          <div>
+            <div class="dt">Downloading Python 3</div>
+            <div class="dd">12 MB of 40 MB · about 1 minute left</div>
+          </div>
+        </div>
+        <span class="ghost">Skip — use C instead</span>
+        <div class="quiet" style="text-align:left;margin-top:16px">Python only. Arcade, C and Web need no download at all.</div>
+      </div>
+    </div></div>
+    <p class="step-sub"><b>Modern:</b> progress that is information, not theatre — a real ring, real bytes, an honest ETA. <b>Law:</b> a step row never appears before its work starts; if the whole build is instant, this screen is one "✓ Ready" row rather than a lie.</p>
+  </div>
+
+  <!-- S7 -->
+  <div class="step">
+    <div class="step-head"><span class="stepnum">7</span><span class="step-title">You're all set</span>
+      <span class="tags"><span class="tag do">a receipt, not an advert</span></span>
+    </div>
+    <p class="step-sub">The reference's last screen sold <i>Premium libraries</i> and <i>No ads</i> with crowns. CodeC's last screen names <b>your</b> project, <b>your</b> file, <b>your</b> settings, two learning doors, and gets out of the way.</p>
+    <div class="phone"><div class="screen glow">
+      <div class="sbar"><span>12:41</span><span>5G ▮▮▮ 86%</span></div>
+      <div class="body" style="padding-top:26px">
+        <div class="bigtick">✓</div>
+        <div class="h small" style="margin-bottom:14px">You’re set up</div>
+        <div class="rcpt">
+          <div class="rhead">
+            <span class="rlogo">&gt;_</span>
+            <div>
+              <div class="rn">MyFirstGame</div>
+              <div class="rf">index.html · opens in the editor</div>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">Text: M</span><span class="chip">Dark</span><span class="chip">Plain words</span><span class="chip">Hints on</span>
+          </div>
+        </div>
+        <div style="height:14px"></div>
+        <div class="door"><span>▸</span><span>Try the sample: CodeC Arcade — 3 games</span><span class="dv">offline</span></div>
+        <div class="door" style="margin-top:8px"><span>▸</span><span>Learn: 19 short chapters</span><span class="dv">website</span></div>
+        <div class="quiet" style="text-align:left;margin-top:14px">Everything here lives in Settings.</div>
+        <div class="cta">Start coding</div>
+      </div>
+    </div></div>
+    <p class="step-sub"><b>Consequence:</b> tapping <i>Start coding</i> runs the same reveal the app uses today — shell, editor route, cursor in the entry file, ▶ visible — with the success haptic. The arena demo is now what it always was: a sample, offered by name.</p>
+  </div>
+
+</div>
+
+<h2 class="section">C · The laws that keep it honest</h2>
+<div class="two" style="gap:20px">
+  <div class="law">
+    <h4>Non-negotiables</h4>
+    <ul>
+      <li><b>Skip ≡ today</b> — "Skip setup" seeds the Arcade sample and writes nothing, so the flow can never be slower than the current build.</li>
+      <li><b>No profile is kept</b> — one gate key plus the chosen project id; nothing is sent anywhere; documented in <code>DATA_AND_PRIVACY.md</code>.</li>
+      <li><b>Upgraders never see it</b> — the flow lives inside the existing first-run gate; <code>first_launch_complete = true</code> means no re-onboarding.</li>
+      <li><b>Phase 64.2's line holds</b> — the flow explains nothing about <i>how to use</i> the app: no tips, no arrows, no spotlights, no locks. Every screen ends in a settings write or a created project.</li>
+      <li><b>It is still a new first-run surface</b> — so it needs the owner's explicit word and a phase number (<b>97</b>) before any code.</li>
+    </ul>
+  </div>
+  <div class="law">
+    <h4>The modern/authentic checklist a reviewer can enforce</h4>
+    <ul>
+      <li>Hero art = product content (real code, real file names, real output, real chrome). No emoji, no stock, no abstract blobs.</li>
+      <li>One loud element per screen — the mint glow appears twice in seven screens (S1, S7).</li>
+      <li>Type contrast over type quantity: one display line per screen; captions in <code>MUTED_TEXT</code>.</li>
+      <li>Every control's effect is visible either instantly (S4/S5) or in the next screen (S2/S3).</li>
+      <li>Motion from <code>CodecMotion</code> only (300 ms emphasized steps, 380/0.8 selection spring), and everything snaps under reduced motion.</li>
+      <li>Haptics: existing tick moments only — selection, success. Never on skip, never on entry.</li>
+      <li>48 dp targets, headings, live regions, and legible at 200 % font scale.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="footer-note">
+  <b>Reading this honestly.</b> These are wireframes, not screenshots — drawn from source at <code>ccae8d46</code>; no device round was run. Every choice shown maps to something already shipped (five C templates, three arena games, the starter scaffolds, the settings keys, the app's own name validator) and the mapping is tabulated in <b>docs/research/ONBOARDING_PERSONALISATION_DESIGN_20261008.md</b>, which also carries the wiring, the tests, the risks and the seven open questions. The reference app is judged only from the owner's seven screenshots. Nothing here authorises implementation.
+</div>
+
+</div>
+</body>
+</html>
