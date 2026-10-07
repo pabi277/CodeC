@@ -292,3 +292,62 @@ checks; watch its automatic Build APK and verify uploaded bytes before the final
 commit-pinned download handoff. This pre-push history does not invent a future CI
 conclusion. Owner Chapter8/P1/P5 transcripts and O7 license remain open; W6.7
 public deployment is HELD. No app/package/workflow change, PR, merge or release.
+
+
+**32. Owner device round1 — actual partial pass (2026-10-07).** After the agent
+supplied complete test files and commands, the owner pasted aarch64 CodeC Terminal
+results. Input/ten-row loop/pointer swap passed. Converter45°C→113°F and calculator
+44+33→77 /5×67→335 /quit passed; opposite conversion and calculator error cases
+were not run. Battery84% and speech request returned successfully; audibility is
+not confirmed. Owner explicitly entered YES and the ncurses/sed maintenance
+transaction completed, followed by battery/speech and exit0. Do not repeat that
+mutating test. `cc --version` printed TCC metadata then missing-main: source shows
+the wrapper unconditionally adds startup objects; this does not invalidate the
+successful compilations. App remains read-only. [Evidence](chat-web6/DEVICE_ROUND_1.md).
+Batch802532d's CI37533980679 success reverified; no new commit/push/CI/deploy for
+this evidence-only follow-up. W5/W6 acceptance remains partial, no blanket pass.
+
+
+**33. Owner device round2 — remaining C cases passed (2026-10-07).** The owner
+pasted the requested follow-up:212°F→100.00°C, calculator zero-division refusal,
+unsupported-operation recovery and both exit0. Together with round1 this evidences
+Chapter8/P1 functional checks; no need to repeat those tests. P5 audible voice and
+CodeC/Android version context are still unconfirmed. The successful consented
+package-maintenance run is not repeated. [Evidence](chat-web6/DEVICE_ROUND_1.md).
+Only device records/living summaries changed; no app/website/ZIP/workflow change,
+commit/push/CI/PR/merge or deployment, and no inferred overall acceptance.
+
+
+**34. Owner confirms audible speech — device gates passed (2026-10-07).** Owner
+answered “Yes” to hearing the Good morning voice, CodeC version “latest”, Android
+“16”. Combined with rounds1–2, required Chapter8/P1/P5 device checks PASS, including
+the deliberately approved package-maintenance path. Exact installed CodeC build
+remains unspecified; do not infer a release/versionCode from “latest”. No repeat
+requested. [Evidence](chat-web6/DEVICE_ROUND_1.md). Review/O7 license and explicit
+PR/merge/deploy authority remain separate. Only evidence/living records changed;
+no website/ZIP/app/workflow edit, new commit/push/CI, merge or deployment.
+
+
+**35. Owner requests visitor cleanup, folders and SEO (2026-10-07).** After
+confirming the device tests, owner said all good and asked to remove the review
+banner/status, organize files into subfolders and strengthen search discovery,
+including Termux-related queries. Chose https://pabi277.github.io/CodeC/ as planned
+base, not publication. D34 records the path/SEO change and initial O2 choice.
+
+**36. Organize without breaking offline teaching.** Original29 pages moved into
+guides/, learn/chapters/, about/ and legal/; CSS/images into assets/. All original
+preformatted examples match802532d byte-for-byte. Added an original factual
+CodeC/Termux comparison and contextual links (30 pages total), titles/descriptions,
+self-canonicals, social metadata/local card, non-executable JSON-LD,30-URL sitemap
+and robots stanza with host-root caveat. No keywords spam, fake affiliation,
+ratings or ranking guarantees. Website metadata prepared, not deployed/indexed.
+
+**37. Verify the whole new tree.**1,105 internal targets,0 missing/orphan pages;
+HTML validation clean;49 host/example checks; final120 responsive/axe cases and
+30 extracted offline/no-JS pages;3 web fixtures;35 local canonical/asset routes
+all HTTP200 with exact source bytes. Initial asset-test harness import error fixed
+and full sweep rerun, no weakened assertion.35-file ZIP200,433B/SHA256
+3a6395737e0d6d38a5c4a430dc88268a7494cad00a4a8facda2a84f43ebfb636.
+[Current record](chat-web7/SUMMARY.md). One follow-up commit/push/readback and
+new automatic CI watch follow these local checks; final handoff records actual
+remote results. No app/workflow/package/README-root edits, PR, merge or deployment.

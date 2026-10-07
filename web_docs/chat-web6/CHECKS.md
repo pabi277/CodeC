@@ -1,5 +1,11 @@
 # Full website review — verification record
 
+> **Required owner device checks PASSED (2026-10-07, rounds1–3).**
+> Chapter8/P1/P5 passed, including audible speech and consented maintenance.
+> Android16 / aarch64; CodeC reported as “latest” (exact build unspecified).
+> No retest needed. Website review/license and PR/merge/deploy authority remain
+> separate. [Actual evidence and compiler diagnostic](DEVICE_ROUND_1.md).
+
 **2026-10-07 · W3–W6 combined content batch, D33.** These are local source,
 syntax, host/fixture and browser results. They are NOT Android device acceptance,
 manual screen-reader certification, owner visual acceptance or public deployment.
@@ -46,8 +52,9 @@ pre-certify remote bytes or future CI. Final handoff supplies the pinned link.
 
 Screenshots were generated for every page at360/1440. Representative Learn/AI/C/
 project crops were inspected; screenshot production is not a claim of exhaustive
-manual visual review. Actual phone zoom, assistive technology and Android RUN
-behavior remain unobserved. No device logs were fabricated.
+manual visual review. Actual phone zoom, assistive technology and editor RUN-button behavior remain
+unobserved; later owner rounds1–3 separately passed the required Terminal/device
+tests (including audible speech). No device logs were fabricated.
 
 ## Reproduce without changing the app
 
@@ -75,14 +82,15 @@ packages or invoke a phone API. Do not run authoring generators over polished HT
 
 ## Still open
 
-- [Chapter8 + P1/P5 Android transcripts](DEVICE_TESTS.md), including genuine output,
-  compiler path/ABI, permission/API/audio behavior and honest upgrade-path status.
+- Required Chapter8/P1/P5 device gates are now CLOSED / PASS: [rounds1–3](DEVICE_ROUND_1.md).
+  Exact installed CodeC build remains unspecified (owner said “latest”); no inferred version.
 - Owner review of the full ZIP; actual phone accessibility/zoom/long-session reading.
 - O1 screenshots/O2 domain/O3 tone/O5 in-app link/O7 course license decisions.
 - Explicit PR/merge and package-safe deployment authorization. Existing /dev and
   /keys hosting and every workflow are untouched.
-- CI for the single batch commit is watched after push. No manual dispatch,
-  Android/Gradle sandbox build or claim that APK CI executes these web tests.
+- Batch802532d CI37533980679 completed successfully (recorded in device follow-up).
+  No new CI for evidence-only records, manual dispatch or Android/Gradle sandbox
+  build; APK CI is not claimed to execute the separate web tests.
 
 External destinations are the same source/release links inventoried during W2:
 11 unique GitHub pages were GET200 there; F-Droid page retrieval succeeded via

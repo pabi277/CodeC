@@ -1,0 +1,6 @@
+# Planned project site. Crawlers read robots.txt at the HOST root, not /CodeC/.
+# Coordinate this stanza with the host owner at publication; do not overwrite existing rules.
+User-agent: *
+Allow: /CodeC/
+
+Sitemap: https://pabi277.github.io/CodeC/sitemap.xml

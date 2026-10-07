@@ -50,7 +50,7 @@ it does not claim a missing October 6 commit existed. D1–D22 above remain hist
 ## Current open items
 
 - **O1** — Screenshots (owner supplies/approves); no screenshots in W1.
-- **O2** — Custom domain; default proposed project Pages URL, no deployment yet.
+- **O2 CLOSED (D34)** — Owner selected https://pabi277.github.io/CodeC/ for the initial public address; no deployment yet.
 - **O3** — Copy tone; W1 uses concise, friendly-technical copy as a reviewable proposal.
 - **O5** — In-app site link; separate app-workstream authorization needed.
 - **O7** — Course license; do not invent an MIT course grant before the answer.
@@ -102,3 +102,24 @@ commit/push and CI watch. Do not cancel GitHub's existing W2 run. D31 full-site
 ZIP law remains: preserve cumulative W3/W4/W5 and final W6-review snapshots in
 the single batch, provide final full29page ZIP link. W5 ch08/W6 P1+P5 transcripts,
 O7 license and package-safe owner-authorized deployment remain open. No app edits.
+
+
+## D34 — Clean public copy, organized folders and factual SEO (2026-10-07)
+
+Owner accepted the tested site and asked to remove FULL-SITE REVIEW, the pending
+course-test/publication message and Review status; organize project folders and
+improve Google/other search discovery, including Termux-related searches. Selected
+**GitHub Pages URL** `https://pabi277.github.io/CodeC/` for metadata/sitemap, explicitly
+not publication. Closes O2's initial-address choice; a future custom domain is a
+separate change. Required course device checks passed in owner rounds1–3.
+
+Implementation: preserve existing look,19 chapters and lesson code; move guides,
+chapters, about/legal and assets into folders; keep explicit relative .html links
+for offline import. Add one original useful CodeC/Termux comparison (30 pages
+rather than29), contextual links, unique metadata, canonicals, local social image,
+non-executable JSON-LD, sitemap and documented robots scope. No guaranteed ranking,
+keyword stuffing, false affiliation, reviews/ratings or copied Termux website code.
+No deployment, search-property credentials/submission, workflow/app edit, PR or
+merge authorized. Existing package /dev and /keys remain untouched. D31 requires
+an updated full-tree ZIP/pinned direct download after checks and session-branch
+push. Old flat ZIPs and historical checks remain historical.

@@ -1,5 +1,14 @@
 # web_prompt.md — CodeC WEBSITE handoff — v2.3
 
+> **D34 current follow-up:**30 organized pages, no review notices, factual
+> CodeC/Termux comparison and SEO. [Current record](web_docs/chat-web7/SUMMARY.md).
+> Planned URL chosen: https://pabi277.github.io/CodeC/ (not deployment authority).
+
+> **Required device gates PASSED:** [owner rounds1–3](web_docs/chat-web6/DEVICE_ROUND_1.md).
+> Chapter8/P1/P5, including audible speech and approved maintenance, passed on
+> Android16 / aarch64. CodeC reported as “latest”; exact build unspecified.
+> Batch802532d / CI37533980679 succeeded. Review/license/deploy authority remain.
+
 > **Owner law D31:** every website phase ends with a verified full-site ZIP and a
 > direct GitHub download link in the final reply. [Required procedure](web_docs/REVIEW_DOWNLOAD_RULE.md).
 > **D33: remaining content authorized as one batch; device gates retained.** No PR/merge/deploy.
@@ -19,49 +28,52 @@ the current git/PR/CI state before making any change:
 2. **web_docs/README.md** — website ground rules and file map.
 3. **web_docs/WEBSITE_PLAN.md** — master v2.3, page/chapter content (§3), content
    rules (§4), self-dependent law (§5), phases (§9), acceptance (§10).
-4. **web_docs/DECISIONS.md** — D1–D33, binding dated decisions and open items.
+4. **web_docs/DECISIONS.md** — D1–D34, binding dated decisions and open items.
 5. **web_docs/NEXT_STEPS.md** — current head and owner-command table.
 
 When a page needs facts: **README.md first**, then
 `docs/guides/TROUBLESHOOTING.md`, `BETA.md`, `AI.md`, `DATA_AND_PRIVACY.md`,
 `RELEASE_NOTES.md`, then `docs/journal/JOURNEY.md`. All app docs/code are read-only.
 
-## Current verified state — 2026-10-07
+## Current verified state — 2026-10-07, D34
 
-**All29 pages are written for review. Not fully accepted, merged or deployed.**
-Owner D33: finish the remaining website together, then **one commit and one CI
-watch**, with **device verification gates retained**. This supersedes separate
-W3–W6 start commands/intermediate commits, not W4.2 verification or device gates.
+**30 organized pages; required device gates passed; no deployment/PR/merge.**
+Owner accepted the tested site and requested removal of FULL-SITE REVIEW/Review
+status, subfolders and stronger Google/other-engine discovery including Termux.
+Selected https://pabi277.github.io/CodeC/ for planned canonicals/sitemap, not publishing.
 
-**Current full ZIP:**
-[Download29page review](https://raw.githubusercontent.com/pabi277/CodeC/arena/8b8f8edc-codec/web_docs/chat-web6/review-zips/CodeC-website-W6-review.zip).
-31 files, all29 HTML pages + CSS + mark. Size/hash: chat-web6/W6_ARCHIVE.json.
-Final handoff pins the commit and checks GitHub uploaded bytes after push. D31
-requires this full-current-site direct link at every website phase/batch end.
+**Current ZIP:**
+[Download organized website](https://raw.githubusercontent.com/pabi277/CodeC/arena/8b8f8edc-codec/web_docs/chat-web7/CodeC-website-organized-SEO.zip).
+35 files /200,433B, manifest/hash in chat-web7/ARCHIVE.json. Final handoff pins new
+commit and verifies uploaded bytes. Import into NEW project, retain folders, open
+root index.html → RUN. Old flat ZIPs stay historical; don't overlay an old project.
 
-**Source first:** chat-web4/VERIFIED_FACTS.md,43 row groups and33 package roots
-verified at8467ff8 (app/main d4231f0), recorded before course pages.
-**Records:** chat-web6/BATCH_SUMMARY.md, CONTENT_TRACE.md, CHECKS.md, static/browser/
-snippet reports, cumulative W3/W4/W5 snapshots. W1/W2 records and ZIPs historical.
-**Website:**9 product pages + course home +19 chapters. No missing final links,
-no runtime JS, remote assets or framework. Ch17→18→19→course; Privacy everywhere.
+**Structure:** index.html root; guides/, learn/index.html, learn/chapters/ (19),
+about/index.html, legal/privacy.html, assets/css + images, sitemap.xml/robots.txt.
+Original29 pages plus CodeC/Termux comparison. Relative .html links work offline;
+all original preformatted examples unchanged from802532d.
+**SEO:** unique titles/descriptions, self-canonicals, local social card/metadata,
+visible/schema breadcrumbs, non-executable JSON-LD,30-URL sitemap. Useful comparison
+and contextual links, no fake affiliation/ratings/keywords spam/ranking guarantees.
+**Robots caution:** project /CodeC/robots.txt is not host crawl control. Engines
+read https://pabi277.github.io/robots.txt. Coordinate separately; no root-host or
+workflow changes. Search Console/Bing verification and submission not performed.
 
-**Still required:** owner Chapter8 input/loops/pointers/converter and P1 calculator
-+P5 device-automation transcripts. Follow chat-web6/DEVICE_TESTS.md; host C/Bash
-stubs and browser tests never substitute. P5 upgrades explicitly opt in and require
-YES; an untested portion is not a pass. W6.7 deployment held/no authorization;
-existing signed package /dev and /keys untouched. O7 course license still pending.
+**Evidence:** chat-web7/CHECKS.md and reports.1,105 internal targets,0 missing,
+120 responsive/axe cases,30 offline/no-JS pages,49 host checks,3 web fixtures,
+35 canonical/asset HTTP200 exact-source matches. No executable website JavaScript.
+**Device:** chat-web6/DEVICE_ROUND_1.md rounds1–3 PASS for Chapter8/P1/P5, including
+voice heard and approved package maintenance. Android16/aarch64, app “latest”,
+exact installed build unspecified. Do not demand repeats or invent a version.
 
-The single batch commit triggers existing Build APK. Observe/report its run after
-push; this pre-push handoff does not invent a CI id/conclusion. Do not create an
-extra commit merely to store self-referential CI state. Final report must include
-tip/run/conclusion and verified pinned ZIP. Owner review comes before any merge.
+Previous batch802532d / CI37533980679 succeeded. Current single follow-up commit/
+push triggers new automatic Build APK; its actual result and verified pinned ZIP
+belong in final handoff, not an invented future CI pass here. No app/Gradle sandbox
+builds or workflow dispatch. All app/docs/packages/workflows remain unchanged.
 
-W2 source8467ff8 was pushed and its25,119B GitHub ZIP readback matched local bytes.
-Its run37528087517 was still running when the owner interrupted the watch; the
-watcher later did not exist after snapshot restoration. No GitHub run cancelled.
-Verify live GitHub state, don't infer the result. This batch started from a clean
-8467ff8 after fetch/reset --mixed restored stale snapshot git metadata, never hard.
+W6.7 deployment stays unauthorised; preserve signed package /dev and /keys. O7
+course license remains open. O2 initial address closed by D34; future custom domain
+is separate. No PR/merge/release/publication/IndexNow without explicit authority.
 
 ### Why the supplied handoff needed reconciliation
 
@@ -142,8 +154,8 @@ branch, never switch/create another branch or force push. No app changes.
 
 ## Owner commands and phase queue
 
-D33 authorized W3–W6 content in one batch after source verification; all29 pages
-are now written. The original phase scope below remains the acceptance map, not
+D33 authorized W3–W6 content in one batch after source verification; all original29 pages
+are written; D34 adds the30th comparison page and folder/SEO changes. The original phase scope below remains the acceptance map, not
 a queue to re-run. Next: review/device transcripts, then explicit PR/merge/deploy
 commands only. PR42 supplies no authority or implementation.
 
@@ -162,10 +174,10 @@ commands only. PR42 supplies no authority or implementation.
   Verified Facts Table re-checks README/package config/release/icon/backup/export/
   LAN/feedback/output/Git/AI and **Phase 46 removed Open Folder**. Lock 19-chapter
   teaching set; O6 owner scope already closed, don't re-ask count or silently cut.
-- **W5 (content implemented; device gate OPEN)** ch-07…12: editor, TCC-safe C, shell, Python, honest Git, networking/LAN.
-  **Ch-08 owner device pass required**, transcript, not replaced by browser tests.
-- **W6 (content implemented; device/deploy gates OPEN)** ch-13…17, **W6.8 ch-18 + W6.9 ch-19 BEFORE W6.6 polish/W6.7 deploy**.
-  **P1+P5 owner device pass required**. 29-page source/resource/offline/full-link
+- **W5 (content implemented; required device gate PASSED)** ch-07…12: editor, TCC-safe C, shell, Python, honest Git, networking/LAN.
+  **Ch-08 owner device pass recorded**, actual transcript, not browser-test inference.
+- **W6 (content implemented; required device gates PASSED; deploy HELD)** ch-13…17, **W6.8 ch-18 + W6.9 ch-19 BEFORE W6.6 polish/W6.7 deploy**.
+  **P1+P5 owner device pass recorded**. 30-page source/resource/offline/full-link
   verification before live, evidence in chat-web6. No deployment shortcut.
 
 **Deployment safety:** existing repository Pages serves the signed package repo

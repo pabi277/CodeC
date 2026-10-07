@@ -1,0 +1,33 @@
+{
+  "pages": 30,
+  "files": 35,
+  "internal_links_and_anchors": 1105,
+  "missing_links": 0,
+  "orphan_pages": 0,
+  "unique_titles_descriptions_canonicals": 30,
+  "valid_jsonld_documents": 30,
+  "executable_author_scripts": 0,
+  "sitemap_urls": 30,
+  "package_roots": 33,
+  "original_preformatted_examples_unchanged": true,
+  "external_hrefs": [
+    "https://f-droid.org/packages/com.termux/",
+    "https://github.com/pabi277/CodeC",
+    "https://github.com/pabi277/CodeC#readme",
+    "https://github.com/pabi277/CodeC/actions",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/BETA.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/DATA_AND_PRIVACY.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/RELEASE_NOTES.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/guides/TROUBLESHOOTING.md",
+    "https://github.com/pabi277/CodeC/blob/main/docs/journal/JOURNEY.md",
+    "https://github.com/pabi277/CodeC/issues",
+    "https://github.com/pabi277/CodeC/releases",
+    "https://github.com/pabi277/CodeC/releases/tag/app-v1.3.18",
+    "https://github.com/termux/termux-app#installation",
+    "https://github.com/termux/termux-app#termux-application",
+    "https://github.com/termux/termux-app/releases",
+    "https://github.com/termux/termux-packages"
+  ],
+  "uncompressed_bytes": 568549,
+  "status": "PASS"
+}

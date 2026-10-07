@@ -1,12 +1,22 @@
 # WEBSITE_PLAN.md — master spec for the CodeC website
 
+> **D34 current implementation:**30 pages (original29 + CodeC/Termux comparison),
+> organized folders, no visitor review banners; owner chose the planned base
+> `https://pabi277.github.io/CodeC/`. [Layout/SEO record](chat-web7/SUMMARY.md).
+> Historical phase counts below describe original scope; no publication authorized.
+
+> **Required device gates PASSED:** [owner rounds1–3](chat-web6/DEVICE_ROUND_1.md).
+> Chapter8/P1/P5, including audible speech and approved maintenance, passed on
+> Android16 / aarch64. CodeC reported as “latest”; exact build unspecified.
+> Batch802532d / CI37533980679 succeeded. Review/license/deploy authority remain.
+
 > **v2.3 — scope dated 2026-10-06; reconciled with the actual tree 2026-10-07.**
 > The owner supplied the v2.3 handoff in chat. It had not landed in this checkout:
 > the base `d4231f0` held v2.2 and 35 phase docs. This session restores the missing
 > specifications, without inventing a past sync or overwriting session history.
-> **All29 pages are implemented for review.** Owner D33 authorized W3–W6
+> **Original29 pages implemented; D34 adds one comparison guide.** Owner D33 authorized W3–W6
 > content/polish together, one end commit/watch, and retained device gates.
-> W4.2 facts were verified first; ch08/P1/P5 owner transcripts remain required.
+> W4.2 facts were verified first; ch08/P1/P5 required device gates now passed (rounds1–3).
 > No PR/merge/deploy authorization. D31 full-site ZIP/link rule remains.
 > Head state: [NEXT_STEPS.md](NEXT_STEPS.md). Prior v2.2 narrative remains in
 > [chat-web2/SUMMARY.md](chat-web2/SUMMARY.md) and [WEB_JOURNEY.md](WEB_JOURNEY.md).
@@ -15,10 +25,10 @@
 
 A public, self-dependent website for CodeC, the Android C IDE, with two wings:
 
-1. **Product:** Home, Install, Start, Engines, Packages, AI, FAQ, About, Privacy — **9 pages**.
+1. **Product:** Home, Install, Start, Engines, Packages, AI, FAQ, About, Privacy — **9 pages**, plus the CodeC/Termux comparison guide (D34).
 2. **Learning:** **Master CodeC from Zero to Advanced**, course home and **19 numbered chapters**.
 
-**29 pages total.** Termux's public site is a structural reference only (never
+**30 pages total (D34).** Termux's public site is a structural reference only (never
 copy its source). The owner's Termux-Mastery supplies the book-like learning
 model, not content. PR #42 is an older, unmerged reference, not a source of
 current product truth or authorization to import its W2 implementation.
@@ -50,9 +60,11 @@ semantic headings, reduced-motion support, 360 px through desktop and zoom.
 Mobile navigation works without JS using native `<details>`.
 
 Final links are relative `.html` paths (compatible with a project Pages subpath
-and a local file copy), not origin-root `/install` paths. W1 retains final URLs;
-unbuilt pages are explicitly labelled upcoming in the preview, not counted as
-passing links. No placeholder pages just to conceal the phase boundary.
+and a local file copy), not origin-root `/install` paths. D34 moves pages under
+guides/, learn/chapters/, about/, legal/ and assets/. SITE_MAP.json in chat-web7
+is the authoritative old-to-new path/metadata map. All30 pages exist; no review
+notices, upcoming labels, fake placeholder or flat compatibility stubs remain.
+Non-executable JSON-LD is metadata, not a site-script dependency.
 
 ### 3.1 Product wing
 
@@ -63,20 +75,20 @@ labelled an example, not an app screenshot or live compiler. Six cards:
 
 | Card | Required content | Final link |
 |---|---|---|
-| Built-in C | Offline TCC, Auto only; arm64-v8a and x86_64; 32-bit caveat | engines.html |
-| Editor | Official file icons, typing feel, ghost text, snippet packs, Emmet, TextMate Dark+ | about.html |
-| Terminal and web/LAN | Real VT/ANSI terminal, multiple sessions; in-app web preview; opt-in LAN sharing | start.html |
-| Packages | CodeC's signed repository, install on request, real packages not inflated counts | packages.html |
-| AI | BYOK; eight bounded tools, no write/exec tool, Apply/Run approval, session-only history | ai.html |
-| Safe workflow | Export-all, project-only backups, crash-loop guard, checksum updater, honest Git | install.html |
+| Built-in C | Offline TCC, Auto only; arm64-v8a and x86_64; 32-bit caveat | guides/engines.html |
+| Editor | Official file icons, typing feel, ghost text, snippet packs, Emmet, TextMate Dark+ | about/index.html |
+| Terminal and web/LAN | Real VT/ANSI terminal, multiple sessions; in-app web preview; opt-in LAN sharing | guides/start.html |
+| Packages | CodeC's signed repository, install on request, real packages not inflated counts | guides/packages.html |
+| AI | BYOK; eight bounded tools, no write/exec tool, Apply/Run approval, session-only history | guides/ai.html |
+| Safe workflow | Export-all, project-only backups, crash-loop guard, checksum updater, honest Git | guides/install.html |
 
 Learning banner: full course title, **19 chapters written for review**, chapter-group preview,
-link to `learn.html`. All chapters are now locally available; never equate written content with device
+link to `learn/index.html`. All chapters are now locally available; never equate written content with device
 acceptance or public deployment.
 Footnote: free/open source, Android, release **app-v1.3.18**, universal APK
 **7 217 532 B** (7.22 MB decimal), versionCode 22. Never attach “-74%” to this size.
 
-**Install (`install.html`, W2).** README first, release channel first. One universal
+**Install (`guides/install.html`, W2).** README first, release channel first. One universal
 `CodeC-IDE-<version>-universal.apk`; shipped v1.3.18 = 7 217 532 B, versionCode 22,
 signed, non-debuggable; release SHA256 verified from GitHub, not guessed.
 Check for updates = Settings → About → Check for updates: numeric version guard,
@@ -87,7 +99,7 @@ fresh install: export first, Files → Export all. Include supported ABIs and
 F-Droid is mentioned only as a README-supported source of Termux, not CodeC.
 Link Privacy. GitHub Releases CTA is not a transient artifact/download URL.
 
-**Start (`start.html`, W2).** Fresh install now has the short skippable introduction,
+**Start (`guides/start.html`, W2).** Fresh install now has the short skippable introduction,
 mandatory privacy acknowledgement (except safe-mode recovery), then the editable
 **CodeC Arcade** HTML project. Returning launches resume the last file. No mandatory
 tour, first-hour tiles or automatic userland download. C and HTML work first;
@@ -95,33 +107,33 @@ Linux userland is opt-in from Terminal, progress/retry never locks navigation.
 Teach a simple `hello.c` and RUN, terminal `cc hello.c -o a.out` then `./a.out`,
 interactive input in Term, package install, web preview, five-tab map, chapter 1 link.
 
-**Engines (`engines.html`, W3.1).** **Auto only**: built-in TCC, optional Clang module,
+**Engines (`guides/engines.html`, W3.1).** **Auto only**: built-in TCC, optional Clang module,
 Termux fallback when needed. No picker (Phase 21), no Termux settings card (38.2).
 Explain conceptual engines, not selectable controls. Four setup steps appear in
 Output Panel only when needed. TCC arm64-v8a/x86_64; null on armeabi-v7a/x86;
 Clang module arm64 limitation; no “switch engine” instructions from stale paragraphs.
 
-**Packages (`packages.html`, W3.2).** Verify the actual package list against
+**Packages (`guides/packages.html`, W3.2).** Verify the actual package list against
 `codec-packages/` build config, record source sha and count. README gives examples,
 not an authoritative enumerated total. Signed metadata (`signed-by=`, never
 `trusted=yes`), verified bootstrap, atomic installs; UI badges and quick actions;
 CodeC packages only, never official com.termux packages.
 
-**FAQ (`faq.html`, W3.3).** Keep BETA B-1…B-8 visible, plus compiler errors,
+**FAQ (`guides/faq.html`, W3.3).** Keep BETA B-1…B-8 visible, plus compiler errors,
 32-bit limits, long-running commands, backup, crash-loop safe mode on third launch,
 export-all, debug/release signing, checksums, long lines, huge imports and Git push
 truth. Phase 46 removed Open Folder; do not recommend that deleted UI. Include AI
 caps/history/provider costs and Privacy link. Feedback → GitHub Issues; personal
 contact details stay in the app. Every answer has a source, optional deeper link.
 
-**About (`about.html`, W3.4).** >_ identity, built-in compiler, terminal, editor,
+**About (`about/index.html`, W3.4).** >_ identity, built-in compiler, terminal, editor,
 file icons, LAN, packages, honest Git readiness/push/publish, outputs temporary,
 export-all/backup/crash guard, Settings trim and feedback, targetSdk 28 deliberate,
 R8 history and public development through Phase 96. Explain AI without autonomy
 or on-device-model promises. Links: Privacy, Issues, README, JOURNEY, Releases,
 BETA, data/privacy guide. No developer phone/email displayed.
 
-**AI (`ai.html`, W3.5).** Optional and off until BYOK setup; Gemini default,
+**AI (`guides/ai.html`, W3.5).** Optional and off until BYOK setup; Gemini default,
 NVIDIA Build manual dev/test only; provider terms/bill apply. No CodeC server,
 shared key or proxy. Preview exact provider/model/text; Send starts the task and
 bounded read follow-ups may send more admitted text without a new tap. Eight tools:
@@ -136,7 +148,7 @@ results, 8 batched files, 3 identical repeats; read window 50–400, default 400
 Keystore key under no_backup/ai; redaction also on Explain last error. Provider
 retention is not zero-retention. Link Privacy; L13 postponed, L14 unauthorized.
 
-**Privacy (`privacy.html`, W3.6).** Two claims no stronger than
+**Privacy (`legal/privacy.html`, W3.6).** Two claims no stronger than
 DATA_AND_PRIVACY.md: no telemetry; nothing leaves unless the user starts it.
 Keep the honest correction **“with ONE approval it can read your files”**, optional
 shared-storage access and permission table with named proving source files. AI
@@ -148,7 +160,7 @@ the device”. No tracking on the site itself.
 
 ### 3.2 Learning wing
 
-`learn.html`: about course, prerequisites, why CodeC, how to use, 19-row chapter
+`learn/index.html`: about course, prerequisites, why CodeC, how to use, 19-row chapter
 index, exercises, educational disclaimer, license per O7 (still pending).
 Every `ch-NN.html`: **Chapter N of 19 → learning goals → prerequisites → steps
 → Try it yourself (1–3 exercises, expected results) → common mistakes → prev/next**.
@@ -231,9 +243,9 @@ record so later pages copy consistently (only active link and page content vary)
 ```
 website/
   index.html
-  install.html  start.html
-  engines.html  packages.html  faq.html  about.html  ai.html  privacy.html
-  learn.html  ch-01.html … ch-19.html
+  guides/install.html  guides/start.html
+  guides/engines.html  guides/packages.html  guides/faq.html  about/index.html  guides/ai.html  legal/privacy.html
+  learn/index.html  learn/chapters/01-getting-started.html … learn/chapters/19-ai-tools-and-approvals.html
   style.css  favicon.svg
 ```
 
@@ -250,7 +262,8 @@ website alone over those endpoints. GitHub's branch-source setting does not serv
 an arbitrary `/website` directory: use a verified Pages artifact approach, without
 switching/creating another branch, editing the APK workflow or replacing package
 publishing. If existing deployment ownership needs a broader change, stop for
-owner authorization. No deployment in W1. Custom domain O2 remains open.
+owner authorization. No deployment in this follow-up. D34 closes the initial
+address choice at https://pabi277.github.io/CodeC/; any custom domain is future scope.
 
 ## 9. Phase scope and current batching exception (D33)
 
@@ -278,7 +291,7 @@ live in chat-web6 without replacing any earlier record.
 
 ## 10. Acceptance criteria
 
-1. 29 real, complete pages, shared chrome, original mark, no broken links/anchors.
+1. 30 real, complete pages (D34), shared chrome, original mark, no broken links/anchors.
 2. Every claim traceable to a repository source; current README re-read at W6.
 3. Zero external resource requests; all pages render offline; course self-contained.
 4. Responsive at 360/1440; keyboard navigation and AA checks; reduced motion.
@@ -296,7 +309,7 @@ live in chat-web6 without replacing any earlier record.
 
 ## 11. Open items
 
-**O1** approved screenshots; **O2** custom domain; **O3** copy tone;
+**O1** approved screenshots; **O2 CLOSED by D34** (initial GitHub Pages URL); **O3** copy tone;
 **O5** in-app site link (separate app work); **O7** course license.
 **O4/O6/O8 closed** by the supplied v2.3 scope: W1→W6; 19 chapters;
 contacts in app only / site links Issues. Do not re-ask them.

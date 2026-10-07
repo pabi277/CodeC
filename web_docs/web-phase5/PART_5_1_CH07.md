@@ -1,11 +1,16 @@
 # CodeC Website Phase W5.1 — Chapter 07: The Editor
 
-> **Current batch status — 2026-10-07, D33: CONTENT IMPLEMENTED; DEVICE ACCEPTANCE OPEN.**
+> **Owner rounds1–3: required device checks PASSED.**
+> [Evidence](../chat-web6/DEVICE_ROUND_1.md): Chapter8/P1/P5 including audible speech;
+> Android16 / aarch64, CodeC “latest” (exact build unspecified). No retest needed.
+> Review/license and explicit PR/merge/deploy authorization are separate.
+
+> **Current batch status — 2026-10-07, D33: CONTENT IMPLEMENTED; REQUIRED DEVICE CHECKS PASSED.**
 > Owner authorized W3–W6 content together, then one commit/watch; separate start
 > commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
 > [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
 > [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
-> D31 download law retained. No device pass, PR, merge or public deployment implied.
+> D31 download law retained. Device pass recorded above; no PR, merge or deployment implied.
 
 > **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
 > Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below
@@ -18,7 +23,7 @@
 > Earlier session-folder references are historical: preserve existing records;
 > W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
 
-**Current status:** CONTENT IMPLEMENTED; DEVICE ACCEPTANCE OPEN; owner-authorized combined batch (D33).
+**Current status:** CONTENT IMPLEMENTED; REQUIRED DEVICE CHECKS PASSED; owner-authorized combined batch (D33).
 
 ## Current v2.3 implementation requirements
 

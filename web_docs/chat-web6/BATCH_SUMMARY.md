@@ -1,8 +1,18 @@
 # Remaining website batch — W3 through W6 content/review
 
+> **Historical flat29page snapshot.** The later folder/SEO update is in
+> [chat-web7](../chat-web7/SUMMARY.md), with the current30page ZIP. Device evidence
+> linked here remains valid; old archives/manifests are not relabelled as current.
+
+> **Required owner device checks PASSED (2026-10-07, rounds1–3).**
+> Chapter8/P1/P5 passed, including audible speech and consented maintenance.
+> Android16 / aarch64; CodeC reported as “latest” (exact build unspecified).
+> No retest needed. Website review/license and PR/merge/deploy authority remain
+> separate. [Actual evidence and compiler diagnostic](DEVICE_ROUND_1.md).
+
 **2026-10-07 · v2.3 + D33 · All29 pages written.** This is a **review edition**,
-not a fully accepted or deployed website. W5 Chapter8 and W6 P1/P5 owner device
-transcripts remain mandatory. No PR, merge, release, Pages deployment or in-app
+not a deployed or fully design-approved website. Required W5 Chapter8 and W6
+P1/P5 owner device checks have now passed (rounds1–3). No PR, merge, release, Pages deployment or in-app
 link change was authorized or performed.
 
 ## What changed in the owner's instructions
@@ -27,10 +37,10 @@ working files. Remote main d4231f0 and open PR42/83 were verified and left alone
   [Verified Facts Table](../chat-web4/VERIFIED_FACTS.md) was written before course
   files.33 curated package build roots are checked against configuration.
 - W5: Chapters7–12, including the ten-section conservative C chapter/capstone,
-  shell/Python/Git and the verified networking variant. Ch08 device gate OPEN.
+  shell/Python/Git and the verified networking variant. Ch08 device gate PASSED (owner rounds1–2).
 - W6 content: Chapters13–17 plus **18/19 before polish**. Real device APIs;
   four-file web example; advanced tools; all five real projects; troubleshooting;
-  optional AI first-question and approval/refusal lessons. P1/P5 device gates OPEN.
+  optional AI first-question and approval/refusal lessons. P1/P5 device gates PASSED (owner rounds1–3).
 - Shared polish: all29 pages in the existing W1 dark/green/system-font design,
   chapter index, prev/next path17→18→19→course, source/privacy links, truthful
   review notices, no obsolete upcoming labels on final pages, keyboard-accessible
@@ -85,8 +95,8 @@ internet; all website pages/assets and code examples are local.
 ## What happens next
 
 1. Owner reviews the complete ZIP and reports design/content issues.
-2. Owner follows [DEVICE_TESTS.md](DEVICE_TESTS.md) and sends actual Chapter8/P1/P5
-   transcripts. Unrun upgrade/audio paths must be labelled untested, not passed.
+2. Preserve [actual device evidence](DEVICE_ROUND_1.md): required Chapter8/P1/P5
+   checks passed. No retest needed; exact installed CodeC build remains unspecified.
 3. Fix reported failures for cause, refresh the full ZIP and recheck affected gates.
 4. Resolve outstanding owner decisions and explicitly authorize any future PR/merge
    and package-safe deployment. Do not publish merely because all pages exist.

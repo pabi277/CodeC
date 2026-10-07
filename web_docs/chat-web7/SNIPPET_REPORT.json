@@ -1,0 +1,301 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "page": "ch-01.html",
+      "file": "note.txt",
+      "language": "text",
+      "check": "fixture / header parsed; used by related checks"
+    },
+    {
+      "page": "ch-02.html",
+      "file": "hello.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-03.html",
+      "file": "ask.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-04.html",
+      "file": "probe.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "shape.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "types.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "card.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "input.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "operators.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "parity.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "countdown.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "sum.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "values.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "reverse.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "pointers.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-08.html",
+      "file": "converter.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-09.html",
+      "file": "greet.sh",
+      "language": "bash",
+      "check": "bash syntax PASS; device APIs not executed"
+    },
+    {
+      "page": "ch-09.html",
+      "file": "check.sh",
+      "language": "bash",
+      "check": "bash syntax PASS; device APIs not executed"
+    },
+    {
+      "page": "ch-09.html",
+      "file": "loop.sh",
+      "language": "bash",
+      "check": "bash syntax PASS; device APIs not executed"
+    },
+    {
+      "page": "ch-10.html",
+      "file": "hello.py",
+      "language": "python",
+      "check": "Python syntax + utility/greeting output/error cases PASS"
+    },
+    {
+      "page": "ch-10.html",
+      "file": "count.py",
+      "language": "python",
+      "check": "Python syntax + utility/greeting output/error cases PASS"
+    },
+    {
+      "page": "ch-10.html",
+      "file": "sample.txt",
+      "language": "text",
+      "check": "fixture / header parsed; used by related checks"
+    },
+    {
+      "page": "ch-13.html",
+      "file": "battery-greet.sh",
+      "language": "bash",
+      "check": "bash syntax PASS; device APIs not executed"
+    },
+    {
+      "page": "ch-14.html",
+      "file": "index.html",
+      "language": "html",
+      "check": "fixture / header parsed; used by related checks"
+    },
+    {
+      "page": "ch-14.html",
+      "file": "style.css",
+      "language": "css",
+      "check": "fixture / header parsed; used by related checks"
+    },
+    {
+      "page": "ch-14.html",
+      "file": "app.js",
+      "language": "javascript",
+      "check": "JavaScript syntax PASS"
+    },
+    {
+      "page": "ch-14.html",
+      "file": "data.json",
+      "language": "json",
+      "check": "JSON parse PASS"
+    },
+    {
+      "page": "ch-14.html",
+      "file": "message.js",
+      "language": "javascript",
+      "check": "JavaScript syntax PASS"
+    },
+    {
+      "page": "ch-15.html",
+      "file": "greeting.h",
+      "language": "c-header",
+      "check": "fixture / header parsed; used by related checks"
+    },
+    {
+      "page": "ch-15.html",
+      "file": "main.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-15.html",
+      "file": "Makefile",
+      "language": "make",
+      "check": "make run/clean PASS; source preserved"
+    },
+    {
+      "page": "ch-15.html",
+      "file": ".codec.json",
+      "language": "json",
+      "check": "JSON parse PASS"
+    },
+    {
+      "page": "ch-15.html",
+      "file": "warning.c",
+      "language": "c",
+      "intentional_unused_warning": "observed, not suppressed",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "calc.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "index.html",
+      "language": "html",
+      "check": "fixture / header parsed; used by related checks"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "style.css",
+      "language": "css",
+      "check": "fixture / header parsed; used by related checks"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "app.js",
+      "language": "javascript",
+      "check": "JavaScript syntax PASS"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "data.json",
+      "language": "json",
+      "check": "JSON parse PASS"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "summarize.py",
+      "language": "python",
+      "check": "Python syntax + utility/greeting output/error cases PASS"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "language": "bash",
+      "check": "bash syntax PASS; device APIs not executed"
+    },
+    {
+      "page": "ch-18.html",
+      "file": "hello.c",
+      "language": "c",
+      "check": "ANSI C90 host compile + expected output PASS; not TCC/Android"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "normal",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "null",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "range",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "battery-fail",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "speech-fail",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "decline",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "upgrade",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    },
+    {
+      "page": "ch-16.html",
+      "file": "morning.sh",
+      "case": "upgrade-fail",
+      "check": "LOCAL STUB CONTROL-FLOW PASS; NOT Android/device acceptance"
+    }
+  ],
+  "device_acceptance": "Owner rounds1-3 passed on Android16/aarch64; host checks below are separate"
+}

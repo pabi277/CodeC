@@ -1,11 +1,21 @@
 # CodeC Website Phase W6.7 — Deploy (GitHub Pages) + verification + link sweep
 
+> **D34 follow-up:**30 pages, organized folders and SEO; old29page/flat counts
+> below are historical scope. [Current ZIP/checks](../chat-web7/SUMMARY.md).
+> Initial Pages URL selected, but publication still requires explicit authority;
+> preserve signed package /dev and /keys and heed the host-root robots limitation.
+
+> **Owner rounds1–3: required device checks PASSED.**
+> [Evidence](../chat-web6/DEVICE_ROUND_1.md): Chapter8/P1/P5 including audible speech;
+> Android16 / aarch64, CodeC “latest” (exact build unspecified). No retest needed.
+> Review/license and explicit PR/merge/deploy authorization are separate.
+
 > **Current batch status — 2026-10-07, D33: HELD / NOT STARTED — NO DEPLOYMENT AUTHORIZATION.**
 > Owner authorized W3–W6 content together, then one commit/watch; separate start
 > commands/intermediate commits below are superseded. W4.2 verification ran FIRST.
 > [Batch record](../chat-web6/BATCH_SUMMARY.md) · [checks](../chat-web6/CHECKS.md) ·
 > [device gates](../chat-web6/DEVICE_TESTS.md) · [current full ZIP](../chat-web6/review-zips/CodeC-website-W6-review.zip).
-> D31 download law retained. No device pass, PR, merge or public deployment implied.
+> D31 download law retained. Device pass recorded above; no PR, merge or deployment implied.
 
 > **Binding v2.3 amendment — 2026-10-07 (scope supplied 2026-10-06).**
 > Apply [WEBSITE_PLAN.md](../WEBSITE_PLAN.md) and the current instructions below

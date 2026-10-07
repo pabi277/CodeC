@@ -1,9 +1,16 @@
-# Required owner device transcripts — NOT YET PASSED
+# Required owner device checks — PASSED; evidence recorded
+
+> **Required owner device checks PASSED (2026-10-07, rounds1–3).**
+> Chapter8/P1/P5 passed, including audible speech and consented maintenance.
+> Android16 / aarch64; CodeC reported as “latest” (exact build unspecified).
+> No retest needed. Website review/license and PR/merge/deploy authority remain
+> separate. [Actual evidence and compiler diagnostic](DEVICE_ROUND_1.md).
 
 **2026-10-07 · Remaining-site batch (D33).** The owner explicitly retained these
 gates. Host compiler, Bash stubs, browser tests and successful APK CI do NOT close
-them. No Android device is available in this workspace; no output below is claimed
-as measured phone output. Use the actual examples in the current review ZIP.
+them. Owner-observed results are in DEVICE_ROUND_1.md; the reusable checklist
+below contains expected results, not measured output. No physical Android device
+is attached to this workspace. Use the actual examples in the current review ZIP.
 
 ## Before testing
 
@@ -85,5 +92,6 @@ Any recovery, permission denial, layout/input problem:
 Do not include API keys, GitHub tokens, private source, identifying account data or
 full unreviewed logs. Screenshots are useful for layout/input problems; text is
 better for exact commands and output. The agent must record your actual report,
-fix failures for cause and repeat affected checks. Until then W5/W6 acceptance
-and public deployment remain **BLOCKED**, not “completed with assumed passes”.
+fix failures for cause and repeat affected checks. The owner has now supplied the required functional device evidence (rounds1–3).
+Those device gates are PASS; public deployment still requires explicit authority
+and the separate review/licensing checks, not an assumed blanket acceptance.

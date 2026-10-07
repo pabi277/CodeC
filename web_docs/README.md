@@ -1,10 +1,19 @@
 # web_docs/ — CodeC website history and planning
 
+> **Current D34 follow-up:** organized30page site + search metadata, no review
+> notices. [Current summary/ZIP](chat-web7/SUMMARY.md) · [SEO handoff](chat-web7/SEO_HANDOFF.md).
+> Initial address selected: https://pabi277.github.io/CodeC/; not deployed.
+
+> **Required device gates PASSED:** [owner rounds1–3](chat-web6/DEVICE_ROUND_1.md).
+> Chapter8/P1/P5, including audible speech and approved maintenance, passed on
+> Android16 / aarch64. CodeC reported as “latest”; exact build unspecified.
+> Batch802532d / CI37533980679 succeeded. Review/license/deploy authority remain.
+
 > **Owner law D31:** every website phase ends with a verified full-site ZIP and a
 > direct GitHub download link in the final reply. [Required procedure](REVIEW_DOWNLOAD_RULE.md).
 > **D33 authorizes the remaining-site batch**; device gates retained. No PR/merge/deploy.
 
-> **2026-10-07 · v2.3 · All29 pages written for review; W5/W6 device acceptance and deployment still held.**
+> **2026-10-07 · v2.3 · 30 organized pages with SEO; required W5/W6 device checks passed; deployment held.**
 > This folder is the website's equivalent of `docs/`. App code and app history
 > remain read-only. Start with [`../rule.md`](../rule.md), then this file,
 > [`WEBSITE_PLAN.md`](WEBSITE_PLAN.md), [`DECISIONS.md`](DECISIONS.md), and
@@ -14,10 +23,11 @@
 
 | File | Purpose / update when |
 |---|---|
-| [WEBSITE_PLAN.md](WEBSITE_PLAN.md) | Master spec v2.3: 9 product pages + course home + 19 chapters = **29 pages**; sources, content/self-dependent law, phase sequence, acceptance |
-| [DECISIONS.md](DECISIONS.md) | Dated decisions D1–D33; never delete old decisions, supersede them explicitly |
+| [WEBSITE_PLAN.md](WEBSITE_PLAN.md) | Master spec v2.3: 9 product pages + course home + 19 chapters = **29 original pages**, plus D34 comparison =30; sources, content/self-dependent law, phase sequence, acceptance |
+| [DECISIONS.md](DECISIONS.md) | Dated decisions D1–D34; never delete old decisions, supersede them explicitly |
 | [REVIEW_DOWNLOAD_RULE.md](REVIEW_DOWNLOAD_RULE.md) | D31: mandatory full-site ZIP + direct GitHub link at EVERY phase exit |
-| [chat-web6/BATCH_SUMMARY.md](chat-web6/BATCH_SUMMARY.md) | Current complete29page review, full ZIP, local checks and remaining device/deploy gates |
+| [chat-web7/SUMMARY.md](chat-web7/SUMMARY.md) | Current organized30page ZIP, banner removal and SEO/factual comparison |
+| [chat-web6/BATCH_SUMMARY.md](chat-web6/BATCH_SUMMARY.md) | Historical flat29page batch; device rounds1–3 evidence remains authoritative |
 | [chat-web4/VERIFIED_FACTS.md](chat-web4/VERIFIED_FACTS.md) | W4.2 source gate, recorded before course authoring |
 | [chat-web5/W2_SUMMARY.md](chat-web5/W2_SUMMARY.md) | Historical W2 Install/Start and five-file ZIP |
 | [NEXT_STEPS.md](NEXT_STEPS.md) | Current state, evidence, next owner command |
@@ -50,4 +60,4 @@ with W1-prefixed records; W6 checks still live in `chat-web6/`.
    no build step, system fonts, no CDN/analytics/embeds; outbound links allowed.
 7. v2.3 truth: shipped through Phase 96 / app-v1.3.18, cancelled plans excluded;
    19 chapters, AI nav, Privacy every footer, contacts in-app only, honest AI
-   consent and storage boundaries. O4/O6/O8 scope closed, W4.2 source verification recorded; owner device gates still open.
+   consent and storage boundaries. O4/O6/O8 scope closed, W4.2 source verification recorded; required owner device gates passed (rounds1–3).

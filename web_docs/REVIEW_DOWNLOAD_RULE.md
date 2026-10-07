@@ -62,3 +62,12 @@ gates. Cumulative pre-polish W3/W4/W5 snapshots are preserved in chat-web6; the
 final full31-file/29page ZIP is the current review deliverable. One combined
 handoff still MUST include its direct download link. Batching does not waive
 source/ZIP checks, owner device transcripts or authorization for public deployment.
+
+
+## D34 layout/SEO follow-up — 2026-10-07
+
+Current complete website is30 pages in subfolders (35 files), distributed as
+chat-web7/CodeC-website-organized-SEO.zip. Preserve paths; root index.html is the
+entry point. New import/project recommended instead of overlaying old flat files.
+D31 byte checks/upload/pinned link still apply. Old review ZIPs remain historical;
+changing metadata and paths does not publish the site or waive deployment authority.
