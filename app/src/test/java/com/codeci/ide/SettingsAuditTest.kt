@@ -27,7 +27,8 @@ class SettingsAuditTest {
         get() = RepoFiles.mainSource("docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md").readText()
 
     private val controlComposables = listOf(
-        "SettingsSwitch", "SettingsDropdown", "SettingsSlider", "SettingsItem", "SettingsAction"
+        "SettingsSwitch", "SettingsDropdown", "SettingsSlider", "SettingsItem", "SettingsAction",
+        "SettingsLinkRow"
     )
 
     private fun countCalls(source: String, composable: String): Int {

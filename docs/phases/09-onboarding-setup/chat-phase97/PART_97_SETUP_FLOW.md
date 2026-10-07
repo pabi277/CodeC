@@ -64,7 +64,15 @@ Changed:
   and lands on the hub with nothing created.
 - `SettingsManager.kt` — one new key, `setup_flow_complete`.
 - `SettingsScreen.kt` — `SettingsLinkRow` (title + promise + action word) and the
-  two learning rows in About.
+  two learning rows in About. The rows are **catalogued**, not decoration: they
+  are `SettingsCatalog` entries (About, screen order) and audit rows 67–68 of
+  `SETTINGS_AUDIT.md`, so Settings search finds them, the section filter hides
+  them with their section, and the "one row, one effect" count is true again
+  (64 → 66 controls, `SettingsAuditTest` · `SettingsSearchPolicyTest` ·
+  `SettingsSearchWiringTest` updated together). Because the catalog pins row
+  labels as *the screen's own text*, the two titles are literals there;
+  `SetupFlowWiringTest` pins those literals equal to `LearningLinks.LEARN_TITLE`
+  / `FAQ_TITLE` so the copies cannot drift.
 - `FileManagerScreen.kt` — the empty hub's quiet reading line.
 - `GameArenaSample.kt` — `seedInto(projectsRoot, projectName, readAsset,
   onFileWritten)`; `writeProject` gained a project name and the file callback.
@@ -126,9 +134,18 @@ branch. The guide-removal assertions are untouched.
 
 ## 5. What still bites (honest list)
 
-- **Not compiled here.** The authoring environment has no JDK/Android SDK, so
-  `./gradlew :app:assembleDebug` and the unit tests have not run. Expect the
-  first CI run to find small things (an unused import, a parameter name).
+- **Compiled only in CI, and it took three rounds.** The authoring environment
+  has no JDK/Android SDK. Round 1 (run `37683136302`, `65e9fd8`) failed at
+  `:app:compileDebugKotlin`: a duplicated `@Composable` in `SettingsScreen.kt`,
+  the missing one on `SettingsAction`, and the first draft's `CodecLinks`
+  reference. Round 2 (`37683916380`, `89c31c1`) compiled the app and failed at
+  `:app:compileDebugUnitTestKotlin` on one illegal character in a backtick test
+  name; round 3 (`37684814990`, `78a6ea5`) ran the whole suite — 3,474 tests,
+  **two** real failures, both fixed in the commit that follows: the settings row
+  helpers test (the new link row is a sixth row) and `FirstOpenGameArenaTest`'s
+  ordering pin (it measured from the top of the effect, where the *abandon*
+  branch legitimately completes the gate before anything is built). The next
+  run is the verification claim; nothing here is asserted from a local run.
 - **`rememberCoroutineScope` + a second `ThemeManager`** instance in `MainApp`:
   DataStore is the single source of truth and both readers observe the same
   flow, but a reviewer may prefer hoisting `themeManager` into `MainApp`.

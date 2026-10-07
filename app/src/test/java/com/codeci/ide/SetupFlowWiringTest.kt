@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.setup.LearningLinks
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -76,6 +77,22 @@ class SetupFlowWiringTest {
             .joinToString("\n") { RepoFiles.codeOnly(it.readText()) }
         assertFalse("the flow must not invent a second ACTION_VIEW", setupCode.contains("ACTION_VIEW"))
         assertFalse("the flow must not import Intent", setupCode.contains("import android.content.Intent"))
+    }
+
+    @Test
+    fun `the settings rows of the two doors carry the constants' own words`() {
+        // The catalog pins row labels as the screen's own text, so the two rows
+        // spell the sentences out. This is the pin that stops the copies
+        // drifting from LearningLinks - the flow's own door uses the constants.
+        val settings = source("ui/screens/SettingsScreen.kt")
+        assertTrue(
+            "the course row must render the constant's own sentence",
+            settings.contains("title = \"${LearningLinks.LEARN_TITLE}\""),
+        )
+        assertTrue(
+            "the FAQ row must render the constant's own sentence",
+            settings.contains("title = \"${LearningLinks.FAQ_TITLE}\""),
+        )
     }
 
     @Test

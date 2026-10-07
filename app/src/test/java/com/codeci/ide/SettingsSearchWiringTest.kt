@@ -102,9 +102,10 @@ class SettingsSearchWiringTest {
     // ---- 2. one decision per row, asked by the five helpers ------------------
 
     @Test
-    fun `all five row helpers ask the policy before they draw`() {
+    fun `all six row helpers ask the policy before they draw`() {
         val helpers = listOf(
             "SettingsSwitch", "SettingsSlider", "SettingsDropdown", "SettingsItem", "SettingsAction",
+            "SettingsLinkRow",
         )
         for (fn in helpers) {
             assertTrue(
@@ -118,8 +119,8 @@ class SettingsSearchWiringTest {
             code.contains("SettingsSearch.rowVisible(view.query, title, view.folded)")
         )
         assertEquals(
-            "five guards and their one definition - no row may skip the question",
-            6, Regex("settingsRowVisible\\(").findAll(code).count()
+            "six guards and their one definition - no row may skip the question",
+            7, Regex("settingsRowVisible\\(").findAll(code).count()
         )
     }
 

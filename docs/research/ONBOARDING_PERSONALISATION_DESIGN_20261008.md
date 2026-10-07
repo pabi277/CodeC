@@ -4,6 +4,9 @@
 > The design below is the record of intent; the implementation, its deviations and its honest gaps are in
 > [`docs/phases/09-onboarding-setup/chat-phase97/PART_97_SETUP_FLOW.md`](../../phases/09-onboarding-setup/chat-phase97/PART_97_SETUP_FLOW.md).
 > Four deviations are recorded there (one stored key instead of two · no Arcade variant chips · the Python download is stated, not started · motion deferred to 97.1).
+> Two of this document's own numbers are now enforced rather than restated: subtitles are ≤12 words
+> (`SetupFlowCopy.MAX_WORDS`, the longest shipped line is 10) and the Settings door rows are real catalogued
+> controls (audit rows 67–68, 66 controls in all), so Settings search can find the course.
 > **Owner's corrections this revision:** *"i want to make it looks more modern authentic"* · *"the game arena is a sample project but i want to the user select their 1st project and work"* · *"i like all 7 pages so i don't want to decrease the number of the slides please reconsider your decisions."*
 > Reference: 7 Pydroid 3 screenshots (reference only, not copied). Predecessor audit: [`BEGINNER_UX_AUDIT_20261007.md`](BEGINNER_UX_AUDIT_20261007.md). Wireframes: [`beginner-ux-mockups/onboarding.html`](beginner-ux-mockups/onboarding.html).
 >

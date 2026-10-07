@@ -140,8 +140,12 @@ class FirstOpenGameArenaTest {
         // Phase 97 — the seeding is the setup flow's own call now: it creates
         // the project the user chose (the sample, on the skip path) and the
         // launch state is still saved after it and before the gate completes.
+        // The abandon branch completes the gate on purpose and builds nothing
+        // (the flow could not create the project), so the ordering law below is
+        // measured on the building path alone: the slice starts after it.
         val accepted = main.substringAfter("LaunchedEffect(firstRunAccepted, firstLaunchComplete, setupFinished)")
             .substringBefore("if (firstLaunchComplete == null)")
+            .substringAfter("val choice = if (setupFinished)")
         val acceptedCode = RepoFiles.codeOnly(accepted)
         val seedAt = acceptedCode.indexOf("SetupSeeding.apply(activity, choice, readArenaAsset)")
         val savedAt = acceptedCode.indexOf("EditorLaunchState.save(activity, createdProject")

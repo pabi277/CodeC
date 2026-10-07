@@ -24,7 +24,8 @@ the same promise. Nothing in the numbered rows below changed for it.
 
 ## 2026-09-27 update — guide removal
 
-The owner removed the guide system. The live inventory is now **64 controls**:
+The owner removed the guide system. The live inventory is now **66 controls** (64 at the 2026-09-27 census, plus the
+Phase 97 learning and FAQ rows):
 Help & guide and Reset tips are removed from the screen and search catalog.
 The guide/coach-mark/typing-tip preference readers are removed; legacy stored
 values are harmless and ignored. Earlier dated census counts above are history.
@@ -56,7 +57,7 @@ values are harmless and ignored. Earlier dated census counts above are history.
 
 Screen order (machine-checked): Editor Settings | CodeC Keys | Compiler | Terminal | Terminal Extra-Keys & Shortcuts | Package Repository & Trust | GitHub Account | Appearance | Storage | About | Feedback & Support | Developer Options
 
-This table is what `SettingsAuditTest` counts: 12 sections, 64 rows
+This table is what `SettingsAuditTest` counts: 12 sections, 66 rows
 (three of the sections — Terminal Extra-Keys & Shortcuts, Package
 Repository & Trust, GitHub Account — are custom cards with no
 `Settings*` rows; they are covered under "Other surfaces" below and in
@@ -100,6 +101,8 @@ change nothing and say so).
 | 31 | Storage | Temporary files | item | — (info; `TempGc.measure` of `CodeC/temp/runs`) | size shown; Phase 39.1 | keep |
 | 32 | Storage | Clear temporary files | action | `TempGc.clearIdle` (idle run dirs only) | space freed; live stamps kept; Phase 39.1 | keep |
 | 33 | Storage | Clear Cache | action | deletes `cacheDir` | space freed; toast confirms | keep |
+| 67 | About | Learn to code — 19 short chapters | action | opens `LearningLinks.LEARN_URL` in the browser through `OpenInBrowser.openOrCopy` (Phase 97); the fallback copies the address, so the tap is never a dead end | the website's 19-chapter course, the owner's "learning of the direct link" (2026-10-08); the subtitle states the one fact a reader needs — it opens in the browser and nothing about them is sent | keep |
+| 68 | About | Common questions | action | opens `LearningLinks.FAQ_URL` through the same door, same copy-on-failure fallback | the site's FAQ page; the app otherwise never mentioned it | keep |
 | 34 | About | Show the welcome screen again | action | `first_launch_complete=false` | `firstLaunchCompleteFlow` → MainActivity welcome | keep |
 | 66 | About | Your CodeC progress | item | — (info; read-only current streak, runs and files) | `StatsManager` flows → `StreakLine` (52.3) | keep |
 | 35 | About | App Version | item | — (info; 7 taps in DEBUG → `dev_mode`) | `devModeUnlockedFlow` → Developer Options | keep |

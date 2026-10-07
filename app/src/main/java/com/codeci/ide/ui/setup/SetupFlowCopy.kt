@@ -17,8 +17,16 @@ package com.codeci.ide.ui.setup
  */
 object SetupFlowCopy {
 
-    /** Subtitles are the flow's spine: one line, and never an essay. */
-    const val MAX_WORDS = 16
+    /**
+     * Subtitles are the flow's spine: one line, and never an essay.
+     *
+     * 12 is the design record's own ceiling
+     * (`docs/research/ONBOARDING_PERSONALISATION_DESIGN_20261008.md`: *"subtitles
+     * <=12 words"*), enforced here rather than merely restated. The longest line
+     * the flow actually ships is 10 words, so the budget has headroom and still
+     * refuses a paragraph from creeping into a subtitle.
+     */
+    const val MAX_WORDS = 12
 
     /**
      * Words the flow must never contain, matched on word boundaries (so

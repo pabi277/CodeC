@@ -18,7 +18,7 @@ import org.junit.Test
  * added to SettingsScreen without a catalog entry fails here, and a query
  * can never offer a label the screen does not render.
  *
- * The audit-table check is the second half of the same idea: the 64 rows
+ * The audit-table check is the second half of the same idea: the 66 rows
  * `docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md` pins as *one row, one effect* are
  * exactly the rows the user can now search, counted per section.
  */
@@ -36,7 +36,10 @@ class SettingsSearchPolicyTest {
         get() = RepoFiles.mainSource("docs/phases/10-app-polish-settings/chat-phase38/SETTINGS_AUDIT.md").readText()
 
     private val controlComposables =
-        listOf("SettingsSwitch", "SettingsDropdown", "SettingsSlider", "SettingsItem", "SettingsAction")
+        listOf(
+            "SettingsSwitch", "SettingsDropdown", "SettingsSlider", "SettingsItem", "SettingsAction",
+            "SettingsLinkRow",
+        )
 
     /** The screen's control-row call sites — the audit test's own counting rule. */
     private fun screenControlRows(): Int = controlComposables.sumOf { composable ->
@@ -99,7 +102,7 @@ class SettingsSearchPolicyTest {
     @Test
     fun `the catalog holds every control row the screen renders`() {
         assertEquals(
-            "the screen's Settings* call sites and the catalog must be the same 64 rows",
+            "the screen's Settings* call sites and the catalog must be the same 66 rows",
             screenControlRows(), SettingsCatalog.entries.size
         )
     }
@@ -133,7 +136,7 @@ class SettingsSearchPolicyTest {
     @Test
     fun `the searchable rows are the audit table's rows, counted per section`() {
         val audit = auditRows().groupingBy { it.first }.eachCount()
-        assertEquals("the audit doc still numbers 64 rows", 64, auditRows().size)
+        assertEquals("the audit doc still numbers 66 rows", 66, auditRows().size)
         audit.forEach { (section, count) ->
             assertEquals(
                 "section '$section': the audit's rows and the searchable rows must be one set",

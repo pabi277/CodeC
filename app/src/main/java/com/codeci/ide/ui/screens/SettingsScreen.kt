@@ -1055,7 +1055,12 @@ fun SettingsScreen(
             // them is sent — the same sentence DATA_AND_PRIVACY.md carries
             // (pinned by LearningLinksTest).
             SettingsLinkRow(
-                title = com.codeci.ide.ui.setup.LearningLinks.LEARN_TITLE,
+                // The label is written here rather than referenced because the
+                // Settings catalog pins row labels as the screen's own text
+                // (SettingsSearchPolicyTest); SetupFlowWiringTest pins this
+                // literal equal to LearningLinks.LEARN_TITLE so the two copies
+                // of the sentence cannot drift.
+                title = "Learn to code — 19 short chapters",
                 subtitle = com.codeci.ide.ui.setup.LearningLinks.LEARN_SUBTITLE,
                 actionText = "OPEN",
                 onClick = {
@@ -1072,7 +1077,9 @@ fun SettingsScreen(
                 }
             )
             SettingsLinkRow(
-                title = com.codeci.ide.ui.setup.LearningLinks.FAQ_TITLE,
+                // Same rule as the course row above: literal here, pinned equal
+                // to LearningLinks.FAQ_TITLE.
+                title = "Common questions",
                 subtitle = "Answers about compiling, storage and the AI",
                 actionText = "OPEN",
                 onClick = {
