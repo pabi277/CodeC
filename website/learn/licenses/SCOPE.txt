@@ -1,0 +1,34 @@
+CodeC course licensing — effective 2026-10-07
+Copyright (c) 2026 pabi277 and CodeC course contributors
+
+The original educational prose, exercises and original instructional diagrams
+in website/learn/index.html and website/learn/chapters/*.html are licensed under
+Creative Commons Attribution 4.0 International (CC BY 4.0), except for the
+code examples separately licensed below. Full terms: CC-BY-4.0.txt and
+https://creativecommons.org/licenses/by/4.0/legalcode.en
+
+Original source-code examples and shell commands presented for learners to
+copy, run and adapt in those lessons are licensed under the MIT License.
+Full terms and copyright notice: MIT-EXAMPLES.txt. Expected output is provided
+as instructional material, not as a separate software product.
+
+You may share and adapt the lessons, including commercially, with appropriate
+credit, a license link and an indication of changes. Do not imply endorsement
+or add legal/technical restrictions forbidden by CC BY 4.0. Permissions are
+not revocable for recipients who comply with the applicable license terms.
+For copies or substantial portions of the example software, retain the MIT
+copyright and permission notices. Neither license provides a warranty.
+
+Suggested lesson attribution (adapt the chapter title and note your changes):
+"[Chapter title], from Master CodeC from Zero to Advanced, by pabi277 and CodeC
+course contributors, https://pabi277.github.io/CodeC/learn/, CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/). Changes: [describe, or none]."
+Source repository: https://github.com/pabi277/CodeC/tree/main/website/learn
+
+Scope exclusions: this notice does not relicense the Android application,
+package binaries, third-party material, linked resources, website HTML/CSS
+implementation or shared navigation, non-course guides, README artwork, logos
+or trademarks. Existing third-party notices and rights continue to apply.
+No trademark rights or endorsement are granted. Public-domain material and
+uses covered by applicable legal exceptions need no permission from this notice.
+This grant applies only to rights the CodeC course authors can grant.

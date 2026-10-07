@@ -245,6 +245,10 @@ exit 0
     def test_pkg_install_prompt_abort_n(self) -> None:
         apt_get_script = f"""#!/bin/sh
 case "$*" in
+  *" update")
+    # First-use catalog refresh is not a package-install mutation.
+    exit 0
+    ;;
   *--download-only*)
     mkdir -p "{self.prefix}/var/cache/apt/archives"
     deb="{self.prefix}/var/cache/apt/archives/nano_9.2_aarch64.deb"
@@ -290,7 +294,9 @@ exit 0
 
         # User inputs 'n'
         res = self._run_pkg("install", "nano", input_str="n\n")
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("pkg: package list ready.", res.stdout)
+        self.assertIn("Do you want to continue? [Y/n]", res.stdout)
         self.assertIn("pkg: installation aborted by user.", res.stdout)
         self.assertNotIn("pkg: installed nano", res.stdout)
         self.assertNotIn("ERROR", res.stderr)
@@ -511,15 +517,28 @@ exit 0
         self.assertEqual(res_channel.returncode, 0)
         self.assertIn("Channel:", res_channel.stdout)
 
-    def test_pkg_friendly_hint_on_unindexed_package(self) -> None:
-        # Mock apt-get failing with Unable to locate package
+    def test_pkg_streams_missing_package_error_and_preserves_exit_code(self) -> None:
+        # Permit the automatic first-use index refresh, then fail the actual
+        # package download. Current friendly_apt streams the original error;
+        # it does not capture/rewrite it into the historical update hint.
         self._create_mock_tool("apt-get", """#!/bin/sh
-echo "E: Unable to locate package foobar" >&2
-exit 100
+case "$*" in
+  *" update") exit 0 ;;
+  *--download-only*)
+    echo "E: Unable to locate package foobar" >&2
+    exit 100
+    ;;
+  *) echo "ERROR: install mutation must not run" >&2; exit 99 ;;
+esac
 """)
         res = self._run_pkg("install", "-y", "foobar")
-        self.assertNotEqual(res.returncode, 0)
-        self.assertIn("package not found; run 'pkg update' first to refresh the package catalog.", res.stderr)
+        self.assertEqual(res.returncode, 100)
+        self.assertIn("pkg: package list ready.", res.stdout)
+        self.assertIn("E: Unable to locate package foobar", res.stderr)
+        self.assertIn("pkg: apt failed; check the streamed output above and retry.", res.stderr)
+        self.assertNotIn("ERROR: install mutation", res.stderr)
+        self.assertNotIn("pkg: installed", res.stdout)
+        self.assertFalse((self.prefix / "var/lib/codec-pkg/transaction.pending").exists())
 
 
 if __name__ == "__main__":

@@ -151,7 +151,7 @@ The **Packages** tab also provides install/run controls and command tools. CodeC
 
 CodeC is an integrated Android IDE; Termux is a terminal-first Linux environment. They are separate projects, not interchangeable package installations. CodeC can use a compatible Termux Clang setup as an **automatic fallback** when needed. There is no manual compiler-engine picker.
 
-Read the [CodeC/Termux comparison](website/guides/codec-vs-termux.html) or the [compiler guide](website/guides/engines.html) for the workflow and architecture differences. These links open checked-in website source; the website is not yet publicly deployed.
+Read the [CodeC/Termux comparison](website/guides/codec-vs-termux.html) or the [compiler guide](website/guides/engines.html) for the workflow and architecture differences. These links open checked-in website source. The public documentation address is [pabi277.github.io/CodeC](https://pabi277.github.io/CodeC/).
 
 <details>
 <summary><strong>Set up optional Termux fallback—only if CodeC asks for it</strong></summary>
@@ -210,9 +210,11 @@ Read the full [permissions and data guide](docs/guides/DATA_AND_PRIVACY.md) and 
 
 The **19-chapter CodeC course** covers a first C program, terminal basics, the editor, shell scripting, Python, Git, web projects, device APIs and optional AI. Examples are included locally; you do not need an AI subscription to follow the course.
 
-**[Download the complete website and course ZIP](https://raw.githubusercontent.com/pabi277/CodeC/0715ab88c9f92f0d02439e1bed38d49e6b039831/web_docs/chat-web7/CodeC-website-organized-SEO.zip)** → import it as a **new CodeC project** → keep its folders → open root `index.html` → RUN.
+**[Download the complete website and course ZIP](https://raw.githubusercontent.com/pabi277/CodeC/main/web_docs/chat-web9/CodeC-website-licensed.zip)** → import it as a **new CodeC project** → keep its folders → open root `index.html` → RUN.
 
-The website is currently available as this offline package and [checked-in source](website/), **not a public deployment**. Its planned GitHub Pages address is not presented as a live documentation site. Course redistribution terms remain a separate owner decision; this README grants no new course-content license.
+**Read online:** [CodeC website](https://pabi277.github.io/CodeC/) · [19-chapter course](https://pabi277.github.io/CodeC/learn/). The same content is available in the offline ZIP and [checked-in source](website/).
+
+**Course license:** original lessons and exercises are **CC BY 4.0**; original code examples are **MIT**. See the [scope and attribution notice](website/learn/licenses/SCOPE.txt), [CC BY 4.0 terms](website/learn/licenses/CC-BY-4.0.txt) and [MIT example-code license](website/learn/licenses/MIT-EXAMPLES.txt). This does not change the app’s license or cover third-party material, logos or README artwork.
 
 | Looking for… | Start here |
 |---|---|

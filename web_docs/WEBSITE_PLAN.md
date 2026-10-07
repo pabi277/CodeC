@@ -1,5 +1,13 @@
 # WEBSITE_PLAN.md — master spec for the CodeC website
 
+> **D36–D37 · 2026-10-07:** O7 resolved: original course lessons CC BY 4.0,
+> original example code MIT; app/third-party/brand rights excluded. Owner explicitly
+> authorized completion, merge to main and website deployment. [Current record](chat-web9/SUMMARY.md).
+> License/ZIP and additive package-safe Pages implementation are prepared. Public
+> deployment is not yet performed. D38 authorizes the two test-only fixture corrections and one current-session
+> PR while the older PRs remain untouched; local corrected suites pass. Earlier held-status
+> entries below are historical; no new app feature or signing change is authorized.
+
 > **D34 current implementation:**30 pages (original29 + CodeC/Termux comparison),
 > organized folders, no visitor review banners; owner chose the planned base
 > `https://pabi277.github.io/CodeC/`. [Layout/SEO record](chat-web7/SUMMARY.md).

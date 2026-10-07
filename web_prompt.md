@@ -1,5 +1,13 @@
 # web_prompt.md — CodeC WEBSITE handoff — v2.3
 
+> **D36–D37 · 2026-10-07:** O7 resolved: original course lessons CC BY 4.0,
+> original example code MIT; app/third-party/brand rights excluded. Owner explicitly
+> authorized completion, merge to main and website deployment. [Current record](web_docs/chat-web9/SUMMARY.md).
+> License/ZIP and additive package-safe Pages implementation are prepared. Public
+> deployment is not yet performed. D38 authorizes the two test-only fixture corrections and one current-session
+> PR while the older PRs remain untouched; local corrected suites pass. Earlier held-status
+> entries below are historical; no new app feature or signing change is authorized.
+
 > **D35 · README refresh (2026-10-07):** owner authorized a professional root
 > README redesign with AI-generated illustrations. [Delivery/checks](web_docs/chat-web8/SUMMARY.md).
 > This is a narrow README/assets exception; app, website, signing and workflows
@@ -33,7 +41,7 @@ the current git/PR/CI state before making any change:
 2. **web_docs/README.md** — website ground rules and file map.
 3. **web_docs/WEBSITE_PLAN.md** — master v2.3, page/chapter content (§3), content
    rules (§4), self-dependent law (§5), phases (§9), acceptance (§10).
-4. **web_docs/DECISIONS.md** — D1–D35, binding dated decisions and open items.
+4. **web_docs/DECISIONS.md** — D1–D38, binding dated decisions and open items.
 5. **web_docs/NEXT_STEPS.md** — current head and owner-command table.
 
 When a page needs facts: **README.md first**, then

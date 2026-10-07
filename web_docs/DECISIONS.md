@@ -142,3 +142,60 @@ layout and a simple host C example; push only the current session branch and wat
 its normal CI. Keep D31's existing verified website ZIP in the final reply because
 website bytes are unchanged. No repeat device gates, PR, merge or deployment.
 [Delivery record](chat-web8/SUMMARY.md). O7 and other owner-gated work remain open.
+
+
+## D36 — Owner delegates course licensing and authorizes merge (2026-10-07)
+
+Owner: “Course-content license - i don't know you give it” and “Complete docs
+and merged to main”. O7 is resolved by the delegated selection: CC BY 4.0 for
+original course lessons/exercises/diagrams, MIT for original copyable code and
+shell examples. Full texts and precise scope/attribution notice ship offline in
+website/learn/licenses/. No global app/repository license is inferred; third-party
+material, website implementation, non-course material and marks remain excluded.
+Recipients may reuse commercially under the applicable terms; compliant grants
+are not revocable. Existing course examples and owner device evidence are unchanged.
+This is authority for this work's PR/merge, not unrelated old PRs or future phases.
+
+## D37 — Website deployment explicitly authorized (2026-10-07)
+
+Owner: “Yes you have to diploy the website too”. Publish at the selected
+https://pabi277.github.io/CodeC/ after the required checks and merge. Preserve
+the existing signed package repository and public keys at dev/ and keys/. No
+app release, package rebuild, re-signing, key rotation, host-root robots change
+or search-engine ownership submission is implied.
+
+Pages uses workflow deployment; main is already an allowed environment branch.
+Last successful package deployment:33669069048 (2026-09-02); retained artifacts
+are no longer available. Preparation therefore downloads the public tree, verifies
+its signatures with the pinned public key, follows only signed package indexes,
+verifies every package hash and retains original metadata/key bytes. Website
+composition refuses collisions/symlinks and reserved paths. A shared Pages lock
+and a small package-publisher composition step prevent competing replacements
+and retain the site during future package publications. Missing/mismatched files
+abort, never publish an empty replacement.
+
+The new workflow publishes only main; branch runs are read-only preparation.
+Future merges affecting website/deployment paths trigger that configured workflow;
+this does not authorize the agent to initiate future edits or merges. Full public
+HTTP/byte checks follow deployment. Historical held-deployment/unknown-O7 entries
+are superseded for this task, not deleted. [Current record](chat-web9/SUMMARY.md).
+
+
+## D38 — Test-only corrections and current-session PR exception (2026-10-07)
+
+Owner selected **“Yes—finish safely”** to the explicit question permitting only
+the two stale package tests to be corrected and one PR for this session despite
+older PR42/83 remaining open. Leave app behavior, signing keys and those old PRs
+untouched; merge/deploy only after green checks. This is a narrow exception, not
+a new blanket permission to edit package runtime or create parallel-work PRs.
+
+Source investigation refined the initial cancellation diagnosis: piped stdin is
+supported by the current confirmation function. The abort test actually failed
+BEFORE the prompt because its mock treated the automatic first-use `apt update`
+as a forbidden install mutation (exit99). Allow only that non-install refresh
+in the mock; retain the rejecting mutation branch and assert prompt/abort/cleanup.
+The other test now permits refresh, fails the actual download with exit100 and
+asserts the streamed original APT error, current guidance, exact exit status and
+transaction cleanup. No runtime edit and no weakened protection assertion.
+Local corrected suite:94 tests,0 failures,4 signer-dependent skips;14 deployment
+safety tests pass. CI is still the executor for the complete runner environment.

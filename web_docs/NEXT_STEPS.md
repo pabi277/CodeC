@@ -1,5 +1,13 @@
 # NEXT_STEPS.md — current website state
 
+> **D36–D37 · 2026-10-07:** O7 resolved: original course lessons CC BY 4.0,
+> original example code MIT; app/third-party/brand rights excluded. Owner explicitly
+> authorized completion, merge to main and website deployment. [Current record](chat-web9/SUMMARY.md).
+> License/ZIP and additive package-safe Pages implementation are prepared. Public
+> deployment is not yet performed. D38 authorizes the two test-only fixture corrections and one current-session
+> PR while the older PRs remain untouched; local corrected suites pass. Earlier held-status
+> entries below are historical; no new app feature or signing change is authorized.
+
 > **D35 · README refresh (2026-10-07):** owner authorized a professional root
 > README redesign with AI-generated illustrations. [Delivery/checks](chat-web8/SUMMARY.md).
 > This is a narrow README/assets exception; app, website, signing and workflows

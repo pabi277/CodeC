@@ -1,0 +1,199 @@
+{
+  "archive": "web_docs/chat-web9/CodeC-website-licensed.zip",
+  "bytes": 209200,
+  "sha256": "c8761230c75acbcc1342ed2784ee1728d6f7c34f40905b1149d0f3b505311cbb",
+  "uncompressed_bytes": 593293,
+  "files": [
+    {
+      "path": "about/index.html",
+      "bytes": 11771,
+      "sha256": "2f3223e0487d5a28ab440c27c4383d2035c740032c9cd6169c6a613a6d51ae91"
+    },
+    {
+      "path": "assets/css/style.css",
+      "bytes": 32787,
+      "sha256": "bed42753217a571b8963c0f53bcae7302590d2c47e89ef43632eb94146168326"
+    },
+    {
+      "path": "assets/images/favicon.svg",
+      "bytes": 1682,
+      "sha256": "968d7fbf78502ef8807d52114f3114ad7acf0bbb97ddde0af130b8ef7e4bafc3"
+    },
+    {
+      "path": "assets/images/social-card.png",
+      "bytes": 54311,
+      "sha256": "3a721d441f287d675bf44eb95b26e9057e48548b528aa58fde74e76b0789e7a9"
+    },
+    {
+      "path": "guides/ai.html",
+      "bytes": 16131,
+      "sha256": "cc22ab5ba59bacb87139fa7280539493c13bcbcebd9ba46d02256876bfcb4a33"
+    },
+    {
+      "path": "guides/codec-vs-termux.html",
+      "bytes": 14111,
+      "sha256": "18715ed5872d8e1c4d656e3e53be9f1e14143777be04e74a17890cd9a4662f70"
+    },
+    {
+      "path": "guides/engines.html",
+      "bytes": 11875,
+      "sha256": "b8777e46fda9309afabf2aa385e0a9c4e0900faa3ac8567ab5c3c39b7e6ad0e0"
+    },
+    {
+      "path": "guides/faq.html",
+      "bytes": 16438,
+      "sha256": "529a7e7c7310c6aee6609f70ac5c133647e981fc0f3b41a7926492cb602be806"
+    },
+    {
+      "path": "guides/install.html",
+      "bytes": 21226,
+      "sha256": "ab830977bb2df114182f31d3e3e2a83547cc93a5135efc7b7584470d5906de54"
+    },
+    {
+      "path": "guides/packages.html",
+      "bytes": 15350,
+      "sha256": "5c5b215b1aa9a90c23de95dad82e3003168293333abb77fb57be371fe8246282"
+    },
+    {
+      "path": "guides/start.html",
+      "bytes": 23315,
+      "sha256": "e6f79c881f8f7df513d430456642deacdeca6d9e5820c4d13e08ad2263649212"
+    },
+    {
+      "path": "index.html",
+      "bytes": 19393,
+      "sha256": "7cead0d96daec443e5430408658827472e5e9576cba08142554bb2e2fbeccdc9"
+    },
+    {
+      "path": "learn/chapters/01-getting-started.html",
+      "bytes": 13526,
+      "sha256": "a9a20850c11ea3d93060e9323f994667ec2952bc862243b075ead6c6817eedc3"
+    },
+    {
+      "path": "learn/chapters/02-first-c-program.html",
+      "bytes": 12844,
+      "sha256": "10b6ef6e964595442c42dc8e08fb01e93245be81cd7da55d4eba36a5bcb64562"
+    },
+    {
+      "path": "learn/chapters/03-android-terminal.html",
+      "bytes": 14002,
+      "sha256": "6afbb2ec9967d37b04614e33b5b3e42650deb73c509a51e37cdd506a88cd3aa1"
+    },
+    {
+      "path": "learn/chapters/04-compiler-engines.html",
+      "bytes": 13173,
+      "sha256": "17557a1e863f3aba6f9754b2a61d2209c05621b62ea60599c65d94b176eb3754"
+    },
+    {
+      "path": "learn/chapters/05-package-manager.html",
+      "bytes": 12915,
+      "sha256": "074354e34354cff9ce5b821f2ae720738645684bda8edccc3742824128e04288"
+    },
+    {
+      "path": "learn/chapters/06-files-and-projects.html",
+      "bytes": 13331,
+      "sha256": "b99c95a9a4ec291733355504f297c6a41aa6cc8c13e563e7169f4b2f03d240d2"
+    },
+    {
+      "path": "learn/chapters/07-code-editor.html",
+      "bytes": 13372,
+      "sha256": "1c143ecc8b0c666ba74e7cba1e6e14922230a6aa07a88a064274818f9f6cd6f1"
+    },
+    {
+      "path": "learn/chapters/08-c-programming-basics.html",
+      "bytes": 24980,
+      "sha256": "64c0e6abaccadb075c51026c26dc745bcf0d9e758b12c98de0448318effa7a4c"
+    },
+    {
+      "path": "learn/chapters/09-shell-scripting.html",
+      "bytes": 13982,
+      "sha256": "715b8108d601a6aa65b04c3582822e899858457aae62ccddb12a1ec263b92aa7"
+    },
+    {
+      "path": "learn/chapters/10-python.html",
+      "bytes": 13782,
+      "sha256": "313772f0a3e9619ddac75a5e5668e886853fae12bc567cac7dec6cf6a49387ae"
+    },
+    {
+      "path": "learn/chapters/11-git-and-github.html",
+      "bytes": 13620,
+      "sha256": "884b3f39a525abbae361e421a886a5e426906ac16182ee48e53200739c310f2c"
+    },
+    {
+      "path": "learn/chapters/12-networking.html",
+      "bytes": 13759,
+      "sha256": "97329810ae88262d8dcf703444382a20aa678ea8c56217425ef8e517bb9661a4"
+    },
+    {
+      "path": "learn/chapters/13-device-apis.html",
+      "bytes": 16875,
+      "sha256": "980bb2918d92d398e30de39334c42e8c26bbb70f09afe3e333036e04c7e05791"
+    },
+    {
+      "path": "learn/chapters/14-web-projects.html",
+      "bytes": 15668,
+      "sha256": "845edeaf22cf7df1a4ba70436723ffdf02c52a205dfcf90b534803824038ea2e"
+    },
+    {
+      "path": "learn/chapters/15-advanced-tools.html",
+      "bytes": 16354,
+      "sha256": "5e9cea72c0a5585bf53e2efff371f5218cb4b4f6184f37850c77efdc6be4b3d1"
+    },
+    {
+      "path": "learn/chapters/16-real-world-projects.html",
+      "bytes": 22279,
+      "sha256": "7c803fa0931bd462fd54dba43cefd0f3e7f57be42d3f3e33f8e35f80a4c425f6"
+    },
+    {
+      "path": "learn/chapters/17-troubleshooting.html",
+      "bytes": 14830,
+      "sha256": "8e61c4f47330ccb7d9f0b2983efea5382cd27f32c657fe3bac37937232baecab"
+    },
+    {
+      "path": "learn/chapters/18-ai-code-help.html",
+      "bytes": 15930,
+      "sha256": "3170fe27cb9d06b2b595b5581397bfde5bd24a969675b55f9f79e4ed4f7948ec"
+    },
+    {
+      "path": "learn/chapters/19-ai-tools-and-approvals.html",
+      "bytes": 17592,
+      "sha256": "f51b00e83d178011fc2703d10d94fc14c2a00ba7a91f4fdbb5d2b0569f1fdd06"
+    },
+    {
+      "path": "learn/index.html",
+      "bytes": 20879,
+      "sha256": "caeb12cc2a8e547520dc4a36142d41cd72ad0c73153ad12418f3e3b5a935986d"
+    },
+    {
+      "path": "learn/licenses/CC-BY-4.0.txt",
+      "bytes": 17023,
+      "sha256": "d557539df68e771cc1eedcc91d13f70fca930e508d11eedcafa4b15db49e3744"
+    },
+    {
+      "path": "learn/licenses/MIT-EXAMPLES.txt",
+      "bytes": 1094,
+      "sha256": "25c1403ffa1f771c9a1f7caf8844185199171d81073aedcebcf4577f22274abe"
+    },
+    {
+      "path": "learn/licenses/SCOPE.txt",
+      "bytes": 2126,
+      "sha256": "10e1f32edc32fda6e864c6c5c39cb3cccbf1c10885476c6fc1cb32ec4ae99ae6"
+    },
+    {
+      "path": "legal/privacy.html",
+      "bytes": 16756,
+      "sha256": "e4f6d8b897d1145398f08790387d6abd7638bd2bca6de192a34b641d4a9cdac1"
+    },
+    {
+      "path": "robots.txt",
+      "bytes": 257,
+      "sha256": "d55c263df8fae4ab6503a879d53b9c37cacb651278c91f4021c998d5acdb6a3e"
+    },
+    {
+      "path": "sitemap.xml",
+      "bytes": 3954,
+      "sha256": "67a5b06206a272bcaf94b6701b63eff4b1725df61cdfc42a4ce1d056dfced03e"
+    }
+  ],
+  "crc_and_exact_tree_bytes": "PASS"
+}

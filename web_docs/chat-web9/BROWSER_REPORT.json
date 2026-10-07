@@ -1,0 +1,1232 @@
+{
+  "browser": "153.0.8010.0",
+  "widths": [
+    320,
+    360,
+    768,
+    1440
+  ],
+  "responsive": [
+    {
+      "name": "about/index.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "about/index.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "about/index.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "about/index.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "guides/ai.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/ai.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/ai.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/ai.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "guides/codec-vs-termux.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/codec-vs-termux.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/codec-vs-termux.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/codec-vs-termux.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "guides/engines.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/engines.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/engines.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/engines.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "guides/faq.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/faq.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/faq.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/faq.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "guides/install.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/install.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/install.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/install.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "guides/packages.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/packages.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/packages.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/packages.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "guides/start.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/start.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/start.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "guides/start.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "index.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "index.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "index.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "index.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/01-getting-started.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/01-getting-started.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/01-getting-started.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/01-getting-started.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/02-first-c-program.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/02-first-c-program.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/02-first-c-program.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/02-first-c-program.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/03-android-terminal.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/03-android-terminal.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/03-android-terminal.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/03-android-terminal.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/04-compiler-engines.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/04-compiler-engines.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/04-compiler-engines.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/04-compiler-engines.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/05-package-manager.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/05-package-manager.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/05-package-manager.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/05-package-manager.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/06-files-and-projects.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/06-files-and-projects.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/06-files-and-projects.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/06-files-and-projects.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/07-code-editor.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/07-code-editor.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/07-code-editor.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/07-code-editor.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/08-c-programming-basics.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/08-c-programming-basics.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/08-c-programming-basics.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/08-c-programming-basics.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/09-shell-scripting.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/09-shell-scripting.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/09-shell-scripting.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/09-shell-scripting.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/10-python.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/10-python.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/10-python.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/10-python.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/11-git-and-github.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/11-git-and-github.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/11-git-and-github.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/11-git-and-github.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/12-networking.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/12-networking.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/12-networking.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/12-networking.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/13-device-apis.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/13-device-apis.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/13-device-apis.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/13-device-apis.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/14-web-projects.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/14-web-projects.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/14-web-projects.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/14-web-projects.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/15-advanced-tools.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/15-advanced-tools.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/15-advanced-tools.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/15-advanced-tools.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/16-real-world-projects.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/16-real-world-projects.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/16-real-world-projects.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/16-real-world-projects.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/17-troubleshooting.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/17-troubleshooting.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/17-troubleshooting.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/17-troubleshooting.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/18-ai-code-help.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/18-ai-code-help.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/18-ai-code-help.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/18-ai-code-help.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/chapters/19-ai-tools-and-approvals.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/19-ai-tools-and-approvals.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/19-ai-tools-and-approvals.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/chapters/19-ai-tools-and-approvals.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "learn/index.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/index.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/index.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "learn/index.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    },
+    {
+      "name": "legal/privacy.html",
+      "width": 320,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "legal/privacy.html",
+      "width": 360,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "legal/privacy.html",
+      "width": 768,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "keyboard pass"
+    },
+    {
+      "name": "legal/privacy.html",
+      "width": 1440,
+      "overflow": 0,
+      "axeViolations": 0,
+      "skipLink": "pass",
+      "menu": "desktop"
+    }
+  ],
+  "offline": [
+    {
+      "name": "about/index.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "guides/ai.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "guides/codec-vs-termux.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "guides/engines.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "guides/faq.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "guides/install.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "guides/packages.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "guides/start.html",
+      "linkedPage": "guides/install.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "index.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/01-getting-started.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/02-first-c-program.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/03-android-terminal.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/04-compiler-engines.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/05-package-manager.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/06-files-and-projects.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/07-code-editor.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/08-c-programming-basics.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/09-shell-scripting.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/10-python.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/11-git-and-github.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/12-networking.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/13-device-apis.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/14-web-projects.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/15-advanced-tools.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/16-real-world-projects.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/17-troubleshooting.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/18-ai-code-help.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/chapters/19-ai-tools-and-approvals.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "learn/index.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    },
+    {
+      "name": "legal/privacy.html",
+      "linkedPage": "guides/start.html",
+      "css": "pass",
+      "icon": "pass",
+      "noJSMenuAndDetails": "pass",
+      "networkRequests": 0
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "webExamples": [
+    {
+      "mode": "normal",
+      "status": "PASS",
+      "network": "all requests fulfilled by local test fixtures"
+    },
+    {
+      "mode": "invalid-json",
+      "status": "PASS",
+      "network": "all requests fulfilled by local test fixtures"
+    },
+    {
+      "mode": "module",
+      "status": "PASS",
+      "network": "all requests fulfilled by local test fixtures"
+    }
+  ]
+}

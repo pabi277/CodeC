@@ -1,0 +1,197 @@
+{
+  "base": "http://127.0.0.1:8000/CodeC/",
+  "routes": [
+    {
+      "route": "about/",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "guides/ai.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/01-getting-started.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/02-first-c-program.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/03-android-terminal.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/04-compiler-engines.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/05-package-manager.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/06-files-and-projects.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/07-code-editor.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/08-c-programming-basics.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/09-shell-scripting.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/10-python.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/11-git-and-github.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/12-networking.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/13-device-apis.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/14-web-projects.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/15-advanced-tools.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/16-real-world-projects.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/17-troubleshooting.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/18-ai-code-help.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/chapters/19-ai-tools-and-approvals.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "guides/engines.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "guides/faq.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "guides/install.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "guides/packages.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "legal/privacy.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "guides/start.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "guides/codec-vs-termux.html",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "sitemap.xml",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "robots.txt",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "assets/images/social-card.png",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "assets/images/favicon.svg",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "assets/css/style.css",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/licenses/CC-BY-4.0.txt",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/licenses/MIT-EXAMPLES.txt",
+      "status": 200,
+      "exact_source_bytes": true
+    },
+    {
+      "route": "learn/licenses/SCOPE.txt",
+      "status": 200,
+      "exact_source_bytes": true
+    }
+  ],
+  "status": "PASS",
+  "scope": "local prefix only; not public deployment/indexing"
+}

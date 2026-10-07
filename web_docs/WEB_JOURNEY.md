@@ -367,3 +367,32 @@ no-JS cases passed. Four axe scans record standalone host-fixture limitations,
 not a blanket accessibility pass. Host C90 example compile/output passed, not a
 new Android device claim. [Delivery and checks](chat-web8/SUMMARY.md). Normal
 branch CI follows push; actual commit/run/conclusion belong in the final handoff.
+
+
+**39. Course licensing and merge/publication authorized (2026-10-07).** Owner
+delegated the license choice and asked to finish docs and merge to main, then
+explicitly added website deployment. D36 selects CC BY 4.0 lessons/MIT examples
+with narrow scope and local full legal texts. D37 prepares additive Pages delivery,
+preserving signed package/key bytes instead of replacing the repository. No app
+license, runtime behavior or signing change. The licensed ZIP supersedes chat-web7
+for current downloads; old ZIPs/evidence remain historical.
+
+Preflight:30 pages/38 files,1,139 local links/anchors,120 browser/axe cases,30 offline
+no-JS pages and38 local HTTP exact-byte routes pass. Fourteen deployment-safety
+tests pass. The unchanged broader package suite exposes two baseline expectation
+failures (interactive cancellation via piped stdin and an obsolete error hint);
+four GPG-dependent tests skip without the sandbox's absent gpg signer. No tests
+weakened or app changes made. New CI, PR/merge and actual deployment remain pending
+that boundary resolution. [Evidence and handoff](chat-web9/SUMMARY.md).
+
+
+**40. Narrow boundary approval and corrected test diagnosis (2026-10-07, D38).**
+Owner approved test-only fixes and one session PR, leaving PR42/83 untouched.
+The earlier entry39 cancellation explanation was provisional and is superseded:
+stdin piping is supported; the abort mock rejected the automatic first-use APT
+index refresh before reaching confirmation. The fixture now permits update only,
+retains the mutation-fails guard and asserts the prompt, refusal and clean marker.
+The missing-package fixture now fails the download, preserves exit100 and checks
+both original streamed error and current guidance plus cleanup. All94 package
+tests complete without failure locally (4 GPG-signer skips);14 deployment tests
+pass. Application and package runtime/signing remain byte-identical to baseline.

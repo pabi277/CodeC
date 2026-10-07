@@ -1,5 +1,13 @@
 # web_docs/ — CodeC website history and planning
 
+> **D36–D37 · 2026-10-07:** O7 resolved: original course lessons CC BY 4.0,
+> original example code MIT; app/third-party/brand rights excluded. Owner explicitly
+> authorized completion, merge to main and website deployment. [Current record](chat-web9/SUMMARY.md).
+> License/ZIP and additive package-safe Pages implementation are prepared. Public
+> deployment is not yet performed. D38 authorizes the two test-only fixture corrections and one current-session
+> PR while the older PRs remain untouched; local corrected suites pass. Earlier held-status
+> entries below are historical; no new app feature or signing change is authorized.
+
 > **D35 · README refresh (2026-10-07):** owner authorized a professional root
 > README redesign with AI-generated illustrations. [Delivery/checks](chat-web8/SUMMARY.md).
 > This is a narrow README/assets exception; app, website, signing and workflows
@@ -29,8 +37,9 @@
 | File | Purpose / update when |
 |---|---|
 | [WEBSITE_PLAN.md](WEBSITE_PLAN.md) | Master spec v2.3: 9 product pages + course home + 19 chapters = **29 original pages**, plus D34 comparison =30; sources, content/self-dependent law, phase sequence, acceptance |
-| [DECISIONS.md](DECISIONS.md) | Dated decisions D1–D35; never delete old decisions, supersede them explicitly |
+| [DECISIONS.md](DECISIONS.md) | Dated decisions D1–D38; never delete old decisions, supersede them explicitly |
 | [REVIEW_DOWNLOAD_RULE.md](REVIEW_DOWNLOAD_RULE.md) | D31: mandatory full-site ZIP + direct GitHub link at EVERY phase exit |
+| [chat-web9/SUMMARY.md](chat-web9/SUMMARY.md) | Current license, merge/deployment preparation and package-safe publication checks |
 | [chat-web8/SUMMARY.md](chat-web8/SUMMARY.md) | D35 owner-authorized root README redesign, artwork and validation |
 | [chat-web7/SUMMARY.md](chat-web7/SUMMARY.md) | Current organized30page ZIP, banner removal and SEO/factual comparison |
 | [chat-web6/BATCH_SUMMARY.md](chat-web6/BATCH_SUMMARY.md) | Historical flat29page batch; device rounds1–3 evidence remains authoritative |

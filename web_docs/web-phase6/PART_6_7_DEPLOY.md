@@ -1,3 +1,9 @@
+> **D37 update — 2026-10-07:** owner now explicitly authorizes website deployment
+> after docs/green CI/merge. O7 resolved by D36; prior required device gates passed.
+> Package-safe workflow implementation and local checks: [current record](../chat-web9/SUMMARY.md).
+> Deployment itself is still pending; historical HELD text below is superseded
+> only as to authorization, not as evidence of publication.
+
 # CodeC Website Phase W6.7 — Deploy (GitHub Pages) + verification + link sweep
 
 > **D34 follow-up:**30 pages, organized folders and SEO; old29page/flat counts
