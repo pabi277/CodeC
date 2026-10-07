@@ -193,7 +193,7 @@ The assistant ships to the release channel in **app-v1.3.18**.
 
 CodeC has no in-app browser. Every address the app offers — the 19-chapter
 course, the FAQ — opens in **your** browser through one Android `ACTION_VIEW`
-intent (`ui/support/CodecLinks.kt`), and the addresses live in one file
+intent (`ui/services/OpenInBrowser.kt`, Phase 37's own path), and the addresses live in one file
 (`ui/setup/LearningLinks.kt`, asserted https-only and same-host by
 `LearningLinksTest`). Three sentences that keep the claims above true:
 

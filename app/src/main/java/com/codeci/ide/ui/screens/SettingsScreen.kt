@@ -1059,9 +1059,15 @@ fun SettingsScreen(
                 subtitle = com.codeci.ide.ui.setup.LearningLinks.LEARN_SUBTITLE,
                 actionText = "OPEN",
                 onClick = {
-                    com.codeci.ide.ui.support.CodecLinks.open(
+                    // Phase 37's own path (the app's one ACTION_VIEW block, no
+                    // in-app browser): open, and if nothing on the device can
+                    // take it, copy the address so the tap is never a dead end.
+                    com.codeci.ide.ui.services.OpenInBrowser.openOrCopy(
                         context,
                         com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                        "CodeC course link",
+                        com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                        "Could not open your browser — the link was copied",
                     )
                 }
             )
@@ -1070,9 +1076,12 @@ fun SettingsScreen(
                 subtitle = "Answers about compiling, storage and the AI",
                 actionText = "OPEN",
                 onClick = {
-                    com.codeci.ide.ui.support.CodecLinks.open(
+                    com.codeci.ide.ui.services.OpenInBrowser.openOrCopy(
                         context,
                         com.codeci.ide.ui.setup.LearningLinks.FAQ_URL,
+                        "CodeC FAQ link",
+                        com.codeci.ide.ui.setup.LearningLinks.FAQ_URL,
+                        "Could not open your browser — the link was copied",
                     )
                 }
             )
@@ -1706,7 +1715,6 @@ fun SettingsItem(title: String, subtitle: String, onClick: (() -> Unit)? = null)
     }
 }
 
-@Composable
 /**
  * Phase 97 — a Settings row that opens an address: a title, the one-line
  * promise, and the action word. [SettingsItem] carries no action and
@@ -1741,6 +1749,7 @@ fun SettingsLinkRow(title: String, subtitle: String, actionText: String, onClick
     }
 }
 
+@Composable
 fun SettingsAction(title: String, actionText: String, onClick: () -> Unit) {
     if (!settingsRowVisible(title)) return
     Row(

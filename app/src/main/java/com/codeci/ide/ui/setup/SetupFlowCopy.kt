@@ -21,13 +21,21 @@ object SetupFlowCopy {
     const val MAX_WORDS = 16
 
     /**
-     * Words the flow must never contain. `level` is here because the flow does
-     * not label people; `userland` because the glossary in the audit replaced
-     * it with "Linux tools"; the rest because CodeC is not a store.
+     * Words the flow must never contain, matched on word boundaries (so
+     * "expected" is not an "xp" and "package" is not an "age").
+     *
+     * The four ability words are here because the flow does not label people:
+     * Pydroid asks "What's your Python level?" and changes nothing; the
+     * switches on S5 change four real settings instead. `level` on its own is
+     * *not* banned - it is the honest difficulty of a shipped C template
+     * (`Template.difficulty`, 1-3). `userland` is here because the audit's
+     * glossary replaced it with "Linux tools"; the rest because CodeC is not a
+     * store and the flow is not a game.
      */
     val BANNED_WORDS: List<String> = listOf(
-        "userland", "premium", "upgrade", "unlock", "credits", "ad-free", "level",
-        "leaderboard", "streak", "xp", "score",
+        "userland", "premium", "upgrade", "unlock", "credits", "ad-free",
+        "leaderboard", "streak", "score", "experience points",
+        "beginner", "intermediate", "advanced", "expert",
     )
 
     // ---- S1 · Set up your workspace ----
@@ -74,6 +82,11 @@ object SetupFlowCopy {
     const val NAME_TITLE = "Name your project"
     const val NAME_SUB = "This is the folder you will see in Projects."
     const val NAME_START_FROM = "Start from"
+    const val NAME_VARIANT_LEVEL_PREFIX = "Level "
+    /** The field's own errors, from the app's validator verdicts. */
+    const val NAME_ERROR_EMPTY = "Type a name to continue"
+    const val NAME_ERROR_INVALID = "That name has characters a folder cannot use"
+    const val NAME_ERROR_TAKEN = "A project already has this name"
     const val NAME_HINT_CHIP_1 = "My First Program"
     const val NAME_HINT_CHIP_2 = "Playground"
     const val NAME_HINT_CHIP_3 = "Test Run"
@@ -113,13 +126,30 @@ object SetupFlowCopy {
     const val BUILD_DOWNLOAD_LINE = "about 40 MB, once"
     const val BUILD_ESCAPE = "Use C instead"
     const val BUILD_NO_DOWNLOAD = "Arcade, C and web pages need no download."
+    const val BUILD_FAILED = "CodeC could not create the project."
+    const val BUILD_FAILED_ACTION = "Open Projects"
+    const val BUILD_FAILED_DETAIL = "You can make the project there instead"
 
     // ---- S7 · You are all set ----
 
     const val READY_TITLE = "You are set up"
     const val READY_CHIP_SIZE_PREFIX = "Text: "
+    /** The receipt's chip line is composed from these, so no fragment hides. */
+    const val READY_CHIP_SEPARATOR = " · "
+    const val READY_CHIP_PLAIN_WORDS = "plain words"
+    const val READY_CHIP_HINTS = "hints on"
     const val READY_SETTINGS_LINE = "Everything here lives in Settings."
     const val READY_FAQ_DOOR_DETAIL = "Answers about compiling, storage and the AI"
+
+    /**
+     * The editor mirror's sample lines, one per language the flow can start.
+     * They are code, not prose, which is exactly why they live here: the
+     * "never draw what the app can show" law means the mirror shows the real
+     * first line of the file the user is about to get.
+     */
+    const val MIRROR_C = "printf(\"Hello!\\n\");"
+    const val MIRROR_PYTHON = "print(\"Hello!\")"
+    const val MIRROR_WEB = "const speed = 6;"
 
     // ---- Buttons, shared ----
 
@@ -127,6 +157,9 @@ object SetupFlowCopy {
     const val BUTTON_CONTINUE = "Continue"
     const val BUTTON_FINISH = "Start coding"
     const val BUTTON_BACK = "Back"
+    /** TalkBack's words for a selected option; the app's existing phrasing. */
+    const val A11Y_SELECTED = "Selected"
+    const val A11Y_NOT_SELECTED = "Not selected"
     const val SKIP_LABEL = "Skip setup — start with the sample game"
     const val SKIP_BUSY = "Setting up"
 
@@ -148,15 +181,18 @@ object SetupFlowCopy {
         PICK_PYTHON, PICK_PYTHON_SUB, PICK_PYTHON_COST, PICK_PYTHON_SAMPLE,
         PICK_WEB, PICK_WEB_SUB, PICK_WEB_COST, PICK_WEB_SAMPLE,
         PICK_TEMPLATES_DOOR,
-        NAME_TITLE, NAME_SUB, NAME_START_FROM,
+        NAME_TITLE, NAME_SUB, NAME_START_FROM, NAME_VARIANT_LEVEL_PREFIX,
+        NAME_ERROR_EMPTY, NAME_ERROR_INVALID, NAME_ERROR_TAKEN,
         NAME_HINT_CHIP_1, NAME_HINT_CHIP_2, NAME_HINT_CHIP_3,
         LOOKS_TITLE, LOOKS_SUB, LOOKS_SIZE, LOOKS_SIZE_DETAIL, LOOKS_THEME, LOOKS_THEME_DETAIL,
         HELPS_TITLE, HELPS_SUB, HELPS_PLAIN, HELPS_PLAIN_DETAIL, HELPS_PLAIN_ON, HELPS_PLAIN_OFF,
         HELPS_PLAIN_SAMPLE, HELPS_PLAIN_RAW, HELPS_HINTS, HELPS_HINTS_DETAIL,
         HELPS_LINES, HELPS_LINES_DETAIL, HELPS_WRAP, HELPS_WRAP_DETAIL, HELPS_AI,
         BUILD_TITLE_PREFIX, BUILD_SUB, BUILD_DOWNLOAD_PREFIX, BUILD_DOWNLOAD_LINE,
-        BUILD_ESCAPE, BUILD_NO_DOWNLOAD,
-        READY_TITLE, READY_CHIP_SIZE_PREFIX, READY_SETTINGS_LINE, READY_FAQ_DOOR_DETAIL,
+        BUILD_ESCAPE, BUILD_NO_DOWNLOAD, BUILD_FAILED, BUILD_FAILED_ACTION, BUILD_FAILED_DETAIL,
+        A11Y_SELECTED, A11Y_NOT_SELECTED,
+        READY_TITLE, READY_CHIP_SIZE_PREFIX, READY_CHIP_SEPARATOR, READY_CHIP_PLAIN_WORDS,
+        READY_CHIP_HINTS, READY_SETTINGS_LINE, READY_FAQ_DOOR_DETAIL,
         BUTTON_START, BUTTON_CONTINUE, BUTTON_FINISH, BUTTON_BACK, SKIP_LABEL, SKIP_BUSY,
         LearningLinks.LEARN_TITLE, LearningLinks.LEARN_SUBTITLE, LearningLinks.FAQ_TITLE,
         LearningLinks.HUB_LEARN_LINE, LearningLinks.FLOW_DOOR_LABEL,
@@ -181,6 +217,8 @@ object SetupFlowCopy {
         HELPS_SUB, HELPS_PLAIN_DETAIL, HELPS_HINTS_DETAIL, HELPS_LINES_DETAIL,
         HELPS_WRAP_DETAIL, HELPS_AI,
         BUILD_SUB, BUILD_DOWNLOAD_LINE, BUILD_NO_DOWNLOAD,
+        BUILD_FAILED, BUILD_FAILED_DETAIL, NAME_ERROR_EMPTY, NAME_ERROR_INVALID, NAME_ERROR_TAKEN,
         READY_SETTINGS_LINE, READY_FAQ_DOOR_DETAIL,
+        MIRROR_C, MIRROR_PYTHON, MIRROR_WEB,
     )
 }

@@ -31,19 +31,29 @@ class SetupFlowCopyTest {
 
     @Test
     fun `no banned word survives anywhere in the flow`() {
-        val lowered = SetupFlowCopy.ALL_COPY.joinToString(" ").lowercase()
+        val copy = SetupFlowCopy.ALL_COPY.joinToString(" ")
         SetupFlowCopy.BANNED_WORDS.forEach { banned ->
-            assertFalse("the flow must not say \"$banned\"", lowered.contains(banned))
+            // Word boundaries, not substrings: "expected" is not an "xp" and
+            // "package" is not an "age" (the Phase 45 lesson - pin the rule,
+            // never the accident).
+            val hit = Regex("\\b" + Regex.escape(banned) + "\\b", RegexOption.IGNORE_CASE)
+            assertFalse("the flow must not say \"$banned\"", hit.containsMatchIn(copy))
         }
     }
 
     @Test
     fun `the flow is ascii only, so no emoji can render differently per device`() {
+        // The app already ships two typographic marks (the middle dot in the
+        // output counts, "3 errors · 1 warning", and the em dash in strings.xml);
+        // they are allowed here. Everything else above ASCII is not: an emoji
+        // renders differently on every OEM and is exactly what the reference
+        // flow's hoisted illustrations suffer from.
+        val allowed = setOf('·', '—', '–')
         SetupFlowCopy.ALL_COPY.forEach { line ->
             line.forEach { character ->
                 assertTrue(
                     "non-ascii character '$character' in \"$line\"",
-                    character.code in 32..126,
+                    character.code in 32..126 || character in allowed,
                 )
             }
         }
@@ -51,13 +61,15 @@ class SetupFlowCopyTest {
 
     @Test
     fun `the words the audit retired never come back`() {
-        val lowered = SetupFlowCopy.ALL_COPY.joinToString(" ").lowercase()
+        val copy = SetupFlowCopy.ALL_COPY.joinToString(" ")
         // "userland" is the installer's word for the same download the rest of
         // the app now calls Linux tools; the flow never needs it at all.
-        assertFalse(lowered.contains("userland"))
-        // No self-labelling: the flow does not ask people what level they are.
-        assertFalse(lowered.contains("beginner"))
-        assertFalse(lowered.contains("advanced"))
+        assertFalse(Regex("\\buserland\\b", RegexOption.IGNORE_CASE).containsMatchIn(copy))
+        // The flow never asks anyone what level they are (the labels are in
+        // BANNED_WORDS); a template's own difficulty is allowed to say Level 2.
+        assertTrue(Regex("\\blevel\\b", RegexOption.IGNORE_CASE).containsMatchIn(
+            SetupFlowCopy.PICK_TEMPLATES_DOOR,
+        ))
     }
 
     @Test
@@ -88,7 +100,7 @@ class SetupFlowCopyTest {
         // below are that description; deleting one fails here.
         assertTrue(doc.contains("Opening the website (Phase 97)"))
         assertTrue(doc.contains("Nothing about you is sent with the link"))
-        assertTrue(doc.contains("CodecLinks.kt"))
+        assertTrue(doc.contains("OpenInBrowser.kt"))
         assertTrue(doc.contains("LearningLinks.kt"))
     }
 

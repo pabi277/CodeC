@@ -50,9 +50,11 @@ New — `app/src/main/java/com/codeci/ide/ui/setup/`:
 | `SetupFlowScreen.kt` | the seven beats, drawn | — |
 | `SetupSeeding.kt` | the disk work: create the project, seed the arena into a named project, write the C template | — |
 
-New — `app/src/main/java/com/codeci/ide/ui/support/CodecLinks.kt`: the app's one
-outbound door (`ACTION_VIEW`; the app has no in-app browser, as `GitControlView`
-already documented).
+No new outbound plumbing: the doors route through **`ui/services/OpenInBrowser`**
+(Phase 37's declared *one* `ACTION_VIEW` path — "no second `ACTION_VIEW` block
+exists in the codebase"). The first draft added `ui/support/CodecLinks.kt`; it was
+deleted in the same change once the existing helper was found, and
+`SetupFlowWiringTest` now asserts the flow imports no `Intent` at all.
 
 Changed:
 
@@ -113,7 +115,11 @@ branch. The guide-removal assertions are untouched.
    them. Everything else of the visual direction shipped: the mint wash, the
    mono samples, the glass cards, the 48 dp controls, the live mirror and the
    live re-theme.
-5. **S7's second door is the FAQ, not the sample.** The sample is one card in
+5. **The browser path is Phase 37's, not a new one.** See the New-files note
+   above: the first draft's `CodecLinks` was deleted in favour of
+   `OpenInBrowser`, which already owns the app's single `ACTION_VIEW` block and
+   its "a tap is never a dead end" fallback.
+6. **S7's second door is the FAQ, not the sample.** The sample is one card in
    S2 and a tile in the hub; a door that says "try the games" while the user is
    mid-flow cannot honour itself without a second seeding path. The FAQ door is
    real, and it is the second address the audit found the app never mentioned.

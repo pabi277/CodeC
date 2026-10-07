@@ -120,7 +120,10 @@ class SetupGateWiringTest {
         // The start destination itself stays the pre-44 one: a route with
         // arguments as `startDestination` is graph-construction risk, and a
         // navigate() after the first composition is the proven path.
-        assertTrue(main.contains("val startDestination = remember(launchState, firstOpenSample) {"))
+        // Phase 97 — the flow adds its own route to the same one-shot decision:
+        // the chosen project and its entry file, remembered beside the
+        // launch state and the sample flag as before.
+        assertTrue(main.contains("val startDestination = remember(launchState, firstOpenSample, firstOpenRoute) {"))
         assertTrue(main.contains("?: Screen.FileManager.route"))
         assertFalse(
             "a route with arguments must not become the graph's start destination",

@@ -132,7 +132,7 @@ class SetupFlowPolicyTest {
 
     @Test
     fun `only C has variants; nothing is faked for the rest`() {
-        assertEquals(true, SetupStart.C.hasVariants)
+        assertTrue(SetupStart.C.hasVariants)
         listOf(SetupStart.ARCADE, SetupStart.PYTHON, SetupStart.WEB).forEach { start ->
             assertTrue(start.id, SetupFlowPolicy.variantsFor(start).isEmpty())
         }

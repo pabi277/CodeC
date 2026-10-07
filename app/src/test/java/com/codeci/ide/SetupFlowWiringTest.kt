@@ -58,15 +58,24 @@ class SetupFlowWiringTest {
     }
 
     @Test
-    fun `the app has one outbound door and the doors use it`() {
-        val links = source("ui/support/CodecLinks.kt")
-        assertTrue(links.contains("Intent.ACTION_VIEW"))
-        // The learning door surfaces: the flow, Settings, and the empty hub.
+    fun `the learning doors use the app's existing single browser path`() {
+        // Phase 37's OpenInBrowser is documented as the app's ONE ACTION_VIEW
+        // block ("no second ACTION_VIEW block exists in the codebase"), so the
+        // Phase 97 doors route through it rather than adding a second one.
+        assertTrue(source("ui/services/OpenInBrowser.kt").contains("Intent.ACTION_VIEW"))
+        // The three door surfaces: the flow, Settings, and the empty hub.
         assertTrue(setup("SetupFlowScreen.kt").contains("LearningLinks.LEARN_URL"))
         assertTrue(source("ui/screens/SettingsScreen.kt").contains("LearningLinks.LEARN_URL"))
         assertTrue(source("ui/screens/FileManagerScreen.kt").contains("LearningLinks.LEARN_URL"))
-        assertTrue(source("ui/screens/SettingsScreen.kt").contains("CodecLinks.open("))
-        assertTrue(source("ui/screens/FileManagerScreen.kt").contains("CodecLinks.open("))
+        assertTrue(source("ui/screens/SettingsScreen.kt").contains("OpenInBrowser.openOrCopy("))
+        assertTrue(source("ui/screens/FileManagerScreen.kt").contains("OpenInBrowser.openOrCopy("))
+        assertTrue(source("MainActivity.kt").contains("OpenInBrowser.open(activity, url)"))
+        // And the setup half owns no intent plumbing of its own.
+        val setupCode = RepoFiles.mainKotlinSources()
+            .filter { it.parentFile.name == "setup" }
+            .joinToString("\n") { RepoFiles.codeOnly(it.readText()) }
+        assertFalse("the flow must not invent a second ACTION_VIEW", setupCode.contains("ACTION_VIEW"))
+        assertFalse("the flow must not import Intent", setupCode.contains("import android.content.Intent"))
     }
 
     @Test
@@ -79,7 +88,10 @@ class SetupFlowWiringTest {
             .filter { it.parentFile.name == "setup" }
             .joinToString("\n") { RepoFiles.codeOnly(it.readText()) }
         listOf("goal", "experience", "age", "skillLevel", "userLevel").forEach { forbidden ->
-            assertFalse("the flow must not record $forbidden", setupSources.contains(forbidden))
+            // Word boundaries: "package" is not an "age", and the keyword
+            // appears at the top of every file.
+            val hit = Regex("\\b" + Regex.escape(forbidden) + "\\b", RegexOption.IGNORE_CASE)
+            assertFalse("the flow must not record $forbidden", hit.containsMatchIn(setupSources))
         }
     }
 
@@ -102,8 +114,22 @@ class SetupFlowWiringTest {
     }
 
     @Test
-    fun `the flow's screens are inside the touch-target audit`() {
-        val touch = RepoFiles.mainSource("app/src/test/java/com/codeci/ide/TouchTargetTest.kt").readText()
-        assertTrue(touch.contains("\"SetupFlowScreen.kt\""))
+    fun `every control in the flow declares the 48dp floor itself`() {
+        // TouchTargetTest resolves files under ui/screens/ and only guards
+        // IconButtons, neither of which covers this screen: the flow has no
+        // IconButtons and lives in ui/setup/. Its floor is therefore asserted
+        // here - each interactive helper carries an explicit MIN_TOUCH height.
+        val screen = setup("SetupFlowScreen.kt")
+        val floor = "heightIn(min = CodecTokens.MIN_TOUCH.dp)"
+        val declared = Regex(Regex.escape(floor)).findAll(screen).count()
+        assertTrue("the flow declares the 48dp floor at least 8 times (found $declared)", declared >= 8)
+        assertFalse(
+            "the flow must not shrink its own buttons",
+            screen.contains("IconButton("),
+        )
+        assertFalse(
+            "no hardcoded sub-48dp box on an interactive surface",
+            Regex("""\.(size|requiredSize|defaultMinSize)\(\s*([0-3]?\d)\.dp""").containsMatchIn(screen),
+        )
     }
 }

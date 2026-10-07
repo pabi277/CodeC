@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -121,7 +122,9 @@ fun SetupFlowScreen(
         buildFailed = false
         writtenFiles.clear()
         val built = withContext(Dispatchers.IO) {
-            onBuild(choice) { path -> writtenFiles.add(path) }
+            // The seeder fires this from its own write loop; a mutable snapshot
+            // is what makes a background write to composition state legal.
+            onBuild(choice) { path -> Snapshot.withMutableSnapshot { writtenFiles.add(path) } }
         }
         building = false
         if (built == null) {
@@ -170,8 +173,16 @@ fun SetupFlowScreen(
                     .heightIn(min = CodecTokens.MIN_TOUCH.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SetupFlowPolicy.previous(step)?.let {
-                    TextButton(onClick = { step = it }) { Text(SetupFlowCopy.BUTTON_BACK) }
+                // Back is offered while the questions are still being answered
+                // (pick -> helps). The build beat is not re-entrant while it is
+                // working, and the receipt is a receipt: leaving it is *Start
+                // coding*, not a step backwards.
+                val canGoBack = step.ordinal in
+                    SetupStep.PICK.ordinal..SetupStep.HELPS.ordinal
+                if (canGoBack) {
+                    SetupFlowPolicy.previous(step)?.let {
+                        TextButton(onClick = { step = it }) { Text(SetupFlowCopy.BUTTON_BACK) }
+                    }
                 }
             }
             Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.S)))
@@ -344,7 +355,7 @@ private fun ChoiceCard(
             .semantics {
                 role = Role.RadioButton
                 this.selected = selected
-                stateDescription = if (selected) "Selected" else "Not selected"
+                stateDescription = if (selected) SetupFlowCopy.A11Y_SELECTED else SetupFlowCopy.A11Y_NOT_SELECTED
             },
     ) {
         Row(
@@ -641,7 +652,7 @@ private fun NameStep(
                 ChoiceCard(
                     title = variant.label,
                     sample = variant.detail,
-                    note = "Level ${variant.difficulty}",
+                    note = SetupFlowCopy.NAME_VARIANT_LEVEL_PREFIX + variant.difficulty,
                     cost = "",
                     selected = variant.id == selectedVariant,
                     onClick = { onVariant(variant.id) },
@@ -664,9 +675,9 @@ private fun NameStep(
         if (problem != null) {
             Text(
                 text = when (problem) {
-                    ProjectNameProblem.EMPTY -> "Type a name to continue"
-                    ProjectNameProblem.INVALID -> "That name has characters a folder cannot use"
-                    ProjectNameProblem.TAKEN -> "A project already has this name"
+                    ProjectNameProblem.EMPTY -> SetupFlowCopy.NAME_ERROR_EMPTY
+                    ProjectNameProblem.INVALID -> SetupFlowCopy.NAME_ERROR_INVALID
+                    ProjectNameProblem.TAKEN -> SetupFlowCopy.NAME_ERROR_TAKEN
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error,
@@ -743,9 +754,9 @@ private fun LooksStep(
                 val size = picks.textSize.fontSp
                 Text(
                     text = when (plan.projectType) {
-                        "python" -> "print(\"Hello!\")"
-                        "c" -> "printf(\"Hello!\\n\");"
-                        else -> "const speed = 6;"
+                        "python" -> SetupFlowCopy.MIRROR_PYTHON
+                        "c" -> SetupFlowCopy.MIRROR_C
+                        else -> SetupFlowCopy.MIRROR_WEB
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     fontFamily = CodecType.codeFamily,
@@ -932,14 +943,14 @@ private fun BuildingStep(
         if (failed) {
             Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.L)))
             Text(
-                text = "CodeC could not create the project. Open Projects to try again.",
+                text = SetupFlowCopy.BUILD_FAILED,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
             Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.M)))
             DoorRow(
-                label = "Open Projects",
-                detail = "You can make the project there instead",
+                label = SetupFlowCopy.BUILD_FAILED_ACTION,
+                detail = SetupFlowCopy.BUILD_FAILED_DETAIL,
                 onClick = onAbandon,
             )
         }
@@ -988,10 +999,16 @@ private fun ReadyStep(
                     text = buildString {
                         append(SetupFlowCopy.READY_CHIP_SIZE_PREFIX)
                         append(picks.textSize.label)
-                        append(" · ")
+                        append(SetupFlowCopy.READY_CHIP_SEPARATOR)
                         append(picks.theme.label)
-                        if (picks.plainWords) append(" · plain words")
-                        if (picks.hints) append(" · hints on")
+                        if (picks.plainWords) {
+                            append(SetupFlowCopy.READY_CHIP_SEPARATOR)
+                            append(SetupFlowCopy.READY_CHIP_PLAIN_WORDS)
+                        }
+                        if (picks.hints) {
+                            append(SetupFlowCopy.READY_CHIP_SEPARATOR)
+                            append(SetupFlowCopy.READY_CHIP_HINTS)
+                        }
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

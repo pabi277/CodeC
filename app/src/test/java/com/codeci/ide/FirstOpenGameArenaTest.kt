@@ -134,24 +134,40 @@ class FirstOpenGameArenaTest {
     }
 
     @Test
-    fun `only accepting the intro seeds and opens the game arena`() {
+    fun `only accepting the intro creates a project and opens it`() {
         assertTrue(main.contains("FirstRunIntroScreen("))
         assertTrue(main.contains("onStart = { if (!firstRunPreparing) firstRunAccepted = true }"))
-        val accepted = main.substringAfter("LaunchedEffect(firstRunAccepted, firstLaunchComplete)")
+        // Phase 97 — the seeding is the setup flow's own call now: it creates
+        // the project the user chose (the sample, on the skip path) and the
+        // launch state is still saved after it and before the gate completes.
+        val accepted = main.substringAfter("LaunchedEffect(firstRunAccepted, firstLaunchComplete, setupFinished)")
             .substringBefore("if (firstLaunchComplete == null)")
         val acceptedCode = RepoFiles.codeOnly(accepted)
-        val seedAt = acceptedCode.indexOf("GameArenaSample.ensure(root)")
-        val savedAt = acceptedCode.indexOf("EditorLaunchState.save(activity, GameArenaSample.NAME")
+        val seedAt = acceptedCode.indexOf("SetupSeeding.apply(activity, choice, readArenaAsset)")
+        val savedAt = acceptedCode.indexOf("EditorLaunchState.save(activity, createdProject")
         val completedAt = acceptedCode.indexOf("settingsManager.setFirstLaunchComplete(true)")
         val resetAt = acceptedCode.indexOf("firstRunAccepted = false", completedAt)
-        assertTrue("explicit privacy acceptance must gate seeding", main.contains("!firstRunAccepted"))
-        assertTrue("assets seed before launch state is saved", seedAt >= 0 && seedAt < savedAt)
+        assertTrue("explicit privacy acceptance must gate the flow", main.contains("!firstRunAccepted"))
+        assertTrue("the project is created before launch state is saved", seedAt >= 0 && seedAt < savedAt)
         assertTrue("launch state is saved before first-run completion", savedAt >= 0 && savedAt < completedAt)
         assertTrue("acceptance state resets after completion", resetAt > completedAt)
         assertTrue(main.contains("activity.assets.open("))
         assertTrue(main.contains("GameArenaSample.ASSET_DIRECTORY"))
         assertTrue(main.contains("Screen.Editor.createRoute(GameArenaSample.ENTRY_FILE, GameArenaSample.NAME)"))
         assertFalse(main.contains("OrbitSample"))
+    }
+
+    @Test
+    fun `the flow's skip path is still the sample's own seeding call`() {
+        // Phase 97 — *Skip setup* must keep behaving exactly as every build
+        // before it did: the arena sample, created by the same call. The call
+        // moved into SetupSeeding (the flow's one Android half), so the pin
+        // lives there now; MainActivity still saves and opens the sample.
+        val seeding = RepoFiles.mainSource(
+            "app/src/main/java/com/codeci/ide/ui/setup/SetupSeeding.kt",
+        ).readText()
+        assertTrue(seeding.contains("GameArenaSample.ensure(root, readAsset)"))
+        assertTrue(main.contains("EditorLaunchState.save(activity, GameArenaSample.NAME, GameArenaSample.ENTRY_FILE)"))
     }
 
     @Test
@@ -176,7 +192,10 @@ class FirstOpenGameArenaTest {
 
     @Test
     fun `a seed failure completes onboarding into the Projects fallback`() {
-        assertTrue(main.contains("}.getOrDefault(false)"))
+        // Phase 97 — the chosen project is created through the flow's seeder
+        // and a null result still falls through to the normal resume/fallback
+        // decision rather than trapping the user in onboarding.
+        assertTrue(main.contains("}.getOrNull()"))
         assertTrue(main.contains("if (sampleIsLaunchable)"))
         assertTrue(main.contains("settingsManager.setFirstLaunchComplete(true)"))
         assertTrue(main.contains("else -> Screen.FileManager.route"))

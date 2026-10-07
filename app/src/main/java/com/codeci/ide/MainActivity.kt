@@ -996,7 +996,7 @@ fun MainApp(
                         )
                     }
                 },
-                onOpenLink = { url -> CodecLinks.open(activity, url) },
+                onOpenLink = { url -> OpenInBrowser.open(activity, url) },
                 onBuild = { choice, onFileWritten ->
                     val assets = activity.assets
                     com.codeci.ide.ui.setup.SetupSeeding.apply(activity, choice, { assetPath ->

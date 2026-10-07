@@ -2311,14 +2311,17 @@ private fun EmptyProjectsState(
         // Phase 97 — the reading door the owner asked for. One quiet line, not
         // a tile: it competes with nothing, and it is the only place the empty
         // hub mentions the 19-chapter course. Opens in the browser through the
-        // app's single outbound helper (CodecLinks), so the privacy sentence in
-        // LearningLinks.LEARN_SUBTITLE stays true.
+        // app's single ACTION_VIEW path (OpenInBrowser, Phase 37), so the
+        // privacy sentence in LearningLinks.LEARN_SUBTITLE stays true.
         Spacer(Modifier.height(CodecTokens.space(Space.S)))
         TextButton(
             onClick = {
-                com.codeci.ide.ui.support.CodecLinks.open(
+                com.codeci.ide.ui.services.OpenInBrowser.openOrCopy(
                     context,
                     com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                    "CodeC course link",
+                    com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                    "Could not open your browser — the link was copied",
                 )
             },
         ) {

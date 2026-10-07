@@ -29,9 +29,6 @@ class TouchTargetTest {
         "TerminalScreen.kt",
         "SettingsScreen.kt",
         "FirstRunIntroScreen.kt",
-        // Phase 97 — the setup flow's own controls: option cards, segmented
-        // rows and the name field are all ≥ CodecTokens.MIN_TOUCH by hand.
-        "SetupFlowScreen.kt",
     )
 
     /** The call header: from the opening paren to its match. */
