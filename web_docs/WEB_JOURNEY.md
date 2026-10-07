@@ -396,3 +396,14 @@ The missing-package fixture now fails the download, preserves exit100 and checks
 both original streamed error and current guidance plus cleanup. All94 package
 tests complete without failure locally (4 GPG-signer skips);14 deployment tests
 pass. Application and package runtime/signing remain byte-identical to baseline.
+
+
+**41. Remote preflight and documentation closeout.** On7254304, package
+CI37589923026 passed without a package build/publication; Pages preflight
+37589923128 recovered and verified the real signed repository and composed the
+website byte-safely, with branch deployment correctly skipped. ZIP209,200B read
+back exactly through GitHub. PR117 opened under D38, leaving PR42/83 untouched.
+Living handoffs now use the licensed ZIP, resolved O7, authorized publication and
+current safety procedure instead of historical held-deployment state. Actual final
+PR/main CI/merge/deployment results are retained in PR117's delivery record, not
+fabricated into this pre-merge narrative. Website/ZIP bytes unchanged by closeout.

@@ -101,3 +101,18 @@ host-root robots change. This preparation record does not invent future results.
 - https://opensource.org/license/mit
 - Verbatim CC text retrieved through GitHub from SPDX license-list-data v3.27.0,
   `text/CC-BY-4.0.txt`; MIT text uses the standard terms with the course copyright.
+
+
+## Remote preparation evidence (7254304)
+
+[Package CI37589923026](https://github.com/pabi277/CodeC/actions/runs/37589923026)
+passed; package build/publication jobs correctly skipped.
+[Pages preflight37589923128](https://github.com/pabi277/CodeC/actions/runs/37589923128)
+passed live pinned-key/signature/package-hash recovery and byte-preserving website
+composition; branch publication correctly skipped. The sandbox could not download
+the artifact blob directly (egress EOF), so no local artifact readback is claimed.
+The runner's verified report is retained as the package-preservation artifact.
+ZIP contents API readback at7254304 matched209,200 bytes and the hash above.
+[PR117](https://github.com/pabi277/CodeC/pull/117) is the single authorized current
+PR; its delivery comment and checks retain final merge/main-deploy/APK results.
+The documentation closeout does not change website/ZIP or deployment code.

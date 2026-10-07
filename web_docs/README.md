@@ -3,17 +3,20 @@
 > **D36–D37 · 2026-10-07:** O7 resolved: original course lessons CC BY 4.0,
 > original example code MIT; app/third-party/brand rights excluded. Owner explicitly
 > authorized completion, merge to main and website deployment. [Current record](chat-web9/SUMMARY.md).
-> License/ZIP and additive package-safe Pages implementation are prepared. Public
-> deployment is not yet performed. D38 authorizes the two test-only fixture corrections and one current-session
-> PR while the older PRs remain untouched; local corrected suites pass. Earlier held-status
-> entries below are historical; no new app feature or signing change is authorized.
+> Licensed ZIP and additive package-safe Pages are implemented. D38 approved the
+> two test-only corrections and one session PR, leaving older PRs untouched.
+> [PR117](https://github.com/pabi277/CodeC/pull/117) carries final merge/CI/deploy
+> evidence. Publication is gated by the main-only workflow; no local preview is
+> treated as a live deployment. No new app feature or signing change is authorized.
+
+## Historical context — D33–D35 (superseded by the current delivery above)
 
 > **D35 · README refresh (2026-10-07):** owner authorized a professional root
 > README redesign with AI-generated illustrations. [Delivery/checks](chat-web8/SUMMARY.md).
 > This is a narrow README/assets exception; app, website, signing and workflows
 > remain unchanged. D34 website ZIP/device evidence still current. No PR/merge/deploy.
 
-> **Current D34 follow-up:** organized30page site + search metadata, no review
+> **Historical D34 follow-up:** organized30page site + search metadata, no review
 > notices. [Current summary/ZIP](chat-web7/SUMMARY.md) · [SEO handoff](chat-web7/SEO_HANDOFF.md).
 > Initial address selected: https://pabi277.github.io/CodeC/; not deployed.
 

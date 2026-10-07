@@ -3,10 +3,11 @@
 > **D36–D37 · 2026-10-07:** O7 resolved: original course lessons CC BY 4.0,
 > original example code MIT; app/third-party/brand rights excluded. Owner explicitly
 > authorized completion, merge to main and website deployment. [Current record](chat-web9/SUMMARY.md).
-> License/ZIP and additive package-safe Pages implementation are prepared. Public
-> deployment is not yet performed. D38 authorizes the two test-only fixture corrections and one current-session
-> PR while the older PRs remain untouched; local corrected suites pass. Earlier held-status
-> entries below are historical; no new app feature or signing change is authorized.
+> Licensed ZIP and additive package-safe Pages are implemented. D38 approved the
+> two test-only corrections and one session PR, leaving older PRs untouched.
+> [PR117](https://github.com/pabi277/CodeC/pull/117) carries final merge/CI/deploy
+> evidence. Publication is gated by the main-only workflow; no local preview is
+> treated as a live deployment. No new app feature or signing change is authorized.
 
 > **D34 current implementation:**30 pages (original29 + CodeC/Termux comparison),
 > organized folders, no visitor review banners; owner chose the planned base

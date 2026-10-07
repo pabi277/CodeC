@@ -1,8 +1,8 @@
 > **D37 update — 2026-10-07:** owner now explicitly authorizes website deployment
 > after docs/green CI/merge. O7 resolved by D36; prior required device gates passed.
 > Package-safe workflow implementation and local checks: [current record](../chat-web9/SUMMARY.md).
-> Deployment itself is still pending; historical HELD text below is superseded
-> only as to authorization, not as evidence of publication.
+> PR117 and its main-only workflow record actual publication results. Historical
+> HELD text below is superseded; local preparation is not itself a deploy result.
 
 # CodeC Website Phase W6.7 — Deploy (GitHub Pages) + verification + link sweep
 
@@ -34,7 +34,7 @@
 > Earlier session-folder references are historical: preserve existing records;
 > W1 uses `chat-web4/W1_*`. No next phase, PR, merge or deploy without command.
 
-**Current status:** HELD / NOT STARTED — NO DEPLOYMENT AUTHORIZATION; owner-authorized combined batch (D33).
+**Historical pre-D37 status:** HELD / NOT STARTED — NO DEPLOYMENT AUTHORIZATION; owner-authorized combined batch (D33).
 
 ## Current v2.3 implementation requirements
 
