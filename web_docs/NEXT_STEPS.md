@@ -1,5 +1,10 @@
 # NEXT_STEPS.md — current website state
 
+> **D35 · README refresh (2026-10-07):** owner authorized a professional root
+> README redesign with AI-generated illustrations. [Delivery/checks](chat-web8/SUMMARY.md).
+> This is a narrow README/assets exception; app, website, signing and workflows
+> remain unchanged. D34 website ZIP/device evidence still current. No PR/merge/deploy.
+
 > **2026-10-07 · D34 ·30 organized pages, search metadata and no review banners.**
 > Required Chapter8/P1/P5 device checks PASSED. No PR/merge/public deployment.
 > Session branch `arena/8b8f8edc-codec` only. App/main source remains d4231f0.

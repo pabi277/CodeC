@@ -123,3 +123,22 @@ No deployment, search-property credentials/submission, workflow/app edit, PR or
 merge authorized. Existing package /dev and /keys remain untouched. D31 requires
 an updated full-tree ZIP/pinned direct download after checks and session-branch
 push. Old flat ZIPs and historical checks remain historical.
+
+
+## D35 — Professional root README and AI artwork (2026-10-07)
+
+Owner explicitly requested a professional root README redesign with AI-generated
+images. This authorizes README.md and necessary illustration assets/provenance,
+plus delivery records; it does not authorize app, app-doc, website-source, signing,
+package or workflow edits. Two optimized conceptual illustrations use the existing
+CodeC brand mark, and are disclosed as artwork, not actual screenshots. Public
+copy must reflect shipped behavior, supported ABIs, optional AI/data transfer and
+release/debug signing differences; no invented license or public-site claim.
+The owner's corrected APK report confirms a successful release-to-release update,
+not a signing defect to fix. No keys or secrets need changing.
+
+Validate GitHub-compatible rendering, local links, mobile/desktop light/dark
+layout and a simple host C example; push only the current session branch and watch
+its normal CI. Keep D31's existing verified website ZIP in the final reply because
+website bytes are unchanged. No repeat device gates, PR, merge or deployment.
+[Delivery record](chat-web8/SUMMARY.md). O7 and other owner-gated work remain open.

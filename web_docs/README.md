@@ -1,5 +1,10 @@
 # web_docs/ — CodeC website history and planning
 
+> **D35 · README refresh (2026-10-07):** owner authorized a professional root
+> README redesign with AI-generated illustrations. [Delivery/checks](chat-web8/SUMMARY.md).
+> This is a narrow README/assets exception; app, website, signing and workflows
+> remain unchanged. D34 website ZIP/device evidence still current. No PR/merge/deploy.
+
 > **Current D34 follow-up:** organized30page site + search metadata, no review
 > notices. [Current summary/ZIP](chat-web7/SUMMARY.md) · [SEO handoff](chat-web7/SEO_HANDOFF.md).
 > Initial address selected: https://pabi277.github.io/CodeC/; not deployed.
@@ -24,8 +29,9 @@
 | File | Purpose / update when |
 |---|---|
 | [WEBSITE_PLAN.md](WEBSITE_PLAN.md) | Master spec v2.3: 9 product pages + course home + 19 chapters = **29 original pages**, plus D34 comparison =30; sources, content/self-dependent law, phase sequence, acceptance |
-| [DECISIONS.md](DECISIONS.md) | Dated decisions D1–D34; never delete old decisions, supersede them explicitly |
+| [DECISIONS.md](DECISIONS.md) | Dated decisions D1–D35; never delete old decisions, supersede them explicitly |
 | [REVIEW_DOWNLOAD_RULE.md](REVIEW_DOWNLOAD_RULE.md) | D31: mandatory full-site ZIP + direct GitHub link at EVERY phase exit |
+| [chat-web8/SUMMARY.md](chat-web8/SUMMARY.md) | D35 owner-authorized root README redesign, artwork and validation |
 | [chat-web7/SUMMARY.md](chat-web7/SUMMARY.md) | Current organized30page ZIP, banner removal and SEO/factual comparison |
 | [chat-web6/BATCH_SUMMARY.md](chat-web6/BATCH_SUMMARY.md) | Historical flat29page batch; device rounds1–3 evidence remains authoritative |
 | [chat-web4/VERIFIED_FACTS.md](chat-web4/VERIFIED_FACTS.md) | W4.2 source gate, recorded before course authoring |

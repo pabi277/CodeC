@@ -1,5 +1,10 @@
 # web_prompt.md — CodeC WEBSITE handoff — v2.3
 
+> **D35 · README refresh (2026-10-07):** owner authorized a professional root
+> README redesign with AI-generated illustrations. [Delivery/checks](web_docs/chat-web8/SUMMARY.md).
+> This is a narrow README/assets exception; app, website, signing and workflows
+> remain unchanged. D34 website ZIP/device evidence still current. No PR/merge/deploy.
+
 > **D34 current follow-up:**30 organized pages, no review notices, factual
 > CodeC/Termux comparison and SEO. [Current record](web_docs/chat-web7/SUMMARY.md).
 > Planned URL chosen: https://pabi277.github.io/CodeC/ (not deployment authority).
@@ -28,7 +33,7 @@ the current git/PR/CI state before making any change:
 2. **web_docs/README.md** — website ground rules and file map.
 3. **web_docs/WEBSITE_PLAN.md** — master v2.3, page/chapter content (§3), content
    rules (§4), self-dependent law (§5), phases (§9), acceptance (§10).
-4. **web_docs/DECISIONS.md** — D1–D34, binding dated decisions and open items.
+4. **web_docs/DECISIONS.md** — D1–D35, binding dated decisions and open items.
 5. **web_docs/NEXT_STEPS.md** — current head and owner-command table.
 
 When a page needs facts: **README.md first**, then

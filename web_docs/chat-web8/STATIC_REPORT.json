@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "readme_bytes": 19424,
+  "heading_count": 16,
+  "internal_link_and_image_refs": 29,
+  "missing_local_targets": 0,
+  "image_count": 2,
+  "images": [
+    {
+      "path": "assets/readme/hero.jpg",
+      "bytes": 106884,
+      "sha256": "74378acd1a27776c62c5f0af9cd95d290ad59ad241d20863dc059f8f24a791a4"
+    },
+    {
+      "path": "assets/readme/workflow.jpg",
+      "bytes": 51427,
+      "sha256": "bb4e590415495b3df57601d11ca2d18e4e2c61f298a6cf2b0921fdb7cc6ef11a"
+    }
+  ],
+  "external_links": [
+    "https://f-droid.org/packages/com.termux/",
+    "https://github.com/pabi277/CodeC/actions/workflows/build-apk.yml",
+    "https://github.com/pabi277/CodeC/issues",
+    "https://github.com/pabi277/CodeC/releases",
+    "https://github.com/pabi277/CodeC/releases/tag/app-v1.3.18",
+    "https://github.com/termux/termux-app#installation",
+    "https://github.com/termux/termux-app/releases",
+    "https://raw.githubusercontent.com/pabi277/CodeC/0715ab88c9f92f0d02439e1bed38d49e6b039831/web_docs/chat-web7/CodeC-website-organized-SEO.zip"
+  ],
+  "c_example": "Host C90 compile/output PASS; not Android acceptance",
+  "protected_trees": "unchanged from0715ab8",
+  "github_markdown_api_render": "parsed; local target/heading assertions PASS"
+}

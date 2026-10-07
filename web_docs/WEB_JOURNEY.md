@@ -351,3 +351,19 @@ and full sweep rerun, no weakened assertion.35-file ZIP200,433B/SHA256
 [Current record](chat-web7/SUMMARY.md). One follow-up commit/push/readback and
 new automatic CI watch follow these local checks; final handoff records actual
 remote results. No app/workflow/package/README-root edits, PR, merge or deployment.
+
+
+**38. Owner-authorized README redesign (2026-10-07, D35).** Rebuilt the root
+README around a branded hero, clear installation/quick start, optional tools/AI,
+privacy and concise contributor guidance. Added two matching optimized AI concept
+illustrations (158,311B total), preserving the original app mark and disclosing
+that the images are not actual screenshots. Corrected historical engine-picker,
+ABI, interactive-input and debug-signing claims against current source. No app,
+website, package, signing or workflow changes. Existing website ZIP and owner
+device evidence remain valid; no license/publication authority inferred.
+
+GitHub Markdown API render and local targets passed; eight responsive light/dark
+no-JS cases passed. Four axe scans record standalone host-fixture limitations,
+not a blanket accessibility pass. Host C90 example compile/output passed, not a
+new Android device claim. [Delivery and checks](chat-web8/SUMMARY.md). Normal
+branch CI follows push; actual commit/run/conclusion belong in the final handoff.
