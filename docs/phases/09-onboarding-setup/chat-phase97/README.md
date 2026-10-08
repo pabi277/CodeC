@@ -19,13 +19,13 @@
 
 | The ask | What shipped | Pinned by |
 |---|---|---|
-| A welcome before anything is asked | **S1 WELCOME** — the CodeC mark centred, the promise under it (*"YOUR POCKET CODING STUDIO"*), and three numbered lines saying what the flow will really do. Two exits: **Let us go** and **Skip setup** (top-left) | `SetupFlowWiringTest`, `SetupFlowArtTest` (the mark is `painterResource(R.drawable.app_mark)`) |
+| A welcome before anything is asked | **S1 WELCOME** — the CodeC mark centred, *"Welcome to CodeC"*, the tagline *"Your pocket coding studio: write, run and check code on this device."*, **three numbered plan lines** with a detail line each saying what the flow will really do, the honest cost (*"About 40 seconds."*), and two exits: **Let us go** and **Skip setup — start with the sample game** | `SetupFlowWiringTest`, `SetupFlowArtTest` (the mark is `painterResource(R.drawable.app_mark)`) |
 | Pick your first project | **S2 PICK** — four real starts: **CodeC Arcade** (the sample the phase-58 first open already seeds), **C**, **Python**, **Web**. Every card shows the real first line of the file it creates and what it costs | `SetupFlowPolicyTest` (18), `SetupFlowArtTest` (six `StepArt` cards, each `ART_*` used once) |
 | Name it yourself | **S3 NAME** — a name field with live validation (`ProjectNameVerdict`), the app's own sanitiser, and name chips. Nothing is typed twice and nothing is refused without a reason | `SetupFlowPolicyTest`, `SetupFlowCopyTest` |
 | It should look how I want | **S4 LOOKS** — **Dark / Light / Auto**, applied **live**: the screen the choice is made on is the screen that changes. Text size S/M/L too | `SetupGateWiringTest` (22), the *S4 re-themes live* seam recorded in Phase 100 |
-| Say what the app may do | **S5 HELPS** — three switches (shared-folder access, learning links, sample-project seeding) with plain-language detail lines, no permission theatre | `SetupFlowWiringTest` |
-| Show me it is doing something | **S6 BUILDING** — a real progress bar over **real work**: `files written ÷ plan.files`, driven by `onFileWritten` from `SetupSeeding.apply` | `SetupFlowPolicyTest`, `SetupFlowArtTest` |
-| End on what I have | **S7 READY** — *"Your workspace is ready"*, the project's name, and chips naming the files that exist on disk | `SetupFlowWiringTest` |
+| Set up how it helps | **S5 HELPS** — three plain-language switches (**Typing hints**, **Line numbers**, **Word wrap long lines**, each with its own detail line), the *when a build fails* preview (the plain sentence beside the real compiler output), and one honest line about the AI (*"The AI helper stays off until you ask for it."*) | `SetupFlowWiringTest`, `SetupFlowCopyTest` |
+| Show me it is doing something | **S6 BUILDING** — a real progress bar over **real work**: `files written ÷ plan.files`, driven by `onFileWritten` from `SetupSeeding.apply`, with the honest download line (*"about 40 MB, once"*) and an escape hatch (*"Use C instead"*, *"Arcade, C and web pages need no download."*) | `SetupFlowPolicyTest`, `SetupFlowArtTest` |
+| End on what I have | **S7 READY** — *"Your workspace is ready"*, the project's name, and chips naming the files that exist on disk, then the one action left: **Start coding** | `SetupFlowWiringTest` |
 | Reach the website's lessons from the app | `LearningLinks` + one link row inside the flow (and the same doors in **Settings → About**: *Learn to code — 19 short chapters*, *Common questions*) | `SettingsSearchWiringTest`, `SettingsAuditTest` (66 rows), `SettingsSearchPolicyTest` |
 
 ## 2. The contract (what the rest of the app may rely on)
@@ -42,8 +42,9 @@
 - **`SetupTextSize`** 14/16/20 sp; **`SetupTheme`** dark/light/auto; **`SetupFlowCopy.ALL_COPY` = 101**
   strings, every one inside `MAX_WORDS = 12`, every one ASCII (plus the app's `·`/`—`/`–`).
 - **`setup_flow_complete`** is the flow's only stored fact (`SettingsManager`, with its flow).
-- **≤ 6 taps, zero typing** to finish; **Back** only inside PICK…HELPS; the privacy agreement
-  (Phase 44/98) still gates everything before it.
+- **≤ 6 taps, zero typing** to finish; **Back** only inside PICK…HELPS; the privacy agreement on
+  the tour's last page still gates the flow that follows it (so the flow is post-agreement by
+  construction, never by convention).
 
 ## 3. Where it plugs into the app
 

@@ -49,7 +49,7 @@ table; the numbers that matter are in `OnboardingContrastTest`:
   what "crisp high-contrast type" means numerically.
 - **The CTA's ink:** `ON_ACCENT` **9.14:1** on the gradient's green end and **7.48:1** on its teal end.
 - **The accent is lightness-corrected:** `onPrimary` on primary *and* tertiary is ≥ 4.50:1 for **all
-  six** accents in **both** themes (worst case 4.61:1, Orange in light) and equals
+  six** accents in **both** themes (worst case 4.61:1 — Blue's tertiary in the light theme) and equals
   `Contrast.onColorFor(primary)` — so the authored `onPrimary` is provably the measured one.
 - **The build bar:** the fill is ≥ 3.0:1 (`AA_NON_TEXT`) against the surface it sits on in every
   combination, and the **resting** `ChoiceCard` edge (`scheme.outline`) is 5.41:1 dark / 4.44:1 light
