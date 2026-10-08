@@ -1047,6 +1047,51 @@ fun SettingsScreen(
                     )
                 }
             }
+            // Phase 97 — the learning door the owner asked for (2026-10-08:
+            // "add this somewhere the learning of the direct link of the
+            // website"). The 19-chapter course already exists and is published;
+            // this row is the app's way in. The subtitle states the one fact a
+            // first-time reader needs: it opens in the browser and nothing about
+            // them is sent — the same sentence DATA_AND_PRIVACY.md carries
+            // (pinned by LearningLinksTest).
+            SettingsLinkRow(
+                // The label is written here rather than referenced because the
+                // Settings catalog pins row labels as the screen's own text
+                // (SettingsSearchPolicyTest); SetupFlowWiringTest pins this
+                // literal equal to LearningLinks.LEARN_TITLE so the two copies
+                // of the sentence cannot drift.
+                title = "Learn to code — 19 short chapters",
+                subtitle = com.codeci.ide.ui.setup.LearningLinks.LEARN_SUBTITLE,
+                actionText = "OPEN",
+                onClick = {
+                    // Phase 37's own path (the app's one ACTION_VIEW block, no
+                    // in-app browser): open, and if nothing on the device can
+                    // take it, copy the address so the tap is never a dead end.
+                    com.codeci.ide.ui.services.OpenInBrowser.openOrCopy(
+                        context,
+                        com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                        "CodeC course link",
+                        com.codeci.ide.ui.setup.LearningLinks.LEARN_URL,
+                        "Could not open your browser — the link was copied",
+                    )
+                }
+            )
+            SettingsLinkRow(
+                // Same rule as the course row above: literal here, pinned equal
+                // to LearningLinks.FAQ_TITLE.
+                title = "Common questions",
+                subtitle = "Answers about compiling, storage and the AI",
+                actionText = "OPEN",
+                onClick = {
+                    com.codeci.ide.ui.services.OpenInBrowser.openOrCopy(
+                        context,
+                        com.codeci.ide.ui.setup.LearningLinks.FAQ_URL,
+                        "CodeC FAQ link",
+                        com.codeci.ide.ui.setup.LearningLinks.FAQ_URL,
+                        "Could not open your browser — the link was copied",
+                    )
+                }
+            )
             // Replay the first-run introduction on the next launch without
             // interrupting the current Settings session.
             SettingsAction(
@@ -1674,6 +1719,40 @@ fun SettingsItem(title: String, subtitle: String, onClick: (() -> Unit)? = null)
     ) {
         Text(text = title, style = MaterialTheme.typography.bodyLarge)
         Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * Phase 97 — a Settings row that opens an address: a title, the one-line
+ * promise, and the action word. [SettingsItem] carries no action and
+ * [SettingsAction] carries no subtitle; the learning doors the owner asked for
+ * (2026-10-08) need both, so this is the third shape - same paddings, same
+ * two-line hierarchy, same visibility rule as its siblings.
+ */
+@Composable
+fun SettingsLinkRow(title: String, subtitle: String, actionText: String, onClick: () -> Unit) {
+    if (!settingsRowVisible(title)) return
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = CodecTokens.space(Space.L), vertical = CodecTokens.space(Space.M)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(CodecTokens.space(Space.S)))
+        Text(
+            text = actionText,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

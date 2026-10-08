@@ -80,6 +80,8 @@ object SettingsCatalog {
         SettingsEntry(section = "Storage", label = "Temporary files"),
         SettingsEntry(section = "Storage", label = "Clear temporary files"),
         SettingsEntry(section = "Storage", label = "Clear Cache"),
+        SettingsEntry(section = "About", label = "Learn to code — 19 short chapters"),
+        SettingsEntry(section = "About", label = "Common questions"),
         SettingsEntry(section = "About", label = "Replay the CodeC introduction"),
         SettingsEntry(section = "About", label = "Your CodeC progress"),
         SettingsEntry(section = "About", label = "App Version"),

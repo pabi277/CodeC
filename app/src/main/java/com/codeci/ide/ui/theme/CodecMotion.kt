@@ -80,8 +80,21 @@ object CodecMotion {
         const val SHORT = 150
         const val MEDIUM = 300
         const val LONG = 500
-        /** A readable status-story interval; the final acknowledgement never auto-dismisses. */
-        const val STORY = 10_000
+        /**
+         * A readable status-story interval; the final acknowledgement never
+         * auto-dismisses.
+         *
+         * Phase 101 - **8 s, not 10.** Each tour page is a heading, two lines
+         * and a caption: the whole page is one glance plus one re-read, and the
+         * owner's brief asks the tour to move faster. Ten seconds was a slide
+         * deck's pace for a screen the reader can already swipe past, and the
+         * swipe is the real control — the timer only exists so that a reader
+         * who does nothing is still carried forward. Eight seconds cuts 8 s of
+         * dead time out of the four automatic pages and still leaves room to
+         * read the longest one twice. The dots keep measuring this window
+         * exactly, and `Pause` still stops the clock.
+         */
+        const val STORY = 8_000
     }
 
     /** The one easing curve. */
