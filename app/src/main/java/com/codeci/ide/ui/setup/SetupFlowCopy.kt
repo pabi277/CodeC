@@ -62,9 +62,34 @@ object SetupFlowCopy {
 
     // ---- S1 · Set up your workspace ----
 
-    const val WELCOME_TITLE = "Set up your workspace"
-    const val WELCOME_SUB = "Three things and you are coding."
+    const val WELCOME_TITLE = "Welcome to CodeC"
+
+    /**
+     * The welcome screen's tagline: the app's one-sentence promise, in the same
+     * words the intro's logo opening uses ("YOUR POCKET CODING STUDIO") but as a
+     * sentence, because here it is read rather than stamped.
+     */
+    const val WELCOME_TAGLINE =
+        "Your pocket coding studio: write, run and check code on this device."
+
     const val WELCOME_TIME = "About 40 seconds."
+
+    // ---- What each beat's illustration shows (Phase 99) -------------------
+    //
+    // One card per beat, described for a screen reader. The words are the
+    // illustration's own content, not a restatement of the heading above it.
+    const val ART_PICK =
+        "Four tiles fanned out: a game controller, a C chip, a coiled python and a web globe. The first is lifted."
+    const val ART_NAME =
+        "A folder standing up, a blank name label clipped to its front, a pencil across it and a green tick."
+    const val ART_LOOKS =
+        "A large A and a small a joined by a slider, beside a strip holding a sun and a crescent moon."
+    const val ART_HELPS =
+        "Three rounded switches on a panel, two flipped on, with a lightbulb and a small wand above it."
+    const val ART_BUILD =
+        "A small bench: a project folder glowing while file cards slide into place, a gear turning above."
+    const val ART_READY =
+        "An open project folder, a green play button above it, a tick on the corner and a rocket lifting off."
     const val WELCOME_PLAN_1 = "Pick your first project"
     const val WELCOME_PLAN_1_DETAIL = "A game, C, Python or a web page"
     const val WELCOME_PLAN_2 = "Make the editor yours"
@@ -154,7 +179,7 @@ object SetupFlowCopy {
 
     // ---- S7 · You are all set ----
 
-    const val READY_TITLE = "You are set up"
+    const val READY_TITLE = "Your workspace is ready"
     const val READY_CHIP_SIZE_PREFIX = "Text: "
     /** The receipt's chip line is composed from these, so no fragment hides. */
     const val READY_CHIP_SEPARATOR = " · "
@@ -195,7 +220,8 @@ object SetupFlowCopy {
     val ALL_COPY: List<String> = listOf(
         WELCOME_EYEBROW, PICK_EYEBROW, NAME_EYEBROW, LOOKS_EYEBROW, HELPS_EYEBROW,
         BUILD_EYEBROW, READY_EYEBROW,
-        WELCOME_TITLE, WELCOME_SUB, WELCOME_TIME,
+        ART_PICK, ART_NAME, ART_LOOKS, ART_HELPS, ART_BUILD, ART_READY,
+        WELCOME_TITLE, WELCOME_TAGLINE, WELCOME_TIME,
         WELCOME_PLAN_1, WELCOME_PLAN_1_DETAIL,
         WELCOME_PLAN_2, WELCOME_PLAN_2_DETAIL,
         WELCOME_PLAN_3, WELCOME_PLAN_3_DETAIL,
@@ -228,7 +254,7 @@ object SetupFlowCopy {
      * by being written somewhere else.
      */
     val allSubtitles: List<String> = listOf(
-        WELCOME_SUB, WELCOME_TIME,
+        WELCOME_TAGLINE, WELCOME_TIME,
         WELCOME_PLAN_1_DETAIL, WELCOME_PLAN_2_DETAIL, WELCOME_PLAN_3_DETAIL,
         PICK_SUB,
         PICK_ARCADE_SUB, PICK_ARCADE_COST,

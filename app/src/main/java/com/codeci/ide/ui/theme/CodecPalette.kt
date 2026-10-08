@@ -129,12 +129,14 @@ object CodecPalette {
     const val IDENTITY_GREEN = 0xFF3DDC84.toInt()
 
     /**
-     * Phase 98 — the pale backdrop the first-run tour's 3D renders are drawn on
-     * (`#F1F7F2`, sampled from the bundled WebP cards themselves, not chosen by
-     * eye). The illustration cards sit on this colour so the render's own soft
-     * edge has nothing to seam against, in every theme and for every accent.
+     * Phases 98-99 — the pale backdrop the bundled 3D renders are drawn on
+     * (`#F1F7F2`, sampled from the WebP cards themselves, not chosen by eye).
+     * Every illustration card sits on this colour so the render's own soft edge
+     * has nothing to seam against, in every theme and for every accent; the
+     * cards are shared by the first-run tour and the setup flow
+     * (`ui/components/StepArt.kt`).
      */
-    const val INTRO_ART_BACKDROP = 0xFFF1F7F2.toInt()
+    const val ART_CARD_BACKDROP = 0xFFF1F7F2.toInt()
 
     /**
      * One selectable accent: the colour plus the name the picker shows.

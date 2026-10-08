@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -40,9 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -53,6 +57,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.codeci.ide.R
+import com.codeci.ide.ui.components.StepArt
 import androidx.compose.ui.unit.sp
 import com.codeci.ide.ui.projects.ProjectNameProblem
 import com.codeci.ide.ui.theme.CodecTokens
@@ -297,6 +303,17 @@ private fun StepProgress(index: Int) {
  * heading `StepTitle` marks as a heading — the chip names the beat's job, which
  * is context, not decoration.
  */
+/**
+ * Phase 99 - one illustration size for all six beats, so the steps line up. It
+ * is deliberately modest: every beat still has to fit its own answers and its
+ * *Continue* on a phone screen, and the art is the beat's anchor, not its
+ * content.
+ */
+private val StepArtSize = 168.dp
+
+/** S1's centred mark. */
+private val WelcomeMarkSize = 88.dp
+
 @Composable
 private fun StepEyebrow(text: String) {
     Surface(
@@ -553,25 +570,54 @@ private fun LibraryDoor(label: String, onClick: () -> Unit) {
 
 // ------------------------------------------------------------------ the beats
 
+/**
+ * Phase 99 - S1 is the welcome beat the owner's brief asks for: the CodeC mark
+ * centred, the app's promise under it, and then what this flow will really do
+ * (the three numbered answers). The two exits stay where Phase 97 put them:
+ * *Let us go*, and *Skip setup* - which is the sample game, unchanged.
+ */
 @Composable
 private fun WelcomeStep(onSkip: () -> Unit, onContinue: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = ">_",
-            style = MaterialTheme.typography.headlineMedium,
-            fontFamily = CodecType.codeFamily,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(
-                top = CodecTokens.space(CodecTokens.Space.XL),
-                bottom = CodecTokens.space(CodecTokens.Space.L),
-            ),
-        )
-        StepEyebrow(SetupFlowCopy.WELCOME_EYEBROW)
-        StepTitle(SetupFlowCopy.WELCOME_TITLE)
-        StepSub("${SetupFlowCopy.WELCOME_SUB} ${SetupFlowCopy.WELCOME_TIME}")
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.app_mark),
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(top = CodecTokens.space(CodecTokens.Space.XL))
+                    .size(WelcomeMarkSize)
+                    .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL))),
+            )
+            Text(
+                text = SetupFlowCopy.WELCOME_TITLE,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(top = CodecTokens.space(CodecTokens.Space.L))
+                    .semantics { heading() },
+            )
+            Text(
+                text = SetupFlowCopy.WELCOME_TAGLINE,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = CodecTokens.space(CodecTokens.Space.S)),
+            )
+        }
+        Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.XL)))
         PlanLine("1", SetupFlowCopy.WELCOME_PLAN_1, SetupFlowCopy.WELCOME_PLAN_1_DETAIL)
         PlanLine("2", SetupFlowCopy.WELCOME_PLAN_2, SetupFlowCopy.WELCOME_PLAN_2_DETAIL)
         PlanLine("3", SetupFlowCopy.WELCOME_PLAN_3, SetupFlowCopy.WELCOME_PLAN_3_DETAIL)
+        Text(
+            text = SetupFlowCopy.WELCOME_TIME,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = CodecTokens.space(CodecTokens.Space.M)),
+        )
         Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.L)))
         PrimaryButton(label = SetupFlowCopy.BUTTON_START, onClick = onContinue)
         TextButton(
@@ -618,6 +664,15 @@ private fun PickStep(
         StepEyebrow(SetupFlowCopy.PICK_EYEBROW)
         StepTitle(SetupFlowCopy.PICK_TITLE, small = true)
         StepSub(SetupFlowCopy.PICK_SUB)
+        // Phase 99 - this beat's illustration, on the same card
+        // the first-run tour uses (ui/components/StepArt.kt).
+        StepArt(
+            art = R.drawable.setup_01_pick,
+            description = SetupFlowCopy.ART_PICK,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(StepArtSize),
+        )
         SetupStart.values().forEach { start ->
             val title = when (start) {
                 SetupStart.ARCADE -> SetupFlowCopy.PICK_ARCADE
@@ -672,6 +727,15 @@ private fun NameStep(
         StepEyebrow(SetupFlowCopy.NAME_EYEBROW)
         StepTitle(SetupFlowCopy.NAME_TITLE, small = true)
         StepSub(SetupFlowCopy.NAME_SUB)
+        // Phase 99 - this beat's illustration, on the same card
+        // the first-run tour uses (ui/components/StepArt.kt).
+        StepArt(
+            art = R.drawable.setup_02_name,
+            description = SetupFlowCopy.ART_NAME,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(StepArtSize),
+        )
 
         if (variants.isNotEmpty()) {
             Text(
@@ -754,6 +818,15 @@ private fun LooksStep(
         StepEyebrow(SetupFlowCopy.LOOKS_EYEBROW)
         StepTitle(SetupFlowCopy.LOOKS_TITLE, small = true)
         StepSub(SetupFlowCopy.LOOKS_SUB)
+        // Phase 99 - this beat's illustration, on the same card
+        // the first-run tour uses (ui/components/StepArt.kt).
+        StepArt(
+            art = R.drawable.setup_03_looks,
+            description = SetupFlowCopy.ART_LOOKS,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(StepArtSize),
+        )
 
         // The mirror: the app's own chrome, carrying the user's own project
         // name. Not a screenshot, not an illustration.
@@ -836,6 +909,15 @@ private fun HelpsStep(
         StepEyebrow(SetupFlowCopy.HELPS_EYEBROW)
         StepTitle(SetupFlowCopy.HELPS_TITLE, small = true)
         StepSub(SetupFlowCopy.HELPS_SUB)
+        // Phase 99 - this beat's illustration, on the same card
+        // the first-run tour uses (ui/components/StepArt.kt).
+        StepArt(
+            art = R.drawable.setup_04_helps,
+            description = SetupFlowCopy.ART_HELPS,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(StepArtSize),
+        )
 
         SegRow(
             label = SetupFlowCopy.HELPS_PLAIN,
@@ -907,6 +989,26 @@ private fun BuildingStep(
         StepEyebrow(SetupFlowCopy.BUILD_EYEBROW)
         StepTitle("${SetupFlowCopy.BUILD_TITLE_PREFIX}${plan.projectName}", small = true)
         StepSub(SetupFlowCopy.BUILD_SUB)
+        // Phase 99 - this beat's illustration, on the same card
+        // the first-run tour uses (ui/components/StepArt.kt).
+        StepArt(
+            art = R.drawable.setup_05_build,
+            description = SetupFlowCopy.ART_BUILD,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(StepArtSize),
+        )
+        Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.M)))
+        // Phase 99 - the honest bar: it fills with the files the seeder has
+        // really written, never with a timer. The rows below are the same fact,
+        // one line per file.
+        LinearProgressIndicator(
+            progress = { if (plan.files.isEmpty()) 1f else written.size.toFloat() / plan.files.size },
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+        Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.S)))
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1002,6 +1104,14 @@ private fun ReadyStep(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         StepEyebrow(SetupFlowCopy.READY_EYEBROW)
+        StepArt(
+            art = R.drawable.setup_06_ready,
+            description = SetupFlowCopy.ART_READY,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(StepArtSize),
+        )
+        Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.S)))
         Text(
             text = SetupFlowCopy.READY_TITLE,
             style = MaterialTheme.typography.headlineSmall,

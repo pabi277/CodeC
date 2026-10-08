@@ -15,3 +15,4 @@ Parent map: [`docs/README.md`](../../README.md) · phase tracker: [`docs/phases/
 | [64](chat-phase64/) | Remove installation UI locks and the guide |
 | [97](chat-phase97/) | The post-agreement setup flow — seven beats, a project the user picks and names, the website's learning doors (owner-authorised 2026-10-08) |
 | [98](chat-phase98/) | The illustrated tour — five 3D pages (offline coding, the edit-run-check loop, the toolkit, sample projects, the agreement) with the progress dots at the bottom, and the same eyebrow chip above every setup beat (owner brief 2026-10-08) |
+| [99](chat-phase99/) | The setup flow's illustrations — a welcome beat with the centred mark and a tagline, one 3D card on each of the six configuration beats at one size, a real progress bar on the loading beat, and the workspace summary retitled (owner brief 2026-10-08) |

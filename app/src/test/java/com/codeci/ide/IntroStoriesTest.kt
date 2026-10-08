@@ -180,7 +180,11 @@ class IntroStoriesTest {
     fun `the tour shows the bundled art instead of drawing its own`() {
         assertTrue(
             "the pages must render the bundled cards",
-            intro.contains("painterResource(story.art)"),
+            intro.contains("art = current.art") && intro.contains("description = current.artDescription"),
+        )
+        assertTrue(
+            "through the one shared card",
+            intro.contains("StepArt(") && intro.contains("import com.codeci.ide.ui.components.StepArt"),
         )
         // The Phase 90-97 vector art lived in five private composables; the tour
         // ships one illustration path now, so a second one coming back is a

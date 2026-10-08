@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,9 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
@@ -70,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.StepArt
 import com.codeci.ide.ui.navigation.BackAction
 import com.codeci.ide.ui.navigation.BackRouter
 import com.codeci.ide.ui.navigation.BackState
@@ -361,7 +358,18 @@ private fun FirstRunStories(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.L)),
                     ) {
-                        IntroArtwork(story = current, reveal = heroReveal.value)
+                        // Phase 99 — the shared illustration card (the setup
+                        // flow draws the same one); the reveal stays this
+                        // screen's own reduced-motion-aware value.
+                        StepArt(
+                            art = current.art,
+                            description = current.artDescription,
+                            reveal = heroReveal.value,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = CodecTokens.space(CodecTokens.Space.HUGE * 7f))
+                                .aspectRatio(1f),
+                        )
                         IntroHeading(story = current)
                         current.caption?.let { caption ->
                             Text(
@@ -492,42 +500,6 @@ private fun FirstRunStories(
 }
 
 private const val INTRO_PAGE_COUNT = 5
-
-/**
- * Phase 98 — the page's hero: the bundled 3D render on a card, square, centred,
- * capped so a tablet does not get a poster. The reveal is the same
- * reduced-motion-aware `CodecMotion.introReveal` the tour always used; it is
- * applied to the art, which is the thing worth revealing.
- */
-@Composable
-private fun IntroArtwork(story: IntroStory, reveal: Float) {
-    val settled = reveal.coerceIn(0f, 1f)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = CodecTokens.space(CodecTokens.Space.HUGE * 7f))
-            .aspectRatio(1f)
-            .graphicsLayer {
-                alpha = settled
-                scaleX = 0.94f + 0.06f * settled
-                scaleY = scaleX
-            },
-        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL)),
-        colors = CardDefaults.cardColors(containerColor = Color(CodecPalette.INTRO_ART_BACKDROP)),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.CARD),
-        ),
-    ) {
-        Image(
-            painter = painterResource(story.art),
-            contentDescription = story.artDescription,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(CodecTokens.space(CodecTokens.Space.S)),
-        )
-    }
-}
 
 /**
  * Phase 98 — eyebrow chip, bold heading, subtext: the shape the owner's
