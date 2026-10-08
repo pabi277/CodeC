@@ -290,6 +290,35 @@ private fun StepProgress(index: Int) {
     }
 }
 
+/**
+ * Phase 98 — the beat's chip: the same shape as the illustrated tour's eyebrow
+ * (`FirstRunIntroScreen.IntroHeading`), so the two halves of onboarding are one
+ * design. It is read as ordinary text by a screen reader, in front of the
+ * heading `StepTitle` marks as a heading — the chip names the beat's job, which
+ * is context, not decoration.
+ */
+@Composable
+private fun StepEyebrow(text: String) {
+    Surface(
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL)),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier
+            .padding(top = CodecTokens.space(CodecTokens.Space.S)),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            maxLines = 1,
+            modifier = Modifier.padding(
+                horizontal = CodecTokens.space(CodecTokens.Space.M),
+                vertical = CodecTokens.space(CodecTokens.Space.XS),
+            ),
+        )
+    }
+}
+
 @Composable
 private fun StepTitle(text: String, small: Boolean = false) {
     Text(
@@ -537,6 +566,7 @@ private fun WelcomeStep(onSkip: () -> Unit, onContinue: () -> Unit) {
                 bottom = CodecTokens.space(CodecTokens.Space.L),
             ),
         )
+        StepEyebrow(SetupFlowCopy.WELCOME_EYEBROW)
         StepTitle(SetupFlowCopy.WELCOME_TITLE)
         StepSub("${SetupFlowCopy.WELCOME_SUB} ${SetupFlowCopy.WELCOME_TIME}")
         PlanLine("1", SetupFlowCopy.WELCOME_PLAN_1, SetupFlowCopy.WELCOME_PLAN_1_DETAIL)
@@ -585,6 +615,7 @@ private fun PickStep(
     onContinue: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        StepEyebrow(SetupFlowCopy.PICK_EYEBROW)
         StepTitle(SetupFlowCopy.PICK_TITLE, small = true)
         StepSub(SetupFlowCopy.PICK_SUB)
         SetupStart.values().forEach { start ->
@@ -638,6 +669,7 @@ private fun NameStep(
 ) {
     val variants = SetupFlowPolicy.variantsFor(choice.start)
     Column(modifier = Modifier.fillMaxWidth()) {
+        StepEyebrow(SetupFlowCopy.NAME_EYEBROW)
         StepTitle(SetupFlowCopy.NAME_TITLE, small = true)
         StepSub(SetupFlowCopy.NAME_SUB)
 
@@ -719,6 +751,7 @@ private fun LooksStep(
     onContinue: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        StepEyebrow(SetupFlowCopy.LOOKS_EYEBROW)
         StepTitle(SetupFlowCopy.LOOKS_TITLE, small = true)
         StepSub(SetupFlowCopy.LOOKS_SUB)
 
@@ -800,6 +833,7 @@ private fun HelpsStep(
     onContinue: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        StepEyebrow(SetupFlowCopy.HELPS_EYEBROW)
         StepTitle(SetupFlowCopy.HELPS_TITLE, small = true)
         StepSub(SetupFlowCopy.HELPS_SUB)
 
@@ -870,6 +904,7 @@ private fun BuildingStep(
     onAbandon: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        StepEyebrow(SetupFlowCopy.BUILD_EYEBROW)
         StepTitle("${SetupFlowCopy.BUILD_TITLE_PREFIX}${plan.projectName}", small = true)
         StepSub(SetupFlowCopy.BUILD_SUB)
         Column(
@@ -966,6 +1001,7 @@ private fun ReadyStep(
     onFinish: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        StepEyebrow(SetupFlowCopy.READY_EYEBROW)
         Text(
             text = SetupFlowCopy.READY_TITLE,
             style = MaterialTheme.typography.headlineSmall,

@@ -46,6 +46,20 @@ object SetupFlowCopy {
         "beginner", "intermediate", "advanced", "expert",
     )
 
+    /**
+     * Phase 98 — the chip above each beat's heading: the same eyebrow the
+     * illustrated tour uses, so the tour and the setup read as one onboarding
+     * rather than two different products. Short, uppercase, and named after the
+     * beat's own job (never after the person, never a promise).
+     */
+    const val WELCOME_EYEBROW = "THREE QUICK ANSWERS"
+    const val PICK_EYEBROW = "YOUR FIRST PROJECT"
+    const val NAME_EYEBROW = "WHAT TO CALL IT"
+    const val LOOKS_EYEBROW = "MAKE IT YOURS"
+    const val HELPS_EYEBROW = "HELP WHILE YOU TYPE"
+    const val BUILD_EYEBROW = "MAKING YOUR PROJECT"
+    const val READY_EYEBROW = "READY TO CODE"
+
     // ---- S1 · Set up your workspace ----
 
     const val WELCOME_TITLE = "Set up your workspace"
@@ -179,6 +193,8 @@ object SetupFlowCopy {
      * that introduces it — `SetupFlowCopyTest` iterates this and nothing else.
      */
     val ALL_COPY: List<String> = listOf(
+        WELCOME_EYEBROW, PICK_EYEBROW, NAME_EYEBROW, LOOKS_EYEBROW, HELPS_EYEBROW,
+        BUILD_EYEBROW, READY_EYEBROW,
         WELCOME_TITLE, WELCOME_SUB, WELCOME_TIME,
         WELCOME_PLAN_1, WELCOME_PLAN_1_DETAIL,
         WELCOME_PLAN_2, WELCOME_PLAN_2_DETAIL,

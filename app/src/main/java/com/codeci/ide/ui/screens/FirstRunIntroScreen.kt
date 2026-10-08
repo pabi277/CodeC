@@ -1,43 +1,37 @@
 package com.codeci.ide.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,10 +54,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -71,7 +68,6 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
 import com.codeci.ide.ui.navigation.BackAction
@@ -80,16 +76,86 @@ import com.codeci.ide.ui.navigation.BackState
 import com.codeci.ide.ui.theme.CodecMotion
 import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.CodecTokens
-import com.codeci.ide.ui.theme.CodecType
 import com.codeci.ide.ui.theme.rememberMotionSpecs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 /**
- * First-run starts with the CodeC mark, then becomes a timed, swipeable story
- * tour. Only the privacy acknowledgement is required; it is an in-app summary,
- * not a claim that CodeC has a separate Terms of Service. Device permissions
- * are still requested only when a feature needs them.
+ * Phase 98 — one page of the illustrated tour.
+ *
+ * The tour's words and art live together in [INTRO_STORIES] rather than inline
+ * in the composition, so `IntroStoriesTest` can check the deck the way the
+ * other screens' copy is checked: every page names a real file, every page
+ * carries a description for TalkBack, and the five pages stay in the order the
+ * tour promises (offline first, then the edit-run-check loop, the toolkit, the
+ * sample projects, and finally the agreement).
+ *
+ * [art] is a bundled WebP card (`app/src/main/res/drawable-nodpi/intro_*.webp`,
+ * 900 px, ~25 KB each). The renders carry their own pale backdrop in the app's
+ * green, so they are used as they were drawn instead of being tinted per
+ * accent — the same reason the colour is not a `MaterialTheme` role.
+ */
+data class IntroStory(
+    val eyebrow: String,
+    val title: String,
+    val body: String,
+    @DrawableRes val art: Int,
+    /** What the illustration shows, for a screen reader (never null: art with no words is a hole). */
+    val artDescription: String,
+    /** One extra honest line, only where a page has a fact worth keeping. */
+    val caption: String? = null,
+)
+
+/**
+ * The five pages, in the order the first run shows them. Page 5 is the privacy
+ * agreement, which is the only *required* one; the first four are the tour the
+ * owner asked for (2026-10-08): **coding offline**, the **edit-run-check loop**,
+ * the **toolkit**, and the **sample projects**.
+ */
+val INTRO_STORIES: List<IntroStory> = listOf(
+    IntroStory(
+        eyebrow = "OFFLINE-FIRST CODING",
+        title = "A coding studio in your pocket.",
+        body = "Write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup; web projects open in an on-device preview. No account required.",
+        art = R.drawable.intro_01_offline,
+        artDescription = "A phone showing a code editor with a green tick on its screen, a crossed-out network arrow beside it, and a green compiler chip: coding that works with no internet.",
+    ),
+    IntroStory(
+        eyebrow = "EDIT · RUN · CHECK",
+        title = "Keep the whole loop together.",
+        body = "Open a project, edit a file, tap RUN, then check output or compiler errors. Save and run again to test your changes. Web projects open in CodeC's local preview.",
+        art = R.drawable.intro_02_loop,
+        artDescription = "Three cards joined in a circle by two arrows: a pencil on lines of code, a green play button, and an output card with a green tick — the edit, run and check loop.",
+    ),
+    IntroStory(
+        eyebrow = "TOOLKIT WHEN YOU NEED IT",
+        title = "Start simple. Add tools later.",
+        body = "C works offline with no setup. Python, Node, shell commands, and packages need optional Linux tools; start that setup from Terminal or Packages only when you choose. Nothing downloads during this tour.",
+        art = R.drawable.intro_03_tools,
+        artDescription = "A terminal window with a glowing prompt, surrounded by a wrench, a gear, a sealed package with a download arrow and a stack of modules — extra tools that plug in when you ask for them.",
+    ),
+    IntroStory(
+        eyebrow = "SAMPLE PROJECTS",
+        title = "Meet CodeC Arcade.",
+        body = "Tap RUN to open your game arena. Pick Snake, Block Party (a block-blast-style puzzle), or Tic-Tac-Toe. The home screen, styles, game rules, and controls live in separate files—play first, then explore one piece at a time.",
+        art = R.drawable.intro_04_sample,
+        artDescription = "A game controller beside a project folder with a rocket, behind three tiles showing a snake, stacked blocks with a falling piece, and a tic-tac-toe grid.",
+        caption = "Three familiar games, ready offline. No account, install, or network connection needed.",
+    ),
+    IntroStory(
+        eyebrow = "BEFORE YOU START",
+        title = "Your code. Your call.",
+        body = "Projects stay in CodeC on this device by default. There are no ads, analytics, or tracking. Git, package downloads, updates, and crash sharing happen only when you choose.",
+        art = R.drawable.intro_05_privacy,
+        artDescription = "A shield with a padlock in front of a phone showing a folder, with a dotted line to a cloud crossed out — projects stay on this device until you choose otherwise.",
+    ),
+)
+
+/**
+ * First-run starts with the CodeC mark, then becomes a swipeable story tour with
+ * one 3D illustration per page. Only the privacy acknowledgement is required; it
+ * is an in-app summary, not a claim that CodeC has a separate Terms of Service.
+ * Device permissions are still requested only when a feature needs them.
  */
 @Composable
 fun FirstRunIntroScreen(
@@ -260,15 +326,6 @@ private fun FirstRunStories(
                 }
             }
 
-            Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.XS)))
-            IntroProgress(
-                page = page,
-                progress = storyProgress.value,
-                timerPaused = timerPaused,
-                onToggleTimer = { timerPaused = !timerPaused },
-                modifier = Modifier.padding(horizontal = CodecTokens.space(CodecTokens.Space.L)),
-            )
-
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -298,66 +355,35 @@ private fun FirstRunStories(
                     animationSpec = motion.floatOrSnap(CodecMotion.crossfadeSpec),
                     label = "first-run-story",
                 ) { currentPage ->
-                    Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.M))) {
-                        when (currentPage) {
-                            0 -> {
-                                CodeRunArtwork(progress = heroReveal.value)
-                                IntroHeading(
-                                    eyebrow = "MAKE SOMETHING REAL",
-                                    title = "A coding studio in your pocket.",
-                                    body = "Write and run C, Python, JavaScript, and HTML on your phone. C works offline with no setup; web projects open in an on-device preview. No account required.",
-                                )
-                                LanguagePills()
-                            }
-                            1 -> {
-                                WorkflowArtwork(progress = heroReveal.value)
-                                IntroHeading(
-                                    eyebrow = "EDIT · RUN · LEARN",
-                                    title = "Keep the whole loop together.",
-                                    body = "Open a project, edit a file, tap RUN, then check output or compiler errors. Save and run again to test your changes. Web projects open in CodeC's local preview.",
-                                )
-                            }
-                            2 -> {
-                                ToolsArtwork(progress = heroReveal.value)
-                                IntroHeading(
-                                    eyebrow = "TOOLS WHEN YOU NEED THEM",
-                                    title = "Start simple. Add tools later.",
-                                    body = "C works offline with no setup. Python, Node, shell commands, and packages need optional Linux tools; start that setup from Terminal or Packages only when you choose. Nothing downloads during this tour.",
-                                )
-                            }
-                            3 -> {
-                                ArcadeArtwork(progress = heroReveal.value)
-                                IntroHeading(
-                                    eyebrow = "YOUR FIRST PROJECT",
-                                    title = "Meet CodeC Arcade.",
-                                    body = "Tap RUN to open your game arena. Pick Snake, Block Party (a block-blast-style puzzle), or Tic-Tac-Toe. The home screen, styles, game rules, and controls live in separate files—play first, then explore one piece at a time.",
-                                )
-                                Text(
-                                    text = "Three familiar games, ready offline. No account, install, or network connection needed.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            else -> {
-                                PrivacyArtwork(progress = heroReveal.value)
-                                IntroHeading(
-                                    eyebrow = "BEFORE YOU START",
-                                    title = "Your code. Your call.",
-                                    body = "Projects stay in CodeC on this device by default. There are no ads, analytics, or tracking. Git, package downloads, updates, and crash sharing happen only when you choose.",
-                                )
-                                PrivacySummary(onReadDetails = { showPrivacyDetails = true })
-                                PrivacyAgreement(
-                                    accepted = privacyAccepted,
-                                    onAcceptedChange = { privacyAccepted = it },
-                                )
-                            }
+                    val current = INTRO_STORIES[currentPage]
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.L)),
+                    ) {
+                        IntroArtwork(story = current, reveal = heroReveal.value)
+                        IntroHeading(story = current)
+                        current.caption?.let { caption ->
+                            Text(
+                                text = caption,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        if (currentPage == INTRO_PAGE_COUNT - 1) {
+                            PrivacySummary(onReadDetails = { showPrivacyDetails = true })
+                            PrivacyAgreement(
+                                accepted = privacyAccepted,
+                                onAcceptedChange = { privacyAccepted = it },
+                            )
                         }
                     }
                 }
                 Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.L)))
             }
 
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
@@ -365,40 +391,72 @@ private fun FirstRunStories(
                         horizontal = CodecTokens.space(CodecTokens.Space.L),
                         vertical = CodecTokens.space(CodecTokens.Space.S),
                     ),
-                horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
             ) {
-                if (page > 0) {
-                    OutlinedButton(
-                        onClick = { page-- },
-                        enabled = !preparing,
-                        modifier = Modifier
-                            .weight(0.85f)
-                            .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
-                    ) {
-                        Text("Back")
-                    }
-                }
-                Button(
-                    onClick = {
-                        if (page < INTRO_PAGE_COUNT - 1) page++ else onStart()
-                    },
-                    enabled = !preparing && (page < INTRO_PAGE_COUNT - 1 || privacyAccepted),
-                    modifier = Modifier
-                        .weight(1.4f)
-                        .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
+                // Phase 98 — the honest progress indicator, at the bottom where
+                // the tour's own art and words are not competing with it: one
+                // dot per story, the current one wide and filling with the real
+                // reading window (never a decorative animation).
+                IntroDots(page = page, progress = storyProgress.value)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = when {
-                            preparing -> "Preparing your first project…"
-                            page == INTRO_PAGE_COUNT - 1 -> "Agree & start coding"
-                            else -> "Next"
+                            timerPaused -> "Paused · swipe or use Next to continue"
+                            page == INTRO_PAGE_COUNT - 1 ->
+                                "Final story · the timer waits here for your agreement"
+                            else -> "Swipe left or right · auto-advances in 10 seconds"
                         },
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
                     )
+                    TextButton(
+                        onClick = { timerPaused = !timerPaused },
+                        modifier = Modifier.heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
+                    ) {
+                        Text(if (timerPaused) "Resume timer" else "Pause timer", maxLines = 1)
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (page > 0) {
+                        OutlinedButton(
+                            onClick = { page-- },
+                            enabled = !preparing,
+                            modifier = Modifier
+                                .weight(0.85f)
+                                .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
+                        ) {
+                            Text("Back")
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            if (page < INTRO_PAGE_COUNT - 1) page++ else onStart()
+                        },
+                        enabled = !preparing && (page < INTRO_PAGE_COUNT - 1 || privacyAccepted),
+                        modifier = Modifier
+                            .weight(1.4f)
+                            .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    ) {
+                        Text(
+                            text = when {
+                                preparing -> "Preparing your first project…"
+                                page == INTRO_PAGE_COUNT - 1 -> "Agree & start coding"
+                                else -> "Next"
+                            },
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
@@ -435,589 +493,148 @@ private fun FirstRunStories(
 
 private const val INTRO_PAGE_COUNT = 5
 
+/**
+ * Phase 98 — the page's hero: the bundled 3D render on a card, square, centred,
+ * capped so a tablet does not get a poster. The reveal is the same
+ * reduced-motion-aware `CodecMotion.introReveal` the tour always used; it is
+ * applied to the art, which is the thing worth revealing.
+ */
 @Composable
-private fun IntroProgress(
-    page: Int,
-    progress: Float,
-    timerPaused: Boolean,
-    onToggleTimer: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val normalizedProgress = progress.coerceIn(0f, 1f)
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = "STORY ${page + 1} OF $INTRO_PAGE_COUNT",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            TextButton(
-                onClick = onToggleTimer,
-                modifier = Modifier.heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
-            ) {
-                Text(if (timerPaused) "Resume timer" else "Pause timer", maxLines = 1)
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics {
-                    contentDescription = "Story ${page + 1} of $INTRO_PAGE_COUNT, ${(normalizedProgress * 100).toInt()} percent"
-                    progressBarRangeInfo = ProgressBarRangeInfo(normalizedProgress, 0f..1f)
-                },
-            horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
-        ) {
-            repeat(INTRO_PAGE_COUNT) { index ->
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(CodecTokens.space(CodecTokens.Space.XS))
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
-                ) {
-                    when {
-                        index < page -> Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.primary),
-                        )
-                        index == page && normalizedProgress > 0f -> Box(
-                            modifier = Modifier
-                                .fillMaxWidth(normalizedProgress)
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.primary),
-                        )
-                    }
-                }
-            }
-        }
-        Text(
-            text = when {
-                timerPaused -> "Paused · swipe or use Next to continue"
-                page == INTRO_PAGE_COUNT - 1 -> "Final story · timer waits here for your agreement"
-                else -> "Swipe left or right · auto-advances in 10 seconds"
+private fun IntroArtwork(story: IntroStory, reveal: Float) {
+    val settled = reveal.coerceIn(0f, 1f)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = CodecTokens.space(CodecTokens.Space.HUGE * 7f))
+            .aspectRatio(1f)
+            .graphicsLayer {
+                alpha = settled
+                scaleX = 0.94f + 0.06f * settled
+                scaleY = scaleX
             },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL)),
+        colors = CardDefaults.cardColors(containerColor = Color(CodecPalette.INTRO_ART_BACKDROP)),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = CodecTokens.elevation(CodecTokens.Elevation.CARD),
+        ),
+    ) {
+        Image(
+            painter = painterResource(story.art),
+            contentDescription = story.artDescription,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(CodecTokens.space(CodecTokens.Space.S)),
         )
     }
 }
 
+/**
+ * Phase 98 — eyebrow chip, bold heading, subtext: the shape the owner's
+ * reference tour uses, centred. The chip is the theme's own container colour,
+ * so it follows the accent the user picked in setup.
+ */
 @Composable
-private fun IntroHeading(eyebrow: String, title: String, body: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS))) {
+private fun IntroHeading(story: IntroStory) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL)),
+            color = MaterialTheme.colorScheme.primaryContainer,
+        ) {
+            Text(
+                text = story.eyebrow,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                maxLines = 1,
+                modifier = Modifier.padding(
+                    horizontal = CodecTokens.space(CodecTokens.Space.M),
+                    vertical = CodecTokens.space(CodecTokens.Space.XS),
+                ),
+            )
+        }
         Text(
-            text = eyebrow,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = title,
+            text = story.title,
             style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
-            text = body,
+            text = story.body,
             style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+/**
+ * Phase 98 — the progress indicator, at the bottom of the tour (the owner's
+ * reference, and where a thumb is not covering the words). One dot per story;
+ * the current dot is a wide pill that fills with the page's real ten-second
+ * window, so it measures something true rather than decorating. Screen readers
+ * get the page and the elapsed fraction in one sentence.
+ */
 @Composable
-private fun CodeRunArtwork(progress: Float) {
-    val accent = Color(CodecPalette.IDENTITY_GREEN)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 190.dp)
-            .semantics { contentDescription = "A code editor turns a short C program into its first running output." },
-        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L)),
-        colors = CardDefaults.cardColors(containerColor = Color(CodecPalette.SURFACE_CODE)),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(CodecTokens.space(CodecTokens.Space.M)),
-            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(CodecTokens.space(CodecTokens.Space.S))
-                        .background(accent, CircleShape)
-                )
-                Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-                Text(
-                    text = "main.c",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
-                    fontFamily = CodecType.codeFamily,
-                )
-                Spacer(Modifier.weight(1f))
-                Text("C11  ·  READY", style = MaterialTheme.typography.labelSmall, color = Color(CodecPalette.MUTED_TEXT))
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XXS))) {
-                CodeLine("#include <stdio.h>", Color(CodecPalette.INFO))
-                CodeLine("int main(void) {", Color(CodecPalette.SUCCESS))
-                CodeLine("  printf(\"Hello, world!\");", Color(CodecPalette.WARNING))
-                CodeLine("}", Color(CodecPalette.SUCCESS))
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.S)))
-                    .background(Color(CodecPalette.SURFACE_PANEL))
-                    .padding(
-                        horizontal = CodecTokens.space(CodecTokens.Space.S),
-                        vertical = CodecTokens.space(CodecTokens.Space.XS),
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("▶  RUN", style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-                Box(
-                    modifier = Modifier
-                        .width(CodecTokens.space(CodecTokens.Space.XXS))
-                        .height(CodecTokens.space(CodecTokens.Space.L))
-                        .background(Color(CodecPalette.MUTED_TEXT).copy(alpha = 0.45f))
-                )
-                Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-                Text(
-                    text = "Hello, world!",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White,
-                    fontFamily = CodecType.codeFamily,
-                    modifier = Modifier
-                        .offset(y = ((1f - progress.coerceIn(0f, 1f)) * 8f).dp)
-                        .alpha(progress.coerceIn(0f, 1f)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CodeLine(text: String, color: Color) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = color,
-        fontFamily = CodecType.codeFamily,
-        maxLines = 1,
-    )
-}
-
-@Composable
-private fun LanguagePills() {
+private fun IntroDots(page: Int, progress: Float) {
+    val normalized = progress.coerceIn(0f, 1f)
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
-    ) {
-        listOf("C · offline", "Python / JS · tools", "Web · local").forEach { label ->
-            Surface(
-                modifier = Modifier.weight(1f),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                Text(
-                    text = label,
-                    modifier = Modifier.padding(vertical = CodecTokens.space(CodecTokens.Space.S)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorkflowArtwork(progress: Float) {
-    val accent = Color(CodecPalette.IDENTITY_GREEN)
-    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 188.dp)
-            .semantics { contentDescription = "CodeC workflow: edit a file, run it, then inspect the output." },
-        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L)),
-        colors = CardDefaults.cardColors(containerColor = Color(CodecPalette.SURFACE_CODE)),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
-        ),
+            .semantics {
+                contentDescription = "Story ${page + 1} of $INTRO_PAGE_COUNT, ${(normalized * 100).toInt()} percent of its reading window"
+                progressBarRangeInfo = ProgressBarRangeInfo(
+                    (page + normalized) / INTRO_PAGE_COUNT,
+                    0f..1f,
+                )
+            },
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            modifier = Modifier.padding(CodecTokens.space(CodecTokens.Space.M)),
-            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "ONE SIMPLE LOOP",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = accent,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = "EDIT → RUN → CHECK",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
-            ) {
-                WorkflowStep(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Filled.Code,
-                    label = "EDIT",
-                    detail = "main.c",
-                    tint = MaterialTheme.colorScheme.primary,
-                    progress = progress,
-                )
-                WorkflowStep(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Filled.PlayArrow,
-                    label = "RUN",
-                    detail = "Tap ▶",
-                    tint = accent,
-                    progress = progress,
-                )
-                WorkflowStep(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Filled.CheckCircle,
-                    label = "CHECK",
-                    detail = "Output",
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    progress = progress,
-                )
-            }
-            Row(
+        repeat(INTRO_PAGE_COUNT) { index ->
+            val current = index == page
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.S)))
-                    .background(Color(CodecPalette.SURFACE_PANEL))
-                    .padding(
-                        horizontal = CodecTokens.space(CodecTokens.Space.S),
-                        vertical = CodecTokens.space(CodecTokens.Space.XS),
+                    .padding(horizontal = CodecTokens.space(CodecTokens.Space.XXS))
+                    .width(
+                        CodecTokens.space(
+                            if (current) CodecTokens.Space.XXL else CodecTokens.Space.S
+                        )
+                    )
+                    .height(CodecTokens.space(CodecTokens.Space.XS))
+                    .clip(CircleShape)
+                    .background(
+                        when {
+                            index < page -> MaterialTheme.colorScheme.primary
+                            current -> MaterialTheme.colorScheme.primary.copy(alpha = 0.32f)
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
+                        }
                     ),
-                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)),
-                )
-                Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-                Text(
-                    text = "OUTPUT  ·  Hello, world!",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White,
-                    fontFamily = CodecType.codeFamily,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WorkflowStep(
-    modifier: Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    detail: String,
-    tint: Color,
-    progress: Float,
-) {
-    Surface(
-        modifier = modifier.heightIn(min = 72.dp),
-        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.S)),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = CodecTokens.space(CodecTokens.Space.XS)),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XXS)),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier
-                    .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
-                    .alpha(progress.coerceIn(0f, 1f)),
-            )
-            Text(label, style = MaterialTheme.typography.labelSmall, color = tint, fontWeight = FontWeight.Bold)
-            Text(detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun ToolsArtwork(progress: Float) {
-    val accent = Color(CodecPalette.IDENTITY_GREEN)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 176.dp)
-            .semantics { contentDescription = "Optional Python, Node, and Linux tools can be installed later. Built-in C works offline." },
-        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.68f)),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(CodecTokens.space(CodecTokens.Space.M)),
-            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Filled.Terminal,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.NAV)),
-                )
-                Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("OPTIONAL TOOLKIT", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                    Text("Choose setup when you're ready", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (current && normalized > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(normalized)
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
-            ) {
-                ToolPill(Modifier.weight(1f), "Python")
-                ToolPill(Modifier.weight(1f), "Node")
-                ToolPill(Modifier.weight(1f), "Linux shell")
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.S)))
-                    .background(Color(CodecPalette.SURFACE_PANEL))
-                    .padding(
-                        horizontal = CodecTokens.space(CodecTokens.Space.S),
-                        vertical = CodecTokens.space(CodecTokens.Space.S),
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier
-                        .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
-                        .alpha(progress.coerceIn(0f, 1f)),
-                )
-                Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-                Text(
-                    text = "C compiler included · works offline",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ToolPill(modifier: Modifier, label: String) {
-    Surface(
-        modifier = modifier,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(vertical = CodecTokens.space(CodecTokens.Space.S)),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun ArcadeArtwork(progress: Float) {
-    val mint = Color(CodecPalette.IDENTITY_GREEN)
-    val orange = Color(CodecPalette.WARNING)
-    val violet = MaterialTheme.colorScheme.tertiary
-    val blue = Color(0xFF8CDCFF)
-    val surface = Color(CodecPalette.SURFACE_PANEL)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(210.dp)
-            .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L)))
-            .background(
-                Brush.linearGradient(
-                    listOf(surface, MaterialTheme.colorScheme.surfaceVariant, surface),
-                )
-            )
-            .semantics { contentDescription = "CodeC Arcade illustration with Snake, a block puzzle, and Tic-Tac-Toe." },
-    ) {
-        Canvas(Modifier.fillMaxSize().alpha(progress.coerceIn(0f, 1f))) {
-            val cardWidth = size.width * 0.23f
-            val cardHeight = size.height * 0.52f
-            val gap = size.width * 0.035f
-            val startX = (size.width - (cardWidth * 3f + gap * 2f)) / 2f
-            val top = size.height * 0.22f
-            val cardColors = listOf(mint, orange, violet)
-            for (index in 0..2) {
-                val left = startX + index * (cardWidth + gap)
-                drawRoundRect(
-                    color = cardColors[index].copy(alpha = 0.13f),
-                    topLeft = androidx.compose.ui.geometry.Offset(left, top),
-                    size = androidx.compose.ui.geometry.Size(cardWidth, cardHeight),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(18f),
-                )
-            }
-            // Snake: a short trail and its bright head.
-            val snakeX = startX + cardWidth * 0.2f
-            val snakeY = top + cardHeight * 0.47f
-            for (index in 0..2) {
-                drawRoundRect(
-                    color = mint.copy(alpha = 0.5f + index * 0.16f),
-                    topLeft = androidx.compose.ui.geometry.Offset(snakeX + index * cardWidth * 0.2f, snakeY),
-                    size = androidx.compose.ui.geometry.Size(cardWidth * 0.19f, cardWidth * 0.19f),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f),
-                )
-            }
-            drawCircle(
-                color = orange,
-                radius = cardWidth * 0.055f,
-                center = androidx.compose.ui.geometry.Offset(startX + cardWidth * 0.7f, top + cardHeight * 0.28f),
-            )
-            // Block puzzle: three pieces of a tiny grid.
-            val blockX = startX + cardWidth + gap + cardWidth * 0.22f
-            val blockY = top + cardHeight * 0.3f
-            for ((dx, dy) in listOf(0 to 0, 1 to 0, 1 to 1, 2 to 1)) {
-                drawRoundRect(
-                    color = orange.copy(alpha = 0.78f),
-                    topLeft = androidx.compose.ui.geometry.Offset(blockX + dx * cardWidth * 0.19f, blockY + dy * cardWidth * 0.19f),
-                    size = androidx.compose.ui.geometry.Size(cardWidth * 0.17f, cardWidth * 0.17f),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f),
-                )
-            }
-            // Tic-Tac-Toe: a three-by-three board with two bright marks.
-            val gridX = startX + (cardWidth + gap) * 2f + cardWidth * 0.23f
-            val gridY = top + cardHeight * 0.31f
-            val gridSize = cardWidth * 0.54f
-            for (line in 1..2) {
-                val offset = gridSize * line / 3f
-                drawLine(violet.copy(alpha = 0.8f), androidx.compose.ui.geometry.Offset(gridX + offset, gridY), androidx.compose.ui.geometry.Offset(gridX + offset, gridY + gridSize), strokeWidth = 2f)
-                drawLine(violet.copy(alpha = 0.8f), androidx.compose.ui.geometry.Offset(gridX, gridY + offset), androidx.compose.ui.geometry.Offset(gridX + gridSize, gridY + offset), strokeWidth = 2f)
-            }
-            drawCircle(mint, radius = gridSize * 0.09f, center = androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.5f, gridY + gridSize * 0.17f))
-            drawLine(blue, androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.15f, gridY + gridSize * 0.55f), androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.3f, gridY + gridSize * 0.7f), strokeWidth = 3f)
-            drawLine(blue, androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.3f, gridY + gridSize * 0.55f), androidx.compose.ui.geometry.Offset(gridX + gridSize * 0.15f, gridY + gridSize * 0.7f), strokeWidth = 3f)
-        }
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(CodecTokens.space(CodecTokens.Space.M)),
-        ) {
-            Text("CODEC ARCADE", style = MaterialTheme.typography.labelLarge, color = mint, fontWeight = FontWeight.Bold)
-            Text("Three classics. One project.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = CodecTokens.space(CodecTokens.Space.S)),
-            horizontalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
-        ) {
-            ArenaChip("SNAKE", mint)
-            ArenaChip("BLOCK PARTY", orange)
-            ArenaChip("TIC-TAC-TOE", violet)
-        }
-    }
-}
-
-@Composable
-private fun ArenaChip(label: String, color: Color) {
-    Surface(
-        shape = CircleShape,
-        color = Color(CodecPalette.SURFACE_PANEL).copy(alpha = 0.86f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.48f)),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = CodecTokens.space(CodecTokens.Space.XS), vertical = CodecTokens.space(CodecTokens.Space.XS)),
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun PrivacyArtwork(progress: Float) {
-    val primary = MaterialTheme.colorScheme.primary
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L)),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(CodecTokens.space(CodecTokens.Space.M)),
-            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
-        ) {
-            PrivacyFeature(Icons.Filled.Folder, "Projects live here", "Saved in CodeC on this device")
-            PrivacyFeature(Icons.Filled.Lock, "No tracking", "No ads, analytics or crash uploads")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Public, contentDescription = null, tint = primary, modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)))
-                Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("You choose when to connect", style = MaterialTheme.typography.labelLarge)
-                    Text("Git, installs and updates start when you ask", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = primary,
-                    modifier = Modifier
-                        .size(CodecTokens.icon(CodecTokens.Icon.ACTION))
-                        .alpha(progress.coerceIn(0f, 1f)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PrivacyFeature(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(CodecTokens.icon(CodecTokens.Icon.ACTION)))
-        Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.S)))
-        Column {
-            Text(title, style = MaterialTheme.typography.labelLarge)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun PrivacySummary(onReadDetails: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS))) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XS)),
+    ) {
         PrivacyBullet("Shared-folder access is optional; Android's file picker remains available.")
         PrivacyBullet("Git, package downloads and updates use the network only when you start them.")
         TextButton(
