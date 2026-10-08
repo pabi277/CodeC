@@ -3,7 +3,7 @@
 > **Status: ✅ IMPLEMENTED (2026-10-08) on `arena/db36a12a-codec`; CI ✅ GREEN on `0c12e8b`
 > (Build APK [`37766270597`](https://github.com/pabi277/CodeC/actions/runs/37766270597));
 > restyled by [Phase 100](../chat-phase100/README.md) and
-> [Phase 101](../chat-phase101/README.md); merged to `main` via PR #118.**
+> [Phase 101](../chat-phase101/README.md); merged to `main` via PR #118 (merge commit `fb439a9`).**
 >
 > **Authorization:** the same Pydroid 3 reference, re-sent with an emphasis on *"consistent 3D
 > illustration per step"* and the animated loading beat. Reference only — the Pydroid composition

@@ -3,7 +3,7 @@
 > **Status: ✅ IMPLEMENTED (2026-10-08) on `arena/db36a12a-codec` @ `2643aa9`; Build APK
 > [`37776053185`](https://github.com/pabi277/CodeC/actions/runs/37776053185) ✅ GREEN, and the
 > PR's own `pull_request` run [`37781090447`](https://github.com/pabi277/CodeC/actions/runs/37781090447)
-> ✅ GREEN (14m05s); **merged to `main` via PR #118**.**
+> ✅ GREEN (14m05s); **merged to `main` via PR #118 (merge commit `fb439a9`)**.**
 >
 > **Authorization:** the owner's second design brief, verbatim in substance — **custom 3D icons for
 > the five tour steps**, a **deep black background** with **pure white** text so the black canvas
@@ -103,6 +103,8 @@ already holds, so no elapsed time is returned.
 | `37775444618` | 101 | `ea61522` | `OnboardingContrastTest.kt:117` — `java.lang.AssertionError` (3 508 tests, 1 failed) |
 | [`37776053185`](https://github.com/pabi277/CodeC/actions/runs/37776053185) | 101 | **`2643aa9`** | **green** — release artifact `6 770 120 B`, debug `26 499 088 B`, mapping `4 786 246 B` |
 | [`37781090447`](https://github.com/pabi277/CodeC/actions/runs/37781090447) | all | `2643aa9` | **green** — the PR's own run, 14m05s |
+| [`37786848486`](https://github.com/pabi277/CodeC/actions/runs/37786848486) | docs | `0716abe` | **green** — the final head's own run, 12m28s |
+| [`37788596176`](https://github.com/pabi277/CodeC/actions/runs/37788596176) | — | `fb439a9` | **green** — the post-merge Build APK on `main`, 16m (release artifact `6 770 241 B`, debug `26 498 912 B`, mapping `4 785 246 B`, no `android:debuggable`) |
 
 The `:117` failure is worth one line of history: the pin compared the glow's hue against the
 accent with `and 0x00FFFFFF`, but `0xFF…` is a **negative** `Int` in Kotlin, so the glow side never

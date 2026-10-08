@@ -3,7 +3,7 @@
 > **Status: ✅ IMPLEMENTED (2026-10-08) on `arena/db36a12a-codec`; CI ✅ GREEN on `723cb40`
 > (Build APK [`37762890430`](https://github.com/pabi277/CodeC/actions/runs/37762890430));
 > restyled by [Phase 100](../chat-phase100/README.md) and
-> [Phase 101](../chat-phase101/README.md); merged to `main` via PR #118.**
+> [Phase 101](../chat-phase101/README.md); merged to `main` via PR #118 (merge commit `fb439a9`).**
 >
 > **Authorization:** the owner's brief — the illustration half of *"something like this with a
 > better approach that fit CodeC"*, plus *"i like all 7 page so i don't want to decrease the

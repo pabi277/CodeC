@@ -2,7 +2,7 @@
 
 > **Status: ✅ IMPLEMENTED (2026-10-08) on `arena/db36a12a-codec`; CI ✅ GREEN on `126f7f7`
 > (Build APK [`37770926970`](https://github.com/pabi277/CodeC/actions/runs/37770926970));
-> superseded on the tour by [Phase 101](../chat-phase101/README.md); merged to `main` via PR #118.**
+> superseded on the tour by [Phase 101](../chat-phase101/README.md); merged to `main` via PR #118 (merge commit `fb439a9`).**
 >
 > **Authorization:** the owner's design brief, verbatim in spirit — *minimalist modern, deep dark
 > backdrop, crisp high-contrast type, sleek custom icons, smooth gradient accents, well-defined

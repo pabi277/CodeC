@@ -2,7 +2,7 @@
 
 > **Status: ✅ IMPLEMENTED (2026-10-07/08) on `arena/db36a12a-codec`; CI ✅ GREEN on the
 > final head `7cbd7f3` (Build APK [`37685622970`](https://github.com/pabi277/CodeC/actions/runs/37685622970));
-> merged to `main` via PR #118 (2026-10-08) with Phases 98–101 riding inside it.**
+> merged to `main` via PR #118 (merge commit `fb439a9`) (2026-10-08) with Phases 98–101 riding inside it.**
 >
 > **Authorization:** the owner's seven Pydroid 3 screenshots, then *"something like this with a
 > better approach that fit CodeC"*, and — after the first design — *"Ok implement start you can
