@@ -212,10 +212,11 @@ class OnboardingStyleTest {
             "the build beat draws the gradient bar",
             setup.contains("GradientProgress("),
         )
-        assertEquals(
-            "and Material's flat bar is gone from the setup",
-            0,
-            setup.count("LinearProgressIndicator"),
+        // `String.count(…)` is Kotlin's character predicate, so this is a
+        // `contains`: the point is that Material's flat bar is gone entirely.
+        assertFalse(
+            "Material's flat bar is gone from the setup",
+            setup.contains("LinearProgressIndicator"),
         )
         assertTrue(
             "the bar is filled with the accent gradient, not a flat colour",
