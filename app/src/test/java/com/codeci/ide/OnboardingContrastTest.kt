@@ -114,7 +114,14 @@ class OnboardingContrastTest {
         // over whatever it sits on, the other has to fade to nothing.
         assertEquals("the control edge is ink at 35%", 89, (OnboardingStage.STAGE_CONTROL_STROKE ushr 24) and 0xFF)
         assertEquals("the halo is the accent at 22%", 56, (glow ushr 24) and 0xFF)
-        assertEquals("and the halo is the accent, not a second colour", accentFrom, glow and 0x00FFFFFF)
+        // Both sides are masked: these are ARGB ints, so the accent's own
+        // `0xFF` alpha makes it a *negative* Int in Kotlin. Comparing the
+        // signed value to `glow and 0x00FFFFFF` compares -12754812 to 4055172.
+        assertEquals(
+            "and the halo is the accent, not a second colour",
+            accentFrom and 0x00FFFFFF,
+            glow and 0x00FFFFFF,
+        )
     }
 
     @Test
