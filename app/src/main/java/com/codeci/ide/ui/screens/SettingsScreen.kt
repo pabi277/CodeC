@@ -1327,7 +1327,7 @@ fun SettingsScreen(
                     text = {
                         Column {
                             Text(stringResource(com.codeci.ide.R.string.update_confirm_body, updateText))
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(CodecTokens.space(Space.S)))
                             Text(stringResource(com.codeci.ide.R.string.update_play_protect_notice))
                         }
                     },
