@@ -97,6 +97,14 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 93 | [✅ AI — five owner fixes (one arrow for the whole flow, the permission named + one-tap fix, `READ_EXTERNAL_STORAGE` capped at 32, the self-check's fifth-check latch, **Welcome to CodeC**, one in-memory conversation per project; D6 unchanged; Build APK green on `dc96329`; not merged)](03-editor/chat-phase93/) | 03-editor |
 | 91 | [✅ AI — the simple chat (IMPLEMENTED 2026-10-04 from the owner's Phase 90 round: Simple by default, Copy on every reply, the New-question button gone, the quoted conversation re-framed, the code block visible in both themes; 10 new host cases; the round ⏳ owner-only)](03-editor/chat-phase91/) | 03-editor |
 | 90 | [✅ AI — the conversation surface (IMPLEMENTED 2026-10-04 on the owner's *"Go"*: new chat with a confirm, follow-up chats over a bounded in-memory `AiChatSession` transcript, and the "real assistant" look with framed code blocks; 30 host cases green; device round C1–C14 ⏳ owner-only; **not merged**)](03-editor/chat-phase90/) | 03-editor |
+| 94 | [✅ AI — more read power: three read-only tools, the structure reader and the value-level secret guard (merged with 95/96 via PR #115 to `main` @ `0edf4dd`)](03-editor/chat-phase94/) | 03-editor |
+| 95 | [✅ AI — history drawer, welcome + agreement, the composer fix and the ChatGPT-style shell (merged PR #115)](03-editor/chat-phase95/) | 03-editor |
+| 96 | [✅ AI — the bug sweep after the Phase 95 device round: six fixes, the scoped `search_project` and the three first-run shape fixes (18 new host cases; CI green `37480934577` on `d984697`; merged PR #115)](03-editor/chat-phase96/) | 03-editor |
+| 97 | [✅ Onboarding — the post-agreement setup flow: seven beats, your own first project, and the way to the lessons (IMPLEMENTED 2026-10-07/08; Build APK `37685622970` green on `7cbd7f3`; MERGED via PR #118)](09-onboarding-setup/chat-phase97/) | 09-onboarding-setup |
+| 98 | [✅ Onboarding — the illustrated first-run tour: five pages, real timers, one shared illustration card (Build APK `37762890430` green on `723cb40`; merged PR #118)](09-onboarding-setup/chat-phase98/) | 09-onboarding-setup |
+| 99 | [✅ Onboarding — art for every beat: six setup renders, five tour renders, and `StepArt` as the one card both halves draw (Build APK `37766270597` green on `0c12e8b`; merged PR #118)](09-onboarding-setup/chat-phase99/) | 09-onboarding-setup |
+| 100 | [✅ Onboarding — the design pass: a fixed stage for the tour, the user's accent for the setup, and three defects the measurement found (Build APK `37770926970` green on `126f7f7`; merged PR #118)](09-onboarding-setup/chat-phase100/) | 09-onboarding-setup |
+| 101 | [✅ Onboarding — the black canvas: one white ink, five custom 3D icons, a five-card pager and a quieter clock (Build APK `37776053185` and the PR's own `37781090447` green on `2643aa9`; MERGED via PR #118)](09-onboarding-setup/chat-phase101/) | 09-onboarding-setup |
 
 ## By category
 
@@ -104,13 +112,13 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 |---|---|---|
 | [01-terminal-userland](01-terminal-userland/) | Terminal & Linux userland | 6 |
 | [02-packages-toolchains](02-packages-toolchains/) | Packages & toolchains | 5 |
-| [03-editor](03-editor/) | Editor & languages | 25 |
+| [03-editor](03-editor/) | Editor & languages | 28 |
 | [04-projects-files](04-projects-files/) | Projects & files | 3 |
 | [05-run-output-preview](05-run-output-preview/) | Run, output & preview | 5 |
 | [06-git-github](06-git-github/) | Git & GitHub | 3 |
 | [07-platform-capabilities](07-platform-capabilities/) | Platform & capabilities | 3 |
 | [08-release-support](08-release-support/) | Release & support | 2 |
-| [09-onboarding-setup](09-onboarding-setup/) | Onboarding & setup | 5 |
+| [09-onboarding-setup](09-onboarding-setup/) | Onboarding & setup | 10 |
 | [10-app-polish-settings](10-app-polish-settings/) | App polish & settings | 3 |
 | [11-phone-ui-parity](11-phone-ui-parity/) | Phone UI parity | 12 |
 | [12-ui-polish-program](12-ui-polish-program/) | UI polish program (phases 65–75) | 7 |

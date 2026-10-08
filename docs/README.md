@@ -11,7 +11,7 @@ top-level areas. **If you are looking for one phase, use the
 | [journal/](journal/) | The story: full journey log, idea backlog, owner handoffs and reviews |
 | [roadmaps/](roadmaps/) | Per-series roadmaps and plans, including the [staged AI integration roadmap](roadmaps/AI_INTEGRATION_ROADMAP.md) and its [level specs](roadmaps/ai-integration/) |
 | [research/](research/) | Research dossiers behind the roadmaps, including the [AI integration repository map and OSS/runtime research](research/AI_INTEGRATION_RESEARCH_20260930.md), plus UX/OSS dossiers and mockups |
-| [phases/](phases/) | **Phases through 83**, grouped into 13 topics — see the [phase tracker](phases/README.md) |
+| [phases/](phases/) | **Phases through 101**, grouped into 13 topics — see the [phase tracker](phases/README.md) |
 | [reference/](reference/) | External reference material (Spck Editor screenshots) |
 | [brand/](brand/) | Brand assets — the app icon masters (load-bearing for the icon pipeline) |
 

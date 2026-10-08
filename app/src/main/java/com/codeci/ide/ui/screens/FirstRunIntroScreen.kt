@@ -648,7 +648,7 @@ private val IconTileSize = CodecTokens.space(CodecTokens.Space.HUGE * 3.5f)
  * The tile is *chrome around* [StepArt] rather than a second illustration path:
  * the render, its required description and its reduced-motion reveal all still
  * come from the one shared card (Phase 99's rule). What changed is the
- * framing — at 176 dp with a gradient ring, the render reads as the step's
+ * framing — at 168 dp with a gradient ring, the render reads as the step's
  * custom 3D **icon**, which is what the brief asks each step to feature.
  */
 @Composable
