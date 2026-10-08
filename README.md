@@ -295,6 +295,26 @@ For the UI’s historical design context, see the [Phase 64 handoff](docs/phases
 
 </details>
 
+## License
+
+**Copyright (C) 2026 CodeC contributors.** CodeC IDE is free software: you can
+redistribute it and/or modify it under the terms of the **GNU General Public
+License, version 3 or (at your option) any later version** (GPL-3.0-or-later);
+the full text is in [LICENSE](LICENSE). It is distributed in the hope that it
+will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE — see the license for the
+details.
+
+Third-party components keep their own licenses; the notices ship inside the
+app under `assets/licenses/` — sora-editor and its TextMate/LSP modules
+(LGPL-2.1), VS Code TextMate grammars (MIT), ZXing core (Apache-2.0), JetBrains
+Mono (OFL), Seti-UI icons (MIT), GitHub gitignore templates (CC0) and friendly
+snippets (MIT) — and the bundled TCC compiler is LGPL. The `codec-packages/`
+tree (package recipes and bootstrap tooling forked from the Termux method) is
+GPL-3.0, see [codec-packages/LICENSE](codec-packages/LICENSE). Website course
+content is CC BY 4.0 with MIT example code, as stated in [Learn and
+explore](#learn-and-explore).
+
 ---
 
 <p align="center">
