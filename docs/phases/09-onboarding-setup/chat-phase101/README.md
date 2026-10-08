@@ -75,9 +75,12 @@ already holds, so no elapsed time is returned.
 
 ## 5. Test surface
 
-- **`OnboardingContrastTest` (8)** — rewritten for the black stage: white/black ≥ 20.9 and the
-  accent ends < 1.2 from each other, the ink on all four stage surfaces ≥ 7.0, the stroke/lane
-  composites (α 89 and 56 pinned), the glow in both its composited and raw forms, `ON_ACCENT` ≥ 7,
+- **`OnboardingContrastTest` (8)** — rewritten for the black stage: the backdrop is `#000000` and
+  the ink is white at **21.00:1** (≥ 20.9 asserted), the **backdrop's two ends stay within 1.2:1**
+  of each other (one black surface, not a gradient you can see) while the **accent's two ends differ
+  by ≥ 1.2:1** (a gradient you *can* see), the ink on the card and the chip, the **derived** tokens
+  asserted as composite equalities (the stroke 20 %, the lane 12 %), the halo's **α 56 (= 22 %)** and
+  its hue — masked on both sides, which is exactly the fix at `:117` — `ON_ACCENT` ≥ 7 on both ends,
   the setup CTA across six accents × two themes, the build bar ≥ `AA_NON_TEXT`, and the 12 % tint's
   text pairs.
 - **`OnboardingStyleTest` (11)** — the tour is theme-free and the setup is un-staged; **every**
@@ -89,17 +92,17 @@ already holds, so no elapsed time is returned.
   (6), `IntroStoriesTest` (8), `CodecMotionTest`, `TouchTargetTest`, `TokenAdoptionTest`,
   `ComposableAnnotationTest` (225 annotations / 0 missing).
 
-## 6. CI, honestly — three rounds, two of them the same family of trap
+## 6. CI, honestly — every round this branch ran
 
-| Run | Head | Cause |
-|---|---|---|
-| `37770222795` | `126f7f7` | missing `androidx.compose.foundation.border` import (`FirstRunIntroScreen.kt:299:30`) |
-| `37770560796` | — | `String.count(substring)` does not exist (it takes a predicate) |
-| `37770926970` | `126f7f7` | **green** (Phase 100's own round) |
-| `37774952759` | `ea61522` | `Regex.findFirstMatchIn` does not exist on this JVM surface — use the member `find()` |
-| `37775444618` | `ea61522` | `OnboardingContrastTest.kt:117` — `java.lang.AssertionError` (3 508 tests, 1 failed) |
-| [`37776053185`](https://github.com/pabi277/CodeC/actions/runs/37776053185) | **`2643aa9`** | **green** — release artifact `6 770 120 B`, debug `26 499 088 B`, mapping `4 786 246 B` |
-| [`37781090447`](https://github.com/pabi277/CodeC/actions/runs/37781090447) | `2643aa9` | **green** — the PR's own run, 14m05s |
+| Run | Phase | Head | Cause |
+|---|---|---|---|
+| `37770222795` | 100 | `98265f9` | missing `androidx.compose.foundation.border` import (`FirstRunIntroScreen.kt:299:30`) |
+| `37770560796` | 100 | `091ca23` | `String.count(substring)` does not exist — it takes a predicate |
+| `37770926970` | 100 | `126f7f7` | **green** |
+| `37774952759` | 101 | `0a46bce` | `Regex.findFirstMatchIn` does not exist on this JVM surface — use the member `find()` |
+| `37775444618` | 101 | `ea61522` | `OnboardingContrastTest.kt:117` — `java.lang.AssertionError` (3 508 tests, 1 failed) |
+| [`37776053185`](https://github.com/pabi277/CodeC/actions/runs/37776053185) | 101 | **`2643aa9`** | **green** — release artifact `6 770 120 B`, debug `26 499 088 B`, mapping `4 786 246 B` |
+| [`37781090447`](https://github.com/pabi277/CodeC/actions/runs/37781090447) | all | `2643aa9` | **green** — the PR's own run, 14m05s |
 
 The `:117` failure is worth one line of history: the pin compared the glow's hue against the
 accent with `and 0x00FFFFFF`, but `0xFF…` is a **negative** `Int` in Kotlin, so the glow side never

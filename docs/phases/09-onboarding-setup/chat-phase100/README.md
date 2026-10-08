@@ -32,7 +32,7 @@ pinned:
 | | Tour | Setup |
 |---|---|---|
 | Backdrop | `OnboardingStage.backdrop()` (fixed) | `MaterialTheme.colorScheme.background` (the user's) |
-| Text | `ON_STAGE_INK` / `ON_STAGE_INK_MUTED` (fixed) | `on*` roles |
+| Text | `ON_STAGE` (white) + `ON_STAGE_MUTED` (fixed) | `on*` roles |
 | Accent | `OnboardingStage.accent()` (fixed green → teal) | `codecAccentGradient(scheme.primary, scheme.tertiary)` |
 | Gradient | the fixed accent, everywhere | the **user's** accent, so the CTA, the ring, the chip hairline and the build bar all agree with the editor they are about to open |
 
@@ -45,7 +45,7 @@ pinned:
 table; the numbers that matter are in `OnboardingContrastTest`:
 
 - **White on the stage:** 21.00:1 (backdrop top), 19.91:1 (bottom), 19.16:1 (card), 16.85:1 (chip).
-  The tour's only text colour is `ON_STAGE_INK` — a pure-white line on a near-black ground, which is
+  The tour's only text colour is `ON_STAGE` — a pure-white line on a near-black ground, which is
   what "crisp high-contrast type" means numerically.
 - **The CTA's ink:** `ON_ACCENT` **9.14:1** on the gradient's green end and **7.48:1** on its teal end.
 - **The accent is lightness-corrected:** `onPrimary` on primary *and* tertiary is ≥ 4.50:1 for **all

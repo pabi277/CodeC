@@ -50,7 +50,7 @@
 
 `MainActivity`'s launch effect (867–932) is the one place that decides: `setupAbandoned` →
 `SetupSeeding.apply` (896) → `EditorLaunchState.save` (900) → the answers + `setSetupFlowComplete`
-(914–926) → `setFirstLaunchComplete(true)` (927). The order is the point: the files exist on disk
+(922, 925) → `setFirstLaunchComplete(true)` (927). The order is the point: the files exist on disk
 before the editor is told which project to open, and a user who abandons the flow at any beat
 still gets the legacy sample rather than a half-built workspace.
 
@@ -72,8 +72,9 @@ Three rounds failed before the green one, and each is worth the line it takes:
 
 ## 5. Deliberately not done
 
-- **No goal or level questions.** Phase 99's Pydroid screenshots were taken as reference and
-  refused on purpose: the flow asks what the app needs and answers the rest by consequence.
+- **No goal or level questions.** The Pydroid screenshots (the seven from this phase's brief, and
+  the ones re-sent for Phase 99) were taken as reference and refused on purpose: the flow asks what
+  the app needs and answers the rest by consequence.
 - **No second illustration path.** Every beat draws the one shared `StepArt` card (Phase 99).
 - **No new storage.** The flow persists exactly one boolean.
 - **No free-form link field.** The lessons door is a URL from `LearningLinks`, not user input.

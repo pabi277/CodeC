@@ -74,12 +74,17 @@ that way: Phase 100 and 101 each needed repairs to *tests*, twice in the same fa
 
 ## 6. Deliberately not done
 
-- **No second tour, no re-entry.** The tour shows once (`FIRST_RUN_LOGO_DURATION_MS` +
-  `setFirstLaunchComplete`), and there is no "show the tour again" switch.
-- **No five vector-art composables.** The Phase 90–97 vector art was retired with this phase;
-  `IntroStoriesTest` fails if any of those names comes back alongside the bundled art.
-- **No copy outside `INTRO_STORIES`.** The screen's own strings are the two controls and the hint.
-- **No "level" or store words.** `IntroStoriesTest` re-uses the setup's banned list verbatim.
+- **No second tour, no re-entry.** The tour is drawn only while `firstLaunchComplete == false`
+  (and never in Safe Mode), and there is no "show the tour again" switch — the only way back is a
+  fresh install.
+- **No copy file.** The five pages' words live in `INTRO_STORIES`; everything else the screen says is
+  a literal in the screen — the controls (*Skip*, *Back*, *Got it*, *Pause*/*Resume*), the hints, the
+  dialog's title, and the agreement's own bullets (five in the dialog, two in the summary). Onboarding
+  copy still does not go into `strings.xml`; the setup flow keeps its own counted `SetupFlowCopy`.
+- **No "level" or store words, and no return of the vector art.** `IntroStoriesTest` re-uses the
+  setup's banned list verbatim, and it fails by name if any of the five Phase 90–97 composables
+  (`CodeRunArtwork`, `WorkflowArtwork`, `ToolsArtwork`, `ArcadeArtwork`, `PrivacyArtwork`) comes back
+  beside the bundled renders — a second illustration path is a regression, not a style choice.
 
 ## 7. Record
 
