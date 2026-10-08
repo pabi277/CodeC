@@ -1,10 +1,10 @@
 package com.codeci.ide.ui.setup
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,10 +22,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -45,8 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -57,12 +55,15 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.codeci.ide.R
-import com.codeci.ide.ui.components.StepArt
 import androidx.compose.ui.unit.sp
+import com.codeci.ide.R
+import com.codeci.ide.ui.components.GradientButton
+import com.codeci.ide.ui.components.GradientProgress
+import com.codeci.ide.ui.components.StepArt
 import com.codeci.ide.ui.projects.ProjectNameProblem
 import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.CodecType
+import com.codeci.ide.ui.theme.codecAccentGradient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -314,11 +315,19 @@ private val StepArtSize = 168.dp
 /** S1's centred mark. */
 private val WelcomeMarkSize = 88.dp
 
+/** Phase 100 - the width of the gradient ring around the welcome mark. */
+private val WelcomeRing = 2.dp
+
 @Composable
 private fun StepEyebrow(text: String) {
+    val scheme = MaterialTheme.colorScheme
     Surface(
         shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL)),
         color = MaterialTheme.colorScheme.primaryContainer,
+        // Phase 100 - the accent gradient as a hairline, exactly as the tour's
+        // chip wears it. Here the two ends are the theme's own primary and
+        // tertiary, so the chip follows whatever accent the user picked.
+        border = BorderStroke(1.dp, codecAccentGradient(scheme.primary, scheme.tertiary)),
         modifier = Modifier
             .padding(top = CodecTokens.space(CodecTokens.Space.S)),
     ) {
@@ -365,15 +374,23 @@ private fun StepSub(text: String) {
     )
 }
 
+/**
+ * Phase 100 - the flow's primary action is the same gradient CTA the tour uses
+ * (`ui/components/GradientButton.kt`), so both halves of onboarding press the
+ * same way. The two gradient ends are the theme's `primary` and `tertiary`, and
+ * the ink on them is the theme's `onPrimary` - the roles Material 3 already
+ * guarantees a readable pairing for (and `ChromeContrastTest` already audits).
+ */
 @Composable
 private fun PrimaryButton(label: String, enabled: Boolean = true, onClick: () -> Unit) {
-    Button(
+    val scheme = MaterialTheme.colorScheme
+    GradientButton(
+        label = label,
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp),
-    ) { Text(label) }
+        brush = codecAccentGradient(scheme.primary, scheme.tertiary),
+        onAccent = scheme.onPrimary,
+    )
 }
 
 /** A card whose "picture" is the real first line of the file it creates. */
@@ -388,11 +405,18 @@ private fun ChoiceCard(
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
-        color = if (selected) scheme.primary.copy(alpha = 0.10f) else scheme.surfaceVariant,
+        color = if (selected) scheme.primary.copy(alpha = 0.12f) else scheme.surfaceVariant,
         shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L)),
+        // Phase 100 - the chosen card is edged with the accent gradient at 2 dp
+        // and marked with a tick, so "which one did I pick" is answered by shape
+        // and colour instead of by a tint that differs by 2 %.
         border = BorderStroke(
-            width = if (selected) 1.5.dp else 1.dp,
-            color = if (selected) scheme.primary.copy(alpha = 0.55f) else scheme.outlineVariant,
+            width = if (selected) 2.dp else 1.dp,
+            brush = if (selected) {
+                codecAccentGradient(scheme.primary, scheme.tertiary)
+            } else {
+                Brush.horizontalGradient(listOf(scheme.outlineVariant, scheme.outlineVariant))
+            },
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -418,7 +442,13 @@ private fun ChoiceCard(
                     text = sample,
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = CodecType.codeFamily,
-                    color = if (selected) scheme.primary else scheme.onSurfaceVariant,
+                    // Phase 100 - this line stays `onSurfaceVariant` even when
+                    // the card is chosen. Drawn in `primary` on the tinted card
+                    // it measured 3.86:1 for most accents (and 3.96:1 at
+                    // Phase 99's 10 % tint): under AA, for a line that is body
+                    // text, not a graphic. The chosen card is carried by the
+                    // gradient edge, the tick and the tint instead.
+                    color = scheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = CodecTokens.space(CodecTokens.Space.XXS)),
                 )
                 Text(
@@ -574,7 +604,9 @@ private fun LibraryDoor(label: String, onClick: () -> Unit) {
  * Phase 99 - S1 is the welcome beat the owner's brief asks for: the CodeC mark
  * centred, the app's promise under it, and then what this flow will really do
  * (the three numbered answers). The two exits stay where Phase 97 put them:
- * *Let us go*, and *Skip setup* - which is the sample game, unchanged.
+ * *Let us go*, and *Skip setup* - which is the sample game, unchanged. Phase 100
+ * gave the mark its accent ring, so S1 stays one picture and one sentence before
+ * the choices.
  */
 @Composable
 private fun WelcomeStep(onSkip: () -> Unit, onContinue: () -> Unit) {
@@ -583,14 +615,7 @@ private fun WelcomeStep(onSkip: () -> Unit, onContinue: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Image(
-                painter = painterResource(R.drawable.app_mark),
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(top = CodecTokens.space(CodecTokens.Space.XL))
-                    .size(WelcomeMarkSize)
-                    .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL))),
-            )
+            WelcomeMark()
             Text(
                 text = SetupFlowCopy.WELCOME_TITLE,
                 style = MaterialTheme.typography.headlineMedium,
@@ -626,6 +651,43 @@ private fun WelcomeStep(onSkip: () -> Unit, onContinue: () -> Unit) {
                 .fillMaxWidth()
                 .heightIn(min = CodecTokens.MIN_TOUCH.dp),
         ) { Text(SetupFlowCopy.SKIP_LABEL, textAlign = TextAlign.Center) }
+    }
+}
+
+/**
+ * Phase 100 - the centred logo, wearing the accent as a 2 dp ring rather than a
+ * flat plate. The tagline below it stays the only other thing on the first
+ * screen, which is the whole brief: logo, tagline, then the options.
+ */
+@Composable
+private fun WelcomeMark() {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL))
+    Box(
+        modifier = Modifier
+            .padding(top = CodecTokens.space(CodecTokens.Space.XL))
+            .size(WelcomeMarkSize)
+            .background(codecAccentGradient(scheme.primary, scheme.tertiary), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        // The inner plate is inset by the ring's width, so the gradient reads as
+        // an outline around the mark itself.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(WelcomeRing)
+                .clip(shape)
+                .background(scheme.surface),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.app_mark),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape),
+            )
+        }
     }
 }
 
@@ -1002,11 +1064,13 @@ private fun BuildingStep(
         // Phase 99 - the honest bar: it fills with the files the seeder has
         // really written, never with a timer. The rows below are the same fact,
         // one line per file.
-        LinearProgressIndicator(
-            progress = { if (plan.files.isEmpty()) 1f else written.size.toFloat() / plan.files.size },
+        GradientProgress(
+            progress = if (plan.files.isEmpty()) 1f else written.size.toFloat() / plan.files.size,
+            brush = codecAccentGradient(
+                MaterialTheme.colorScheme.primary,
+                MaterialTheme.colorScheme.tertiary,
+            ),
             modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
         Spacer(Modifier.height(CodecTokens.space(CodecTokens.Space.S)))
         Column(

@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -33,9 +34,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -66,13 +67,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.GradientButton
 import com.codeci.ide.ui.components.StepArt
 import com.codeci.ide.ui.navigation.BackAction
 import com.codeci.ide.ui.navigation.BackRouter
 import com.codeci.ide.ui.navigation.BackState
 import com.codeci.ide.ui.theme.CodecMotion
-import com.codeci.ide.ui.theme.CodecPalette
 import com.codeci.ide.ui.theme.CodecTokens
+import com.codeci.ide.ui.theme.OnboardingStage
 import com.codeci.ide.ui.theme.rememberMotionSpecs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -260,15 +262,20 @@ private fun FirstRunStories(
         }
     }
 
-    val background = MaterialTheme.colorScheme.background
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val swipeThresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) {
         CodecTokens.space(CodecTokens.Space.XXL).toPx()
     }
+    // Phase 100 - the tour is staged, not themed: it runs before the app has a
+    // theme (that is one of the setup's answers), so it uses OnboardingStage's
+    // fixed deep surface and ink instead of MaterialTheme's roles. Every pair of
+    // colours here is contrast-tested (OnboardingContrastTest).
+    val stageInk = Color(OnboardingStage.ON_STAGE)
+    val stageMuted = Color(OnboardingStage.ON_STAGE_MUTED)
+    val accent = Color(OnboardingStage.ACCENT_FROM)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(background, surfaceVariant.copy(alpha = 0.36f))))
+            .background(OnboardingStage.backdrop())
     ) {
         Column(
             modifier = Modifier
@@ -288,7 +295,12 @@ private fun FirstRunStories(
                         modifier = Modifier
                             .size(CodecTokens.space(CodecTokens.Space.HUGE))
                             .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)))
-                            .background(Color(CodecPalette.SURFACE_PANEL)),
+                            .background(Color(OnboardingStage.STAGE_CARD))
+                            .border(
+                                width = 1.dp,
+                                color = Color(OnboardingStage.STAGE_STROKE),
+                                shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Image(
@@ -303,17 +315,19 @@ private fun FirstRunStories(
                             text = "CodeC",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
+                            color = stageInk,
                         )
                         Text(
                             text = "APP TOUR",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = stageMuted,
                         )
                     }
                 }
                 if (page < INTRO_PAGE_COUNT - 1) {
                     TextButton(
                         onClick = { page = INTRO_PAGE_COUNT - 1 },
+                        colors = ButtonDefaults.textButtonColors(contentColor = accent),
                         modifier = Modifier
                             .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH))
                             .semantics { contentDescription = "Skip to agreement" },
@@ -353,38 +367,50 @@ private fun FirstRunStories(
                     label = "first-run-story",
                 ) { currentPage ->
                     val current = INTRO_STORIES[currentPage]
-                    Column(
+                    // Phase 100 - the page is a card: one reading surface with a
+                    // hairline, so the art, the words and the controls read as
+                    // one object instead of floating on the backdrop.
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.L)),
+                        shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL)),
+                        color = Color(OnboardingStage.STAGE_CARD),
+                        border = BorderStroke(1.dp, Color(OnboardingStage.STAGE_STROKE)),
                     ) {
-                        // Phase 99 — the shared illustration card (the setup
-                        // flow draws the same one); the reveal stays this
-                        // screen's own reduced-motion-aware value.
-                        StepArt(
-                            art = current.art,
-                            description = current.artDescription,
-                            reveal = heroReveal.value,
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .widthIn(max = CodecTokens.space(CodecTokens.Space.HUGE * 7f))
-                                .aspectRatio(1f),
-                        )
-                        IntroHeading(story = current)
-                        current.caption?.let { caption ->
-                            Text(
-                                text = caption,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
+                                .padding(CodecTokens.space(CodecTokens.Space.L)),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.L)),
+                        ) {
+                            // Phase 99 — the shared illustration card (the setup
+                            // flow draws the same one); the reveal stays this
+                            // screen's own reduced-motion-aware value.
+                            StepArt(
+                                art = current.art,
+                                description = current.artDescription,
+                                reveal = heroReveal.value,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .widthIn(max = CodecTokens.space(CodecTokens.Space.HUGE * 7f))
+                                    .aspectRatio(1f),
                             )
-                        }
-                        if (currentPage == INTRO_PAGE_COUNT - 1) {
-                            PrivacySummary(onReadDetails = { showPrivacyDetails = true })
-                            PrivacyAgreement(
-                                accepted = privacyAccepted,
-                                onAcceptedChange = { privacyAccepted = it },
-                            )
+                            IntroHeading(story = current, ink = stageInk, muted = stageMuted)
+                            current.caption?.let { caption ->
+                                Text(
+                                    text = caption,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = stageMuted,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            if (currentPage == INTRO_PAGE_COUNT - 1) {
+                                PrivacySummary(onReadDetails = { showPrivacyDetails = true })
+                                PrivacyAgreement(
+                                    accepted = privacyAccepted,
+                                    onAcceptedChange = { privacyAccepted = it },
+                                )
+                            }
                         }
                     }
                 }
@@ -418,11 +444,12 @@ private fun FirstRunStories(
                             else -> "Swipe left or right · auto-advances in 10 seconds"
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = stageMuted,
                         modifier = Modifier.weight(1f),
                     )
                     TextButton(
                         onClick = { timerPaused = !timerPaused },
+                        colors = ButtonDefaults.textButtonColors(contentColor = accent),
                         modifier = Modifier.heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
                     ) {
                         Text(if (timerPaused) "Resume timer" else "Pause timer", maxLines = 1)
@@ -437,6 +464,8 @@ private fun FirstRunStories(
                         OutlinedButton(
                             onClick = { page-- },
                             enabled = !preparing,
+                            border = BorderStroke(1.dp, Color(OnboardingStage.STAGE_CONTROL_STROKE)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = stageInk),
                             modifier = Modifier
                                 .weight(0.85f)
                                 .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
@@ -444,27 +473,22 @@ private fun FirstRunStories(
                             Text("Back")
                         }
                     }
-                    Button(
+                    // Phase 100 - the primary action is the gradient CTA with the
+                    // pressed state (ui/components/GradientButton.kt).
+                    GradientButton(
+                        label = when {
+                            preparing -> "Preparing your first project…"
+                            page == INTRO_PAGE_COUNT - 1 -> "Agree & start coding"
+                            else -> "Next"
+                        },
                         onClick = {
                             if (page < INTRO_PAGE_COUNT - 1) page++ else onStart()
                         },
                         enabled = !preparing && (page < INTRO_PAGE_COUNT - 1 || privacyAccepted),
-                        modifier = Modifier
-                            .weight(1.4f)
-                            .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    ) {
-                        Text(
-                            text = when {
-                                preparing -> "Preparing your first project…"
-                                page == INTRO_PAGE_COUNT - 1 -> "Agree & start coding"
-                                else -> "Next"
-                            },
-                            maxLines = 1,
-                        )
-                    }
+                        brush = OnboardingStage.accent(),
+                        onAccent = Color(OnboardingStage.ON_ACCENT),
+                        modifier = Modifier.weight(1.4f),
+                    )
                 }
             }
         }
@@ -507,21 +531,25 @@ private const val INTRO_PAGE_COUNT = 5
  * so it follows the accent the user picked in setup.
  */
 @Composable
-private fun IntroHeading(story: IntroStory) {
+private fun IntroHeading(story: IntroStory, ink: Color, muted: Color) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
     ) {
+        // The chip wears the accent gradient as a hairline, not as a fill: the
+        // gradient is the page's one colour statement, and a filled pill this
+        // wide would out-shout the heading it introduces.
         Surface(
             shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL)),
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = Color(OnboardingStage.STAGE_CHIP),
+            border = BorderStroke(1.dp, OnboardingStage.accent()),
         ) {
             Text(
                 text = story.eyebrow,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = Color(OnboardingStage.ON_STAGE_CHIP),
                 maxLines = 1,
                 modifier = Modifier.padding(
                     horizontal = CodecTokens.space(CodecTokens.Space.M),
@@ -534,13 +562,13 @@ private fun IntroHeading(story: IntroStory) {
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = ink,
         )
         Text(
             text = story.body,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = muted,
         )
     }
 }
@@ -582,9 +610,15 @@ private fun IntroDots(page: Int, progress: Float) {
                     .clip(CircleShape)
                     .background(
                         when {
-                            index < page -> MaterialTheme.colorScheme.primary
-                            current -> MaterialTheme.colorScheme.primary.copy(alpha = 0.32f)
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
+                            // Phase 100 - progress is the gradient; what is left
+                            // is a quiet lane, not a second colour.
+                            index < page || current -> OnboardingStage.accent()
+                            else -> Brush.horizontalGradient(
+                                listOf(
+                                    Color(OnboardingStage.ON_STAGE).copy(alpha = 0.18f),
+                                    Color(OnboardingStage.ON_STAGE).copy(alpha = 0.18f),
+                                )
+                            )
                         }
                     ),
             ) {
@@ -593,7 +627,7 @@ private fun IntroDots(page: Int, progress: Float) {
                         modifier = Modifier
                             .fillMaxHeight()
                             .fillMaxWidth(normalized)
-                            .background(MaterialTheme.colorScheme.primary),
+                            .background(OnboardingStage.accent()),
                     )
                 }
             }
@@ -611,6 +645,7 @@ private fun PrivacySummary(onReadDetails: () -> Unit) {
         PrivacyBullet("Git, package downloads and updates use the network only when you start them.")
         TextButton(
             onClick = onReadDetails,
+            colors = ButtonDefaults.textButtonColors(contentColor = Color(OnboardingStage.ACCENT_FROM)),
             modifier = Modifier.heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
         ) {
             Text("Read the full privacy summary")
@@ -629,12 +664,12 @@ private fun PrivacyBullet(text: String) {
             modifier = Modifier
                 .padding(top = CodecTokens.space(CodecTokens.Space.XS))
                 .size(CodecTokens.space(CodecTokens.Space.XS))
-                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                .background(OnboardingStage.accent(), CircleShape)
         )
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Color(OnboardingStage.ON_STAGE_MUTED),
             modifier = Modifier.weight(1f),
         )
     }
@@ -652,10 +687,19 @@ private fun PrivacyAgreement(accepted: Boolean, onAcceptedChange: (Boolean) -> U
                 onValueChange = onAcceptedChange,
             ),
         shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.M)),
-        color = if (accepted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.74f),
-        border = androidx.compose.foundation.BorderStroke(
+        color = Color(OnboardingStage.STAGE_CHIP),
+        border = BorderStroke(
             1.dp,
-            if (accepted) MaterialTheme.colorScheme.primary.copy(alpha = 0.72f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.42f),
+            if (accepted) {
+                OnboardingStage.accent()
+            } else {
+                Brush.horizontalGradient(
+                    listOf(
+                        Color(OnboardingStage.STAGE_CONTROL_STROKE),
+                        Color(OnboardingStage.STAGE_CONTROL_STROKE),
+                    )
+                )
+            },
         ),
     ) {
         Column(
@@ -663,20 +707,28 @@ private fun PrivacyAgreement(accepted: Boolean, onAcceptedChange: (Boolean) -> U
             verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.XXS)),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = accepted, onCheckedChange = null)
+                Checkbox(
+                    checked = accepted,
+                    onCheckedChange = null,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Color(OnboardingStage.ACCENT_FROM),
+                        checkmarkColor = Color(OnboardingStage.ON_ACCENT),
+                        uncheckedColor = Color(OnboardingStage.ON_STAGE_MUTED),
+                    ),
+                )
                 Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.XS)))
                 Text(
                     text = "I understand and accept this privacy summary.",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color(OnboardingStage.ON_STAGE),
                 )
             }
             if (!accepted) {
                 Text(
                     text = "Check this box to continue.",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(OnboardingStage.ON_STAGE_MUTED),
                     modifier = Modifier.padding(start = CodecTokens.space(CodecTokens.Space.HUGE)),
                 )
             }
