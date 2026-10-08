@@ -100,6 +100,23 @@ object UpdatePolicy {
     /** Hard ceiling for an APK download; a release asset bigger than this is an error. */
     const val MAX_APK_BYTES = 200L * 1024L * 1024L
 
+    /**
+     * Phase 102 — the download URL itself is part of the trust decision. The
+     * release JSON arrives over the same channel as everything else, so a
+     * tampered `browser_download_url` must not be able to point the downloader
+     * at an arbitrary host: only GitHub's own release hosts, over https, ever
+     * pass [preflight]. `*.githubusercontent.com` covers the asset CDN the
+     * browser_download_url redirects to; http and foreign hosts are refused.
+     */
+    fun isTrustedDownloadUrl(url: String): Boolean = try {
+        val uri = java.net.URI(url)
+        val host = uri.host?.lowercase() ?: return false
+        uri.scheme.equals("https", ignoreCase = true) &&
+            (host == "github.com" || host.endsWith(".githubusercontent.com"))
+    } catch (_: Exception) {
+        false
+    }
+
     fun isAppRelease(tag: String): Boolean = APP_TAG.matches(tag.trim())
 
     /**
@@ -163,6 +180,8 @@ object UpdatePolicy {
     fun preflight(asset: Asset): Verification = when {
         asset.downloadUrl.isBlank() ->
             Verification.NeverInstall("release asset has no download URL")
+        !isTrustedDownloadUrl(asset.downloadUrl) ->
+            Verification.NeverInstall("download URL is not a trusted GitHub host")
         asset.sizeBytes > MAX_APK_BYTES ->
             Verification.NeverInstall(
                 "release asset declares ${asset.sizeBytes} bytes (cap $MAX_APK_BYTES)"

@@ -106,7 +106,7 @@
     <string name="install_from_github">Install APK from GitHub</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="checking_update">Checking GitHub for app updates…</string>
-    <string name="update_found">Update available: v%1$s — downloading %2$s…</string>
+    <string name="update_found">Update available: v%1$s — %2$s. Review and confirm in the next dialog.</string>
     <string name="update_up_to_date">CodeC is up to date (v%1$s).</string>
     <string name="update_older_refused">Not installing: the newest release is v%1$s, which is older than this install (v%2$s).</string>
     <string name="update_none">No app releases published yet — only bootstrap packages exist on GitHub. Opening the Releases page.</string>
@@ -114,6 +114,14 @@
     <string name="update_no_checksum">This release has no checksum, so CodeC refuses to install it automatically. Opening the Releases page instead.</string>
     <string name="update_download_failed">Couldn\'t download the APK: %1$s. Opening the Releases page instead.</string>
     <string name="allow_unknown_sources">Allow CodeC IDE to install updates, then try again.</string>
+    <!-- Phase 102 — verified-update consent dialog, signature gate and the Play Protect heads-up. -->
+    <string name="update_confirm_title">Install update v%1$s?</string>
+    <string name="update_confirm_body">v%1$s — the download is SHA-256-checked against the release notes, and the APK signature is checked against the CodeC release key before any install.</string>
+    <string name="update_play_protect_notice">Play Protect may say Unsafe app blocked, built for an older Android. Expected: CodeC targets API 28 so downloaded compilers can run (the same compatibility mode Termux uses). With a matching checksum, Install anyway is safe.</string>
+    <string name="update_install">Install</string>
+    <string name="update_not_now">Not now</string>
+    <string name="update_sig_bad">The downloaded APK is NOT signed with the CodeC release key — refusing to install it. Opening the Releases page instead.</string>
+    <string name="update_sig_unreadable">This Android version cannot read the APK signature, so CodeC refuses the auto-install. Opening the Releases page instead.</string>
     <string name="safe_mode_banner">Safe mode: your settings are bypassed for this session only — nothing was changed or deleted on disk. Your projects are still here and can be exported.</string>
     <string name="safe_mode_dismiss">Dismiss the safe mode banner</string>
     <string name="report_last_crash">Report the last crash (log attached, nothing sent by itself)</string>

@@ -2272,3 +2272,32 @@ The screenshot observations and deterministic replay are kept separate in the [P
 - **Is any of this device-accepted?** Not yet. The code exists now, but formal device acceptance for the AI work remains POSTPONED to Level 12, where the eight visual checks from Phase 88.5 are listed.
 
 [Phase 88 brief](../phases/03-editor/chat-phase88/README.md) · [Level 11 spec](../roadmaps/ai-integration/11_AGENT_PHONE_PRESENTATION.md) · [security rules S1–S12](../roadmaps/ai-integration/00_AGENTIC_MAP_AND_SECURITY_RULES.md).
+
+## 62. Play Protect says "Unsafe app blocked — built for an older version of Android" (Phase 102)
+
+- **Symptom.** Installing `CodeC-IDE-<version>-universal.apk` from Downloads —
+  or accepting the in-app update — shows Google Play Protect's *Unsafe app
+  blocked* dialog: *"This app was built for an older version of Android and
+  doesn't include the latest privacy protections."*
+- **Why it is expected, not a broken download.** CodeC targets API 28 on
+  purpose: Android 10+ denies `execve()` inside an app's data directory for
+  apps targeting 29+, and that is exactly where the downloaded Clang and the
+  userland live (§1, §2). Termux ships the same compatibility mode and gets
+  the same dialog. Play Protect on recent Android flags any `targetSdk` far
+  below the current API, so every CodeC APK shows it, from every channel
+  (file manager, browser, in-app updater). It is a warning, not the hard
+  block: Android refuses installs outright only below API 23, and CodeC
+  targets 28.
+- **What to do.** (1) Check the file against the release page — name, size
+  and the `sha256:` lines; the in-app updater does this for you before it
+  ever hands an APK to the installer, and since Phase 102 it also verifies
+  the APK's SIGNATURE against the pinned release key on the phone. (2) Tap
+  **Install anyway** (recent Android confirms with fingerprint/PIN).
+- **What Phase 102 changed in the app.** The update now asks consent in a
+  dialog that names this notice before anything downloads; the handoff to
+  the system installer prefers a `PackageInstaller` session (no URI grant
+  leaves the app) and otherwise scopes the intent to the system package
+  installer; the download URL must be a GitHub host; and an APK whose
+  signature is neither the pinned release key nor the running install's own
+  key is refused with a reason. Fingerprint of the release key:
+  `docs/guides/UPLOAD_KEY_SETUP.md`.

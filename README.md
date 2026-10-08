@@ -65,6 +65,14 @@ CodeC brings an editor, compiler, terminal and project tools into one Android ap
 2. Download **`CodeC-IDE-<version>-universal.apk`**. There is one universal release APK—no ABI guessing.
 3. Check the release’s SHA-256 value if desired, allow Android’s **Install unknown apps** permission for your download source, then install.
 
+> **Play Protect notice (expected):** on recent Android, Google Play Protect
+> may show *Unsafe app blocked — this app was built for an older version of
+> Android*. That is the price of CodeC's compatibility mode — it targets
+> API 28 so downloaded compilers can run, the same mode Termux uses — not a
+> defect of your download. Verify the checksum (or let the in-app updater do
+> it, which also checks the APK signature) and choose **Install anyway**.
+> Details: [TROUBLESHOOTING §62](docs/guides/TROUBLESHOOTING.md).
+
 The published [v1.3.18 release](https://github.com/pabi277/CodeC/releases/tag/app-v1.3.18) is **7.22 MB** (7,217,532 bytes), versionCode **22**. Check Releases for newer versions rather than treating this snapshot as an automatic update check.
 
 In CodeC, **Settings → About → Check for updates** checks the app release channel, compares versions and verifies the published checksum before installation. A `userland-*` release is Linux setup data, **not** the CodeC app.

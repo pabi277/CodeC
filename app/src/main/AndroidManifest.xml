@@ -119,6 +119,12 @@
             android:name=".ui.services.TerminalForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Phase 102: status callback of the PackageInstaller session the
+             verified updater commits; only the system installer sends these. -->
+        <receiver
+            android:name=".ui.services.InstallStatusReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

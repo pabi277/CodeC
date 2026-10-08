@@ -1,7 +1,10 @@
 package com.codeci.ide.ui.services
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -260,18 +263,114 @@ class ApkUpdateManager(private val context: Context) {
         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
+    /**
+     * Phase 102 — authenticity gate, run AFTER [downloadVerified] returned
+     * Ready and BEFORE any handoff: the digest proved the bytes match the
+     * release notes (same channel), this proves WHO signed them. The
+     * platform reads the archive's signing certificate (v2/v3 on API 28+,
+     * the deprecated v1 route below); a platform that cannot read one gives
+     * [ApkSignaturePolicy.Verdict.Unverifiable] and the UI refuses the
+     * auto-install (browser instead) — same discipline as "no checksum,
+     * no install".
+     */
+    fun signatureVerdict(file: File): ApkSignaturePolicy.Verdict =
+        ApkSignaturePolicy.verdict(
+            apkCertDer = firstCert(
+                runCatching {
+                    packageManager().getPackageArchiveInfo(file.absolutePath, signatureFlags())
+                }.getOrNull()
+            ),
+            installedCertDer = firstCert(
+                runCatching {
+                    packageManager().getPackageInfo(context.packageName, signatureFlags())
+                }.getOrNull()
+            )
+        )
+
+    private fun packageManager(): PackageManager = context.packageManager
+
+    private fun signatureFlags(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else {
+            @Suppress("DEPRECATION")
+            PackageManager.GET_SIGNATURES
+        }
+
+    /** A `Signature` IS the certificate wrapper; `toByteArray()` is its DER. */
+    private fun firstCert(info: android.content.pm.PackageInfo?): ByteArray? {
+        if (info == null) return null
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
+        } else {
+            @Suppress("DEPRECATION")
+            info.signatures?.firstOrNull()?.toByteArray()
+        }
+    }
+
+    /**
+     * Phase 102 — hand the verified, signature-checked APK to the system.
+     * First choice is a PackageInstaller SESSION: the bytes go straight to
+     * the installer over a private pipe, no FileProvider URI grant leaves
+     * the app, and nothing else on the device can intercept the handoff.
+     * Only when a session cannot be created does the legacy FileProvider
+     * intent run — and then it is SCOPED via [InstallHandoffPolicy] to the
+     * system package installer, never implicit (the pre-102 hole: any app
+     * with an APK intent filter was a candidate for the read grant).
+     */
     fun installApk(file: File) {
+        if (installViaSession(file)) return
         val uri = FileProvider.getUriForFile(
             context,
             "${BuildConfig.APPLICATION_ID}.fileprovider",
             file
         )
+        val mime = "application/vnd.android.package-archive"
+        val probe = Intent(Intent.ACTION_VIEW).apply { setDataAndType(uri, mime) }
+        val candidates = packageManager().queryIntentActivities(probe, 0).map { ri ->
+            InstallHandoffPolicy.Resolver(
+                packageName = ri.activityInfo.packageName,
+                isSystemApp = ri.activityInfo.applicationInfo.flags and
+                    android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0
+            )
+        }
+        val target = InstallHandoffPolicy.pickInstallerPackage(candidates)
+        if (target == null) {
+            // No system installer resolved at all: the implicit intent is the
+            // documented last resort (a device with no package installer has
+            // no install path to begin with), and it is logged.
+            AppLogger.e("Update", "no system package installer resolved; implicit handoff as last resort")
+        }
         val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
+            setDataAndType(uri, mime)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            target?.let { setPackage(it) }
         }
         context.startActivity(intent)
+    }
+
+    /** The primary Phase-102 path; false sends [installApk] to the scoped fallback. */
+    private fun installViaSession(file: File): Boolean = try {
+        val installer = packageManager().packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        params.setSize(file.length())
+        val sessionId = installer.createSession(params)
+        installer.openSession(sessionId).use { session ->
+            session.openWrite(file.name, 0, file.length()).use { out ->
+                file.inputStream().use { input -> input.copyTo(out) }
+                session.fsync(out)
+            }
+            val statusIntent = Intent(context, InstallStatusReceiver::class.java)
+            val pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT or
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+            val pending = PendingIntent.getBroadcast(context, sessionId, statusIntent, pendingFlags)
+            session.commit(pending.intentSender)
+        }
+        true
+    } catch (e: Exception) {
+        AppLogger.e("Update", "PackageInstaller session failed; falling back to scoped intent", e)
+        false
     }
 
     fun openReleasesPage() {
