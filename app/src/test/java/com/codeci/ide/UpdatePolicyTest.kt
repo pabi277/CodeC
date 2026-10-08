@@ -25,8 +25,14 @@ class UpdatePolicyTest {
         notes: String = ""
     ) = AppRelease(tag = tag, title = tag, draft = draft, prerelease = prerelease, notesBody = notes, assets = assets)
 
+    // Phase 102 — the helper URL must itself pass the host pin, or every
+    // preflight Ok assertion below would fail for the wrong reason.
     private fun apk(name: String, size: Long = 24_000_000L) =
-        UpdatePolicy.Asset(name = name, sizeBytes = size, downloadUrl = "https://example.test/$name")
+        UpdatePolicy.Asset(
+            name = name,
+            sizeBytes = size,
+            downloadUrl = "https://github.com/pabi277/CodeC/releases/download/app-v1.0.0/$name"
+        )
 
     // ---- channel: only app-v* tags are app updates ----
 
@@ -149,6 +155,41 @@ class UpdatePolicyTest {
                 is UpdatePolicy.Verification.NeverInstall
         )
         assertEquals(UpdatePolicy.Verification.Ok, UpdatePolicy.preflight(apk("x.apk")))
+    }
+
+    // ---- Phase 102: the download URL is part of the trust decision ----
+
+    @Test
+    fun `download URLs must be GitHub hosts over https`() {
+        assertTrue(
+            UpdatePolicy.isTrustedDownloadUrl(
+                "https://github.com/pabi277/CodeC/releases/download/app-v1.4.0/x.apk"
+            )
+        )
+        assertTrue(
+            UpdatePolicy.isTrustedDownloadUrl(
+                "https://objects.githubusercontent.com/github-production-release-asset/x.apk"
+            )
+        )
+        assertFalse(
+            "a foreign host is refused",
+            UpdatePolicy.isTrustedDownloadUrl("https://evil.example/x.apk")
+        )
+        assertFalse(
+            "github.com.evil.example is NOT github.com",
+            UpdatePolicy.isTrustedDownloadUrl("https://github.com.evil.example/x.apk")
+        )
+        assertFalse(
+            "cleartext is refused",
+            UpdatePolicy.isTrustedDownloadUrl("http://github.com/pabi277/CodeC/x.apk")
+        )
+        assertFalse(UpdatePolicy.isTrustedDownloadUrl("not a url"))
+        assertTrue(
+            "preflight inherits the host pin",
+            UpdatePolicy.preflight(
+                UpdatePolicy.Asset("x.apk", 100L, "https://evil.example/x.apk")
+            ) is UpdatePolicy.Verification.NeverInstall
+        )
     }
 
     // ---- post-download gate ----

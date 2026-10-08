@@ -65,6 +65,14 @@ CodeC brings an editor, compiler, terminal and project tools into one Android ap
 2. Download **`CodeC-IDE-<version>-universal.apk`**. There is one universal release APK—no ABI guessing.
 3. Check the release’s SHA-256 value if desired, allow Android’s **Install unknown apps** permission for your download source, then install.
 
+> **Play Protect notice (expected):** on recent Android, Google Play Protect
+> may show *Unsafe app blocked — this app was built for an older version of
+> Android*. That is the price of CodeC's compatibility mode — it targets
+> API 28 so downloaded compilers can run, the same mode Termux uses — not a
+> defect of your download. Verify the checksum (or let the in-app updater do
+> it, which also checks the APK signature) and choose **Install anyway**.
+> Details: [TROUBLESHOOTING §62](docs/guides/TROUBLESHOOTING.md).
+
 The published [v1.3.18 release](https://github.com/pabi277/CodeC/releases/tag/app-v1.3.18) is **7.22 MB** (7,217,532 bytes), versionCode **22**. Check Releases for newer versions rather than treating this snapshot as an automatic update check.
 
 In CodeC, **Settings → About → Check for updates** checks the app release channel, compares versions and verifies the published checksum before installation. A `userland-*` release is Linux setup data, **not** the CodeC app.
@@ -286,6 +294,26 @@ Preserve signed package metadata, CodeC’s `cc` TCC frontend, the real shell bi
 For the UI’s historical design context, see the [Phase 64 handoff](docs/phases/09-onboarding-setup/chat-phase64/HANDOFF.md), [UI review](docs/journal/UI_POLISH_REVIEW_20260927.md) and [first-run research](docs/research/FIRST_RUN_EXPERIENCE_RESEARCH_20260930.md). These records are history, not permission to restart completed work.
 
 </details>
+
+## License
+
+**Copyright (C) 2026 CodeC contributors.** CodeC IDE is free software: you can
+redistribute it and/or modify it under the terms of the **GNU General Public
+License, version 3 or (at your option) any later version** (GPL-3.0-or-later);
+the full text is in [LICENSE](LICENSE). It is distributed in the hope that it
+will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE — see the license for the
+details.
+
+Third-party components keep their own licenses; the notices ship inside the
+app under `assets/licenses/` — sora-editor and its TextMate/LSP modules
+(LGPL-2.1), VS Code TextMate grammars (MIT), ZXing core (Apache-2.0), JetBrains
+Mono (OFL), Seti-UI icons (MIT), GitHub gitignore templates (CC0) and friendly
+snippets (MIT) — and the bundled TCC compiler is LGPL. The `codec-packages/`
+tree (package recipes and bootstrap tooling forked from the Termux method) is
+GPL-3.0, see [codec-packages/LICENSE](codec-packages/LICENSE). Website course
+content is CC BY 4.0 with MIT example code, as stated in [Learn and
+explore](#learn-and-explore).
 
 ---
 

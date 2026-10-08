@@ -114,6 +114,14 @@ match these lines, and refuses to install at all when none are published:
   cannot write a file, stage or commit, or type in your terminal.
 - **On a small phone a code block's contrast is modest.** Fenced code in an
   answer is readable, but not high-contrast on narrow screens.
+- **Play Protect calls every CodeC APK "built for an older Android".** CodeC
+  targets API 28 on purpose — that compatibility mode is what lets the
+  downloaded compilers run on Android 10+ (Termux ships the same mode) — and
+  recent Play Protect flags exactly that. The warning is expected: check the
+  checksum, tap **Install anyway**. Since Phase 102 the in-app updater shows
+  this notice before you consent, verifies the APK signature against the
+  release key, and hands the APK to the system installer over a private
+  session instead of a broadcast intent.
 - Opening a huge folder from the file picker can be slow on low-RAM phones;
   if it hangs, back out and open a smaller subfolder.
 - Device-to-device restore and cloud backup carry **your projects only** —

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
@@ -198,6 +199,15 @@ fun SettingsScreen(
     var settingsQuery by rememberSaveable { mutableStateOf("") }
     var foldedSectionsCsv by remember {
         mutableStateOf(SettingsDisclosure.initialCollapsedCsv())
+    }
+    // Phase 102 — the verified-update consent point. One tap must no longer
+    // run straight from "an update exists" to a system install: the dialog
+    // this state drives is where the user consents AND where the Play
+    // Protect heads-up lives (the APK targets API 28 on purpose, so recent
+    // Android will call it "built for an older version" — expected, not
+    // unsafe). Null means no dialog.
+    var pendingUpdate by remember {
+        mutableStateOf<com.codeci.ide.ui.services.UpdateCheck.UpdateAvailable?>(null)
     }
     val foldedSections = remember(foldedSectionsCsv) { SettingsDisclosure.parse(foldedSectionsCsv) }
     val settingsView = remember(settingsQuery, foldedSections) {
@@ -1293,9 +1303,52 @@ fun SettingsScreen(
                                     context.startActivity(updater.installPermissionIntent())
                                     return@launch
                                 }
-                                when (val result = updater.downloadVerified(check)) {
+                                // Phase 102 — consent before any download: the
+                                // dialog names the version, the checksum contract
+                                // and the expected Play Protect notice.
+                                pendingUpdate = check
+                            }
+                        }
+                    }
+                }
+            )
+            // Phase 102 — the verified-update consent dialog. INSTALL runs the
+            // old automatic path (download → size+SHA-256 gate) PLUS the new
+            // signature gate: the APK must be signed by the pinned release key
+            // or the running install's own key, else the browser, never an
+            // install. NOT NOW dismisses; nothing is downloaded until consent.
+            pendingUpdate?.let { update ->
+                val updateText =
+                    com.codeci.ide.ui.services.UpdatePolicy.Version.parse(update.release.tag)?.text
+                        ?: update.release.tag
+                AlertDialog(
+                    onDismissRequest = { pendingUpdate = null },
+                    title = { Text(stringResource(com.codeci.ide.R.string.update_confirm_title, updateText)) },
+                    text = {
+                        Column {
+                            Text(stringResource(com.codeci.ide.R.string.update_confirm_body, updateText))
+                            Spacer(Modifier.height(CodecTokens.space(Space.S)))
+                            Text(stringResource(com.codeci.ide.R.string.update_play_protect_notice))
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            pendingUpdate = null
+                            scope.launch {
+                                val updater = com.codeci.ide.ui.services.ApkUpdateManager(context)
+                                when (val result = updater.downloadVerified(update)) {
                                     is com.codeci.ide.ui.services.DownloadResult.Ready ->
-                                        updater.installApk(result.file)
+                                        when (updater.signatureVerdict(result.file)) {
+                                            com.codeci.ide.ui.services.ApkSignaturePolicy.Verdict.Unverifiable -> {
+                                                Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_sig_unreadable), Toast.LENGTH_LONG).show()
+                                                updater.openReleasesPage()
+                                            }
+                                            is com.codeci.ide.ui.services.ApkSignaturePolicy.Verdict.WrongKey -> {
+                                                Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_sig_bad), Toast.LENGTH_LONG).show()
+                                                updater.openReleasesPage()
+                                            }
+                                            else -> updater.installApk(result.file)
+                                        }
                                     is com.codeci.ide.ui.services.DownloadResult.BrowserOnly -> {
                                         Toast.makeText(context, context.getString(com.codeci.ide.R.string.update_no_checksum), Toast.LENGTH_LONG).show()
                                         updater.openReleasesPage()
@@ -1310,10 +1363,15 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+                        }) { Text(stringResource(com.codeci.ide.R.string.update_install)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingUpdate = null }) {
+                            Text(stringResource(com.codeci.ide.R.string.update_not_now))
                         }
                     }
-                }
-            )
+                )
+            }
             // Phase 38.2 audit — the bare "Licenses" row that used to sit
             // here duplicated the "Open-source licenses" row above it and
             // controlled nothing; deleted.
