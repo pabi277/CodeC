@@ -298,13 +298,6 @@ private fun StepProgress(index: Int) {
 }
 
 /**
- * Phase 98 — the beat's chip: the same shape as the illustrated tour's eyebrow
- * (`FirstRunIntroScreen.IntroHeading`), so the two halves of onboarding are one
- * design. It is read as ordinary text by a screen reader, in front of the
- * heading `StepTitle` marks as a heading — the chip names the beat's job, which
- * is context, not decoration.
- */
-/**
  * Phase 99 - one illustration size for all six beats, so the steps line up. It
  * is deliberately modest: every beat still has to fit its own answers and its
  * *Continue* on a phone screen, and the art is the beat's anchor, not its
@@ -318,6 +311,13 @@ private val WelcomeMarkSize = 88.dp
 /** Phase 100 - the width of the gradient ring around the welcome mark. */
 private val WelcomeRing = 2.dp
 
+/**
+ * Phase 98 — the beat's chip: the same shape as the illustrated tour's eyebrow
+ * (`FirstRunIntroScreen.IntroHeading`), so the two halves of onboarding are one
+ * design. It is read as ordinary text by a screen reader, in front of the
+ * heading `StepTitle` marks as a heading — the chip names the beat's job, which
+ * is context, not decoration.
+ */
 @Composable
 private fun StepEyebrow(text: String) {
     val scheme = MaterialTheme.colorScheme
@@ -412,10 +412,17 @@ private fun ChoiceCard(
         // and colour instead of by a tint that differs by 2 %.
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
+            // Phase 101 - the resting edge is `outline`, not `outlineVariant`:
+            // in M3's dark baseline `outlineVariant` and `surfaceVariant` are
+            // the *same* value, so a resting option card had no edge at all,
+            // and "well-defined cards" (the 2026-10-08 brief) has to mean
+            // something a user can see. `outline` clears the non-text floor on
+            // the page the card sits on - 5.41:1 dark, 4.44:1 light - and both
+            // are pinned in OnboardingContrastTest.
             brush = if (selected) {
                 codecAccentGradient(scheme.primary, scheme.tertiary)
             } else {
-                Brush.horizontalGradient(listOf(scheme.outlineVariant, scheme.outlineVariant))
+                Brush.horizontalGradient(listOf(scheme.outline, scheme.outline))
             },
         ),
         modifier = Modifier

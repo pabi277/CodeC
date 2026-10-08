@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -54,6 +52,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -182,12 +181,16 @@ const val FIRST_RUN_LOGO_DURATION_MS = 2_000L
 
 @Composable
 private fun IntroLogoOpening() {
-    val background = MaterialTheme.colorScheme.background
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+    // Phase 101 - the opening is the first screen of the five, so it is on the
+    // same black stage: a themed flash here would be the one screen of the
+    // flow that did not look like the flow. The mark gets the accent ring,
+    // the wordmark and the eyebrow are pure white, and the gradient underline
+    // is the same accent the button and the dots use.
+    val shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL))
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(background, surfaceVariant.copy(alpha = 0.42f))))
+            .background(OnboardingStage.backdrop())
             .statusBarsPadding()
             .navigationBarsPadding(),
         contentAlignment = Alignment.Center,
@@ -196,27 +199,53 @@ private fun IntroLogoOpening() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.S)),
         ) {
-            Image(
-                painter = painterResource(R.drawable.app_mark),
-                contentDescription = "CodeC app logo",
+            Box(
                 modifier = Modifier
-                    .size(112.dp)
-                    .clip(RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.L))),
-            )
+                    .size(LogoMarkSize)
+                    .background(OnboardingStage.accent(), shape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(LogoRing)
+                        .clip(shape)
+                        .background(Color(OnboardingStage.STAGE_TOP)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.app_mark),
+                        contentDescription = "CodeC app logo",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(shape),
+                    )
+                }
+            }
             Text(
                 text = "CodeC",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = Color(OnboardingStage.ON_STAGE),
             )
             Text(
                 text = "YOUR POCKET CODING STUDIO",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color(OnboardingStage.ON_STAGE),
+            )
+            Box(
+                modifier = Modifier
+                    .width(CodecTokens.space(CodecTokens.Space.HUGE))
+                    .height(CodecTokens.space(CodecTokens.Space.XXS))
+                    .background(OnboardingStage.accent(), CircleShape),
             )
         }
     }
 }
+
+/** Phase 101 - the opening mark's size, and the width of its accent ring. */
+private val LogoMarkSize = CodecTokens.space(CodecTokens.Space.HUGE * 2f)
+private val LogoRing = CodecTokens.space(CodecTokens.Space.XXS)
 
 @Composable
 private fun FirstRunStories(
@@ -242,7 +271,9 @@ private fun FirstRunStories(
     }
 
     // This is elapsed story time, not decorative movement: it remains a real
-    // ten-second reading window even when Android's reduced-motion switch is on.
+    // reading window (CodecMotion.Duration.STORY) even when Android's
+    // reduced-motion switch is on - and the copy below promises the same
+    // number, so the two move together.
     LaunchedEffect(page, showPrivacyDetails, preparing, timerPaused) {
         if (!showPrivacyDetails && !preparing && !timerPaused) {
             val remainingMs = (
@@ -266,13 +297,14 @@ private fun FirstRunStories(
     val swipeThresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) {
         CodecTokens.space(CodecTokens.Space.XXL).toPx()
     }
-    // Phase 100 - the tour is staged, not themed: it runs before the app has a
+    // Phase 101 - the tour is staged, not themed: it runs before the app has a
     // theme (that is one of the setup's answers), so it uses OnboardingStage's
-    // fixed deep surface and ink instead of MaterialTheme's roles. Every pair of
-    // colours here is contrast-tested (OnboardingContrastTest).
+    // pure-black stage and pure-white ink instead of MaterialTheme's roles.
+    // There is exactly one text colour here - the brief asks for pure white
+    // type - so nothing on this screen takes a grey or an accent as text; the
+    // accent is left to the gradients (CTA, ring, dots, glow). Every pair is
+    // measured in OnboardingContrastTest.
     val stageInk = Color(OnboardingStage.ON_STAGE)
-    val stageMuted = Color(OnboardingStage.ON_STAGE_MUTED)
-    val accent = Color(OnboardingStage.ACCENT_FROM)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -321,14 +353,14 @@ private fun FirstRunStories(
                         Text(
                             text = "APP TOUR",
                             style = MaterialTheme.typography.labelSmall,
-                            color = stageMuted,
+                            color = stageInk,
                         )
                     }
                 }
                 if (page < INTRO_PAGE_COUNT - 1) {
                     TextButton(
                         onClick = { page = INTRO_PAGE_COUNT - 1 },
-                        colors = ButtonDefaults.textButtonColors(contentColor = accent),
+                        colors = ButtonDefaults.textButtonColors(contentColor = stageInk),
                         modifier = Modifier
                             .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH))
                             .semantics { contentDescription = "Skip to agreement" },
@@ -384,24 +416,26 @@ private fun FirstRunStories(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(CodecTokens.space(CodecTokens.Space.L)),
                         ) {
-                            // Phase 99 — the shared illustration card (the setup
-                            // flow draws the same one); the reveal stays this
-                            // screen's own reduced-motion-aware value.
-                            StepArt(
-                                art = current.art,
-                                description = current.artDescription,
-                                reveal = heroReveal.value,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .widthIn(max = CodecTokens.space(CodecTokens.Space.HUGE * 7f))
-                                    .aspectRatio(1f),
-                            )
-                            IntroHeading(story = current, ink = stageInk, muted = stageMuted)
+                            // Phase 101 - the step's icon: one custom 3D
+                            // render, ringed with the accent gradient and set
+                            // on its own halo. Still the one shared
+                            // illustration path (`StepArt`), so the render,
+                            // its required description and its reveal are
+                            // unchanged - only the frame around it is new, and
+                            // it is a *tile* now: an icon, not a poster.
+                            IntroIconTile(reveal = heroReveal.value) {
+                                StepArt(
+                                    art = current.art,
+                                    description = current.artDescription,
+                                    reveal = heroReveal.value,
+                                )
+                            }
+                            IntroHeading(story = current, ink = stageInk)
                             current.caption?.let { caption ->
                                 Text(
                                     text = caption,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = stageMuted,
+                                    color = stageInk,
                                     textAlign = TextAlign.Center,
                                 )
                             }
@@ -442,18 +476,30 @@ private fun FirstRunStories(
                             timerPaused -> "Paused · swipe or use Next to continue"
                             page == INTRO_PAGE_COUNT - 1 ->
                                 "Final story · the timer waits here for your agreement"
-                            else -> "Swipe left or right · auto-advances in 10 seconds"
+                            // The number is read off the constant, so the
+                            // sentence cannot outlive the window it promises.
+                            else -> "Swipe left or right · auto-advances in ${CodecMotion.Duration.STORY / 1000} seconds"
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = stageMuted,
+                        color = stageInk,
                         modifier = Modifier.weight(1f),
                     )
+                    // Phase 101 - the quiet half of the brief's "reduce the
+                    // Pause timer affordance". It was never decoration (a
+                    // reader who needs longer must be able to stop the clock),
+                    // so it keeps its 48 dp target and its full announcement;
+                    // what it loses is the second and third word, which is what
+                    // made a fallback control look like the page's action.
                     TextButton(
                         onClick = { timerPaused = !timerPaused },
-                        colors = ButtonDefaults.textButtonColors(contentColor = accent),
-                        modifier = Modifier.heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
+                        colors = ButtonDefaults.textButtonColors(contentColor = stageInk),
+                        modifier = Modifier
+                            .heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH))
+                            .semantics {
+                                contentDescription = if (timerPaused) "Resume timer" else "Pause timer"
+                            },
                     ) {
-                        Text(if (timerPaused) "Resume timer" else "Pause timer", maxLines = 1)
+                        Text(if (timerPaused) "Resume" else "Pause", maxLines = 1)
                     }
                 }
                 Row(
@@ -500,6 +546,15 @@ private fun FirstRunStories(
             onDismissRequest = { showPrivacyDetails = false },
             icon = { Icon(Icons.Filled.Security, contentDescription = null) },
             title = { Text("CodeC privacy, in plain language") },
+            // Phase 101 - the dialog is part of the stage, not a themed pop-up
+            // inside it. Before this, the modal took the app theme's colours:
+            // on a phone in light mode the tour flashed a white sheet over the
+            // black stage, and its worst-case text colour was a grey. Now every
+            // word in it is the stage's white, on the stage's card.
+            containerColor = Color(OnboardingStage.STAGE_CARD),
+            iconContentColor = Color(OnboardingStage.ON_STAGE),
+            titleContentColor = Color(OnboardingStage.ON_STAGE),
+            textContentColor = Color(OnboardingStage.ON_STAGE),
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -513,12 +568,15 @@ private fun FirstRunStories(
                     Text(
                         text = "More details, including the full permission table, are available in Settings → About → Privacy & permissions and in the CodeC repository's privacy note.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color(OnboardingStage.ON_STAGE),
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPrivacyDetails = false }) { Text("Got it") }
+                TextButton(
+                    onClick = { showPrivacyDetails = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(OnboardingStage.ON_STAGE)),
+                ) { Text("Got it") }
             },
         )
     }
@@ -528,11 +586,12 @@ private const val INTRO_PAGE_COUNT = 5
 
 /**
  * Phase 98 — eyebrow chip, bold heading, subtext: the shape the owner's
- * reference tour uses, centred. The chip is the theme's own container colour,
- * so it follows the accent the user picked in setup.
+ * reference tour uses, centred. Phase 101 dropped the second ink: every word
+ * here is the stage's pure white, and the chip is a dark fill carrying the
+ * accent gradient as its hairline.
  */
 @Composable
-private fun IntroHeading(story: IntroStory, ink: Color, muted: Color) {
+private fun IntroHeading(story: IntroStory, ink: Color) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -550,7 +609,7 @@ private fun IntroHeading(story: IntroStory, ink: Color, muted: Color) {
                 text = story.eyebrow,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(OnboardingStage.ON_STAGE_CHIP),
+                color = Color(OnboardingStage.ON_STAGE),
                 maxLines = 1,
                 modifier = Modifier.padding(
                     horizontal = CodecTokens.space(CodecTokens.Space.M),
@@ -569,16 +628,64 @@ private fun IntroHeading(story: IntroStory, ink: Color, muted: Color) {
             text = story.body,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = muted,
+            color = ink,
         )
+    }
+}
+
+/**
+ * Phase 101 — the step icon's tile. `HUGE * 3.5f` is 168 dp: the same size the
+ * setup's six cards use, so the two halves of onboarding frame their art
+ * identically. It is a token expression because this file is one of the six
+ * `TokenAdoptionTest` holds to the scale.
+ */
+private val IconTileSize = CodecTokens.space(CodecTokens.Space.HUGE * 3.5f)
+
+/**
+ * Phase 101 — the step's 3D icon: the page's render inside a rounded tile,
+ * ringed with the accent gradient and set on a soft accent halo.
+ *
+ * The tile is *chrome around* [StepArt] rather than a second illustration path:
+ * the render, its required description and its reduced-motion reveal all still
+ * come from the one shared card (Phase 99's rule). What changed is the
+ * framing — at 176 dp with a gradient ring, the render reads as the step's
+ * custom 3D **icon**, which is what the brief asks each step to feature.
+ */
+@Composable
+private fun IntroIconTile(reveal: Float, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(CodecTokens.radius(CodecTokens.Radius.XL))
+    Box(
+        // Room for the halo, and no more: the glow is an edge, not a layout.
+        modifier = Modifier.size(IconTileSize * 1.3f),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            // The halo rides the same entrance as the tile it lights. On black
+            // a 22 % glow is the first thing the eye finds, so it must not be
+            // there before the icon it belongs to.
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(reveal.coerceIn(0f, 1f))
+                .background(OnboardingStage.iconGlow()),
+        )
+        Box(
+            modifier = Modifier
+                .size(IconTileSize)
+                .clip(shape)
+                .border(width = 2.dp, brush = OnboardingStage.accent(), shape = shape),
+            contentAlignment = Alignment.Center,
+        ) {
+            content()
+        }
     }
 }
 
 /**
  * Phase 98 — the progress indicator, at the bottom of the tour (the owner's
  * reference, and where a thumb is not covering the words). One dot per story;
- * the current dot is a wide pill that fills with the page's real ten-second
- * window, so it measures something true rather than decorating. Screen readers
+ * the current dot is a wide pill that fills with the page's real window
+ * (`CodecMotion.Duration.STORY`), so it measures something true rather than
+ * decorating - and the copy under it reads the same number. Screen readers
  * get the page and the elapsed fraction in one sentence.
  */
 @Composable
@@ -611,13 +718,13 @@ private fun IntroDots(page: Int, progress: Float) {
                     .clip(CircleShape)
                     .background(
                         when {
-                            // Phase 100 - progress is the gradient; what is left
-                            // is a quiet lane, not a second colour.
+                            // Phase 101 - progress is the gradient; what is
+                            // left is the stage's own lane colour.
                             index < page || current -> OnboardingStage.accent()
                             else -> Brush.horizontalGradient(
                                 listOf(
-                                    Color(OnboardingStage.ON_STAGE).copy(alpha = 0.18f),
-                                    Color(OnboardingStage.ON_STAGE).copy(alpha = 0.18f),
+                                    Color(OnboardingStage.STAGE_LANE),
+                                    Color(OnboardingStage.STAGE_LANE),
                                 )
                             )
                         }
@@ -646,7 +753,7 @@ private fun PrivacySummary(onReadDetails: () -> Unit) {
         PrivacyBullet("Git, package downloads and updates use the network only when you start them.")
         TextButton(
             onClick = onReadDetails,
-            colors = ButtonDefaults.textButtonColors(contentColor = Color(OnboardingStage.ACCENT_FROM)),
+            colors = ButtonDefaults.textButtonColors(contentColor = Color(OnboardingStage.ON_STAGE)),
             modifier = Modifier.heightIn(min = CodecTokens.space(CodecTokens.MIN_TOUCH)),
         ) {
             Text("Read the full privacy summary")
@@ -670,7 +777,7 @@ private fun PrivacyBullet(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(OnboardingStage.ON_STAGE_MUTED),
+            color = Color(OnboardingStage.ON_STAGE),
             modifier = Modifier.weight(1f),
         )
     }
@@ -714,7 +821,10 @@ private fun PrivacyAgreement(accepted: Boolean, onAcceptedChange: (Boolean) -> U
                     colors = CheckboxDefaults.colors(
                         checkedColor = Color(OnboardingStage.ACCENT_FROM),
                         checkmarkColor = Color(OnboardingStage.ON_ACCENT),
-                        uncheckedColor = Color(OnboardingStage.ON_STAGE_MUTED),
+                        // A white ring, not a grey one: the brief's
+                        // high-contrast rule applies to controls too, and the
+                        // box has to read as a box before it is ticked.
+                        uncheckedColor = Color(OnboardingStage.ON_STAGE),
                     ),
                 )
                 Spacer(Modifier.width(CodecTokens.space(CodecTokens.Space.XS)))
@@ -729,7 +839,7 @@ private fun PrivacyAgreement(accepted: Boolean, onAcceptedChange: (Boolean) -> U
                 Text(
                     text = "Check this box to continue.",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(OnboardingStage.ON_STAGE_MUTED),
+                    color = Color(OnboardingStage.ON_STAGE),
                     modifier = Modifier.padding(start = CodecTokens.space(CodecTokens.Space.HUGE)),
                 )
             }

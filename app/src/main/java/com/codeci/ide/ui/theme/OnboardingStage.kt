@@ -4,75 +4,101 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /**
- * Phase 100 — the onboarding stage: a deep, modern dark surface with a gradient
- * accent, used by the illustrated tour and by the setup's welcome beat.
+ * Phase 101 — the onboarding stage, at its final contrast: **pure black, pure
+ * white, and the accent kept for the gradients alone**.
  *
- * Four decisions, each of them checkable (`OnboardingContrastTest`,
- * `OnboardingStyleTest`):
+ * The owner's brief (2026-10-08): *"a deep black background and pure white,
+ * high-contrast typography for all text … sleek, custom 3D icons and smooth,
+ * modern gradients for buttons and status indicators."* That is one decision
+ * stated three ways, and it is why this object looks the way it does:
  *
- * 1. **The tour is staged dark on purpose.** The tour runs *before* the app has
- *    a theme (the theme is one of the answers the setup collects), so it cannot
- *    take its colours from the user's palette. It uses this stage instead of the
- *    live `MaterialTheme` — a fixed, high-contrast surface that looks the same
- *    on every device and in every system mode.
+ * 1. **The stage is black, not "dark".** [STAGE_TOP] is `#000000` — the darkest
+ *    value a display can show — with a whisper of a wash to [STAGE_BOTTOM], so
+ *    the screen has depth without a second colour. White on it measures
+ *    **21.00:1**, the highest ratio WCAG defines: there is no better contrast
+ *    available on this device.
+ * 2. **There is exactly one text colour: [ON_STAGE] = `#FFFFFF`.** Headings,
+ *    body, captions, the chip's label, the skip and pause links, the agreement
+ *    and its hint — all pure white. Hierarchy is carried by *size and weight*
+ *    (headline / body / label), not by grey, which is also why there is no
+ *    `ON_STAGE_MUTED` in this file any more. The accent never becomes text:
+ *    it lives on fills, rings and indicators, where it is read as colour
+ *    rather than as a word.
+ * 3. **The accent is the gradient, and the gradient is the state.** The CTA
+ *    ([accent]), the step icon's ring, the progress dots and the glow behind
+ *    the icon all use the same `#3DDC84 → #2BC4B0` run; the ink on it
+ *    ([ON_ACCENT]) clears AA on *both* ends (9.14:1 and 7.48:1).
  *
- *    The **setup** beats do *not* use it: S4 re-themes the app live, because
- *    "these change right here" is the beat's whole point, so its surfaces stay
- *    the theme's own (a fresh install is dark, which is the same deep surface
- *    family). The seam is deliberate and recorded in PART_100.
+ * The tour is staged rather than themed because it runs *before* the app has a
+ * theme — the theme is one of the answers the setup collects. The setup's own
+ * beats stay theme-driven on purpose (S4 re-themes the app live); that seam is
+ * recorded in `PART_100` and pinned by `OnboardingStyleTest`.
  *
- * 2. **Every text pair clears WCAG AA by a wide margin**, not by a hair. The
- *    tightest pair here is [ON_STAGE_MUTED] on [STAGE_CARD] at 8.9:1; the
- *    gradient's own ink is 7.5:1 on the *lighter* end of the gradient.
- *
- * 3. **The gradient is this project's own green → teal**, not a stock purple.
- *    The setup's gradients use `primary → tertiary`, so they follow whatever
- *    accent the user picked; the tour's cannot, so it uses these two.
- *
- * 4. **Nothing here is a `MaterialTheme` role.** `Color` from
- *    `ui.graphics` only, so this object is host-testable and the ratios above
- *    can be asserted without a device.
+ * Everything here is plain `Int` colour math, so `OnboardingContrastTest` can
+ * measure each pair on the JVM instead of on a device.
  */
 object OnboardingStage {
 
-    /** The backdrop: a vertical wash, top to bottom. */
-    const val STAGE_TOP = 0xFF0A0E0C.toInt()
-    const val STAGE_BOTTOM = 0xFF111A15.toInt()
+    /** The backdrop: pure black, top to bottom, with the faintest rising cast. */
+    const val STAGE_TOP = 0xFF000000.toInt()
+    const val STAGE_BOTTOM = 0xFF060A08.toInt()
 
-    /** The content card the tour's page sits in. */
-    const val STAGE_CARD = 0xFF141C17.toInt()
+    /** The content card the tour's page sits in: lifted just off the black. */
+    const val STAGE_CARD = 0xFF0C100E.toInt()
 
     /**
-     * The card's hairline. `#F2F6F3` at 14 % over [STAGE_CARD] — a visible edge
-     * without a second colour to keep in tune (`Contrast.composite`).
+     * The card's hairline — `#FFFFFF` at 20 % over [STAGE_CARD], so a card is
+     * *defined* on a black stage instead of melting into it. Derived, not
+     * invented: the test asserts the composite equality.
      */
-    const val STAGE_STROKE = 0xFF333B36.toInt()
+    const val STAGE_STROKE = 0xFF3D403E.toInt()
 
-    /** Type. */
-    const val ON_STAGE = 0xFFF2F6F3.toInt()          // 17.8:1 on the stage top
-    const val ON_STAGE_MUTED = 0xFFAFBDB5.toInt()    //  9.9:1 on the stage top
+    /**
+     * The lane behind the progress dots — the same white, at 12 %: a status
+     * track you can see is *there* without competing with the gradient that
+     * fills it. Derived the same way as [STAGE_STROKE].
+     */
+    const val STAGE_LANE = 0xFF292D2B.toInt()
 
-    /** The eyebrow chip: its own dark fill, and mint ink that reads on it. */
-    const val STAGE_CHIP = 0xFF16301F.toInt()
-    const val ON_STAGE_CHIP = 0xFF9CF2C3.toInt()     // 10.8:1 on the chip
+    /**
+     * Type. The only text colour on the stage, and the only one this phase
+     * allows: pure white, 21:1 on the backdrop and 19.16:1 on the card.
+     */
+    const val ON_STAGE = 0xFFFFFFFF.toInt()
+
+    /** The eyebrow chip's own fill: a deep green-black the white label sits on. */
+    const val STAGE_CHIP = 0xFF122019.toInt()
+
+    /**
+     * A control that is present but not the primary action (the tour's *Back*):
+     * white at 35 %, translucent so it can sit on any stage surface.
+     */
+    const val STAGE_CONTROL_STROKE = 0x59FFFFFF.toInt()
+
+    /**
+     * The halo under the step's 3D icon: the accent at 22 %, drawn as a radial
+     * gradient that fades to nothing — the one soft edge on the stage.
+     */
+    const val STAGE_GLOW = 0x383DDC84.toInt()
 
     /**
      * The accent gradient's two ends, and the ink that sits on them. The green
      * is CodeC's own ([CodecPalette.IDENTITY_GREEN]); the teal is its closest
-     * neighbour that still carries dark ink at 7.5:1.
+     * neighbour that still carries dark ink at 7.48:1, and the two ends differ
+     * by 1.22:1 so the run reads as a gradient rather than a flat fill.
      */
     const val ACCENT_FROM = CodecPalette.IDENTITY_GREEN
     const val ACCENT_TO = 0xFF2BC4B0.toInt()
-    const val ON_ACCENT = 0xFF06251A.toInt()         // 9.1:1 and 7.5:1 on the ends
+    const val ON_ACCENT = 0xFF06251A.toInt()
 
-    /** A control that is present but not the primary action. */
-    const val STAGE_CONTROL_STROKE = 0x59F2F6F3.toInt()  // ink at 35 %
-
-    /** The backdrop wash. */
+    /** The backdrop wash: black, with a hint of depth at the bottom. */
     fun backdrop(): Brush = Brush.verticalGradient(listOf(Color(STAGE_TOP), Color(STAGE_BOTTOM)))
 
     /** The accent, left to right. */
     fun accent(): Brush = Brush.horizontalGradient(listOf(Color(ACCENT_FROM), Color(ACCENT_TO)))
+
+    /** The icon's halo: the accent fading to nothing behind the step's 3D icon. */
+    fun iconGlow(): Brush = Brush.radialGradient(listOf(Color(STAGE_GLOW), Color.Transparent))
 }
 
 /**

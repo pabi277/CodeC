@@ -59,7 +59,9 @@ class CodecMotionTest {
 
     @Test
     fun `the story timer uses its full linear reading interval`() {
-        assertEquals(10_000, CodecMotion.Duration.STORY)
+        // Phase 101 - shortened from 10 s: the tour is swipeable, so the timer
+        // is the fallback pace rather than the reading pace.
+        assertEquals(8_000, CodecMotion.Duration.STORY)
         val timer = CodecMotion.storyTimer(CodecMotion.Duration.STORY) as TweenSpec<*>
         assertEquals(CodecMotion.Duration.STORY, timer.durationMillis)
     }
