@@ -144,7 +144,7 @@ class OnboardingStyleTest {
         var checked = 0
         for (m in Regex("""\bText\s*\(""").findAll(tour)) {
             val header = callHeader(tour, m.range.first)
-            val declared = Regex("""color = ([^,\n]+)""").findFirstMatchIn(header)?.groupValues?.get(1)?.trim()
+            val declared = Regex("""color = ([^,\n]+)""").find(header)?.groupValues?.get(1)?.trim()
                 ?: continue
             checked++
             assertTrue(
