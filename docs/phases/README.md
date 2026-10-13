@@ -105,6 +105,13 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | 99 | [✅ Onboarding — art for every beat: six setup renders, five tour renders, and `StepArt` as the one card both halves draw (Build APK `37766270597` green on `0c12e8b`; merged PR #118)](09-onboarding-setup/chat-phase99/) | 09-onboarding-setup |
 | 100 | [✅ Onboarding — the design pass: a fixed stage for the tour, the user's accent for the setup, and three defects the measurement found (Build APK `37770926970` green on `126f7f7`; merged PR #118)](09-onboarding-setup/chat-phase100/) | 09-onboarding-setup |
 | 101 | [✅ Onboarding — the black canvas: one white ink, five custom 3D icons, a five-card pager and a quieter clock (Build APK `37776053185` and the PR's own `37781090447` green on `2643aa9`; MERGED via PR #118)](09-onboarding-setup/chat-phase101/) | 09-onboarding-setup |
+| 102 | [Install-path hardening + the Play Protect heads-up (IMPLEMENTED 2026-10-08 on `arena/dcabbb28-codec`; record in the folder)](13-security/chat-phase102/) | 13-security |
+| 103 | [📋 Terminal selection + scroll rebuild — Termux-style handles/toolbar, joined copy, honest rest position (brief only)](01-terminal-userland/chat-phase103/) | 01-terminal-userland |
+| 104 | [📋 Shell & session truth — login shell (`.bashrc` loads), IXON-off PTY, alt-scroll arrows, cwd inherit (roadmap brief)](../roadmaps/PHASE103_108_ROADMAP.md) | 01-terminal-userland |
+| 105 | [📋 Editor ⇄ terminal — tap `file:line` to source, send path/selection, Select-URL (roadmap brief)](../roadmaps/PHASE103_108_ROADMAP.md) | 05-run-output-preview |
+| 106 | [📋 Packages tell the truth — manifest-driven catalog, install sets (Node = nodejs+npm) (roadmap brief)](../roadmaps/PHASE103_108_ROADMAP.md) | 02-packages-toolchains |
+| 107 | [📋 Python GUI (Route A) — in-app X/VNC display, run-with-GUI orchestration; app-only, spike deferred to 108·K13 (roadmap brief)](../roadmaps/PHASE103_108_ROADMAP.md) | 07-platform-capabilities |
+| 108 | [📋 The curated package program — 126 new roots in 15 small chunks (K1–K15), built LAST on the owner's order law (roadmap brief)](../roadmaps/PHASE103_108_ROADMAP.md) | 02-packages-toolchains |
 
 ## By category
 
@@ -123,6 +130,7 @@ in execution order (`docs/getting-started/HOW_TO_CREATE_A_PHASE.md`).
 | [11-phone-ui-parity](11-phone-ui-parity/) | Phone UI parity | 12 |
 | [12-ui-polish-program](12-ui-polish-program/) | UI polish program (phases 65–75) | 7 |
 | [13-archive](13-archive/) | Archive | 1 |
+| [13-security](13-security/) | Security | 1 |
 
 > Phase 16–17 are parts of the phase-15 folder. Phases 71, 72, 73 and 75 are
 > briefs inside [12-ui-polish-program](12-ui-polish-program/) (70.1 + 72.1 share
