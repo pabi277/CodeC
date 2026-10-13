@@ -18,3 +18,4 @@ Planning documents belong here. A roadmap is a proposal, not authorization to im
 - [Phases 54–58](PHASE54_58_PHONE_UI_ROADMAP.md)
 - [Phases 59–63](PHASE59_63_UI_PARITY_ROADMAP.md)
 - [Terminal plan](TERMINAL_PLAN.md)
+- [Phases 103–108 — power terminal, editor connection, Python GUI (Route A), ~150-package program](PHASE103_108_ROADMAP.md)
