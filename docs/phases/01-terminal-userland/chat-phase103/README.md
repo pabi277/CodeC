@@ -74,7 +74,7 @@ the proportional scrollbar (`ScrollMath.thumb`).
 `TokenAdoptionTest`, `TypeAdoptionTest`, `IconRoleTest`, `MotionWiringTest`). Compose view
 and screen: CI `Build APK` only. CI history: `38506463779` red on `f5f3748` (test-compile
 import) → fixed by `7c4b9f1`; `38506987604` red on the first 103.2 tip (one motion pin) →
-fixed in the next commit; the green run id is recorded below once it lands.
+fixed by `d3b6f08`; **`Build APK` ✅ GREEN `38507532428` on tip `d3b6f08`** (the full 103.1 + 103.2 tree, build=success). Device pass owed.
 
 **Deviations (all recorded in the part docs):** fling on `withFrameNanos` rather than
 `RenderPump.kt` (frame-paced, no new ticker); `ScrollWiringTest`/`SelectionWiringTest`

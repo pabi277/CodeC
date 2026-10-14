@@ -134,7 +134,8 @@ selection, scroll, and pure terminal suites. Plus the four source scans
   fix-up `7c4b9f1`.
 - `8e436bc` (103.2 first tip) — run `38506987604`: compile green, 3574 tests with
   one red pin (`MotionWiringTest`: thumb fade used a spec constructor in the view).
-  Fixed in the next commit (see the CI record in the phase README).
+  Fixed by `d3b6f08`.
+- `d3b6f08` (current tip) — run `38507532428`: **green**, `build=success`.
 - Note: `7c4b9f1` was pushed together with `8e436bc` by mistake, so it was never
   built alone. Its test-compile fix was verified on the host instead.
 
