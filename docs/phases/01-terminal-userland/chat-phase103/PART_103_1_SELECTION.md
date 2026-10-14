@@ -123,8 +123,12 @@ the Android `components` package, plus `ScrollMathTest`, `ReflowTest`,
 `MouseEncodingTest`, `GlyphSpansTest`, `TerminalChromeTest`).
 Not host-runnable: `TerminalUxTest`, `TerminalBufferTest` (need `components`).
 
-**CI:** recorded in the commit-2 docs (the run that proves this commit is the
-one on its own pushed tip; the commit-1 tip sha and run id are recorded there).
+**CI:** commit `f5f3748` — `Build APK` run `38506463779`: **red** at
+`:app:compileDebugUnitTestKotlin` (`SelectionExtractTest.kt:94,98` unresolved
+`selectedText`; the legacy extension needs an import). Fix-up `7c4b9f1` adds the import;
+the harness generator now drops it together with the legacy case, so the harness can no
+longer hide this. The 103.1 tip was pushed together with 103.2 by mistake and never built
+alone; the full-tree build is recorded in the phase README.
 
 **Device pass required:** yes — the device rows for the whole phase run after
 commit 2 (copy of a partial wrapped URL, Select-all then Copy, paste into a

@@ -112,6 +112,11 @@ pin-tested; the view itself is compiled only by CI `Build APK`.
 - The plan's `ScrollWiringTest` shipped as `TerminalGestureWiringTest` (source pins;
   the Compose layer cannot run on host). `ScrollRestTest` covers rest, step rails,
   fling plan/offset, and the thumb.
+- The scrollbar fade uses the platform default spring, not a `CodecMotion` spec. The
+  view must stay off the design-system motion tokens (`TerminalChromeTest`), and spec
+  constructors live in the theme motion file (`MotionWiringTest`). Reduced motion
+  (animator scale 0) shows the thumb at its target at once. Found by CI run
+  `38506987604`; the first attempt used `CodecMotion.fadeSpecMedium` and failed both pins.
 - A touch that interrupts a fling also runs `rest`, so the sub-row remainder is
   discarded at that moment. That can move the view by less than one row; it is the
   same rest rule applied on touch-down.
@@ -122,8 +127,16 @@ selection, scroll, and pure terminal suites. Plus the four source scans
 147 passed, 0 failed. Not host-runnable: `TerminalUxTest`, `TerminalBufferTest`
 (they import the Android `components` package), and the Compose view and screen.
 
-**CI:** commit 1 `f5f3748` — `Build APK` run `38506463779`. Commit 2's tip and run
-id are recorded in the docs follow-up after the run is green.
+**CI history (recorded as it happened):**
+
+- `f5f3748` (103.1) — `Build APK` run `38506463779`: red, test-compile error
+  (`SelectionExtractTest` missing the legacy `selectedText` import). Fixed by the
+  fix-up `7c4b9f1`.
+- `8e436bc` (103.2 first tip) — run `38506987604`: compile green, 3574 tests with
+  one red pin (`MotionWiringTest`: thumb fade used a spec constructor in the view).
+  Fixed in the next commit (see the CI record in the phase README).
+- Note: `7c4b9f1` was pushed together with `8e436bc` by mistake, so it was never
+  built alone. Its test-compile fix was verified on the host instead.
 
 **Device pass required (owner):** fresh open has no blank band; a hard fling in a long
 scrollback settles at the true top/bottom without overshoot; the thumb matches

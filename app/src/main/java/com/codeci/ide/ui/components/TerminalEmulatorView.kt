@@ -11,7 +11,6 @@ import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -359,11 +358,14 @@ fun TerminalEmulatorView(
         delay(900)
         thumbShown = false
     }
-    val thumbAlpha by animateFloatAsState(
-        targetValue = if (thumbShown) 1f else 0f,
-        animationSpec = tween(durationMillis = if (animatorScale > 0f) 300 else 0),
-        label = "terminalScrollThumb"
-    )
+    // The view takes no motion spec of its own: it stays off the design-system
+    // motion tokens (TerminalChromeTest), and spec constructors live in the
+    // theme motion file (MotionWiringTest).
+    // The platform default spring fades the thumb; reduced motion (animator
+    // scale 0) shows the target at once.
+    val thumbTarget = if (thumbShown) 1f else 0f
+    val thumbFade by animateFloatAsState(targetValue = thumbTarget, label = "terminalScrollThumb")
+    val thumbAlpha = if (animatorScale > 0f) thumbFade else thumbTarget
 
     // Phase 19.2 round 3: REMOVED the "jump to live on every update" effect —
     // it reset topRow=0 on every output frame, so while output streamed the
