@@ -1,5 +1,6 @@
 package com.codeci.ide
 
+import com.codeci.ide.ui.components.selectedText
 import com.codeci.ide.ui.terminal.SelCell
 import com.codeci.ide.ui.terminal.SelectionModel
 import com.codeci.ide.ui.terminal.TermSelection
