@@ -2301,3 +2301,31 @@ The screenshot observations and deterministic replay are kept separate in the [P
   signature is neither the pinned release key nor the running install's own
   key is refused with a reason. Fingerprint of the release key:
   `docs/guides/UPLOAD_KEY_SETUP.md`.
+
+## 63. Copy takes the whole screen, or a long wrapped URL copies cut in pieces (Phase 103.1 / 103.2)
+
+- **Symptom.** Selecting part of a line and tapping Copy puts the whole terminal
+  transcript on the clipboard. Or a URL that wrapped across two rows copies as two
+  pieces, with a line break in the middle.
+- **Why it happened.** The toolbar Copy fell back to the whole transcript when the
+  selection produced no text, and the extractor kept a newline at every soft wrap.
+- **What changed.** Copy writes the selection or is disabled; there is no transcript
+  fallback. Rows that wrapped by themselves are joined with no separator, and hard line
+  ends keep their newline. Select all, then Copy, writes the full buffer on purpose.
+- **Check.** Long-press a word, drag the handles, tap Copy. The clipboard holds only the
+  selected text, and a wrapped URL pastes as one unbroken string. If you see the whole
+  screen, note the Phase and the build, then report it.
+
+## 64. Terminal: a blank band when you first open it, or a fling that overshoots (Phase 103.2)
+
+- **Symptom.** After the terminal first opens, scrolling up and lifting your finger
+  leaves an empty strip above or below the text. Or a hard fling runs past the first or
+  last line.
+- **Why it happened.** The sub-row scroll remainder was never reset on finger-lift, so
+  the view could rest up to one row out of place. Flings were not modelled.
+- **What changed.** Lifting your finger discards the remainder and snaps to whole rows.
+  A fling decays and stops at the true top or bottom with no overshoot. A touch stops a
+  fling in progress. With animations turned off, a fling is an instant jump. The
+  scrollbar thumb is drawn in proportion to the scrollback length while you scroll.
+- **Check.** Open a fresh terminal and scroll up and down. There should be no blank band.
+  Fling through a long scrollback and watch it stop at the first and last line.

@@ -1,14 +1,8 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
-**Status:** 🚧 IMPLEMENTING (owner: "Start Phase 103", 2026-10-14). Commit 1 = 103.1 pure
-selection layer (`SelectionModel`, buffer absolute rows, tests; not user-visible —
-see PART_103_1 §Implementation). Commit 2 = 103.2 view wiring + scroll physics +
-the Copy-law edit. Device rows owed. The series moves to Phase 104 only after commit 2
-is green and this README gains its `## Implementation` record. **Owner rows:** *"partial text copy not working"* and
-*"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
-Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
-[`PHASE103_108_ROADMAP.md`](../../../roadmaps/PHASE103_108_ROADMAP.md); research:
-[`TERMINAL_PYTHON_GUI_PACKAGES_RESEARCH_20261014.md`](../../../research/TERMINAL_PYTHON_GUI_PACKAGES_RESEARCH_20261014.md) §2–3.
+**Status:** 🚧 IMPLEMENTED — device pass owed (owner: "Start Phase 103", 2026-10-14).
+Commit 1 = 103.1 pure selection layer; commit 2 = 103.2 view wiring (handles, toolbar,
+Copy law) + scroll physics. The series moves to Phase 104; see `## Implementation`.
 
 ## Why this phase exists (evidence, read this session @ `5cbc1c0`)
 
@@ -57,3 +51,35 @@ the clipboard holds exactly the dragged span with soft wraps joined; (2) open th
 fresh — no blank band; fling scrolls with inertia and stops at the true top/bottom;
 (3) selection made mid-`cat` stays on its text while output scrolls. Then this README
 gains its `## Implementation` record and the series moves to Phase 104.
+
+## Implementation
+
+**Shipped 2026-10-14 on `arena/4baff5b7-codec` (owner: "Start Phase 103"), in two
+commits in order.** Commit 1 `f5f3748` = 103.1 pure selection policy (owner split
+decision: the Compose layer was not hand-split out of the interleaved gesture code).
+Commit 2 = 103.1 wiring + 103.2 scroll physics, plus the Copy-law edit. Part records:
+[`PART_103_1_SELECTION.md`](PART_103_1_SELECTION.md) §Implementation,
+[`PART_103_2_SCROLL_PHYSICS.md`](PART_103_2_SCROLL_PHYSICS.md) §Implementation.
+
+**Built:** `SelectionModel` (pure: begin/drag/selectAll/clamp/spanOnRow/extract/cellAt/
+screenRowOf/handleAnchorX/edgeScrollPx); the buffer-absolute selection anchor
+(`TerminalSnapshot.historyBase`, `absRowOf`) and the soft-wrap join
+(`TerminalLine.wrapped`); two 48 dp handles and a floating Copy / Select all / Paste
+toolbar; Copy writes the selection or is disabled, and the transcript fallback is
+deleted; rest-on-lift (`ScrollMath.rest`) that fixes the first-open blank band;
+fling/inertia (`ScrollMath.planFling`/`flingOffset`, reduced-motion instant jump);
+the proportional scrollbar (`ScrollMath.thumb`).
+
+**Host:** 130 / 0 on the terminal suites; 147 / 0 with the four source scans. Compose
+view and screen: CI `Build APK` only (`f5f3748` run `38506463779` for commit 1; commit
+2's run recorded in the docs follow-up).
+
+**Deviations (all recorded in the part docs):** fling on `withFrameNanos` rather than
+`RenderPump.kt` (frame-paced, no new ticker); `ScrollWiringTest`/`SelectionWiringTest`
+built as `TerminalGestureWiringTest`; Share's transcript fallback predates the phase and
+is not changed here.
+
+**Device pass required (owner):** the exit condition in this README, plus the
+PART_103_2 device list. Phase 103 is not closed until the owner's device pass is
+recorded.
+

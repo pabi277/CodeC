@@ -1610,3 +1610,16 @@ Exactly **three** `client.stream(` sites are preserved (841/1136/1363); `ui/ai/`
 - **Host:** the 103.1 set passes 106/0. The Compose layer is verified only by CI `Build APK`.
 - **Next:** commit 2 (103.2), then the series moves to 104 once commit 2 is green and the README
   `## Implementation` record is written.
+
+## 2026-10-14 — Phase 103.2: selection wiring and scroll physics (commit 2 of 2)
+
+- **What happened.** The Compose layer that commit 1 deferred ships here, with the scroll
+  physics. Handles and a floating Copy / Select all / Paste toolbar replace the word popup.
+  Copy writes the selection or is disabled, and the transcript fallback is deleted. The
+  view rests on lift (fixing the first-open blank band), flings with decay and a true
+  rail stop, and draws a proportional scrollbar. The selection is held in buffer-absolute
+  rows, so it stays on its text while output scrolls.
+- **Evidence.** Host: 130/0 on the terminal suites; 147/0 with the four source scans.
+  The view is compile-checked only by CI `Build APK`.
+- **Device pass.** Owed by the owner; the checklist is in PART_103_2 and the README.
+- **Next.** On the owner's "Start Phase 104", shell/session truth. Next free phase: 109.

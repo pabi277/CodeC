@@ -10,21 +10,35 @@ import android.os.VibratorManager
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.translate
@@ -46,16 +61,24 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.R
 import com.codeci.ide.ui.terminal.CellFlags
 import com.codeci.ide.ui.terminal.CellMetrics
+import com.codeci.ide.ui.terminal.SelCell
+import com.codeci.ide.ui.terminal.SelHandle
+import com.codeci.ide.ui.terminal.SelectionModel
+import com.codeci.ide.ui.terminal.TermSelection
+import com.codeci.ide.ui.terminal.absoluteLine
 import com.codeci.ide.ui.terminal.GlyphSpans
 import com.codeci.ide.ui.terminal.MouseEncoding
 import com.codeci.ide.ui.terminal.MouseModes
@@ -69,7 +92,6 @@ import com.codeci.ide.ui.theme.TerminalThemeColors
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.abs
-import kotlin.math.floor
 import kotlin.math.roundToInt
 
 /**
@@ -246,10 +268,17 @@ fun TerminalEmulatorView(
     // Phase 19.2 round 3: sub-row scroll remainder (px) for pixel-smooth
     // scrolling — the grid translates by this fraction of a row.
     var scrollSubPx by remember { mutableFloatStateOf(0f) }
-    var selection by remember { mutableStateOf<GridSelection?>(null) }
+    var selection by remember { mutableStateOf<TermSelection?>(null) }
+    // Overflow (⋮) menu of the selection toolbar.
     var menu by remember { mutableStateOf(false) }
-    var menuOffset by remember { mutableStateOf(IntOffset.Zero) }
-    var selecting by remember { mutableStateOf(false) }
+    // Phase 103.1 — the handle under the finger, and the finger's view point.
+    var handleGrab by remember { mutableStateOf<SelHandle?>(null) }
+    var handlePoint by remember { mutableStateOf(Offset.Zero) }
+    // Phase 103.2 — the planned fling, and a scroll pulse that shows the thumb.
+    var fling by remember { mutableStateOf<ScrollMath.Fling?>(null) }
+    var scrollEpoch by remember { mutableIntStateOf(0) }
+    var thumbShown by remember { mutableStateOf(false) }
+    val animatorScale = remember { animatorDurationScale(context) }
 
     var flashAlpha by remember { mutableFloatStateOf(0f) }
 
@@ -279,11 +308,62 @@ fun TerminalEmulatorView(
     if (topRow < minTop) topRow = minTop
     if (topRow > 0) topRow = 0
 
-    // Update active selection state for parent toolbar copy
-    LaunchedEffect(selection, snapshot.generation) {
-        val selectedText = selection?.let { snapshot.selectedText(it) }?.takeIf { it.isNotEmpty() }
+    // Parent toolbar copy reads the live selection text. Copy law: the parent
+    // gets the selection or null, never a whole-transcript fallback.
+    val selectedText = remember(selection, snapshot.generation) {
+        selection?.let { SelectionModel.extract(it, snapshot) }?.takeIf { it.isNotEmpty() }
+    }
+    LaunchedEffect(selectedText) {
         onSelectionChanged(selectedText)
     }
+
+    // Phase 103.2 — the fling. One plan at a time: a touch sets `fling` to
+    // null (see the scroll gesture's onDown), which ends this loop at its
+    // next frame. Frame-clock paced, so it is one step per display frame.
+    LaunchedEffect(fling) {
+        val plan = fling ?: return@LaunchedEffect
+        var startNanos = -1L
+        var appliedPx = 0f
+        while (fling === plan) {
+            val frameNanos = withFrameNanos { it }
+            if (startNanos < 0L) startNanos = frameNanos
+            val elapsedMs = (frameNanos - startNanos) / 1_000_000L
+            val travelled = ScrollMath.flingOffset(plan, elapsedMs)
+            val snap = latestSnapshot
+            val r = ScrollMath.step(
+                subRowPx = scrollSubPx,
+                deltaPx = travelled - appliedPx,
+                cellH = cellH.toFloat(),
+                topRow = topRow,
+                minTop = -snap.scrollbackCount
+            )
+            appliedPx = travelled
+            scrollSubPx = r.subRowPx
+            topRow = r.topRow
+            scrollEpoch++
+            // Stop at the rail the fling is heading for: no overshoot, no idle frames.
+            val atRail = (plan.totalPx > 0f && r.topRow == 0) ||
+                (plan.totalPx < 0f && r.topRow == -snap.scrollbackCount)
+            if (elapsedMs >= plan.durationMs || atRail) break
+        }
+        val rested = ScrollMath.rest(topRow, scrollSubPx, -latestSnapshot.scrollbackCount)
+        topRow = rested.topRow
+        scrollSubPx = rested.subRowPx
+        if (fling === plan) fling = null
+    }
+
+    // Phase 103.2 — the scrollbar thumb is visible while scrolling, then fades.
+    LaunchedEffect(scrollEpoch) {
+        if (scrollEpoch == 0) return@LaunchedEffect
+        thumbShown = true
+        delay(900)
+        thumbShown = false
+    }
+    val thumbAlpha by animateFloatAsState(
+        targetValue = if (thumbShown) 1f else 0f,
+        animationSpec = tween(durationMillis = if (animatorScale > 0f) 300 else 0),
+        label = "terminalScrollThumb"
+    )
 
     // Phase 19.2 round 3: REMOVED the "jump to live on every update" effect —
     // it reset topRow=0 on every output frame, so while output streamed the
@@ -316,6 +396,77 @@ fun TerminalEmulatorView(
         val cols = CellMetrics.columnsForWidth(with(density) { maxWidth.toPx() }, cellW)
         val rows = CellMetrics.rowsForHeight(with(density) { maxHeight.toPx() }, cellH)
 
+        // Phase 103.1 — the handle drag. The finger's point is kept in VIEW
+        // pixels and mapped to a buffer cell on every move and every
+        // auto-scroll frame, so the selection follows the finger while the
+        // content scrolls under it.
+        val viewWPx = with(density) { maxWidth.toPx() }
+        val viewHPx = with(density) { maxHeight.toPx() }
+        val knobDy = with(density) { 6.dp.toPx() }
+        val toolbarGap = with(density) { 8.dp.toPx() }
+        val thumbWidthPx = with(density) { 4.dp.toPx() }
+        val thumbMinPx = with(density) { 32.dp.toPx() }
+        var toolbarSize by remember { mutableStateOf(IntSize.Zero) }
+        val dragging = handleGrab != null
+
+        fun rowTopPx(screenRow: Int): Float = screenRow * cellH - scrollSubPx
+
+        // A width change (or a reflow, which re-lays the history) makes any
+        // buffer-absolute selection point at other text: drop it.
+        LaunchedEffect(cols) {
+            selection = null
+            handleGrab = null
+        }
+
+        val applyHandleDrag: () -> Unit = {
+            val grab = handleGrab
+            val current = selection
+            if (grab != null && current != null) {
+                val snap = latestSnapshot
+                val p = handlePoint
+                val cell = SelectionModel.cellAt(
+                    x = p.x,
+                    y = p.y,
+                    cellW = cellW,
+                    cellH = cellH,
+                    scrollSubPx = scrollSubPx,
+                    cols = cols,
+                    rows = rows,
+                    topRow = topRow,
+                    historyBase = snap.historyBase,
+                    scrollbackCount = snap.scrollbackCount
+                )
+                val moved = SelectionModel.drag(current, grab, cell)
+                selection = moved
+                handleGrab = moved.active ?: grab
+            }
+        }
+
+        // Edge auto-scroll while a handle is held in the top/bottom band.
+        LaunchedEffect(dragging) {
+            while (handleGrab != null) {
+                withFrameNanos { }
+                val step = SelectionModel.edgeScrollPx(handlePoint.y, viewHPx, cellH)
+                if (step != 0f && handleGrab != null) {
+                    val snap = latestSnapshot
+                    val r = ScrollMath.step(
+                        subRowPx = scrollSubPx,
+                        deltaPx = step,
+                        cellH = cellH.toFloat(),
+                        topRow = topRow,
+                        minTop = -snap.scrollbackCount
+                    )
+                    scrollSubPx = r.subRowPx
+                    topRow = r.topRow
+                    scrollEpoch++
+                    applyHandleDrag()
+                }
+            }
+        }
+
+        val sel = selection
+        val selectionVisible = sel != null && !snapshot.altScreen
+
         Box(modifier = Modifier.fillMaxSize()) {
             Canvas(
                 modifier = Modifier
@@ -344,36 +495,35 @@ fun TerminalEmulatorView(
                                 if (url != null) {
                                     onUrlClick(url)
                                 } else {
-                                    selecting = false
                                     selection = null
                                     keyView?.showIme()
                                 }
                             },
                             onLongPress = { pos ->
+                                // Phase 103.1: long-press selects the word under the
+                                // finger; the handles and toolbar take it from there.
                                 val snap = latestSnapshot
                                 val row = ((pos.y + scrollSubPx) / cellH).toInt().coerceIn(0, rows - 1)
                                 val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
-                                val y = topRow + row
-                                val line = snap.lineAt(y)
+                                val abs = snap.absRowOf(topRow + row)
+                                val line = snap.absoluteLine(abs)
                                 val (wStart, wEnd) = if (line != null) {
                                     findWordBoundaries(line.text, col)
                                 } else col to col
-                                selection = GridSelection(wStart, y, wEnd, y)
-                                selecting = true
-                                menuOffset = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
-                                menu = true
+                                selection = SelectionModel.begin(abs, wStart, wEnd, snap.altScreen)
+                                menu = false
                             }
                         )
                     }
                     .pointerInput(cellW, cellH, cols, rows) {
-                        detectScrollOrSelect(
-                            cellW = cellW,
-                            cellH = cellH,
-                            cols = cols,
-                            rows = rows,
-                            selecting = { selecting },
+                        detectScrollGesture(
+                            onDown = {
+                                // A touch stops a fling in progress.
+                                fling = null
+                            },
                             onScroll = { dy, x, y ->
                                 val snap = latestSnapshot
+                                scrollEpoch++
                                 if (snap.mouseMode and MouseModes.CAPTURE_MASK != 0) {
                                     // Termux-style touch mapping: while the app
                                     // reports the mouse, swipes act as the
@@ -407,13 +557,19 @@ fun TerminalEmulatorView(
                                     topRow = r.topRow
                                 }
                             },
-                            onSelectMove = { col, row ->
+                            onRelease = { velocityPxPerS ->
                                 val snap = latestSnapshot
-                                val cur = selection ?: return@detectScrollOrSelect
-                                selection = cur.copy(
-                                    x2 = col.coerceIn(0, cols - 1),
-                                    y2 = (topRow + row).coerceIn(-snap.scrollbackCount, snap.rows - 1)
-                                )
+                                if (snap.mouseMode and MouseModes.CAPTURE_MASK == 0) {
+                                    // Phase 103.2: the finger has left the glass —
+                                    // the sub-row remainder is discarded (whole-row
+                                    // rest, Termux), then the release speed flings.
+                                    // Web convention: a finger moving up is a
+                                    // positive, view-newer velocity.
+                                    val rested = ScrollMath.rest(topRow, scrollSubPx, -snap.scrollbackCount)
+                                    topRow = rested.topRow
+                                    scrollSubPx = rested.subRowPx
+                                    ScrollMath.planFling(-velocityPxPerS, animatorScale)?.let { fling = it }
+                                }
                             }
                         )
                     }
@@ -450,10 +606,27 @@ fun TerminalEmulatorView(
                             boldPaint = boldPaint,
                             cursorX = if (isCursorRow) snapshot.cursorX else -1,
                             selection = selection,
-                            extY = extY,
+                            absRow = snapshot.absRowOf(extY),
                             cols = cols,
                             theme = theme,
                             batch = glyphBatch
+                        )
+                    }
+                }
+                // Phase 103.2 — proportional scrollbar thumb, fading after a scroll.
+                if (thumbAlpha > 0f) {
+                    val thumb = ScrollMath.thumb(
+                        trackPx = size.height,
+                        scrollbackCount = snapshot.scrollbackCount,
+                        rows = rows,
+                        topRow = topRow,
+                        minLengthPx = thumbMinPx
+                    )
+                    if (thumb != null) {
+                        drawRect(
+                            color = theme.cursor.copy(alpha = 0.45f * thumbAlpha),
+                            topLeft = Offset(size.width - thumbWidthPx, thumb.offsetPx),
+                            size = Size(thumbWidthPx, thumb.lengthPx)
                         )
                     }
                 }
@@ -467,81 +640,135 @@ fun TerminalEmulatorView(
                 )
             }
 
-            DropdownMenu(
-                expanded = menu,
-                onDismissRequest = { menu = false }
-            ) {
-                val selectedText = selection?.let { snapshot.selectedText(it) }
-                val selectedUrl = selectedText?.let { findUrlAt(it, 0) }
-
-                if (selectedUrl != null) {
-                    DropdownMenuItem(
-                        text = { Text("Open URL") },
-                        onClick = {
-                            menu = false
-                            onUrlClick(selectedUrl)
-                        }
+            if (sel != null && selectionVisible) {
+                val startRow = SelectionModel.screenRowOf(
+                    sel.start.row, snapshot.historyBase, snapshot.scrollbackCount, topRow
+                )
+                val endRow = SelectionModel.screenRowOf(
+                    sel.end.row, snapshot.historyBase, snapshot.scrollbackCount, topRow
+                )
+                val startAnchorX = SelectionModel.handleAnchorX(SelHandle.START, sel.start, cellW)
+                val endAnchorX = SelectionModel.handleAnchorX(SelHandle.END, sel.end, cellW)
+                // Each handle's grab point sits inside the cell it marks, so the
+                // first move of a drag never jumps the selection by a cell.
+                val startPoint = Offset(startAnchorX, rowTopPx(startRow) + cellH / 2f)
+                val endPoint = Offset(endAnchorX, rowTopPx(endRow) + cellH / 2f)
+                if (startRow in 0 until rows) {
+                    SelectionKnob(
+                        centerX = startAnchorX,
+                        centerY = rowTopPx(startRow) + cellH + knobDy,
+                        color = theme.cursor,
+                        onDragStart = {
+                            handleGrab = SelHandle.START
+                            handlePoint = startPoint
+                        },
+                        onDrag = { dx, dy ->
+                            handlePoint = Offset(handlePoint.x + dx, handlePoint.y + dy)
+                            applyHandleDrag()
+                        },
+                        onDragEnd = { handleGrab = null }
                     )
                 }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.terminal_copy)) },
-                    onClick = {
-                        menu = false
-                        val text = selectedText ?: snapshot.transcriptText()
-                        onCopyText(text)
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Select All") },
-                    onClick = {
-                        menu = false
-                        selection = GridSelection(
-                            0, -snapshot.scrollbackCount,
-                            cols - 1, snapshot.rows - 1
-                        )
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Copy All") },
-                    onClick = {
-                        menu = false
-                        onCopyText(snapshot.transcriptText())
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Share") },
-                    onClick = {
-                        menu = false
-                        val text = selectedText ?: snapshot.transcriptText()
-                        runCatching {
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, text)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (endRow in 0 until rows) {
+                    SelectionKnob(
+                        centerX = endAnchorX,
+                        centerY = rowTopPx(endRow) + cellH + knobDy,
+                        color = theme.cursor,
+                        onDragStart = {
+                            handleGrab = SelHandle.END
+                            handlePoint = endPoint
+                        },
+                        onDrag = { dx, dy ->
+                            handlePoint = Offset(handlePoint.x + dx, handlePoint.y + dy)
+                            applyHandleDrag()
+                        },
+                        onDragEnd = { handleGrab = null }
+                    )
+                }
+
+                // Floating toolbar: above the selection, or below it when there
+                // is no room above. Hidden while a handle is being dragged.
+                if (!dragging) {
+                    val above = rowTopPx(startRow) - toolbarSize.height - toolbarGap
+                    val below = rowTopPx(endRow) + cellH + toolbarGap
+                    val rawY = if (above >= 0f) above else below
+                    val tx = (startAnchorX - toolbarSize.width / 2f)
+                        .coerceIn(0f, (viewWPx - toolbarSize.width).coerceAtLeast(0f))
+                    val ty = rawY.coerceIn(0f, (viewHPx - toolbarSize.height).coerceAtLeast(0f))
+                    Row(
+                        modifier = Modifier
+                            .offset { IntOffset(tx.roundToInt(), ty.roundToInt()) }
+                            .onSizeChanged { toolbarSize = it }
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TerminalSelectionAction(
+                            label = stringResource(R.string.terminal_copy),
+                            enabled = selectedText != null
+                        ) {
+                            // Copy law: writes the selection, or nothing.
+                            selectedText?.let(onCopyText)
+                        }
+                        TerminalSelectionAction(label = "Select all") {
+                            selection = SelectionModel.selectAll(snapshot)
+                        }
+                        TerminalSelectionAction(label = stringResource(R.string.terminal_paste)) {
+                            selection = null
+                            onPaste()
+                        }
+                        Box {
+                            TerminalSelectionAction(label = "More") { menu = true }
+                            DropdownMenu(
+                                expanded = menu,
+                                onDismissRequest = { menu = false }
+                            ) {
+                                val selectedUrl = selectedText?.let { findUrlAt(it, 0) }
+                                if (selectedUrl != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Open URL") },
+                                        onClick = {
+                                            menu = false
+                                            onUrlClick(selectedUrl)
+                                        }
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Copy All") },
+                                    onClick = {
+                                        menu = false
+                                        onCopyText(snapshot.transcriptText())
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Share") },
+                                    onClick = {
+                                        menu = false
+                                        val text = selectedText ?: snapshot.transcriptText()
+                                        runCatching {
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_TEXT, text)
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            context.startActivity(
+                                                Intent.createChooser(intent, "Share terminal text")
+                                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            )
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Reset") },
+                                    onClick = {
+                                        menu = false
+                                        onReset()
+                                    }
+                                )
                             }
-                            context.startActivity(
-                                Intent.createChooser(intent, "Share terminal text")
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            )
                         }
                     }
-                )
-                DropdownMenuItem(
-                    text = { Text("Reset") },
-                    onClick = {
-                        menu = false
-                        onReset()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.terminal_paste)) },
-                    onClick = {
-                        menu = false
-                        selecting = false
-                        selection = null
-                        onPaste()
-                    }
-                )
+                }
             }
         }
 
@@ -551,7 +778,6 @@ fun TerminalEmulatorView(
                 if (keyView !== view) keyView = view
                 view.onInput = { text ->
                     if (text.isNotEmpty()) {
-                        selecting = false
                         selection = null
                         topRow = 0
                         onInput(text)
@@ -577,8 +803,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
     paint: android.graphics.Paint,
     boldPaint: android.graphics.Paint,
     cursorX: Int,
-    selection: GridSelection?,
-    extY: Int,
+    selection: TermSelection?,
+    absRow: Long,
     cols: Int,
     theme: TerminalThemeColors,
     batch: StringBuilder
@@ -589,7 +815,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
     } else {
         line.runs
     }
-    val sel = selection?.normalized()
     for (run in runs) {
         val start = run.start.coerceIn(0, cols)
         val end = run.end.coerceIn(start, cols)
@@ -697,29 +922,14 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
             flushBatch()
         }
     }
-    if (sel != null && extY in minOf(sel.y1, sel.y2)..maxOf(sel.y1, sel.y2)) {
-        val left = if (extY == sel.y1 && extY == sel.y2) {
-            minOf(sel.x1, sel.x2)
-        } else if (extY == minOf(sel.y1, sel.y2)) {
-            if (sel.y1 <= sel.y2) sel.x1 else sel.x2
-        } else if (extY == maxOf(sel.y1, sel.y2)) {
-            0
-        } else {
-            0
-        }
-        val right = if (extY == sel.y1 && extY == sel.y2) {
-            maxOf(sel.x1, sel.x2) + 1
-        } else if (extY == minOf(sel.y1, sel.y2)) {
-            cols
-        } else if (extY == maxOf(sel.y1, sel.y2)) {
-            (if (sel.y1 <= sel.y2) sel.x2 else sel.x1) + 1
-        } else {
-            cols
-        }
+    // Phase 103.1: the selection is stored in buffer-absolute rows, so this
+    // row's span is the same text no matter how far the output has scrolled.
+    val span = selection?.let { SelectionModel.spanOnRow(it, absRow, cols) }
+    if (span != null) {
         drawRect(
             color = theme.selection,
-            topLeft = Offset(CellMetrics.columnX(left, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
-            size = Size(((right - left).coerceAtLeast(0)) * cellW.toFloat(), cellH.toFloat())
+            topLeft = Offset(CellMetrics.columnX(span.first, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
+            size = Size((span.last - span.first + 1) * cellW.toFloat(), cellH.toFloat())
         )
     }
     if (cursorX in 0 until cols) {
@@ -780,27 +990,16 @@ private fun GridSelection.normalized(): GridSelection {
     return if (aFirst) this else GridSelection(x2, y2, x1, y1)
 }
 
+/**
+ * Copy text for a legacy extended-Y [GridSelection] (0 = top live row,
+ * negative = history). Phase 103.1: delegates to [SelectionModel.extract], the
+ * one extractor, so soft-wrapped rows join here exactly as they do on screen.
+ */
 fun TerminalSnapshot.selectedText(sel: GridSelection): String {
     val n = sel.normalized()
-    return buildString {
-        for (y in n.y1..n.y2) {
-            val line = lineAt(y) ?: continue
-            val text = line.text
-            val start = if (y == n.y1) n.x1.coerceAtLeast(0) else 0
-            val end = if (y == n.y2) (n.x2 + 1).coerceAtMost(text.length) else text.length
-            if (start < end && start < text.length) {
-                val sb = StringBuilder()
-                for (col in start until end.coerceAtMost(text.length)) {
-                    // Phase 19.4: join wide pairs and expand clusters.
-                    if (line.columnIsContinuation(col)) continue
-                    val cluster = line.clusters?.get(col)
-                    if (cluster != null) sb.append(cluster) else sb.append(text[col])
-                }
-                append(sb.toString().trimEnd())
-            }
-            if (y != n.y2) append('\n')
-        }
-    }.trimEnd()
+    val start = SelCell(absRowOf(n.y1), n.x1.coerceAtLeast(0))
+    val end = SelCell(absRowOf(n.y2), n.x2.coerceAtLeast(0))
+    return SelectionModel.extract(TermSelection(start, end), this)
 }
 
 /**
@@ -818,37 +1017,119 @@ fun TerminalSnapshot.lineAt(extY: Int): TerminalLine? {
     }
 }
 
-private suspend fun PointerInputScope.detectScrollOrSelect(
-    cellW: Int,
-    cellH: Int,
-    cols: Int,
-    rows: Int,
-    selecting: () -> Boolean,
+/**
+ * Phase 103.1/103.2 — one-finger gesture on the grid. Reports the finger's
+ * vertical travel while it moves ([onScroll], web-convention delta is the
+ * negated finger motion), a touch-down ([onDown]), and on lift the release
+ * speed in px/s, finger-motion convention ([onRelease]). A press that never
+ * moved is a tap or long-press and reports no release.
+ */
+private suspend fun PointerInputScope.detectScrollGesture(
+    onDown: () -> Unit,
     onScroll: (Float, Float, Float) -> Unit,
-    onSelectMove: (Int, Int) -> Unit
+    onRelease: (Float) -> Unit
 ) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
+        onDown()
         var lastY = down.position.y
         var dragged = false
+        val tracker = VelocityTracker()
+        tracker.addPosition(down.uptimeMillis, down.position)
         while (true) {
             val event = awaitPointerEvent()
             val change = event.changes.firstOrNull() ?: break
-            if (!change.pressed) break
+            if (!change.pressed) {
+                if (dragged) {
+                    tracker.addPosition(change.uptimeMillis, change.position)
+                    onRelease(tracker.calculateVelocity().y)
+                }
+                break
+            }
             val dy = change.position.y - lastY
             if (abs(dy) > 1f || abs(change.positionChange().x) > 1f) dragged = true
-            if (selecting()) {
-                val col = floor(change.position.x / cellW).toInt().coerceIn(0, cols - 1)
-                val row = floor(change.position.y / cellH).toInt().coerceIn(0, rows - 1)
-                onSelectMove(col, row)
-                change.consume()
-            } else if (dragged) {
+            if (dragged) {
                 onScroll(-dy, change.position.x, change.position.y)
                 lastY = change.position.y
                 change.consume()
             }
+            tracker.addPosition(change.uptimeMillis, change.position)
         }
     }
+}
+
+/**
+ * Phase 103.1 — one selection handle. A 48 dp touch target (the Termux-style
+ * grab point) around a 14 dp knob drawn just below the cell it marks.
+ */
+@Composable
+private fun SelectionKnob(
+    centerX: Float,
+    centerY: Float,
+    color: Color,
+    onDragStart: () -> Unit,
+    onDrag: (Float, Float) -> Unit,
+    onDragEnd: () -> Unit
+) {
+    val density = LocalDensity.current
+    val touchPx = with(density) { 48.dp.toPx() }
+    val currentStart by rememberUpdatedState(onDragStart)
+    val currentDrag by rememberUpdatedState(onDrag)
+    val currentEnd by rememberUpdatedState(onDragEnd)
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (centerX - touchPx / 2f).roundToInt(),
+                    (centerY - touchPx / 2f).roundToInt()
+                )
+            }
+            .size(48.dp)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { currentStart() },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        currentDrag(amount.x, amount.y)
+                    },
+                    onDragEnd = { currentEnd() },
+                    onDragCancel = { currentEnd() }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(modifier = Modifier.size(14.dp).background(color, CircleShape))
+    }
+}
+
+/** A selection-toolbar action: at least 48 dp tall, greyed when disabled. */
+@Composable
+private fun TerminalSelectionAction(
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.defaultMinSize(minHeight = 48.dp)
+    ) {
+        Text(label)
+    }
+}
+
+/**
+ * The platform's animator duration scale (0 = animations off). Read once per
+ * composition; fling and the thumb fade degrade to instant when it is 0.
+ */
+private fun animatorDurationScale(context: Context): Float = try {
+    android.provider.Settings.Global.getFloat(
+        context.contentResolver,
+        android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+        1f
+    )
+} catch (_: Exception) {
+    1f
 }
 
 private suspend fun PointerInputScope.detectSmoothPinch(

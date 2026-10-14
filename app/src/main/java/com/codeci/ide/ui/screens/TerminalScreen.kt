@@ -330,10 +330,14 @@ fun TerminalScreen(
                         contentDescription = stringResource(R.string.terminal_storage_title)
                     )
                 }
-                IconButton(onClick = {
-                    val textToCopy = activeSelection ?: viewModel.transcriptText()
-                    copyText(context, textToCopy)
-                }) {
+                // Phase 103.1 copy law: Copy writes the selection, or is
+                // disabled. The whole-transcript fallback is gone.
+                IconButton(
+                    enabled = activeSelection != null,
+                    onClick = {
+                        activeSelection?.let { copyText(context, it) }
+                    }
+                ) {
                     Icon(
                         Icons.Default.ContentCopy,
                         contentDescription = stringResource(R.string.terminal_copy)
