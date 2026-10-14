@@ -99,7 +99,14 @@ data class TerminalLine(
      * mapping stays 1:1; the renderer draws the cluster instead of the bare
      * base character when present.
      */
-    val clusters: Map<Int, String>? = null
+    val clusters: Map<Int, String>? = null,
+    /**
+     * Phase 103.1: this visual row ended by soft auto-wrap, so it continues
+     * on the next row of the SAME logical line. Copy joins such rows with no
+     * separator (Termux `getSelectedText(joinBackLines = true)`); hard line
+     * ends keep their `\n`.
+     */
+    val wrapped: Boolean = false
 ) {
     /** True when [col] is the (invisible) right half of a wide glyph. */
     fun columnIsContinuation(col: Int): Boolean {
@@ -141,9 +148,21 @@ data class TerminalSnapshot(
     val title: String,
     val generation: Long,
     /** Phase 19.5: active mouse-reporting modes ([MouseModes] bits). */
-    val mouseMode: Int = 0
+    val mouseMode: Int = 0,
+    /**
+     * Phase 103.1: count of history lines EVER dropped from the front of the
+     * scrollback (cap overflow / clear). A line's buffer-absolute row is
+     * `historyBase + index` in `scrollbackLines ++ lines`, so a selection
+     * stored in absolute rows keeps its text while output scrolls.
+     */
+    val historyBase: Long = 0L,
+    /** Phase 103.1: the alternate screen (full-screen apps) is showing. */
+    val altScreen: Boolean = false
 ) {
     val scrollbackCount: Int get() = scrollbackLines.size
+
+    /** Buffer-absolute row of extended row [extY] (0 = top live row). */
+    fun absRowOf(extY: Int): Long = historyBase + scrollbackCount + extY
 
     /** Scrollback + live screen, readable (wide pairs joined, clusters kept). */
     fun transcriptText(): String = buildString {
@@ -213,6 +232,9 @@ class TerminalBuffer(
     private val scrollback: ArrayDeque<Row> = ArrayDeque()
     private var generation: Long = 0L
 
+    /** Phase 103.1: history lines ever dropped from the front (see [TerminalSnapshot.historyBase]). */
+    private var historyDropped: Long = 0L
+
     val isAltScreen: Boolean get() = usingAlt
     val scrollbackSize: Int get() = scrollback.size
 
@@ -243,7 +265,7 @@ class TerminalBuffer(
         usingAlt = false
         altScreen = null
         screen = freshScreen(rows, cols)
-        scrollback.clear()
+        dropAllHistory()
         generation++
     }
 
@@ -307,7 +329,9 @@ class TerminalBuffer(
         // Repartition: the bottom r rows become the screen, everything above
         // goes to scrollback (oldest rows beyond the budget are dropped).
         val firstScreen = (emitted.size - r).coerceAtLeast(0)
-        scrollback.clear()
+        // A reflow re-lays every history line, so buffer-absolute rows have no
+        // meaning across it; the view drops any selection when the width changes.
+        dropAllHistory()
         val scrollEnd = firstScreen.coerceAtMost(scrollbackLimit)
         for (i in (firstScreen - scrollEnd) until scrollEnd) {
             scrollback.addLast(emitted[i])
@@ -353,7 +377,7 @@ class TerminalBuffer(
             val push = owed - drop
             for (i in 0 until push) {
                 scrollback.addLast(current[i])
-                while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
+                while (scrollback.size > scrollbackLimit) dropOldestHistory()
             }
             repeat(push) { current.removeAt(0) }
             cursorY -= push
@@ -565,7 +589,7 @@ class TerminalBuffer(
             }
             2, 3 -> {
                 for (y in 0 until rows) clearRow(y)
-                if (mode == 3) scrollback.clear()
+                if (mode == 3) dropAllHistory()
             }
         }
         wrapPending = false
@@ -697,7 +721,18 @@ class TerminalBuffer(
 
     private fun pushScrollback(row: Row) {
         scrollback.addLast(row)
-        while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
+        while (scrollback.size > scrollbackLimit) dropOldestHistory()
+    }
+
+    /** Phase 103.1: the only way a history line leaves the front, so [historyBase] stays exact. */
+    private fun dropOldestHistory() {
+        scrollback.removeFirst()
+        historyDropped++
+    }
+
+    private fun dropAllHistory() {
+        historyDropped += scrollback.size
+        scrollback.clear()
     }
 
     fun setScrollRegion(top: Int, bottom: Int) {
@@ -714,10 +749,10 @@ class TerminalBuffer(
     fun snapshot(): TerminalSnapshot {
         generation++
         val history = ArrayList<TerminalLine>(scrollback.size)
-        for (row in scrollback) history.add(rowToLine(row.cells))
+        for (row in scrollback) history.add(rowToLine(row.cells, row.wrapped))
         val lines = ArrayList<TerminalLine>(rows)
         for (y in 0 until rows) {
-            lines.add(rowToLine(screen[y].cells))
+            lines.add(rowToLine(screen[y].cells, screen[y].wrapped))
         }
         return TerminalSnapshot(
             cols = cols,
@@ -729,7 +764,9 @@ class TerminalBuffer(
             cursorVisible = cursorVisible,
             title = title,
             generation = generation,
-            mouseMode = mouseMode
+            mouseMode = mouseMode,
+            historyBase = historyDropped,
+            altScreen = usingAlt
         )
     }
 
@@ -770,7 +807,7 @@ class TerminalBuffer(
     }
 
     companion object {
-        fun rowToLine(row: Array<Cell>): TerminalLine {
+        fun rowToLine(row: Array<Cell>, wrapped: Boolean = false): TerminalLine {
             val text = StringBuilder(row.size)
             val runs = ArrayList<StyleRun>()
             var clusters: HashMap<Int, String>? = null
@@ -812,7 +849,7 @@ class TerminalBuffer(
                 }
             }
             runs.add(StyleRun(runStart, row.size, runFg, runBg, runFlags))
-            return TerminalLine(text.toString(), runs, clusters)
+            return TerminalLine(text.toString(), runs, clusters, wrapped)
         }
     }
 }

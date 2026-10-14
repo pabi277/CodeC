@@ -1,7 +1,10 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
-**Status:** 📋 PLANNED (brief only, 2026-10-14; no code written — implementation needs
-the owner's "Start Phase 103"). **Owner rows:** *"partial text copy not working"* and
+**Status:** 🚧 IMPLEMENTING (owner: "Start Phase 103", 2026-10-14). Commit 1 = 103.1 pure
+selection layer (`SelectionModel`, buffer absolute rows, tests; not user-visible —
+see PART_103_1 §Implementation). Commit 2 = 103.2 view wiring + scroll physics +
+the Copy-law edit. Device rows owed. The series moves to Phase 104 only after commit 2
+is green and this README gains its `## Implementation` record. **Owner rows:** *"partial text copy not working"* and
 *"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
 Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
 [`PHASE103_108_ROADMAP.md`](../../../roadmaps/PHASE103_108_ROADMAP.md); research:

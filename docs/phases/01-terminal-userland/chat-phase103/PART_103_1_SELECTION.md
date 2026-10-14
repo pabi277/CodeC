@@ -1,6 +1,7 @@
 # CodeC Phase 103.1 — Selection: handles, floating toolbar, joined copy
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED (pure layer, commit 1 of 2) · **Cost:** `[client-only]` · **Effort:** M
+> The Compose wiring (handles, toolbar, Copy-law edit) ships in the 103.2 commit — see §Implementation.
 > **Owner row (verbatim):** "partial text copy not working" → selection style pick:
 > "Termux-style — long-press → drag handles → floating Copy/Select-all toolbar"
 
@@ -72,3 +73,60 @@ a running `cat` prompt works from the same toolbar.
 - **Accessibility/IME text services for the canvas** — real gap (canvas is
   `IMPORTANT_FOR_ACCESSIBILITY_NO`), but a separate phase; recorded in the series
   research §3 as P2, not smuggled into this part.
+
+## Implementation
+
+**Owner split decision (2026-10-14):** the owner chose to split the pure layer
+from the Compose wiring rather than hand-split the interleaved gesture code.
+Consequence: **commit 1 (this part) is not user-visible.** `TerminalEmulatorView.kt`
+and `TerminalScreen.kt` ship whole in commit 2 (103.2), which therefore also
+carries the handles, the floating Copy/Select-all/Paste toolbar, and the Copy-law
+edit. The Compose layer is host-uncompilable here; CI `Build APK` is its only
+compile check.
+
+**What commit 1 contains (pure, Android-free):**
+
+- `ui/terminal/SelectionModel.kt` (new) — `TermSelection` (buffer-absolute
+  `SelCell` start/end + active handle), `begin` (word), `drag` (handle move with
+  reverse-drag normalising), `selectAll`, `clamp`, `spanOnRow` (inclusive column
+  span per buffer row), `extract` (joins soft-wrapped rows with no separator,
+  keeps `\n` on hard ends, trims trailing spaces per hard line only, skips
+  wide-glyph continuations, expands clusters), `cellAt` (view px → cell, honours
+  the sub-row remainder), `screenRowOf`, `handleAnchorX`, `edgeScrollPx`.
+- `ui/terminal/TerminalBuffer.kt` — `TerminalLine.wrapped` (soft-wrap flag,
+  set from the row); `TerminalSnapshot.historyBase` (count of history lines ever
+  dropped, so `absRowOf(extY) = historyBase + scrollbackCount + extY` stays
+  stable while output scrolls); `TerminalSnapshot.altScreen`; every history drop
+  goes through `dropOldestHistory`/`dropAllHistory` so `historyBase` is exact.
+  A reflow drops all history (rows re-laid), and the view drops the selection on
+  a width change.
+- Tests: `SelectionModelTest` (begin, drag both handles incl. reverse, absolute
+  anchoring across scrollback growth, clamp, edge band, empty buffer, alt screen
+  refusal), `SelectionExtractTest` (soft-wrap join; partial wrapped span `mple.c`;
+  hard newlines; mid-line spaces; wide glyphs; empty buffer; a legacy
+  `selectedText` agreement case that runs against `main`'s extractor in this
+  commit and against the routed extractor in commit 2).
+
+**Deviations recorded:**
+
+- The planned `SelectionWiringTest` (source pin) moved with the view into commit
+  2 as `TerminalGestureWiringTest`, together with `ScrollRestTest`.
+- Legacy `selectedText(GridSelection)` kept its signature. Its row semantics
+  (inclusive `x2`) match `SelectionModel.extract`, checked case by case
+  (`(6,0,10,0)` → `World`; `(0,0,11,1)` → `Hello World!\nSecond Line.`;
+  `(0,0,1,0)` → `AB`).
+
+**Host verification (sandbox harness, commit 1 set):** 106 passed, 0 failed
+(`SelectionModelTest`, `SelectionExtractTest` minus the legacy case that needs
+the Android `components` package, plus `ScrollMathTest`, `ReflowTest`,
+`TerminalUnicodeTest`, `AnsiParserTest`, `CharWidthTest`, `CellMetricsTest`,
+`MouseEncodingTest`, `GlyphSpansTest`, `TerminalChromeTest`).
+Not host-runnable: `TerminalUxTest`, `TerminalBufferTest` (need `components`).
+
+**CI:** recorded in the commit-2 docs (the run that proves this commit is the
+one on its own pushed tip; the commit-1 tip sha and run id are recorded there).
+
+**Device pass required:** yes — the device rows for the whole phase run after
+commit 2 (copy of a partial wrapped URL, Select-all then Copy, paste into a
+running `cat`).
+
