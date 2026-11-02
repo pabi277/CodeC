@@ -68,7 +68,9 @@ import com.codeci.ide.ui.theme.CodecTokens.Radius
 import com.codeci.ide.ui.theme.CodecTokens.Space
 import com.codeci.ide.MainActivity
 import com.codeci.ide.R
+import com.codeci.ide.ui.components.HapticMoment
 import com.codeci.ide.ui.components.TerminalEmulatorView
+import com.codeci.ide.ui.components.rememberCodecHaptics
 import com.codeci.ide.ui.components.TerminalExtraKeys
 import com.codeci.ide.ui.components.openTerminalUrl
 import com.codeci.ide.ui.components.parseExtraKeysMacros
@@ -126,6 +128,10 @@ fun TerminalScreen(
     val activeItem = sessions.firstOrNull { it.id == activeSessionId } ?: sessions.firstOrNull()
 
     var activeSelection by remember { mutableStateOf<String?>(null) }
+    // Phase 103.1: the ONE haptics adapter (Phase 51.4) — honours the
+    // Settings switch and the device's vibrator, and keeps the platform call
+    // in the two files the house allows.
+    val haptics = rememberCodecHaptics()
     var bellTrigger by remember { mutableLongStateOf(0L) }
     var sessionsOpen by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<String?>(null) }
@@ -482,6 +488,13 @@ fun TerminalScreen(
             cursorSequence = { viewModel.cursorKey(it) },
             bellTrigger = bellTrigger,
             onSelectionChanged = { activeSelection = it },
+            // Phase 103.1: the long-press tick is performed HERE, in the
+            // screen that owns the terminal's chrome, because
+            // TerminalEmulatorView.kt is one of the two haptics-free zones
+            // `HapticWiringTest` guards (Phase 51.4). DRAG_STARTED is the
+            // house moment for "a long press took", and going through the
+            // adapter keeps the owner's Settings switch in force.
+            onSelectionStarted = { haptics.perform(HapticMoment.DRAG_STARTED) },
             onUrlClick = { openTerminalUrl(context, it) },
             onMouseEvent = { viewModel.sendKey(it) },
             onReset = { viewModel.resetEmulator() },

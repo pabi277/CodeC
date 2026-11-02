@@ -58,8 +58,10 @@ soft-wrap flag and a monotonic `scrolledRows` counter published by the buffer,
 two draggable 48 dp handles and a floating Copy / Select all / Paste / More
 toolbar over the terminal, edge auto-scroll, and **the copy law** — Copy writes
 the selection or is disabled, and the `transcriptText()` fallback behind "it
-copied everything" is deleted rather than kept as a net. The long-press tick
-goes through the app's one haptics adapter (Phase 51.4). 36 new host cases
+copied everything" is deleted rather than kept as a net. The long-press tick is
+*announced* by the view and performed by `TerminalScreen.kt` through the app's
+one haptics adapter, because CI showed the emulator view is a pinned
+haptics-free zone (Phase 51.4). 37 new host cases
 (`SelectionModelTest` 25, `SelectionWiringTest` 11) were compiled and **run**
 in-sandbox before CI. Full record, including two places where the plan was
 corrected on evidence and what is deferred:

@@ -49,7 +49,7 @@ class SelectionWiringTest {
         // handler. The popup stole the gesture, so there was never a range
         // left for the finger to extend — hence "partial text copy not
         // working".
-        val block = window(code(view), "onLongPress = {", 1600)
+        val block = window(code(view), "onLongPress = {", 2200)
         assertTrue("the long-press must build the range through the model", block.contains("SelectionModel.beginWord"))
         assertTrue("the same gesture must arm drag-extension", block.contains("selecting = true"))
         assertTrue("the handles must appear", block.contains("showHandles = true"))
@@ -61,17 +61,38 @@ class SelectionWiringTest {
 
     @Test
     fun `the long press ticks through the app's ONE haptics adapter`() {
-        // Phase 51.4 invariant (pinned by `HapticWiringTest`): the platform
-        // call lives in CodecHaptics.kt / CodecKeyboard.kt and nowhere else.
-        // A terminal that reached for the vibrator directly would break that
-        // pin AND ignore the owner's Settings switch. DRAG_STARTED is the
-        // house moment for "a long press took".
-        val block = window(code(view), "onLongPress = {", 1600)
-        assertTrue(block.contains("haptics.perform(HapticMoment.DRAG_STARTED)"))
+        // Phase 51.4 (pinned by `HapticWiringTest`) makes
+        // TerminalEmulatorView.kt a HAPTICS-FREE zone, so the view only
+        // ANNOUNCES that a selection began; the screen — which owns the
+        // terminal's chrome — performs the tick through the adapter. That
+        // keeps the platform call in the two files the house allows and keeps
+        // the owner's Settings switch in force. DRAG_STARTED is the house
+        // moment for "a long press took".
+        val block = window(code(view), "onLongPress = {", 2200)
+        assertTrue("the view must announce the moment", block.contains("onSelectionStarted()"))
         assertFalse(
-            "the terminal must not touch the platform haptics itself",
+            "the emulator view must not name a moment (Phase 51.4)",
+            code(view).contains("HapticMoment")
+        )
+        assertFalse(
+            "and must never touch the platform haptics itself",
             code(view).contains("performHapticFeedback")
         )
+        assertTrue(
+            "the screen performs it, through the adapter",
+            code(screen).contains("haptics.perform(HapticMoment.DRAG_STARTED)")
+        )
+        assertTrue(
+            "the screen borrows the house handle, not a new one",
+            code(screen).contains("rememberCodecHaptics()")
+        )
+    }
+
+    @Test
+    fun `the emulator view stays off the app token system`() {
+        // Phase 51.3 pin (`TerminalChromeTest`): Phase 36 owns the emulator's
+        // rendering, so this file draws from the terminal theme only.
+        assertFalse(code(view).contains("CodecTokens"))
     }
 
     @Test

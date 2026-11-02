@@ -78,7 +78,6 @@ import com.codeci.ide.ui.terminal.TerminalLine
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.terminal.TextSelection
 import com.codeci.ide.ui.terminal.XtermColors
-import com.codeci.ide.ui.theme.CodecTokens
 import com.codeci.ide.ui.theme.DraculaTerminalTheme
 import com.codeci.ide.ui.theme.TerminalThemeColors
 import com.codeci.ide.ui.viewmodels.TerminalViewModel
@@ -180,6 +179,12 @@ fun TerminalEmulatorView(
     modifier: Modifier = Modifier,
     bellTrigger: Long = 0L,
     onSelectionChanged: (String?) -> Unit = {},
+    /**
+     * Phase 103.1: a selection was just started by a long-press. The view
+     * does not perform the haptic itself (Phase 51.4 keeps this file
+     * haptic-free); the screen, which owns the terminal's chrome, does.
+     */
+    onSelectionStarted: () -> Unit = {},
     onUrlClick: (String) -> Unit = {},
     /** Phase 19.5: raw mouse-reporting bytes for the running program. */
     onMouseEvent: (String) -> Unit = {},
@@ -190,12 +195,6 @@ fun TerminalEmulatorView(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    // Phase 103.1: the long-press tick goes through the app's ONE haptics
-    // adapter (Phase 51.4) — it honours the Settings switch and the
-    // device's vibrator, and it keeps the platform call in the two files
-    // `HapticWiringTest` allows. DRAG_STARTED is the house moment for
-    // exactly this: "a long press took".
-    val haptics = rememberCodecHaptics()
     var keyView by remember { mutableStateOf<TerminalKeyView?>(null) }
 
     // Reactive local font size for instant smooth pinch-to-zoom
@@ -454,7 +453,13 @@ fun TerminalEmulatorView(
                                     dragFingerX = pos.x
                                     dragFingerY = pos.y
                                     menuOffset = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
-                                    haptics.perform(HapticMoment.DRAG_STARTED)
+                                    // Phase 103.1: the tick is performed by
+                                    // the SCREEN, not here — the emulator
+                                    // view is one of the two haptics-free
+                                    // zones `HapticWiringTest` guards
+                                    // (Phase 51.4), so this file never
+                                    // names a HapticMoment at all.
+                                    onSelectionStarted()
                                 }
                             }
                         )
@@ -1226,7 +1231,10 @@ private fun SelectionToolbar(
         ),
         shape = RoundedCornerShape(8.dp),
         color = theme.topBarBackground,
-        shadowElevation = CodecTokens.elevation(CodecTokens.Elevation.SHEET)
+        // Phase 51.3 keeps `CodecTokens` out of this file (Phase 36 owns the
+        // emulator's rendering, and the terminal draws from its own theme),
+        // so the lift is a plain dp like the rest of the view's chrome.
+        shadowElevation = 4.dp
     ) {
         Row(modifier = Modifier.padding(horizontal = 4.dp)) {
             ToolbarAction(stringResource(R.string.terminal_copy), canCopy, theme, onCopy)

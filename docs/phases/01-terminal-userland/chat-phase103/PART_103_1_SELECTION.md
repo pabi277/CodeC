@@ -101,13 +101,18 @@ repository; nothing here is a proposal.
 1. **The planned "selection refused on the alternate screen" case was dropped.**
    Refusing would mean a user cannot copy out of `less`, `man` or a TUI — the
    exact content people copy. Selection is grid-wide, as it always was.
-2. **The long-press haptic goes through the app's one adapter**
-   (`rememberCodecHaptics()` → `HapticMoment.DRAG_STARTED`), not a direct
-   platform call. Phase 51.4 pins the platform call to `CodecHaptics.kt` /
-   `CodecKeyboard.kt` only (`HapticWiringTest`); a terminal that reached for the
-   vibrator itself would break that pin **and** ignore the Settings switch.
-   `DRAG_STARTED` maps to the light `TextHandleMove` tick — the right word for a
-   text handle.
+2. **The long-press tick is performed by the screen, not the view.** CI
+   (run `41392258325`) caught this honestly: `TerminalEmulatorView.kt` is one
+   of the two **haptics-free zones** `HapticWiringTest` guards (Phase 51.4,
+   alongside `SoraEditorHost.kt`), and `TerminalChromeTest` pins the same file
+   off `CodecTokens` because Phase 36 owns its rendering. So the view only
+   *announces* the moment (`onSelectionStarted()`), and `TerminalScreen.kt` —
+   which does own the terminal's chrome — performs
+   `haptics.perform(HapticMoment.DRAG_STARTED)` through the app's one adapter.
+   That keeps the platform call in the two files the house allows, keeps the
+   owner's Settings switch in force, and `DRAG_STARTED` maps to the light
+   `TextHandleMove` tick — the right word for a text handle. Both pins are now
+   re-asserted by `SelectionWiringTest`.
 
 ### Where the code lives
 
