@@ -233,3 +233,8 @@ that leaks on every cancellation, and Compose cancels gesture detectors
 whenever their keys change. Any per-gesture state must be reset by the
 **lifecycle that owns it** (`DisposableEffect` on the same keys), never only by
 the happy path.
+
+**CI (`Build APK`, branch `arena/d900b6b1-codec`) — the rewrite:** `41399563488`
+✗ `var current = held` inferred a nullable handle (Kotlin infers a `var` from the
+declared type of its initializer, not from the smart cast in force) ·
+**`41399928538` ✅ green, APK built.**
