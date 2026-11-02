@@ -308,6 +308,13 @@ fun TerminalEmulatorView(
     // pop up) and drags broke when scrollback grew. Reading this state
     // instead keeps the detectors alive across frames.
     var latestSnapshot by remember { mutableStateOf(snapshot) }
+    // Phase 103.1: the handle overlay hit-tests against the CURRENT handle
+    // boxes. A plain local `val` captured by a keyed pointerInput freezes at
+    // whatever the boxes were when the cell metrics last changed — the touch
+    // would land on where a handle USED to be — so they travel as state, the
+    // same discipline as `latestSnapshot`.
+    var latestStartBox by remember { mutableStateOf<HandleBox?>(null) }
+    var latestEndBox by remember { mutableStateOf<HandleBox?>(null) }
     SideEffect { latestSnapshot = snapshot }
 
     // BEL visual flash + vibration
@@ -613,6 +620,11 @@ fun TerminalEmulatorView(
                     below = true
                 )
             }
+            // Publish the boxes for the gesture layer (see latestStartBox).
+            SideEffect {
+                latestStartBox = startBox
+                latestEndBox = endBox
+            }
             // The copy law: the clipboard gets the selection, or nothing.
             val selectedText = selection?.let { SelectionModel.extract(snapshot, it) } ?: ""
 
@@ -671,8 +683,8 @@ fun TerminalEmulatorView(
                     .pointerInput(cellW, cellH, cols, rows) {
                         detectHandleDrag(
                             hitTest = { pos ->
-                                val box = startBox
-                                val end = endBox
+                                val box = latestStartBox
+                                val end = latestEndBox
                                 if (box == null || end == null) {
                                     null
                                 } else {
@@ -775,8 +787,6 @@ fun TerminalEmulatorView(
                     x = (menuOffset.x / density.density).dp,
                     y = (menuOffset.y / density.density).dp
                 )
-                expanded = menu,
-                onDismissRequest = { menu = false }
             ) {
                 // Phase 103.1: `selectedText` here is the SELECTION, never the
                 // transcript. The old line was
@@ -1263,12 +1273,11 @@ private suspend fun PointerInputScope.detectHandleDrag(
 ) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
-        val handle = hitTest(down.position)
         // Not on a handle: leave the event alone so the terminal below sees
         // it exactly as it did before this overlay existed.
-        if (handle == null) return@awaitEachGesture
+        val handle = hitTest(down.position) ?: return@awaitEachGesture
         down.consume()
-        var current = handle
+        var current: SelectionHandle = handle
         onStart(current, down.position)
         while (true) {
             val event = awaitPointerEvent()
