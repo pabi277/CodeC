@@ -457,8 +457,8 @@ fun TerminalEmulatorView(
                                     // the SCREEN, not here — the emulator
                                     // view is one of the two haptics-free
                                     // zones `HapticWiringTest` guards
-                                    // (Phase 51.4), so this file never
-                                    // names a HapticMoment at all.
+                                    // (Phase 51.4), so this file only says
+                                    // that a selection began.
                                     onSelectionStarted()
                                 }
                             }
@@ -1231,9 +1231,9 @@ private fun SelectionToolbar(
         ),
         shape = RoundedCornerShape(8.dp),
         color = theme.topBarBackground,
-        // Phase 51.3 keeps `CodecTokens` out of this file (Phase 36 owns the
-        // emulator's rendering, and the terminal draws from its own theme),
-        // so the lift is a plain dp like the rest of the view's chrome.
+        // Phase 51.3 keeps the app's token system out of this file (Phase 36
+        // owns the emulator's rendering, and the terminal draws from its own
+        // theme), so the lift is a plain dp like the rest of the view's chrome.
         shadowElevation = 4.dp
     ) {
         Row(modifier = Modifier.padding(horizontal = 4.dp)) {
