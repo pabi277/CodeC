@@ -2,7 +2,8 @@
 
 > **Status:** 🚧 IMPLEMENTED (2026-10-14, on the owner's "Start Phase 103") ·
 > **Cost:** `[client-only]` · **Effort:** M · **Device pass: REQUIRED** (touch
-> behaviour — see the exit condition below). CI: pending at push time.
+> behaviour — see the exit condition below). CI: **green** `41393882567` on `95bf1e4`
+(3,562 host cases).
 >
 > *(The brief below is kept verbatim; the record of what was actually built
 > follows it as [Implementation](#implementation-record-2026-10-14).)*
@@ -136,7 +137,7 @@ repository; nothing here is a proposal.
 - `findWordBoundaries` and `TerminalSnapshot.selectedText(GridSelection)` now
   forward to the model instead of keeping a second copy of the rule.
 
-### Tests (36 new host cases, all green in-sandbox before CI)
+### Tests (37 new host cases, green in-sandbox and on CI)
 
 `SelectionModelTest` (25) — word bounds over paths/flags/spaces, long-press,
 drag on both handles including a reverse drag that flips the held edge,
@@ -144,7 +145,7 @@ clamping, `shift` (including the "text scrolled out of the buffer → drop the
 selection" case and the counter outliving the scrollback cap), and the copy
 rules: wrapped URL as one line, a selection starting mid-wrap, hard lines,
 trim rules, empty rows, backwards ranges.
-`SelectionWiringTest` (11) — source pins: no `menu = true` inside the
+`SelectionWiringTest` (12) — source pins: no `menu = true` inside the
 long-press, the transcript fallback gone from both copy paths, the
 handle-drag guard wired, the 48 dp target, the sub-row offset in the row math,
 the haptics invariant, and the toolbar's shape.

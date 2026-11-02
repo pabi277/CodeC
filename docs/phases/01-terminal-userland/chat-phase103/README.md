@@ -1,8 +1,8 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
 **Status:** 🚧 IN PROGRESS — **103.1 implemented** (2026-10-14, on the owner's
-"Start Phase 103"; CI pending at push time, **device pass required**), **103.2 still
-📋 PLANNED**. **Owner rows:** *"partial text copy not working"* and
+"Start Phase 103"; CI **green** `41393882567` on `95bf1e4`, **device pass
+required**), **103.2 still 📋 PLANNED**. **Owner rows:** *"partial text copy not working"* and
 *"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
 Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
 [`PHASE103_108_ROADMAP.md`](../../../roadmaps/PHASE103_108_ROADMAP.md); research:
@@ -62,8 +62,8 @@ copied everything" is deleted rather than kept as a net. The long-press tick is
 *announced* by the view and performed by `TerminalScreen.kt` through the app's
 one haptics adapter, because CI showed the emulator view is a pinned
 haptics-free zone (Phase 51.4). 37 new host cases
-(`SelectionModelTest` 25, `SelectionWiringTest` 11) were compiled and **run**
-in-sandbox before CI. Full record, including two places where the plan was
+(`SelectionModelTest` 25, `SelectionWiringTest` 12) were compiled and **run**
+in-sandbox before CI, and CI's 3,562-case suite is green (`41393882567`). Full record, including two places where the plan was
 corrected on evidence and what is deferred:
 [`PART_103_1_SELECTION.md` § Implementation record](PART_103_1_SELECTION.md#implementation-record-2026-10-14).
 
