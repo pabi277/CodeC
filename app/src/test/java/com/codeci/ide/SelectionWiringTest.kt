@@ -50,12 +50,65 @@ class SelectionWiringTest {
         // left for the finger to extend — hence "partial text copy not
         // working".
         val block = window(code(view), "onLongPress = {", 2200)
-        assertTrue("the long-press must build the range through the model", block.contains("SelectionModel.beginWord"))
-        assertTrue("the same gesture must arm drag-extension", block.contains("selecting = true"))
-        assertTrue("the handles must appear", block.contains("showHandles = true"))
+        assertTrue("the long-press must start a range", block.contains("beginSelectionAt("))
         assertFalse(
             "opening the menu inside the long-press is the bug — it ends the gesture",
             block.contains("menu = true")
+        )
+        assertTrue(
+            "the range is built by the model, not by the view",
+            code(view).contains("SelectionModel.beginWord")
+        )
+        assertTrue("the same gesture must arm drag-extension", code(view).contains("selecting = true"))
+        assertTrue("the handles must appear", code(view).contains("showHandles = true"))
+    }
+
+    @Test
+    fun `a double tap grabs the word too`() {
+        // The owner tried it before he tried the long-press: *"No copy with
+        // long press or double tap"*. On a phone a double-tap IS the
+        // word-grabbing gesture, so it must not be left unbound.
+        val block = window(code(view), "onDoubleTap = {", 150)
+        assertTrue(block.contains("beginSelectionAt("))
+        assertFalse("a double-tap is not a long-press: no tick", block.contains("tick = true"))
+    }
+
+    @Test
+    fun `the extend branch never swallows an event it cannot use`() {
+        // The 2026-10-14 device failure, in one condition. The extend branch
+        // consumes the event; if it is taken while there is nothing to
+        // extend, the terminal stops scrolling AND the tap detector next
+        // door — which needs an unconsumed down — stops firing. Long-press,
+        // double-tap, scroll: all three dead at once, which is exactly what
+        // the owner saw.
+        assertTrue(
+            "extending must require an actual range",
+            code(view).contains("extending = { selecting && selection != null }")
+        )
+    }
+
+    @Test
+    fun `the per-gesture flags are cleared when the detector is torn down`() {
+        // The detector is keyed on the cell metrics, and `rows` changes when
+        // the soft keyboard opens — that CANCELS the coroutine, so the
+        // end-of-gesture cleanup (`onGestureEnd`) never runs. Without this
+        // reset, one long-press could leave `selecting` switched on for good.
+        assertTrue(code(view).contains("DisposableEffect(cellW, cellH, cols, rows)"))
+        val block = window(code(view), "DisposableEffect(cellW, cellH, cols, rows)", 400)
+        assertTrue("the teardown must clear the extend flag", block.contains("selecting = false"))
+        assertTrue("and the held handle", block.contains("draggingHandle = null"))
+    }
+
+    @Test
+    fun `one detector owns every gesture on the glass`() {
+        // Two detectors over the canvas (the original build put the handle
+        // drag on a full-screen overlay above it) is two places a gesture
+        // can be swallowed, and this surface cannot afford one.
+        assertTrue(code(view).contains("private suspend fun PointerInputScope.detectTerminalGestures("))
+        assertFalse("the full-screen handle overlay is gone", code(view).contains("detectHandleDrag"))
+        assertFalse(
+            "and so is the second full-screen pointerInput it needed",
+            code(view).contains("hitTest = { pos ->")
         )
     }
 
@@ -68,8 +121,7 @@ class SelectionWiringTest {
         // keeps the platform call in the two files the house allows and keeps
         // the owner's Settings switch in force. DRAG_STARTED is the house
         // moment for "a long press took".
-        val block = window(code(view), "onLongPress = {", 2200)
-        assertTrue("the view must announce the moment", block.contains("onSelectionStarted()"))
+        assertTrue("the view must announce the moment", code(view).contains("onSelectionStarted()"))
         assertFalse(
             "the emulator view must not name a moment (Phase 51.4)",
             code(view).contains("HapticMoment")
@@ -97,14 +149,12 @@ class SelectionWiringTest {
 
     @Test
     fun `a handle drag owns the gesture — the buffer must not scroll under it`() {
-        assertTrue(
-            "the scroll detector must be told when a handle is held",
-            code(view).contains("handleDragging = { draggingHandle != null }")
-        )
-        assertTrue(
-            "and it must actually branch on it",
-            code(view).contains("if (handleDragging())")
-        )
+        // The single detector hit-tests the handles on the DOWN and consumes
+        // from there, so neither the scroll branch nor the tap detector can
+        // act on the same pointer.
+        assertTrue(code(view).contains("val held = hitHandle(down.position)"))
+        assertTrue(code(view).contains("down.consume()"))
+        assertTrue(code(view).contains("onHandleEnd()"))
     }
 
     @Test

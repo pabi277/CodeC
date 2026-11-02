@@ -1,8 +1,10 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
-**Status:** 🚧 IN PROGRESS — **103.1 implemented** (2026-10-14, on the owner's
-"Start Phase 103"; CI **green** `41393882567` on `95bf1e4`, **device pass
-required**), **103.2 still 📋 PLANNED**. **Owner rows:** *"partial text copy not working"* and
+**Status:** 🚧 IN PROGRESS — **103.1 implemented**, **device round 1 FAILED and
+root-caused** (2026-10-14) → **rewritten, device round 2 required**; **103.2 still
+📋 PLANNED**. The failure was one sticky per-gesture flag, and it killed long-press,
+double-tap, scroll and copy together — full analysis in
+[`PART_103_1_SELECTION.md` § Device round 1](PART_103_1_SELECTION.md#device-round-1-2026-10-14--failed-root-caused). **Owner rows:** *"partial text copy not working"* and
 *"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
 Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
 [`PHASE103_108_ROADMAP.md`](../../../roadmaps/PHASE103_108_ROADMAP.md); research:

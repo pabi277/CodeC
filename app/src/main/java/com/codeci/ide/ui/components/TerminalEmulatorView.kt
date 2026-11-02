@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -397,7 +398,93 @@ fun TerminalEmulatorView(
             selecting = false
         }
 
+        val handleTouchPx = with(density) { HandleTouchSize.toPx() }
+
+        /**
+         * Phase 103.1: which handle (if any) is under [pos], in view px.
+         * ONE definition, used by the single gesture detector below, so the
+         * touch test and the two drawn handles cannot disagree.
+         */
+        fun handleAt(pos: Offset): SelectionHandle? {
+            val start = latestStartBox
+            val end = latestEndBox
+            return when {
+                start == null || end == null -> null
+                start.hit(pos.x, pos.y, handleTouchPx) -> SelectionHandle.START
+                end.hit(pos.x, pos.y, handleTouchPx) -> SelectionHandle.END
+                else -> null
+            }
+        }
+
+        /**
+         * Phase 103.1: begin a word selection under [pos].
+         *
+         * Used by BOTH the long-press and the double-tap: the owner reached
+         * for the double-tap first (*"No copy with long press or double
+         * tap"*), and on a phone a double-tap is the gesture that grabs a
+         * word. [tick] asks the screen for the long-press feedback, which a
+         * double-tap does not get.
+         */
+        fun beginSelectionAt(pos: Offset, tick: Boolean) {
+            val snap = latestSnapshot
+            val row = ((pos.y + scrollSubPx) / cellH).toInt().coerceIn(0, rows - 1)
+            val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
+            val started = SelectionModel.beginWord(snap, col, topRow + row) ?: return
+            selection = started
+            // The finger may still be down: the same gesture then EXTENDS
+            // the range (detectTerminalGestures). The menu no longer opens
+            // here — opening it inside the long-press is what made a drag
+            // impossible, because there was never a range left to extend.
+            selecting = true
+            draggingHandle = null
+            showHandles = true
+            dragFingerX = pos.x
+            dragFingerY = pos.y
+            menuOffset = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
+            if (tick) onSelectionStarted()
+        }
+
+        /**
+         * Phase 103.1: drag [handle] to [pos]; returns the edge the finger is
+         * now holding (a drag that crosses the other edge flips).
+         */
+        fun moveHandle(handle: SelectionHandle, pos: Offset): SelectionHandle {
+            val snap = latestSnapshot
+            val cur = selection
+            dragFingerX = pos.x
+            dragFingerY = pos.y
+            if (cur == null) return handle
+            val row = ((pos.y + scrollSubPx) / cellH).toInt().coerceIn(0, rows - 1)
+            val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
+            val moved = SelectionModel.drag(
+                selection = cur,
+                handle = handle,
+                col = col,
+                extY = topRow + row,
+                cols = cols,
+                minRow = -snap.scrollbackCount,
+                maxRow = snap.rows - 1
+            )
+            selection = moved.selection
+            return moved.handle
+        }
+
         Box(modifier = Modifier.fillMaxSize()) {
+            // Phase 103.1: the gesture detector below is keyed on the cell
+            // metrics, and `rows` changes when the soft keyboard opens —
+            // which CANCELS the coroutine instead of running its end-of-
+            // gesture cleanup. This is the backstop: whenever the detector is
+            // torn down, the per-gesture flags go with it. Without it one
+            // long-press could leave `selecting` switched on for good, and
+            // every later event would be consumed by the extend branch with
+            // nothing to extend — no scroll, no long-press, no tap (the
+            // owner's 2026-10-14 device report, all three symptoms at once).
+            DisposableEffect(cellW, cellH, cols, rows) {
+                onDispose {
+                    selecting = false
+                    draggingHandle = null
+                }
+            }
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
@@ -431,47 +518,29 @@ fun TerminalEmulatorView(
                                     keyView?.showIme()
                                 }
                             },
+                            onDoubleTap = { pos ->
+                                beginSelectionAt(pos, tick = false)
+                            },
                             onLongPress = { pos ->
-                                val snap = latestSnapshot
-                                val row = ((pos.y + scrollSubPx) / cellH).toInt().coerceIn(0, rows - 1)
-                                val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
-                                val y = topRow + row
-                                val started = SelectionModel.beginWord(snap, col, y)
-                                if (started != null) {
-                                    selection = started
-                                    // Phase 103.1: the finger is still down —
-                                    // the SAME gesture now EXTENDS the range
-                                    // (see detectScrollOrSelect). The menu no
-                                    // longer opens here: opening it inside the
-                                    // long-press is exactly what made a drag
-                                    // impossible ("partial text copy not
-                                    // working"), because there was never a
-                                    // range left to extend.
-                                    selecting = true
-                                    draggingHandle = null
-                                    showHandles = true
-                                    dragFingerX = pos.x
-                                    dragFingerY = pos.y
-                                    menuOffset = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
-                                    // Phase 103.1: the tick is performed by
-                                    // the SCREEN, not here — the emulator
-                                    // view is one of the two haptics-free
-                                    // zones `HapticWiringTest` guards
-                                    // (Phase 51.4), so this file only says
-                                    // that a selection began.
-                                    onSelectionStarted()
-                                }
+                                beginSelectionAt(pos, tick = true)
                             }
                         )
                     }
                     .pointerInput(cellW, cellH, cols, rows) {
-                        detectScrollOrSelect(
-                            cellW = cellW,
-                            cellH = cellH,
-                            cols = cols,
-                            rows = rows,
-                            selecting = { selecting },
-                            handleDragging = { draggingHandle != null },
+                        detectTerminalGestures(
+                            hitHandle = { pos -> handleAt(pos) },
+                            onHandleStart = { handle, pos ->
+                                draggingHandle = handle
+                                dragFingerX = pos.x
+                                dragFingerY = pos.y
+                            },
+                            onHandleMove = { handle, pos -> moveHandle(handle, pos) },
+                            onHandleEnd = { draggingHandle = null },
+                            // Extend ONLY when there is a range to extend:
+                            // consuming an event with nothing to extend
+                            // swallows the gesture (owner device report,
+                            // 2026-10-14 — see the teardown reset below).
+                            extending = { selecting && selection != null },
                             onScroll = { dy, x, y ->
                                 val snap = latestSnapshot
                                 if (snap.mouseMode and MouseModes.CAPTURE_MASK != 0) {
@@ -509,7 +578,7 @@ fun TerminalEmulatorView(
                             },
                             onSelectMove = { x, y ->
                                 val snap = latestSnapshot
-                                val cur = selection ?: return@detectScrollOrSelect
+                                val cur = selection ?: return@detectTerminalGestures
                                 dragFingerX = x
                                 dragFingerY = y
                                 // Phase 103.1: the row is measured in the
@@ -600,7 +669,6 @@ fun TerminalEmulatorView(
             // receiver, so the outer one has to be named.
             val viewWidthPx = with(density) { this@BoxWithConstraints.maxWidth.toPx() }
             val viewHeightPx = with(density) { this@BoxWithConstraints.maxHeight.toPx() }
-            val handleTouchPx = with(density) { HandleTouchSize.toPx() }
             val handleDotPx = with(density) { HandleDotRadius.toPx() }
             val shownSel = if (showHandles) selection?.normalized() else null
             val startBox = shownSel?.let { sel ->
@@ -674,75 +742,17 @@ fun TerminalEmulatorView(
                 )
             }
 
-            // The handle drag lives on ONE overlay above the terminal instead
-            // of on the handles themselves: a handle moves while it is being
-            // dragged, so a gesture bound to its own box would read its
-            // coordinates in a moving frame. The overlay is keyed only on the
-            // cell metrics (never on topRow/scrollSubPx, which change every
-            // frame — restarting a detector mid-gesture is the Phase 19.2
-            // round-3 bug), and reads the live values through the state
-            // holders at event time.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(cellW, cellH, cols, rows) {
-                        detectHandleDrag(
-                            hitTest = { pos ->
-                                val box = latestStartBox
-                                val end = latestEndBox
-                                if (box == null || end == null) {
-                                    null
-                                } else {
-                                    when {
-                                        box.hit(pos.x, pos.y, handleTouchPx) -> SelectionHandle.START
-                                        end.hit(pos.x, pos.y, handleTouchPx) -> SelectionHandle.END
-                                        else -> null
-                                    }
-                                }
-                            },
-                            onStart = { handle, pos ->
-                                draggingHandle = handle
-                                dragFingerX = pos.x
-                                dragFingerY = pos.y
-                            },
-                            onMove = { handle, pos ->
-                                val snap = latestSnapshot
-                                val cur = selection
-                                dragFingerX = pos.x
-                                dragFingerY = pos.y
-                                if (cur == null) {
-                                    handle
-                                } else {
-                                    val row = ((pos.y + scrollSubPx) / cellH).toInt().coerceIn(0, rows - 1)
-                                    val col = (pos.x / cellW).toInt().coerceIn(0, cols - 1)
-                                    val moved = SelectionModel.drag(
-                                        selection = cur,
-                                        handle = handle,
-                                        col = col,
-                                        extY = topRow + row,
-                                        cols = cols,
-                                        minRow = -snap.scrollbackCount,
-                                        maxRow = snap.rows - 1
-                                    )
-                                    selection = moved.selection
-                                    // A drag that crosses the other edge
-                                    // flips: the finger keeps the edge it
-                                    // started on.
-                                    moved.handle
-                                }
-                            },
-                            onEnd = { draggingHandle = null }
-                        )
-                    }
-            )
-
             // Phase 103.1: edge auto-scroll. Without it a selection can never
             // grow past one screen — the finger reaches the edge of the glass
             // and stops, no matter how much text there is.
-            val gestureActive = selecting || draggingHandle != null
+            // A held HANDLE, or a finger that is genuinely extending an
+            // existing range. Never the bare `selecting` flag: if that ever
+            // survived a gesture this loop would scroll for ever and park
+            // the view at a rail.
+            val gestureActive = (selecting && selection != null) || draggingHandle != null
             LaunchedEffect(gestureActive, cellH) {
                 if (!gestureActive) return@LaunchedEffect
-                while (selecting || draggingHandle != null) {
+                while ((selecting && selection != null) || draggingHandle != null) {
                     val band = cellH * EDGE_SCROLL_BAND_ROWS
                     val dir = when {
                         dragFingerY < band -> -1f // toward older text
@@ -1261,56 +1271,36 @@ private fun ToolbarAction(
     }
 }
 
-/**
- * Phase 103.1: drag one of the two handles.
- *
- * Consumes from the DOWN, not from the first move: the terminal's own
- * scroll/tap detector deliberately accepts already-consumed downs
- * (`requireUnconsumed = false`), so a handle that only consumed after touch
- * slop would ALSO scroll the buffer — or, on a tap, clear the very selection
- * the user was reaching for.
- *
- * [onMove] returns the handle the finger is now holding, because a drag that
- * crosses the other edge flips the range.
- */
-private suspend fun PointerInputScope.detectHandleDrag(
-    hitTest: (Offset) -> SelectionHandle?,
-    onStart: (SelectionHandle, Offset) -> Unit,
-    onMove: (SelectionHandle, Offset) -> SelectionHandle,
-    onEnd: () -> Unit
-) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        // Not on a handle: leave the event alone so the terminal below sees
-        // it exactly as it did before this overlay existed.
-        val handle = hitTest(down.position) ?: return@awaitEachGesture
-        down.consume()
-        var current: SelectionHandle = handle
-        onStart(current, down.position)
-        while (true) {
-            val event = awaitPointerEvent()
-            val change = event.changes.firstOrNull() ?: break
-            if (!change.pressed) break
-            change.consume()
-            current = onMove(current, change.position)
-        }
-        onEnd()
-    }
-}
-
-private suspend fun PointerInputScope.detectScrollOrSelect(
-    cellW: Int,
-    cellH: Int,
-    cols: Int,
-    rows: Int,
-    selecting: () -> Boolean,
-    handleDragging: () -> Boolean,
+private suspend fun PointerInputScope.detectTerminalGestures(
+    hitHandle: (Offset) -> SelectionHandle?,
+    onHandleStart: (SelectionHandle, Offset) -> Unit,
+    onHandleMove: (SelectionHandle, Offset) -> SelectionHandle,
+    onHandleEnd: () -> Unit,
+    extending: () -> Boolean,
     onScroll: (Float, Float, Float) -> Unit,
     onSelectMove: (Float, Float) -> Unit,
     onGestureEnd: () -> Unit
 ) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
+        val held = hitHandle(down.position)
+        if (held != null) {
+            // A handle owns the pointer from the DOWN, not from the first
+            // move: the buffer must not scroll under it, and a tap on a
+            // handle must not clear the very selection being adjusted.
+            down.consume()
+            var current = held
+            onHandleStart(current, down.position)
+            while (true) {
+                val event = awaitPointerEvent()
+                val change = event.changes.firstOrNull() ?: break
+                if (!change.pressed) break
+                change.consume()
+                current = onHandleMove(current, change.position)
+            }
+            onHandleEnd()
+            return@awaitEachGesture
+        }
         var lastY = down.position.y
         var dragged = false
         while (true) {
@@ -1319,12 +1309,7 @@ private suspend fun PointerInputScope.detectScrollOrSelect(
             if (!change.pressed) break
             val dy = change.position.y - lastY
             if (abs(dy) > 1f || abs(change.positionChange().x) > 1f) dragged = true
-            if (handleDragging()) {
-                // Phase 103.1: the handle overlay above us owns this pointer.
-                // Consume so nothing else in the stack acts on it, but do
-                // NOT scroll — the handle drag has its own edge auto-scroll.
-                change.consume()
-            } else if (selecting()) {
+            if (extending()) {
                 onSelectMove(change.position.x, change.position.y)
                 change.consume()
             } else if (dragged) {
@@ -1333,6 +1318,9 @@ private suspend fun PointerInputScope.detectScrollOrSelect(
                 change.consume()
             }
         }
+        // The gesture ended normally. (It can also be CANCELLED — the
+        // detector is keyed on the cell metrics — and then this line never
+        // runs; `DisposableEffect` in the composable is the backstop.)
         onGestureEnd()
     }
 }

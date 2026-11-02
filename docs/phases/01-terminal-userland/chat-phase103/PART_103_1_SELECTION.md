@@ -166,3 +166,70 @@ the haptics invariant, and the toolbar's shape.
   polish, not this part's bug.
 - **Double-tap-to-select-word, and accessibility for the canvas** (the canvas is
   `IMPORTANT_FOR_ACCESSIBILITY_NO`) — recorded in the series research §3 as P2.
+
+---
+
+## Device round 1 (2026-10-14) — FAILED, root-caused
+
+The owner's report, verbatim:
+
+> *"Totally failed at device test*  
+> *No copy with long press or double tap, the complete copy botton is not usable*  
+> *And scroll is Totally not working a bit the screen is pause at a prace"*
+
+Three symptoms, and they are **one** fault. Not "selection is broken" — the
+terminal had stopped receiving touch entirely.
+
+### Root cause: one sticky flag
+
+`selecting` (the "a long-press happened, so this gesture extends the range"
+flag) was cleared in exactly one place: the end of the gesture loop. But that
+detector is keyed on the cell metrics —
+
+```kotlin
+.pointerInput(cellW, cellH, cols, rows) { detectScrollOrSelect(...) }
+```
+
+— and **`rows` changes when the soft keyboard opens**. A key change *cancels*
+the coroutine; `onGestureEnd()` never runs; the flag stays on. From that
+moment:
+
+1. **Scroll dead.** The extend branch ran on every move and called
+   `change.consume()`. The scroll branch is an `else if` below it, so the
+   buffer never moved.
+2. **Long-press and double-tap dead.** `detectTapGestures` sits on the same
+   node and uses `awaitFirstDown()`, which **requires an unconsumed down**.
+   The extend branch had already consumed it, so no tap, no long-press, no
+   double-tap — ever again.
+3. **"The screen is paused at a place."** The edge auto-scroll loop was gated
+   on the bare `selecting` flag, so it kept running for a gesture that no
+   longer existed. With `dragFingerY` left parked near an edge it scrolled
+   continuously until it hit the rail — the view sitting still at one place is
+   not a rendering bug, it is a loop that finished its journey.
+4. **The copy button "not usable"** is not a fourth fault: with no range ever
+   created, `activeSelection` was always null, and the copy law disables the
+   button when there is nothing selected. (Disabled is the fix for "it copied
+   everything" — but it does mean a greyed-out Copy says "no range here".)
+
+### What changed
+
+| Change | Why |
+|---|---|
+| **The extend branch requires an actual range** — `extending = { selecting && selection != null }` | An event consumed with nothing to extend is a gesture swallowed whole. Now a flag that outlives its gesture cannot stop scrolling. |
+| **`DisposableEffect(cellW, cellH, cols, rows)` clears `selecting` / `draggingHandle` on teardown** | The direct fix: the detector's cancellation now has a cleanup of its own, instead of depending on a line that cancellation skips. |
+| **Auto-scroll is gated on a held pointer, never the bare flag** | Even a surviving flag could then only cost a no-op loop, not a runaway scroll to a rail. |
+| **The full-screen overlay is gone; one detector owns the glass** (`detectTerminalGestures`) | The first build put handle dragging on a `Box(fillMaxSize().pointerInput { … })` above the canvas — a second node that can swallow a gesture, and a topology nothing else in this app uses. Handles are now hit-tested on the DOWN inside the single existing detector. |
+| **Double-tap selects the word** | The owner reached for it before the long-press (*"No copy with long press or double tap"*); on a phone it is the word-grabbing gesture, and it was unbound. |
+
+All five are pinned: `the extend branch never swallows an event it cannot use`,
+`the per-gesture flags are cleared when the detector is torn down`,
+`one detector owns every gesture on the glass`, `a double tap grabs the word
+too`, `a handle drag owns the gesture`.
+
+### The lesson recorded here, not smoothed over
+
+A gesture flag whose only cleanup is "the normal end of the gesture" is a flag
+that leaks on every cancellation, and Compose cancels gesture detectors
+whenever their keys change. Any per-gesture state must be reset by the
+**lifecycle that owns it** (`DisposableEffect` on the same keys), never only by
+the happy path.
