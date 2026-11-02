@@ -1,12 +1,12 @@
 # CodeC Phase 103.1 — Selection: handles, floating toolbar, joined copy
 
-> **Status:** 🚧 IMPLEMENTED (2026-10-14, on the owner's "Start Phase 103") ·
+> **Status:** 🚧 IMPLEMENTED (2026-11-02, on the owner's "Start Phase 103") ·
 > **Cost:** `[client-only]` · **Effort:** M · **Device pass: REQUIRED** (touch
 > behaviour — see the exit condition below). CI: **green** `41393882567` on `95bf1e4`
 (3,562 host cases).
 >
 > *(The brief below is kept verbatim; the record of what was actually built
-> follows it as [Implementation](#implementation-record-2026-10-14).)*
+> follows it as [Implementation](#implementation-record-2026-11-02).)*
 
 > **Status (brief, as planned):** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** M
 > **Owner row (verbatim):** "partial text copy not working" → selection style pick:
@@ -71,7 +71,7 @@ a running `cat` prompt works from the same toolbar.
 1. termux-app `TextSelectionCursorController.java`, `TerminalView.java`
    (`getSelectedText`), `HandleView.java` — behaviour read from local clone
    @ `8629e63`, 2026-10-14 (audit session). GPL-3.0: behaviour only.
-2. Owner device reports and picks, this session (2026-10-14).
+2. Owner device reports and picks, this session (2026-11-02).
 
 ## Deferred / rejected with reasons
 
@@ -83,7 +83,7 @@ a running `cat` prompt works from the same toolbar.
 
 ---
 
-## Implementation record (2026-10-14)
+## Implementation record (2026-11-02)
 
 Built on the owner's *"Start Phase 103"*. Everything below is real code in this
 repository; nothing here is a proposal.
@@ -169,7 +169,7 @@ the haptics invariant, and the toolbar's shape.
 
 ---
 
-## Device round 1 (2026-10-14) — FAILED, root-caused
+## Device round 1 (2026-11-02) — FAILED, root-caused
 
 The owner's report, verbatim:
 

@@ -1,10 +1,10 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
 **Status:** 🚧 IN PROGRESS — **103.1 implemented**, **device round 1 FAILED and
-root-caused** (2026-10-14) → **rewritten, device round 2 required**; **103.2 still
+root-caused** (2026-11-02) → **rewritten, device round 2 required**; **103.2 still
 📋 PLANNED**. The failure was one sticky per-gesture flag, and it killed long-press,
 double-tap, scroll and copy together — full analysis in
-[`PART_103_1_SELECTION.md` § Device round 1](PART_103_1_SELECTION.md#device-round-1-2026-10-14--failed-root-caused). **Owner rows:** *"partial text copy not working"* and
+[`PART_103_1_SELECTION.md` § Device round 1](PART_103_1_SELECTION.md#device-round-1-2026-11-02--failed-root-caused). **Owner rows:** *"partial text copy not working"* and
 *"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
 Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
 [`PHASE103_108_ROADMAP.md`](../../../roadmaps/PHASE103_108_ROADMAP.md); research:
@@ -50,7 +50,7 @@ host tests are the record, CI (`Build APK`) is the executor; **device pass requi
 permission, DataStore key or Settings control. Phase 40.5 colour law: handles/toolbar
 use existing roles/tokens only.
 
-## Implementation record (103.1, 2026-10-14)
+## Implementation record (103.1, 2026-11-02)
 
 The owner said *"Start Phase 103"* and the selection half was built in one
 push: a pure `ui/terminal/SelectionModel.kt` (word bounds, drag on both handles
@@ -67,7 +67,7 @@ haptics-free zone (Phase 51.4). 37 new host cases
 (`SelectionModelTest` 25, `SelectionWiringTest` 12) were compiled and **run**
 in-sandbox before CI, and CI's 3,562-case suite is green (`41393882567`). Full record, including two places where the plan was
 corrected on evidence and what is deferred:
-[`PART_103_1_SELECTION.md` § Implementation record](PART_103_1_SELECTION.md#implementation-record-2026-10-14).
+[`PART_103_1_SELECTION.md` § Implementation record](PART_103_1_SELECTION.md#implementation-record-2026-11-02).
 
 **103.2 (scroll physics) has not been started.** It shares
 `TerminalEmulatorView.kt` with 103.1 and lands as its own commit.
