@@ -330,10 +330,19 @@ fun TerminalScreen(
                         contentDescription = stringResource(R.string.terminal_storage_title)
                     )
                 }
-                IconButton(onClick = {
-                    val textToCopy = activeSelection ?: viewModel.transcriptText()
-                    copyText(context, textToCopy)
-                }) {
+                // Phase 103.1 — the copy law: Copy writes the SELECTION, or
+                // is disabled. It used to fall back to
+                // `viewModel.transcriptText()`, which is the owner's "it
+                // copied everything": the old gesture layer left the
+                // selection empty, so the fallback fired and put the whole
+                // session on the clipboard. With 103.1 the selection is real,
+                // so the fallback is deleted rather than kept as a net.
+                IconButton(
+                    enabled = activeSelection != null,
+                    onClick = {
+                        activeSelection?.let { copyText(context, it) }
+                    }
+                ) {
                     Icon(
                         Icons.Default.ContentCopy,
                         contentDescription = stringResource(R.string.terminal_copy)

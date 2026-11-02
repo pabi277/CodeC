@@ -1,7 +1,8 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
-**Status:** 📋 PLANNED (brief only, 2026-10-14; no code written — implementation needs
-the owner's "Start Phase 103"). **Owner rows:** *"partial text copy not working"* and
+**Status:** 🚧 IN PROGRESS — **103.1 implemented** (2026-10-14, on the owner's
+"Start Phase 103"; CI pending at push time, **device pass required**), **103.2 still
+📋 PLANNED**. **Owner rows:** *"partial text copy not working"* and
 *"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
 Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
 [`PHASE103_108_ROADMAP.md`](../../../roadmaps/PHASE103_108_ROADMAP.md); research:
@@ -46,6 +47,26 @@ host tests are the record, CI (`Build APK`) is the executor; **device pass requi
 — both bugs are touch behaviours only a handset can accept. No new dependency,
 permission, DataStore key or Settings control. Phase 40.5 colour law: handles/toolbar
 use existing roles/tokens only.
+
+## Implementation record (103.1, 2026-10-14)
+
+The owner said *"Start Phase 103"* and the selection half was built in one
+push: a pure `ui/terminal/SelectionModel.kt` (word bounds, drag on both handles
+with a flip when the drag crosses the anchor, `shift` to keep a selection on its
+own text while output streams, and `extract` with the soft-wrap join), the
+soft-wrap flag and a monotonic `scrolledRows` counter published by the buffer,
+two draggable 48 dp handles and a floating Copy / Select all / Paste / More
+toolbar over the terminal, edge auto-scroll, and **the copy law** — Copy writes
+the selection or is disabled, and the `transcriptText()` fallback behind "it
+copied everything" is deleted rather than kept as a net. The long-press tick
+goes through the app's one haptics adapter (Phase 51.4). 36 new host cases
+(`SelectionModelTest` 25, `SelectionWiringTest` 11) were compiled and **run**
+in-sandbox before CI. Full record, including two places where the plan was
+corrected on evidence and what is deferred:
+[`PART_103_1_SELECTION.md` § Implementation record](PART_103_1_SELECTION.md#implementation-record-2026-10-14).
+
+**103.2 (scroll physics) has not been started.** It shares
+`TerminalEmulatorView.kt` with 103.1 and lands as its own commit.
 
 ## Exit condition (the phase, not the parts)
 

@@ -99,7 +99,18 @@ data class TerminalLine(
      * mapping stays 1:1; the renderer draws the cluster instead of the bare
      * base character when present.
      */
-    val clusters: Map<Int, String>? = null
+    val clusters: Map<Int, String>? = null,
+    /**
+     * Phase 103.1: true when this row ended by **soft auto-wrap** — it is a
+     * fragment of one longer logical line whose remainder sits on the next
+     * row. This mirrors [Row.wrapped], which the buffer has carried since
+     * Phase 19.1 for resize reflow; Phase 103.1 publishes it on the
+     * immutable line so COPY can rejoin the fragments. Without it a long
+     * command or URL copies back as two lines with a newline wedged in the
+     * middle — unquotable, unclickable, and the owner's own example
+     * ("partial text copy not working").
+     */
+    val wrapped: Boolean = false
 ) {
     /** True when [col] is the (invisible) right half of a wide glyph. */
     fun columnIsContinuation(col: Int): Boolean {
@@ -141,9 +152,39 @@ data class TerminalSnapshot(
     val title: String,
     val generation: Long,
     /** Phase 19.5: active mouse-reporting modes ([MouseModes] bits). */
-    val mouseMode: Int = 0
+    val mouseMode: Int = 0,
+    /**
+     * Phase 103.1: rows this buffer has pushed into scrollback over its
+     * lifetime ([TerminalBuffer.scrolledRows]). Extended-Y coordinates are
+     * measured from the LIVE screen, so every row of new output slides
+     * existing text one step deeper into history; the view diffs this value
+     * and shifts an open selection by the difference (SelectionModel.shift)
+     * so the highlight stays on the text the finger chose.
+     */
+    val scrolledRows: Long = 0L
 ) {
     val scrollbackCount: Int get() = scrollbackLines.size
+
+    /**
+     * The transcript row for an extended Y coordinate — `0` = top row of the
+     * live screen, negative = scrolled back into history — without
+     * concatenating the two lists.
+     *
+     * Phase 103.1: this used to be an extension in the Compose view file,
+     * which tied the selection MODEL (pure, host-testable) to an Android
+     * source file. It is the single definition of "what does row -12 mean",
+     * so it belongs with the buffer that defines the coordinates.
+     */
+    fun lineAt(extY: Int): TerminalLine? {
+        val idx = scrollbackCount + extY
+        if (idx < 0) return null
+        return if (idx < scrollbackLines.size) {
+            scrollbackLines[idx]
+        } else {
+            val live = idx - scrollbackLines.size
+            if (live in lines.indices) lines[live] else null
+        }
+    }
 
     /** Scrollback + live screen, readable (wide pairs joined, clusters kept). */
     fun transcriptText(): String = buildString {
@@ -213,6 +254,18 @@ class TerminalBuffer(
     private val scrollback: ArrayDeque<Row> = ArrayDeque()
     private var generation: Long = 0L
 
+    /**
+     * Phase 103.1: rows pushed into scrollback since the buffer was created
+     * or last [reset] — monotonic, and independent of `scrollback.size`
+     * (which stops growing at [scrollbackLimit] when the oldest rows are
+     * dropped, even though the text has still moved). A selection is stored
+     * in extended-Y coordinates anchored to the live screen, so it must be
+     * shifted by the CHANGE in this counter to stay on its own text while
+     * output streams or during a `cat`.
+     */
+    var scrolledRows: Long = 0L
+        private set
+
     val isAltScreen: Boolean get() = usingAlt
     val scrollbackSize: Int get() = scrollback.size
 
@@ -244,6 +297,7 @@ class TerminalBuffer(
         altScreen = null
         screen = freshScreen(rows, cols)
         scrollback.clear()
+        scrolledRows = 0L // Phase 103.1: a reset ends the coordinate epoch.
         generation++
     }
 
@@ -353,6 +407,7 @@ class TerminalBuffer(
             val push = owed - drop
             for (i in 0 until push) {
                 scrollback.addLast(current[i])
+                scrolledRows++ // Phase 103.1: same shift as pushScrollback
                 while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
             }
             repeat(push) { current.removeAt(0) }
@@ -697,6 +752,10 @@ class TerminalBuffer(
 
     private fun pushScrollback(row: Row) {
         scrollback.addLast(row)
+        // Phase 103.1: one more row of history = every existing extended-Y
+        // coordinate now means a row of older text. Selections (and only
+        // they) compensate with SelectionModel.shift.
+        scrolledRows++
         while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
     }
 
@@ -714,10 +773,10 @@ class TerminalBuffer(
     fun snapshot(): TerminalSnapshot {
         generation++
         val history = ArrayList<TerminalLine>(scrollback.size)
-        for (row in scrollback) history.add(rowToLine(row.cells))
+        for (row in scrollback) history.add(rowToLine(row))
         val lines = ArrayList<TerminalLine>(rows)
         for (y in 0 until rows) {
-            lines.add(rowToLine(screen[y].cells))
+            lines.add(rowToLine(screen[y]))
         }
         return TerminalSnapshot(
             cols = cols,
@@ -729,7 +788,8 @@ class TerminalBuffer(
             cursorVisible = cursorVisible,
             title = title,
             generation = generation,
-            mouseMode = mouseMode
+            mouseMode = mouseMode,
+            scrolledRows = scrolledRows
         )
     }
 
@@ -770,16 +830,17 @@ class TerminalBuffer(
     }
 
     companion object {
-        fun rowToLine(row: Array<Cell>): TerminalLine {
-            val text = StringBuilder(row.size)
+        fun rowToLine(row: Row): TerminalLine {
+            val cells = row.cells
+            val text = StringBuilder(cells.size)
             val runs = ArrayList<StyleRun>()
             var clusters: HashMap<Int, String>? = null
             var runStart = 0
-            var runFg = row[0].fg
-            var runBg = row[0].bg
-            var runFlags = row[0].flags
-            for (x in row.indices) {
-                val cell = row[x]
+            var runFg = cells[0].fg
+            var runBg = cells[0].bg
+            var runFlags = cells[0].flags
+            for (x in cells.indices) {
+                val cell = cells[x]
                 val cp = if (cell.cp <= 0) ' '.code else cell.cp
                 val marks = cell.comb
                 if (cp > 0xFFFF) {
@@ -811,8 +872,8 @@ class TerminalBuffer(
                     runFlags = cell.flags
                 }
             }
-            runs.add(StyleRun(runStart, row.size, runFg, runBg, runFlags))
-            return TerminalLine(text.toString(), runs, clusters)
+            runs.add(StyleRun(runStart, cells.size, runFg, runBg, runFlags))
+            return TerminalLine(text.toString(), runs, clusters, row.wrapped)
         }
     }
 }
