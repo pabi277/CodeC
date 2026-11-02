@@ -1289,7 +1289,11 @@ private suspend fun PointerInputScope.detectTerminalGestures(
             // move: the buffer must not scroll under it, and a tap on a
             // handle must not clear the very selection being adjusted.
             down.consume()
-            var current = held
+            // The type is named: Kotlin infers a `var` from the DECLARED type
+            // of its initializer, not from the smart cast in force here, so
+            // `var current = held` would be a nullable handle and every call
+            // below would argue about it.
+            var current: SelectionHandle = held
             onHandleStart(current, down.position)
             while (true) {
                 val event = awaitPointerEvent()
