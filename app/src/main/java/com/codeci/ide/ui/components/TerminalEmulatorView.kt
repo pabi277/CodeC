@@ -583,8 +583,11 @@ fun TerminalEmulatorView(
             // Everything below is the part the owner could not do at all
             // before: a range on screen, two things to drag, and a Copy that
             // writes the range instead of the whole transcript.
-            val viewWidthPx = with(density) { maxWidth.toPx() }
-            val viewHeightPx = with(density) { maxHeight.toPx() }
+            // `maxWidth`/`maxHeight` belong to the OUTER BoxWithConstraints
+            // scope; inside this inner Box there is already a BoxScope
+            // receiver, so the outer one has to be named.
+            val viewWidthPx = with(density) { this@BoxWithConstraints.maxWidth.toPx() }
+            val viewHeightPx = with(density) { this@BoxWithConstraints.maxHeight.toPx() }
             val handleTouchPx = with(density) { HandleTouchSize.toPx() }
             val handleDotPx = with(density) { HandleDotRadius.toPx() }
             val shownSel = if (showHandles) selection?.normalized() else null
