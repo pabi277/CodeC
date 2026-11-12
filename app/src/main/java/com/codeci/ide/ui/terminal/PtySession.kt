@@ -32,9 +32,9 @@ class PtySession private constructor(
         return PtyNative.read(masterFd, buffer, offset, length)
     }
 
-    fun setWindowSize(rows: Int, cols: Int) {
+    fun setWindowSize(rows: Int, cols: Int, widthPx: Int = 0, heightPx: Int = 0) {
         if (closed) return
-        PtyNative.setWindowSize(masterFd, rows, cols, pid)
+        PtyNative.setWindowSize(masterFd, rows, cols, pid, widthPx, heightPx)
     }
 
     fun pollExit(): Int = PtyNative.waitPid(pid, hang = false)

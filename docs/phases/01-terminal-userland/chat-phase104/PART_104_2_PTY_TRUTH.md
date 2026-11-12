@@ -31,6 +31,27 @@ runtime, so the Kotlin declaration and the C symbol are pinned by a source test.
 
 ## Deferred / rejected with reasons
 
-- Passing pixel sizes from the view on every resize: deferred to the view wiring if the
-  pixel size is not already in `TerminalSession.resize`; the field exists and is 0 until
-  then, which is the behaviour today.
+- Pixel sizes from the view are **wired**, not deferred. The view passes the settled cell
+  size (`PtyWinSize.pixelExtent`) through the ViewModel and `TerminalSession.resize` to the
+  PTY. `TerminalSession.start` seeds the new PTY with the last pixel extent, so a fresh
+  shell does not start at 0x0.
+
+## Implementation (2026-10-14, `arena/4baff5b7-codec`)
+
+- `pty.c` `configure_slave`: clears `IXON` and `IXOFF`; sets `IUTF8` under `#ifdef IUTF8`.
+- `pty.c` `nativeSetWindowSize(fd, rows, cols, widthPx, heightPx)`: writes `ws_xpixel` and
+  `ws_ypixel`, clamped to 0..65535 (0 = unknown).
+- `ui/terminal/PtyWinSize.kt` (new, pure): `pixelExtent(cells, cellPx)`.
+- `PtyNative.kt`, `PtySession.kt`, `TerminalSession.kt`, `TerminalViewModel.kt`,
+  `TerminalEmulatorView.kt` (`onResize` now carries pixel extents), `TerminalScreen.kt`:
+  thread the pixel extent. `TerminalSession.resize` also sends the winsize when only the
+  cell size changed (same grid), and keeps the emulator resize tied to a grid change.
+- Tests: `PtyWinSizeTest` (3, host), `PtyTruthWiringTest` (4 source pins, host).
+- Host: 169 passed, 0 failed. `pty.c` also compiles with `gcc -Wall -Wextra` against the JDK
+  headers (both before and after).
+- Not host-compiled: `TerminalSession.kt`, `PtySession.kt`, the ViewModel, the view and the
+  screen (Android or coroutine imports). CI is their compile. The `PtyNative.kt` change
+  compiles against a host `AppLogger` stub.
+
+**Device pass required:** Ctrl-S does not freeze `cat`; Ctrl-Q resumes; typed UTF-8 erases a
+whole character on backspace.

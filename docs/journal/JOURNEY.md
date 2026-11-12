@@ -1639,3 +1639,13 @@ Exactly **three** `client.stream(` sites are preserved (841/1136/1363); `ui/ai/`
   `ShellEnvironment`. The host harness does not compile `ShellEnvironment.kt` (it imports Android),
   so it could not catch this. Lesson: when a pure helper is called from an Android-only file, the
   call site must be qualified and checked by reading, and CI is the only compile of that file.
+
+## 2026-10-14 — Phase 104.2: PTY truth
+
+- **Flow control off, UTF-8 on.** `configure_slave` clears `IXON`/`IXOFF` so Ctrl-S/Ctrl-Q reach
+  the shell and editors as ordinary keys. `IUTF8` makes backspace erase a whole character.
+- **Pixels are wired, not stubbed.** The view's settled cell size becomes the pixel extent of the
+  grid, which travels through the ViewModel and `TerminalSession` to the kernel winsize. A new
+  shell starts with the last known extent, not 0x0.
+- **Verification limit.** Most of the touched Android files are not host-compiled. They are checked
+  by reading, a source pin, and CI.

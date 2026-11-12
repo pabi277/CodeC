@@ -31,7 +31,7 @@ object PtyNative {
 
     external fun nativeOpenPty(): IntArray?
     external fun nativeCloseFd(fd: Int)
-    external fun nativeSetWindowSize(fd: Int, rows: Int, cols: Int): Int
+    external fun nativeSetWindowSize(fd: Int, rows: Int, cols: Int, widthPx: Int, heightPx: Int): Int
     external fun nativeSpawn(
         masterFd: Int,
         slaveFd: Int,
@@ -77,9 +77,16 @@ object PtyNative {
         nativeCloseFd(fd)
     }
 
-    fun setWindowSize(fd: Int, rows: Int, cols: Int, pid: Int = -1) {
+    fun setWindowSize(
+        fd: Int,
+        rows: Int,
+        cols: Int,
+        pid: Int = -1,
+        widthPx: Int = 0,
+        heightPx: Int = 0,
+    ) {
         if (!nativeAvailable || fd < 0 || rows <= 0 || cols <= 0) return
-        nativeSetWindowSize(fd, rows, cols)
+        nativeSetWindowSize(fd, rows, cols, widthPx, heightPx)
         if (pid > 0) nativeKill(pid, SIGWINCH)
     }
 

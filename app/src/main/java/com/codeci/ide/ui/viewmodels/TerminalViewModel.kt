@@ -188,6 +188,9 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     /** Last measured grid, applied before spawning a new PTY. */
     @Volatile private var terminalCols = 80
     @Volatile private var terminalRows = 24
+    /** Phase 104.2: whole-grid pixel extent, forwarded to the PTY winsize. */
+    @Volatile private var terminalWidthPx = 0
+    @Volatile private var terminalHeightPx = 0
 
     // ---- Phase 7 multi-session state ----------------------------------------
 
@@ -426,7 +429,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             // Seed the emulator and PTY with the current grid before exec.
             // This avoids a post-attach TIOCSWINSZ/SIGWINCH when a newly
             // created session becomes visible and Bash redraws its prompt.
-            item.session.resize(terminalCols, terminalRows)
+            item.session.resize(terminalCols, terminalRows, terminalWidthPx, terminalHeightPx)
             item.session.start(prepared)
             _started.value = true
             // Phase 44.1 — the setup keep-alive ends here: either the shell is
@@ -839,16 +842,18 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         activeSession()?.send(sequence)
     }
 
-    fun resize(cols: Int, rows: Int) {
+    fun resize(cols: Int, rows: Int, widthPx: Int = 0, heightPx: Int = 0) {
         terminalCols = cols
         terminalRows = rows
+        terminalWidthPx = widthPx
+        terminalHeightPx = heightPx
         // Keep every PTY at the same terminal geometry. Resizing only the
         // active session meant switching to an older session delivered a
         // SIGWINCH on every switch, which Bash rendered as extra blank
         // prompts/enters. New sessions receive the same geometry before their
         // first prompt in startItem().
         manager.sessions.value.forEach { item ->
-            item.session.resize(cols, rows)
+            item.session.resize(cols, rows, widthPx, heightPx)
         }
     }
 

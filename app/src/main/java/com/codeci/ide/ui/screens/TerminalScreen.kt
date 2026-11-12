@@ -470,7 +470,9 @@ fun TerminalScreen(
             fontFamily = fontFamily,
             theme = terminalTheme,
             onInput = { viewModel.send(it) },
-            onResize = { cols, rows -> viewModel.resize(cols, rows) },
+            onResize = { cols, rows, widthPx, heightPx ->
+                viewModel.resize(cols, rows, widthPx, heightPx)
+            },
             onFontScale = { viewModel.setFontSize(it) },
             onPaste = { pasteFromClipboard(context, viewModel) },
             onCopyText = { copyText(context, it) },

@@ -81,6 +81,7 @@ import com.codeci.ide.ui.terminal.absoluteLine
 import com.codeci.ide.ui.terminal.GlyphSpans
 import com.codeci.ide.ui.terminal.MouseEncoding
 import com.codeci.ide.ui.terminal.MouseModes
+import com.codeci.ide.ui.terminal.PtyWinSize
 import com.codeci.ide.ui.terminal.ScrollMath
 import com.codeci.ide.ui.terminal.StyleRun
 import com.codeci.ide.ui.terminal.TerminalLine
@@ -167,7 +168,7 @@ fun TerminalEmulatorView(
     fontFamily: String = "Monospace",
     theme: TerminalThemeColors = DraculaTerminalTheme,
     onInput: (String) -> Unit,
-    onResize: (cols: Int, rows: Int) -> Unit,
+    onResize: (cols: Int, rows: Int, widthPx: Int, heightPx: Int) -> Unit,
     onFontScale: (Float) -> Unit,
     onPaste: () -> Unit,
     onCopyText: (String) -> Unit,
@@ -393,7 +394,14 @@ fun TerminalEmulatorView(
         // session* changes even if the view's own size did not — otherwise a
         // freshly created session keeps the emulator-default 80x24 grid and
         // the cursor drifts (the exact bug class Phase 6.1 closed).
-        LaunchedEffect(ptyCols, ptyRows, resizeKey) { onResize(ptyCols, ptyRows) }
+        LaunchedEffect(ptyCols, ptyRows, settledCellW, settledCellH, resizeKey) {
+            onResize(
+                ptyCols,
+                ptyRows,
+                PtyWinSize.pixelExtent(ptyCols, settledCellW),
+                PtyWinSize.pixelExtent(ptyRows, settledCellH),
+            )
+        }
 
         val cols = CellMetrics.columnsForWidth(with(density) { maxWidth.toPx() }, cellW)
         val rows = CellMetrics.rowsForHeight(with(density) { maxHeight.toPx() }, cellH)

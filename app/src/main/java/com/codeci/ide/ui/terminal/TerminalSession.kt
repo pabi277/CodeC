@@ -116,7 +116,7 @@ class TerminalSession(
             running.set(true)
             _alive.value = true
             _exitCode.value = null
-            session.setWindowSize(emulator.rows, emulator.cols)
+            session.setWindowSize(emulator.rows, emulator.cols, lastWidthPx, lastHeightPx)
             renderJob?.cancel()
             renderJob = renderPump.start(scope)
             readerJob = scope.launch { readLoop(session) }
@@ -148,15 +148,29 @@ class TerminalSession(
         send("$clean\r")
     }
 
-    fun resize(cols: Int, rows: Int) {
+    /**
+     * Phase 104.2: [widthPx]/[heightPx] are the whole grid's pixel extent, so a
+     * cell-size change with an unchanged grid still reaches the PTY winsize.
+     */
+    fun resize(cols: Int, rows: Int, widthPx: Int = 0, heightPx: Int = 0) {
         if (cols <= 0 || rows <= 0) return
-        synchronized(emulator) {
-            if (cols == emulator.cols && rows == emulator.rows) return
-            emulator.resize(cols, rows)
+        val gridChanged = synchronized(emulator) {
+            if (cols == emulator.cols && rows == emulator.rows) {
+                false
+            } else {
+                emulator.resize(cols, rows)
+                true
+            }
         }
-        pty?.setWindowSize(rows, cols)
-        publish()
+        if (!gridChanged && widthPx == lastWidthPx && heightPx == lastHeightPx) return
+        lastWidthPx = widthPx
+        lastHeightPx = heightPx
+        pty?.setWindowSize(rows, cols, widthPx, heightPx)
+        if (gridChanged) publish()
     }
+
+    @Volatile private var lastWidthPx = 0
+    @Volatile private var lastHeightPx = 0
 
     fun stop() {
         synchronized(this) { stopLocked() }

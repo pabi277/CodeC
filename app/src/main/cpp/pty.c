@@ -56,8 +56,14 @@ static void configure_slave(int slave) {
         return;
     }
     tio.c_lflag |= (ECHO | ICANON | ISIG | IEXTEN | ECHOE | ECHOK);
-    tio.c_iflag |= (ICRNL | IXON);
-    tio.c_iflag &= ~(INLCR | IGNCR);
+    /* Phase 104.2: Ctrl-S/Ctrl-Q are ordinary keys for the shell and its
+     * editors, not flow control, so IXON/IXOFF are off. IUTF8 makes the
+     * line discipline erase whole multi-byte characters on backspace. */
+    tio.c_iflag |= ICRNL;
+    tio.c_iflag &= ~(INLCR | IGNCR | IXON | IXOFF);
+#ifdef IUTF8
+    tio.c_iflag |= IUTF8;
+#endif
     tio.c_oflag |= (OPOST | ONLCR);
     tcsetattr(slave, TCSANOW, &tio);
 }
@@ -131,7 +137,8 @@ Java_com_codeci_ide_ui_terminal_PtyNative_nativeCloseFd(JNIEnv *env, jobject thi
 
 JNIEXPORT jint JNICALL
 Java_com_codeci_ide_ui_terminal_PtyNative_nativeSetWindowSize(
-        JNIEnv *env, jobject thiz, jint fd, jint rows, jint cols) {
+        JNIEnv *env, jobject thiz, jint fd, jint rows, jint cols,
+        jint width_px, jint height_px) {
     (void) env;
     (void) thiz;
     if (fd < 0 || rows <= 0 || cols <= 0) {
@@ -142,6 +149,10 @@ Java_com_codeci_ide_ui_terminal_PtyNative_nativeSetWindowSize(
     memset(&ws, 0, sizeof(ws));
     ws.ws_row = (unsigned short) rows;
     ws.ws_col = (unsigned short) cols;
+    /* Phase 104.2: pixel extents let apps (e.g. graphics, image protocols)
+     * size themselves; 0 means unknown. Clamp to the winsize field range. */
+    ws.ws_xpixel = (unsigned short) (width_px > 0 ? (width_px > 65535 ? 65535 : width_px) : 0);
+    ws.ws_ypixel = (unsigned short) (height_px > 0 ? (height_px > 65535 ? 65535 : height_px) : 0);
     if (ioctl(fd, TIOCSWINSZ, &ws) != 0) {
         return -1;
     }
