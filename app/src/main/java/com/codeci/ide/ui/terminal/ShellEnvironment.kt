@@ -115,6 +115,15 @@ object ShellEnvironment {
     fun etcDir(prefix: File): File = File(prefix, "etc")
     fun tmpDir(prefix: File): File = File(prefix, "tmp")
 
+    /**
+     * Phase 104.1 — the `~/.profile` a login bash reads: the prefix profile,
+     * then `~/.bashrc` when it exists (login bash does not read `.bashrc` by
+     * itself, so this is where the rc load happens).
+     */
+    fun homeProfileScript(etcProfile: String): String =
+        ". ${TerminalHandoff.shellEscape(etcProfile)}\n" +
+            "if [ -f \"\$HOME/.bashrc\" ]; then . \"\$HOME/.bashrc\"; fi\n"
+
     fun ccScript(): String = """
         #!/system/bin/sh
         # CodeC cc — frontend for the embedded TCC compiler (Phase 1).
@@ -2207,7 +2216,7 @@ class ShellBootstrap(private val context: Context) {
         File(etc, "profile").writeText(
             ShellEnvironment.profileScript(prefix, home, projects)
         )
-        File(home, ".profile").writeText(". ${TerminalHandoff.shellEscape(File(etc, "profile").absolutePath)}\n")
+        File(home, ".profile").writeText(homeProfileScript(File(etc, "profile").absolutePath))
         marker.writeText(ShellEnvironment.BOOTSTRAP_VERSION)
 
         val tcc = EmbeddedCompiler.tccBinary(context)

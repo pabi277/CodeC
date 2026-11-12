@@ -2329,3 +2329,16 @@ The screenshot observations and deterministic replay are kept separate in the [P
   scrollbar thumb is drawn in proportion to the scrollback length while you scroll.
 - **Check.** Open a fresh terminal and scroll up and down. There should be no blank band.
   Fling through a long scrollback and watch it stop at the first and last line.
+
+## 65. `.bashrc` aliases do not work in the terminal on first open (Phase 104.1)
+
+- **Symptom.** An alias from `~/.bashrc` (for example `ll`) is "command not found" right after
+  install, and the prompt is Android's shell.
+- **Why.** Until a real bash is installed, the terminal falls back to Android's own
+  `/system/bin/sh`, which never reads `~/.bashrc`. Bash comes from the package bootstrap, not
+  from the app's first run.
+- **What changed (104.1).** When a real bash is installed, the terminal starts it as a login
+  shell, and `~/.profile` now sources `~/.bashrc` when that file exists. The fallback shell is
+  not changed.
+- **Check.** Install the bootstrap (bash appears under `$PREFIX/bin`), open a new tab, and run
+  `alias`. Your `~/.bashrc` aliases should be listed.

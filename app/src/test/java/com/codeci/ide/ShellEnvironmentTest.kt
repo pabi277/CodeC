@@ -24,6 +24,16 @@ class ShellEnvironmentTest {
     }
 
     @Test
+    fun `home profile sources the prefix profile then bashrc behind a file guard`() {
+        val script = ShellEnvironment.homeProfileScript("/tmp/codec-prefix/etc/profile")
+        val source = script.indexOf(". /tmp/codec-prefix/etc/profile")
+        val rc = script.indexOf("\$HOME/.bashrc")
+        assertTrue(source >= 0)
+        assertTrue(rc > source)
+        assertTrue(script.contains("if [ -f \"\$HOME/.bashrc\" ]"))
+    }
+
+    @Test
     fun `cc script runs TCC with static musl flags then chmods the ELF`() {
         val script = ShellEnvironment.ccScript()
         assertTrue(script.startsWith("#!/system/bin/sh"))

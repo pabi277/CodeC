@@ -1623,3 +1623,13 @@ Exactly **three** `client.stream(` sites are preserved (841/1136/1363); `ui/ai/`
   The view is compile-checked only by CI `Build APK`.
 - **Device pass.** Owed by the owner; the checklist is in PART_103_2 and the README.
 - **Next.** On the owner's "Start Phase 104", shell/session truth. Next free phase: 109.
+
+## 2026-10-14 — Phase 104.1: the login shell (and a wrong premise, corrected)
+
+- **Owner: "Start Phase 104".** Roadmap row: "Shell and session truth".
+- **Corrected premise.** The roadmap said a login shell is needed so `~/.bashrc` loads. Measured in
+  the sandbox with bash 5.2: `bash -i` (the old launch) already loads `~/.bashrc`, and `bash -l` does
+  not. The login switch alone would have removed the rc load. The real first-open gap is the
+  Android-sh fallback when no bash is installed. 104.1 now starts login bash and sources the rc from
+  the profile; the fallback is unchanged and documented.
+- **Host:** 162 passed, 0 failed. CI pending for the 104.1 commit.

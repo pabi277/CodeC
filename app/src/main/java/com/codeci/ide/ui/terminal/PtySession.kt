@@ -92,23 +92,21 @@ class PtySession private constructor(
         }
 
         fun startShell(prepared: PreparedShell): PtySession {
-            val shell = if (prepared.shell.exists()) {
-                prepared.shell.absolutePath
-            } else {
-                "/system/bin/sh"
-            }
+            val shellExists = prepared.shell.exists()
+            val shellPath = if (shellExists) prepared.shell.absolutePath else ShellLaunchPolicy.SYSTEM_SH
             val profile = File(ShellEnvironment.etcDir(prepared.prefix), "profile")
-            val launch = if (profile.exists()) {
-                ". ${TerminalHandoff.shellEscape(profile.absolutePath)}; " +
-                    "exec ${TerminalHandoff.shellEscape(shell)} -i"
-            } else {
-                "exec ${TerminalHandoff.shellEscape(shell)} -i"
-            }
+            // Phase 104.1: a real bash is a login shell exec'd directly; the
+            // rest keeps the sh chain (see ShellLaunchPolicy).
+            val plan = ShellLaunchPolicy.plan(
+                shellPath = shellPath,
+                shellIsElf = shellExists && ShellEnvironment.isElf(prepared.shell),
+                profilePath = profile.takeIf { it.exists() }?.absolutePath
+            )
             val cwd = prepared.cwd.takeIf { it.exists() }?.absolutePath
                 ?: prepared.home.absolutePath
             return start(
-                file = "/system/bin/sh",
-                args = arrayOf("sh", "-c", launch),
+                file = plan.file,
+                args = plan.argv.toTypedArray(),
                 env = ShellEnvironment.envToArray(prepared.env),
                 cwd = cwd
             )
