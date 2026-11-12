@@ -84,7 +84,7 @@ class TouchTargetTest {
         // 3 → 4 in Phase 57.1, and 4 → 5 in Phase 68.1 and 5 → 6 with sort door for compact Spck parity:
         // the Test ▷ Row became an IconButton to save horizontal space, the top
         // bar became a 48dp Row (hamburger + search + run + optional test), and
-        // the tab row's trailing cell kept the editor-menu IconButton. Phase 71.1 took the total 20 → 21 (packages 2 → 3): the 📌 on a package card is an IconButton like every other, so the 48 dp rule holds. A phase
+        // the tab row's trailing cell kept the editor-menu IconButton. Phase 71.1 took the total 20 → 21 (packages 2 → 3): the 📌 on a package card is an IconButton like every other, so the 48 dp rule holds. Phase 104.3 took the total 21 → 22: the terminal top bar's ⋮ menu is an IconButton (default 48 dp touch target) that holds Keep screen on and Kill process. A phase
         // that changes this number again must say why here, not just edit the digit.
         var total = 0
         for (name in coreFiles) {
@@ -96,8 +96,8 @@ class TouchTargetTest {
             total += Regex("""\bIconButton\s*\(""").findAll(code).count()
         }
         assertTrue(
-            "expected 21 IconButtons across the core files, found $total",
-            total == 21,
+            "expected 22 IconButtons across the core files, found $total",
+            total == 22,
         )
     }
 }

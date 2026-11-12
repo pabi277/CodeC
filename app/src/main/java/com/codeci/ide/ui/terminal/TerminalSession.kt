@@ -148,6 +148,20 @@ class TerminalSession(
         send("$clean\r")
     }
 
+    /** Phase 104.3: true once the shell has really ended or failed; never while starting. */
+    fun isDead(): Boolean {
+        val life = _lifecycle.value
+        return !_alive.value && (life == TerminalLifecycle.EXITED || life == TerminalLifecycle.FAILED)
+    }
+
+    /** Phase 104.3: SIGKILL the shell (terminal menu "Kill process"). */
+    fun killProcess() {
+        pty?.killProcess()
+    }
+
+    /** Phase 104.3: the shell's current directory, which a new tab inherits. */
+    fun currentDirectory(): String? = pty?.currentDirectory()
+
     /**
      * Phase 104.2: [widthPx]/[heightPx] are the whole grid's pixel extent, so a
      * cell-size change with an unchanged grid still reaches the PTY winsize.
@@ -230,12 +244,8 @@ class TerminalSession(
             // the live shell, and do not flip alive=false under it.
             val superseded = synchronized(this) { pty !== session }
             if (!superseded) {
-                val code = _exitCode.value
-                val notice = if (code != null) {
-                    "\r\n[process exited with $code]\r\n"
-                } else {
-                    "\r\n[process exited]\r\n"
-                }
+                // Phase 104.3: the spec notice; Enter restarts the session.
+                val notice = "\r\n" + SessionFacts.exitNotice(_exitCode.value) + "\r\n"
                 synchronized(emulator) { emulator.feed(notice) }
                 publish()
                 _alive.value = false

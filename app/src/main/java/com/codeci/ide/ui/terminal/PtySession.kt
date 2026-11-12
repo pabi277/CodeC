@@ -39,6 +39,18 @@ class PtySession private constructor(
 
     fun pollExit(): Int = PtyNative.waitPid(pid, hang = false)
 
+    /** Phase 104.3: SIGKILL the shell from the terminal menu. */
+    fun killProcess() {
+        if (closed) return
+        PtyNative.kill(pid, PtyNative.SIGKILL)
+    }
+
+    /** Phase 104.3: the shell's current directory from /proc, or null when unreadable. */
+    fun currentDirectory(): String? {
+        if (closed) return null
+        return runCatching { File("/proc/$pid/cwd").canonicalPath }.getOrNull()
+    }
+
     override fun close() {
         if (closed) return
         closed = true

@@ -1649,3 +1649,19 @@ Exactly **three** `client.stream(` sites are preserved (841/1136/1363); `ui/ai/`
   shell starts with the last known extent, not 0x0.
 - **Verification limit.** Most of the touched Android files are not host-compiled. They are checked
   by reading, a source pin, and CI.
+
+## 2026-10-14 — Phase 104.3: alt-scroll and session facts
+
+- **Pagers scroll.** In the alternate screen with mode 1007 and no mouse tracking, the swipe
+  and the fling become ↑/↓ keys, so `less` moves with the finger. The swipe and the fling share
+  one branch.
+- **Dead sessions say so.** The notice is `Process completed (code N) — press Enter`, and Enter
+  restarts a session that really ended (never one that is still starting).
+- **New tab, same directory.** The new tab reads the previous shell's `/proc/<pid>/cwd`, and falls
+  back to the projects dir when that is not readable. Whether the device allows the read is a
+  device-pass item.
+- **Menu.** The ⋮ in the top bar holds Keep screen on (in memory, no DataStore) and Kill process.
+  The planned place was the selection-only More menu; the top bar makes it reachable without a
+  selection.
+- **Harness blind spot, again.** Android files are not host-compiled. Their edits were checked by
+  reading the diff and by source pins. CI is the compile.

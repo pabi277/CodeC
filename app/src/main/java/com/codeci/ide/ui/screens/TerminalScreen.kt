@@ -3,6 +3,7 @@ package com.codeci.ide.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
@@ -28,12 +29,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GetApp
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -49,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -260,6 +264,19 @@ fun TerminalScreen(
             .imePadding()
             .background(terminalTheme.background)
     ) {
+        // Phase 104.3 — keep the screen on while the terminal is open (in memory;
+        // the window flag is cleared when the screen leaves or the toggle is off).
+        val keepScreenOn by viewModel.keepScreenOn.collectAsState()
+        val hostActivity = LocalActivity.current
+        DisposableEffect(keepScreenOn, hostActivity) {
+            val window = hostActivity?.window
+            if (keepScreenOn) window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+        }
+        var terminalMenuOpen by remember { mutableStateOf(false) }
+        val checkIcon: @Composable () -> Unit = {
+            Icon(Icons.Default.Check, contentDescription = null)
+        }
         TopAppBar(
             navigationIcon = {
                 Box {
@@ -360,6 +377,32 @@ fun TerminalScreen(
                         Icons.Default.Refresh,
                         contentDescription = stringResource(R.string.terminal_restart)
                     )
+                }
+                // Phase 104.3 — the terminal menu: keep-screen-on and kill-process.
+                Box {
+                    IconButton(onClick = { terminalMenuOpen = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Terminal menu")
+                    }
+                    DropdownMenu(
+                        expanded = terminalMenuOpen,
+                        onDismissRequest = { terminalMenuOpen = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Keep screen on") },
+                            trailingIcon = if (keepScreenOn) checkIcon else null,
+                            onClick = {
+                                terminalMenuOpen = false
+                                viewModel.setKeepScreenOn(!keepScreenOn)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Kill process") },
+                            onClick = {
+                                terminalMenuOpen = false
+                                viewModel.killActiveProcess()
+                            }
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(

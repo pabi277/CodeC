@@ -33,6 +33,7 @@ import com.codeci.ide.ui.terminal.TerminalSessionItem
 import com.codeci.ide.ui.terminal.TerminalSessionManager
 import com.codeci.ide.ui.terminal.TerminalSnapshot
 import com.codeci.ide.ui.terminal.TerminalHandoff
+import com.codeci.ide.ui.terminal.SessionFacts
 import com.codeci.ide.ui.terminal.TerminalLifecycle
 import com.codeci.ide.ui.terminal.TerminalStartMeasurement
 import com.codeci.ide.ui.terminal.OrderedReadinessQueue
@@ -405,7 +406,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private suspend fun startItem(
         item: TerminalSessionItem,
         forceInstall: Boolean = false,
-        reason: String? = null
+        reason: String? = null,
+        cwd: String? = null
     ) {
         item.session.beginStarting()
         synchronized(commandQueueLock) {
@@ -421,7 +423,10 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
                 measurements[item.id] = (measurements[item.id] ?: initial)
                     .userlandDone(SystemClock.elapsedRealtime())
             }
-            val prepared = prepareShell()
+            val prepared = prepareShell().let { base ->
+                // Phase 104.3: inherit the previous tab's directory when it still exists.
+                if (cwd != null && File(cwd).isDirectory) base.copy(cwd = File(cwd)) else base
+            }
             synchronized(measurementLock) {
                 measurements[item.id] = (measurements[item.id] ?: initial)
                     .prepareDone(SystemClock.elapsedRealtime())
@@ -453,6 +458,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     /** UI "+": create, attach collectors, and bootstrap the new session (D6/D7). */
     fun newSession() {
+        // Phase 104.3: the new tab opens in the previous tab's directory.
+        val inherited = SessionFacts.inheritedDirectory(activeSession()?.currentDirectory())
         val item = manager.createSession()
         if (item == null) {
             _sessionLimitEvents.tryEmit(Unit)
@@ -460,7 +467,7 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         }
         attachSession(item)
         viewModelScope.launch(Dispatchers.IO) {
-            startMutex.withLock { startItem(item) }
+            startMutex.withLock { startItem(item, cwd = inherited) }
         }
     }
 
@@ -487,6 +494,20 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     fun renameSession(id: String, name: String?) {
         manager.renameSession(id, name)
+    }
+
+    private val _keepScreenOn = MutableStateFlow(false)
+
+    /** Phase 104.3: keep the screen on while the terminal is open. In memory only (no DataStore key). */
+    val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
+
+    fun setKeepScreenOn(on: Boolean) {
+        _keepScreenOn.value = on
+    }
+
+    /** Phase 104.3: terminal menu "Kill process" for the active session. */
+    fun killActiveProcess() {
+        activeSession()?.killProcess()
     }
 
     /** Toolbar restart: the active session restarts in place (D11). */
@@ -780,6 +801,13 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     fun send(text: String) {
         if (text.isEmpty()) return
+        // Phase 104.3: a dead session restarts on Enter, as its notice says.
+        activeSession()?.let { s ->
+            if (SessionFacts.restartsOnInput(dead = s.isDead(), input = text)) {
+                restart()
+                return
+            }
+        }
         var payload = text
         if (_ctrlLatched.value && text.length == 1) {
             payload = ctrl(text[0]).toString()

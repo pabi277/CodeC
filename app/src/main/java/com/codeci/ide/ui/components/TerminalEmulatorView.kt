@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.codeci.ide.R
+import com.codeci.ide.ui.terminal.AltScroll
 import com.codeci.ide.ui.terminal.CellFlags
 import com.codeci.ide.ui.terminal.CellMetrics
 import com.codeci.ide.ui.terminal.SelCell
@@ -265,6 +266,8 @@ fun TerminalEmulatorView(
     // Termux mTopRow: 0 = live screen, negative = scrolled into transcript.
     var topRow by remember { mutableIntStateOf(0) }
     var wheelRemainder by remember { mutableFloatStateOf(0f) }
+    // Phase 104.3 — sub-row remainder for the alternate-screen wheel and fling.
+    var altScrollRemainder by remember { mutableFloatStateOf(0f) }
     // Phase 19.2 round 3: sub-row scroll remainder (px) for pixel-smooth
     // scrolling — the grid translates by this fraction of a row.
     var scrollSubPx by remember { mutableFloatStateOf(0f) }
@@ -330,20 +333,32 @@ fun TerminalEmulatorView(
             val elapsedMs = (frameNanos - startNanos) / 1_000_000L
             val travelled = ScrollMath.flingOffset(plan, elapsedMs)
             val snap = latestSnapshot
-            val r = ScrollMath.step(
-                subRowPx = scrollSubPx,
-                deltaPx = travelled - appliedPx,
-                cellH = cellH.toFloat(),
-                topRow = topRow,
-                minTop = -snap.scrollbackCount
-            )
-            appliedPx = travelled
-            scrollSubPx = r.subRowPx
-            topRow = r.topRow
-            scrollEpoch++
-            // Stop at the rail the fling is heading for: no overshoot, no idle frames.
-            val atRail = (plan.totalPx > 0f && r.topRow == 0) ||
-                (plan.totalPx < 0f && r.topRow == -snap.scrollbackCount)
+            var atRail = false
+            if (AltScroll.active(snap.altScreen, snap.mouseMode)) {
+                // Phase 104.3 — alternate screen, mode 1007: the fling becomes
+                // ↑/↓ keys, as the wheel does. There is no local scrollback here.
+                val steps = AltScroll.steps(travelled - appliedPx, altScrollRemainder, cellH.toFloat())
+                altScrollRemainder = steps.remainderPx
+                repeat(kotlin.math.abs(steps.rows)) {
+                    onInput(cursorSequence(if (steps.rows > 0) 'B' else 'A'))
+                }
+                appliedPx = travelled
+            } else {
+                val r = ScrollMath.step(
+                    subRowPx = scrollSubPx,
+                    deltaPx = travelled - appliedPx,
+                    cellH = cellH.toFloat(),
+                    topRow = topRow,
+                    minTop = -snap.scrollbackCount
+                )
+                appliedPx = travelled
+                scrollSubPx = r.subRowPx
+                topRow = r.topRow
+                scrollEpoch++
+                // Stop at the rail the fling is heading for: no overshoot, no idle frames.
+                atRail = (plan.totalPx > 0f && r.topRow == 0) ||
+                    (plan.totalPx < 0f && r.topRow == -snap.scrollbackCount)
+            }
             if (elapsedMs >= plan.durationMs || atRail) break
         }
         val rested = ScrollMath.rest(topRow, scrollSubPx, -latestSnapshot.scrollbackCount)
@@ -550,6 +565,14 @@ fun TerminalEmulatorView(
                                         repeat(kotlin.math.abs(units)) {
                                             MouseEncoding.wheel(dir, col + 1, row + 1, sgr)?.let(onMouseEvent)
                                         }
+                                    }
+                                } else if (AltScroll.active(snap.altScreen, snap.mouseMode)) {
+                                    // Phase 104.3 — alternate screen, mode 1007: the
+                                    // swipe becomes ↑/↓ keys (less, man, and similar).
+                                    val steps = AltScroll.steps(dy, altScrollRemainder, cellH.toFloat())
+                                    altScrollRemainder = steps.remainderPx
+                                    repeat(kotlin.math.abs(steps.rows)) {
+                                        onInput(cursorSequence(if (steps.rows > 0) 'B' else 'A'))
                                     }
                                 } else {
                                     // Phase 19.2 round 3: pixel-smooth local
