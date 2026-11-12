@@ -1633,3 +1633,9 @@ Exactly **three** `client.stream(` sites are preserved (841/1136/1363); `ui/ai/`
   Android-sh fallback when no bash is installed. 104.1 now starts login bash and sources the rc from
   the profile; the fallback is unchanged and documented.
 - **Host:** 162 passed, 0 failed. CI pending for the 104.1 commit.
+
+- **104.1 CI fix (`Build APK` failed on `e53bbe5`).** The `.profile` writer called
+  `homeProfileScript` unqualified from `ShellBootstrap`, which is a different class from
+  `ShellEnvironment`. The host harness does not compile `ShellEnvironment.kt` (it imports Android),
+  so it could not catch this. Lesson: when a pure helper is called from an Android-only file, the
+  call site must be qualified and checked by reading, and CI is the only compile of that file.

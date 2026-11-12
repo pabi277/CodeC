@@ -2216,7 +2216,7 @@ class ShellBootstrap(private val context: Context) {
         File(etc, "profile").writeText(
             ShellEnvironment.profileScript(prefix, home, projects)
         )
-        File(home, ".profile").writeText(homeProfileScript(File(etc, "profile").absolutePath))
+        File(home, ".profile").writeText(ShellEnvironment.homeProfileScript(File(etc, "profile").absolutePath))
         marker.writeText(ShellEnvironment.BOOTSTRAP_VERSION)
 
         val tcc = EmbeddedCompiler.tccBinary(context)
