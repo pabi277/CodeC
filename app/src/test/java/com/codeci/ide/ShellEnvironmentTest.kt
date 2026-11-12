@@ -278,7 +278,7 @@ class ShellEnvironmentTest {
         assertTrue(profile.contains("/system/bin/ls"))
         assertFalse(profile.contains("ls -la"))
         assertFalse(profile.contains("codec:\\w"))
-        assertTrue(profile.contains("export PS1='${'$'}(printf"))
+        assertTrue(profile.contains("export PS1='\\[${'$'}(printf"))
         assertTrue(profile.contains("CodeCShellReady"))
     }
 
