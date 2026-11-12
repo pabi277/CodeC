@@ -42,9 +42,9 @@
 
 | Part | Scope | Doc |
 |---|---|---|
-| 104.1 (host green; CI pending) | Login shell via direct spawn with argv[0] `-bash` when an ELF bash exists; `~/.profile` sources `~/.bashrc`; the shim path is unchanged and recorded | [PART_104_1_LOGIN_SHELL.md](PART_104_1_LOGIN_SHELL.md) |
-| 104.2 (host green; CI pending) | PTY truth: `IXON`/`IXOFF` off, `IUTF8` on (`pty.c`), winsize pixel fields wired from the view | [PART_104_2_PTY_TRUTH.md](PART_104_2_PTY_TRUTH.md) |
-| 104.3 (host green; CI pending) | Alt-scroll (1007 → arrow keys, wheel and fling), dead-session message with Enter restart, new-tab cwd inheritance, Keep-screen-on and Kill-process in the top-bar ⋮ menu | [PART_104_3_ALT_SCROLL_SESSION.md](PART_104_3_ALT_SCROLL_SESSION.md) |
+| 104.1 (CI green `12f4e3e`; device pass required) | Login shell via direct spawn with argv[0] `-bash` when an ELF bash exists; `~/.profile` sources `~/.bashrc`; the shim path is unchanged and recorded | [PART_104_1_LOGIN_SHELL.md](PART_104_1_LOGIN_SHELL.md) |
+| 104.2 (CI green `32057d9`; device pass required) | PTY truth: `IXON`/`IXOFF` off, `IUTF8` on (`pty.c`), winsize pixel fields wired from the view | [PART_104_2_PTY_TRUTH.md](PART_104_2_PTY_TRUTH.md) |
+| 104.3 (CI green `b85fa99`; device pass required) | Alt-scroll (1007 → arrow keys, wheel and fling), dead-session message with Enter restart, new-tab cwd inheritance, Keep-screen-on and Kill-process in the top-bar ⋮ menu | [PART_104_3_ALT_SCROLL_SESSION.md](PART_104_3_ALT_SCROLL_SESSION.md) |
 
 ## Standing laws honoured
 

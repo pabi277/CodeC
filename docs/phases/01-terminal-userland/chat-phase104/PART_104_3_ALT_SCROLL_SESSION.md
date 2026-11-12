@@ -1,6 +1,6 @@
 # CodeC Phase 104.3 — Alt-scroll and session facts
 
-> **Status:** ✅ HOST GREEN · CI and device pass pending · **Cost:** `[client-only]` · **Effort:** M
+> **Status:** ✅ CI GREEN `b85fa99` (run `43193599612`) · device pass required · **Cost:** `[client-only]` · **Effort:** M
 
 ## First move: evidence, not code
 
