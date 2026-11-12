@@ -1674,3 +1674,15 @@ Exactly **three** `client.stream(` sites are preserved (841/1136/1363); `ui/ai/`
 - Sandbox reset: the host harness directory was lost, so CI is the check for this commit.
 - Branch realigned: the local branch pointed at the base commit; `git reset --mixed` to the remote tip
   (working tree was already identical).
+
+## 2026-10-14 — Long-command wrap: the prompt's marker was counted as width
+
+- **Device report:** a long command restarts at the start of the same row instead of wrapping.
+- **My first guess was wrong.** The pixel-size SIGWINCH fix did not solve it. The device round
+  showed the symptom is independent of zoom.
+- **Reproduced.** In bash 5.2 with `pyte` as the terminal, the app's prompt overwrites the row at 20
+  columns. The same prompt with `\[ \]` around the marker wraps correctly.
+- **Cause.** `PS1` runs `printf` for the `CodeCShellReady` marker without `\[ \]`, so readline counts its
+  23 bytes as visible width. The base commit already had this.
+- **Fix.** Wrap the marker in `\[ \]` in both places the prompt is set. Pinned in
+  `ShellEnvironmentTest` (CI).

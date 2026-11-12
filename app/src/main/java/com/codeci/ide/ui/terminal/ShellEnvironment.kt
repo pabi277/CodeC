@@ -1951,7 +1951,7 @@ HELP
         # Command substitution runs when the interactive shell paints each
         # prompt, so readiness means the actual child shell is usable (not
         # merely that the parent launcher sourced this file).
-        export PS1='${'$'}(printf "\033]1337;CodeCShellReady\007")codec ${'$'} '
+        export PS1='\[${'$'}(printf "\033]1337;CodeCShellReady\007")\]codec ${'$'} '
         mkdir -p "${'$'}HOME" "${'$'}TMPDIR" "${'$'}CODEC_PROJECTS" 2>/dev/null
         pj() { cd "${'$'}CODEC_PROJECTS" || return; }
         cd "${'$'}CODEC_PROJECTS" 2>/dev/null || cd "${'$'}HOME" 2>/dev/null || true
@@ -2018,7 +2018,7 @@ HELP
             put("CC_WARN", warningFlags(warnings))
             put("CC_OPT", optimizationFlag(optimization))
             put("ENV", File(etcDir(prefix), "profile").absolutePath)
-            put("PS1", "\$(printf \"\\033]1337;CodeCShellReady\\007\")codec \$ ")
+            put("PS1", "\\[\$(printf \"\\033]1337;CodeCShellReady\\007\")\\]codec \$ ")
             put("USER", "codec")
             put("CODEC_PROJECTS", projects.absolutePath)
             if (tccBinary != null) put("TCC_BIN", tccBinary.absolutePath)

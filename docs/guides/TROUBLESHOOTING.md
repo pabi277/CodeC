@@ -2342,3 +2342,22 @@ The screenshot observations and deterministic replay are kept separate in the [P
   not changed.
 - **Check.** Install the bootstrap (bash appears under `$PREFIX/bin`), open a new tab, and run
   `alias`. Your `~/.bashrc` aliases should be listed.
+
+## 66. A long command wraps onto the prompt's own line (Phase 104.2 device round)
+
+- **Symptom.** Type a command longer than the screen width. At the wrap, the text restarts at the
+  start of the same row (`codec $ echo aaa…` is overwritten), and the rest appears on the next row.
+  Pinch-zoom is not required.
+- **Cause.** The prompt runs `printf` to emit the readiness marker `ESC ] 1337;CodeCShellReady BEL`
+  (the terminal uses it to know the shell is ready). Bash counts those 23 bytes as visible width,
+  because they were not wrapped in `\[ … \]`. So readline thinks the prompt is ~31 columns wide, not
+  8, and its wrap redraw lands on the wrong row. Reproduced with bash 5.2 and a terminal emulator
+  (`pyte`) at 20 columns: the app's prompt overwrites the row; the same prompt with `\[ \]` wraps
+  correctly.
+- **Fix.** The prompt is `\[$(printf "\033]1337;CodeCShellReady\007")\]codec $ `, in both places that
+  set it: the profile (`ShellEnvironment.profileScript`) and the process environment
+  (`ShellEnvironment.shellEnv`). The marker still works.
+- **Not the cause.** The Phase 104.2 pixel-size change (SIGWINCH on pixel-only resize) was a real
+  issue and is fixed, but it did not cause this symptom.
+- **Check.** Type past the screen width at the prompt. The line should wrap onto the next row with
+  the prompt intact.

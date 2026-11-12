@@ -72,3 +72,8 @@ whole character on backspace.
   mismatch during the pinch in `TerminalEmulatorView`.
 - **Device row to re-run:** pinch-zoom, then type until the line is full. Expect a normal
   wrap to the next line.
+
+**Correction (same device round):** the cause of the wrap symptom was not the pixel-size
+SIGWINCH described above. It is the prompt's zero-width marker, which is not wrapped in
+`\[ … \]`, so readline miscounts the prompt width. The pixel fix stays (it removes a real
+redraw), but see TROUBLESHOOTING §66 for the actual fix.
