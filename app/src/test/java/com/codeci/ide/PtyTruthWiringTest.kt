@@ -47,6 +47,14 @@ class PtyTruthWiringTest {
     }
 
     @Test
+    fun `a pixel-only resize never signals the shell`() {
+        // Phase 104.2 fix: the PTY (and so SIGWINCH) is touched only on a grid change.
+        val body = termSession.substringAfter("fun resize(cols: Int, rows: Int, widthPx: Int = 0, heightPx: Int = 0)")
+            .substringBefore("private var lastWidthPx")
+        assertTrue(body.indexOf("if (!gridChanged) return") in 0 until body.indexOf("pty?.setWindowSize(rows, cols, widthPx, heightPx)"))
+    }
+
+    @Test
     fun `a new shell starts with the last known pixel extent, not zero`() {
         assertTrue(termSession.contains("session.setWindowSize(emulator.rows, emulator.cols, lastWidthPx, lastHeightPx)"))
     }

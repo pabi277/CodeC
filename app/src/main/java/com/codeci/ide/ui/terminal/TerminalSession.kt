@@ -163,11 +163,16 @@ class TerminalSession(
     fun currentDirectory(): String? = pty?.currentDirectory()
 
     /**
-     * Phase 104.2: [widthPx]/[heightPx] are the whole grid's pixel extent, so a
-     * cell-size change with an unchanged grid still reaches the PTY winsize.
+     * Phase 104.2 / 104.2-fix: [widthPx]/[heightPx] are the whole grid's pixel
+     * extent. They are remembered for the next real grid change, but the PTY is
+     * signalled only when rows or columns change. Linux raises SIGWINCH on any
+     * winsize change, pixels included, so a pinch that changes only the cell size
+     * made the shell redraw its line mid-edit at a stale width.
      */
     fun resize(cols: Int, rows: Int, widthPx: Int = 0, heightPx: Int = 0) {
         if (cols <= 0 || rows <= 0) return
+        lastWidthPx = widthPx
+        lastHeightPx = heightPx
         val gridChanged = synchronized(emulator) {
             if (cols == emulator.cols && rows == emulator.rows) {
                 false
@@ -176,11 +181,9 @@ class TerminalSession(
                 true
             }
         }
-        if (!gridChanged && widthPx == lastWidthPx && heightPx == lastHeightPx) return
-        lastWidthPx = widthPx
-        lastHeightPx = heightPx
+        if (!gridChanged) return
         pty?.setWindowSize(rows, cols, widthPx, heightPx)
-        if (gridChanged) publish()
+        publish()
     }
 
     @Volatile private var lastWidthPx = 0

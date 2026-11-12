@@ -55,3 +55,20 @@ runtime, so the Kotlin declaration and the C symbol are pinned by a source test.
 
 **Device pass required:** Ctrl-S does not freeze `cat`; Ctrl-Q resumes; typed UTF-8 erases a
 whole character on backspace.
+
+## Fix from the device pass (line redraw after pinch zoom)
+
+- **Symptom (device, item 1):** after pinch-zooming, typing until the line is full did not
+  wrap to a new line; the text started again on the same line.
+- **Cause (code reading, not reproduced on a device):** 104.2 sent the PTY a winsize update
+  when only the pixel size changed. Linux raises SIGWINCH on any winsize change, and
+  `PtyNative` also signals explicitly. The shell then redrew its line mid-edit at a stale
+  width. Before 104.2, a pixel-only change never reached the PTY.
+- **Fix:** `TerminalSession.resize` always remembers the latest pixel size, and signals the
+  PTY only when rows or columns change. The pixel size rides along with the next real grid
+  change. Pin: `PtyTruthWiringTest.a pixel-only resize never signals the shell`.
+- **Not claimed:** a grid change during a zoom still signals the shell, as it did before
+  104.2. If the device still wraps wrongly, the next suspect is the live-versus-settled size
+  mismatch during the pinch in `TerminalEmulatorView`.
+- **Device row to re-run:** pinch-zoom, then type until the line is full. Expect a normal
+  wrap to the next line.

@@ -1665,3 +1665,12 @@ Exactly **three** `client.stream(` sites are preserved (841/1136/1363); `ui/ai/`
   selection.
 - **Harness blind spot, again.** Android files are not host-compiled. Their edits were checked by
   reading the diff and by source pins. CI is the compile.
+
+## 2026-10-14 — 104.2 fix: pixel-only resize no longer signals the shell
+
+- Device report (item 1): after pinch zoom, a full line did not wrap. Code reading traced it to
+  104.2's pixel-only winsize updates, which SIGWINCH the shell mid-edit. Fixed: the PTY is signalled
+  only on a rows/columns change. Not reproduced on a device; the device row is the test.
+- Sandbox reset: the host harness directory was lost, so CI is the check for this commit.
+- Branch realigned: the local branch pointed at the base commit; `git reset --mixed` to the remote tip
+  (working tree was already identical).
