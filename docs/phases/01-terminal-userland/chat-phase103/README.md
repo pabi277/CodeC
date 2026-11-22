@@ -1,5 +1,25 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
+**Round 2 (owner's first device report, 2026-11-22): the bar now has one rule and the band is
+visible.** His two sentences — *"1st it is not looking good"* and *"the copy,select all etc
+shown only once long prase to select after fixing the copy part it doesn't show again"* — were
+three real defects: (1) `handleHit` ran on the DOWN, before the long-press timer, so a press
+inside a handle's 48 dp box became a handle drag and a drag hid the bar — fixed with
+`HANDLE_ARMED`, which only becomes `HANDLE` when the finger moves; (2) `toolbar`/`selecting`/
+`activeEnd` were three flags that drifted (`selecting`/`activeEnd` were written and never
+read) — replaced by ONE rule, "a selection exists and no finger is on the surface", with
+`pressActive` set on the down and cleared by the single shared lift; (3) the band was
+`theme.selection` at its stored alpha, and three of the four bundled themes store a **dark**
+translucent colour — Dracula's `#44475A` @ 40 % over `#282A36` is **~1.2:1**, invisible, which
+is exactly what the screenshot showed (two green rings, no highlight). The band is now
+**derived** by the new pure `SelectionLook` from the theme's own foreground at the first alpha
+clearing **1.35:1**; handles are a solid dot with a band-coloured collar and a stem to the cell
+edge. Also: a tap with the bar up no longer discards the selection (there was then no way
+back), the toolbar gained an always-enabled **✕**, and dragging a handle past the oldest row
+selects all / past the last live line clears. Tests **93/93** host (SelectionModelTest 32,
+SelectionScrollWiringTest 18, **SelectionLookTest 5 new**), the five pre-existing view suites
+**34/34**, and **Build APK ✅ GREEN `45009026711` on `9d0c365`**.
+
 **Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22) — host harness 85/85 and
 **Build APK ✅ GREEN on `df3b285`** (run [`44999216380`](https://github.com/pabi277/CodeC/actions/runs/44999216380):
 host unit + screenshot tests, debug + release assembly, APK set check, lint) **and on the
