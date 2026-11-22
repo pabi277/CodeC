@@ -21,6 +21,8 @@
     <string name="terminal_copied">Copied to clipboard</string>
     <string name="terminal_copy_empty">Nothing to copy</string>
     <!-- Phase 103.1 — the floating selection toolbar. -->
+    <!-- The one always-available exit: a selection can never trap the user. -->
+    <string name="terminal_clear_selection">✕</string>
     <string name="terminal_select_all">Select all</string>
     <string name="terminal_more">More</string>
     <string name="terminal_open_url">Open URL</string>

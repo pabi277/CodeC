@@ -29,6 +29,17 @@ terminal surface only.
 | A6 | Tap **Copy**. | *"Copied to clipboard"*. Paste into any text field: the clipboard holds **exactly** the highlighted span — not the whole terminal, not empty. |
 | A7 | Repeat A1–A6 on a line that **wrapped** (make one: `printf 'x%.0s' {1..200}; echo`), selecting across the fold. | The pasted text is **one unbroken string** at the fold (no stray newline in the middle of the run). |
 
+## A2. Round 2 — the bar comes back every time, and the band is visible
+
+| # | Do | Expect |
+|---|---|---|
+| A8 | Make a selection, tap **✕** to clear it, then long-press a word **again** (anywhere, including right next to a handle). | The bar appears **every** time. This is the row the first round failed: a press landing in a handle's 48 dp box was claimed as a handle drag, which hid the bar for that whole gesture and the next one. |
+| A9 | With the bar up, **tap the terminal**. | The selection **stays** and so does the bar. A tap no longer silently throws the selection away (that left no way to copy it). Use **✕** or **Copy** to end it. |
+| A10 | Look at the highlighted text on each terminal theme (⤓ Settings → Terminal theme). | The band is clearly visible on **all four** themes — Dracula, Monokai, GitHub Dark and Classic Dark. Round 1 drew `theme.selection`, which is a dark colour in three of them: the band was invisible and only the two handle dots showed. |
+| A11 | Look at the handles. | A solid dot connected to its cell by a short stem, in the band's colour with the cursor colour on top — it should read as "this end of the selection", not a stray circle. |
+| A12 | Drag a handle **up** past the oldest line in history. | The whole buffer gets selected (**Select all**) instead of the handle sticking. |
+| A13 | On the live screen, drag a handle **down** past the last line. | The selection clears — you asked for nothing past the end. |
+
 ## B. Copy law — it must never fall back to the transcript
 
 | # | Do | Expect |

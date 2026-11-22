@@ -67,7 +67,13 @@ class SelectionScrollWiringTest {
         val longPress = code.substringAfter("onLongPress = { x, y ->")
             .substringBefore("onScroll = {")
         assertTrue(longPress.contains("TerminalSelection.word("))
-        assertTrue(longPress.contains("toolbar = true"))
+        // Round 2: the long-press no longer sets the bar's visibility itself.
+        // It made the selection; the LIFT shows the bar (see the rule pin
+        // below), because a bar under the finger would eat the drag.
+        assertFalse(
+            "the press must not raise the bar under the finger",
+            longPress.contains("toolbar = true")
+        )
         assertFalse(
             "the pre-103 menu flag must not be set by the press",
             longPress.contains("menu = true")
@@ -139,6 +145,49 @@ class SelectionScrollWiringTest {
         assertTrue(code.contains(".shifted(contentShift)"))
         assertTrue(code.contains("TrimMath.contentShift("))
         assertTrue(code.contains("snapshot.scrollbackGeneration"))
+    }
+
+    @Test
+    fun `the bar's visibility is one rule, and there is always a way out`() {
+        val code = SourceCode.of(source(view))
+        // ONE condition decides the bar: a selection exists and no finger is on
+        // the surface. The old trio (toolbar/selecting/activeEnd) drifted and
+        // left a selection with no bar and no way to copy it — the owner's
+        // "it shows once and then never again".
+        assertFalse(
+            "the old drifting flags must not come back",
+            code.contains("var toolbar by remember") ||
+                code.contains("var selecting by remember") ||
+                code.contains("var activeEnd by remember")
+        )
+        assertTrue(
+            "the bar is shown from the one rule",
+            code.contains("if (shownSelection != null && !pressActive)")
+        )
+        assertTrue(
+            "every press must release the bar again",
+            code.contains("onRest = {") && code.contains("pressActive = false")
+        )
+        // ✕ is unconditional — a selection can never trap the user.
+        assertTrue(
+            "the toolbar needs an always-enabled dismiss",
+            code.contains("onDismiss = {") &&
+                code.contains("TextButton(onClick = onDismiss, colors = colors)")
+        )
+        assertFalse(
+            "a handle hit must not pre-empt the long-press",
+            code.contains("mode = Mode.HANDLE\n            onBeginHandleDrag")
+        )
+    }
+
+    @Test
+    fun `the band is derived from the theme, never the stored dark colour`() {
+        val code = SourceCode.of(source(view))
+        assertTrue("the band comes from the pure rule", code.contains("SelectionLook.bandOver("))
+        assertFalse(
+            "theme.selection was invisible on three of the four themes",
+            code.contains("color = theme.selection")
+        )
     }
 
     // ---- 103.2: rest, fling, scrollbar -----------------------------------

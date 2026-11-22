@@ -203,7 +203,11 @@ class SelectionModelTest {
         val to = when (shifted) {
             is SelectionDrag.Move -> shifted.to
             is SelectionDrag.MoveAndScroll -> shifted.to
+            // A sub-pixel drag near the top edge on a live screen may now
+            // reach a rail; both rails are verbs, not points.
             is SelectionDrag.AutoScroll -> SelectionPoint(-1, -1)
+            is SelectionDrag.SelectAll -> SelectionPoint(-2, -2)
+            is SelectionDrag.Clear -> SelectionPoint(-3, -3)
         }
         assertEquals(SelectionPoint(1, 0), to)
     }
@@ -220,9 +224,50 @@ class SelectionModelTest {
             is SelectionDrag.Move -> far.to
             is SelectionDrag.MoveAndScroll -> far.to
             is SelectionDrag.AutoScroll -> SelectionPoint(0, 0)
+            is SelectionDrag.SelectAll -> SelectionPoint(0, 0)
+            is SelectionDrag.Clear -> SelectionPoint(0, 0)
         }
         assertTrue("col ${to.col} in 0..39", to.col in 0..39)
         assertTrue("row ${to.row} in 0..29", to.row in 0..29)
+    }
+
+    // ---- the two rails are verbs, not dead ends --------------------------
+
+    @Test
+    fun `dragging off the oldest row means select all, off the live screen means clear`() {
+        val sel = TerminalSelection.word(row = -5, startCol = 0, endCol = 4)
+        // Already at the top of a 100-row history, finger in the top band:
+        // there is nothing further to extend into, so the gesture selects all.
+        val atOldest = SelectionAutoScroll.dragFor(
+            selection = sel, end = SelectionEnd.CURSOR,
+            x = 5f, y = 0f, cellW = 10, cellH = 20, cols = 40, rows = 30,
+            xScroll = 0f, rowCap = -100, minTop = -100
+        )
+        assertTrue("at the oldest row the top rail selects all", atOldest is SelectionDrag.SelectAll)
+
+        // Still scrolled up: the top band is ordinary "keep going older".
+        val canStillScroll = SelectionAutoScroll.dragFor(
+            selection = sel, end = SelectionEnd.CURSOR,
+            x = 5f, y = 0f, cellW = 10, cellH = 20, cols = 40, rows = 30,
+            xScroll = 0f, rowCap = -5, minTop = -100
+        )
+        assertTrue(canStillScroll is SelectionDrag.MoveAndScroll)
+
+        // At the live screen, the bottom band is past the newest line: clear.
+        val atLive = SelectionAutoScroll.dragFor(
+            selection = sel, end = SelectionEnd.CURSOR,
+            x = 5f, y = 599f, cellW = 10, cellH = 20, cols = 40, rows = 30,
+            xScroll = 0f, rowCap = 0, minTop = -100
+        )
+        assertTrue("at the live screen the bottom rail clears", atLive is SelectionDrag.Clear)
+
+        // Scrolled up, the bottom band still means "toward live".
+        val towardLive = SelectionAutoScroll.dragFor(
+            selection = sel, end = SelectionEnd.CURSOR,
+            x = 5f, y = 599f, cellW = 10, cellH = 20, cols = 40, rows = 30,
+            xScroll = 0f, rowCap = -5, minTop = -100
+        )
+        assertTrue(towardLive is SelectionDrag.MoveAndScroll)
     }
 
     // ---- Select All ------------------------------------------------------

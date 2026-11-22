@@ -193,6 +193,21 @@ sealed interface SelectionDrag {
 
     /** Move the handle AND scroll — the drag reached the viewport edge. */
     data class MoveAndScroll(val to: SelectionPoint, val lines: Int) : SelectionDrag
+
+    /**
+     * The drag was dragged off the TOP of the buffer while already showing its
+     * first row: there is nothing further to extend into, so the gesture means
+     * "everything" — Termux's select-all wipe.
+     */
+    data object SelectAll : SelectionDrag
+
+    /**
+     * The drag was dragged off the BOTTOM of the LIVE screen: past the newest
+     * line there is nothing to select, so the gesture means "never mind".
+     * Deliberately NOT reachable while scrolled up, where down means "toward
+     * live" and is ordinary auto-scroll.
+     */
+    data object Clear : SelectionDrag
 }
 
 object SelectionModel {
@@ -436,7 +451,9 @@ object SelectionAutoScroll {
         cols: Int,
         rows: Int,
         xScroll: Float,
-        rowCap: Int
+        rowCap: Int,
+        /** The oldest reachable row (`-scrollbackCount`): the top dead end. */
+        minTop: Int = Int.MIN_VALUE
     ): SelectionDrag {
         val cw = cellW.coerceAtLeast(1)
         val ch = cellH.coerceAtLeast(1).toFloat()
@@ -449,17 +466,26 @@ object SelectionAutoScroll {
             SelectionEnd.CURSOR -> selection.cursorEnd
         }
         val target = SelectionPoint(rowCap + row, col)
-        // Which side of the viewport the finger is on: this decides the sign,
-        // not the buffer we are standing in (a selection made while scrolling
-        // history must still extend both ways).
+        // Which edge band the finger is in decides the sign of the scroll, and
+        // the buffer's own limits decide whether there is still somewhere to
+        // scroll. Two dead ends become verbs instead of doing nothing:
+        //   top of the oldest row     → Select all
+        //   bottom of the live screen → Clear
+        // A dead end that silently does nothing is what made the selection feel
+        // broken: the handle simply stopped following the finger.
+        val atTopEdge = row <= EDGE_ROWS - 1
+        val atBottomEdge = row >= rows - EDGE_ROWS
+        val oldestTop = rowCap <= minTop
+        if (atTopEdge && oldestTop) return SelectionDrag.SelectAll
+        if (atBottomEdge && rowCap >= 0) return SelectionDrag.Clear
         val lines = when {
             // rowCap is the TOP row, so its sign says which way "older" is:
             // in history the older line is more negative (up), on the live
             // screen it is more positive (down). A press that starts at the
             // live screen and drags to the top edge must therefore travel
             // BACK into scrollback — same gesture, opposite sign.
-            row <= EDGE_ROWS - 1 -> if (rowCap < 0) -LINES_PER_FRAME else LINES_PER_FRAME
-            row >= rows - EDGE_ROWS -> if (rowCap < 0) LINES_PER_FRAME else -LINES_PER_FRAME
+            atTopEdge -> if (rowCap < 0) -LINES_PER_FRAME else LINES_PER_FRAME
+            atBottomEdge -> if (rowCap < 0) LINES_PER_FRAME else -LINES_PER_FRAME
             else -> 0
         }
         return if (lines != 0) SelectionDrag.MoveAndScroll(target, lines) else SelectionDrag.Move(target)

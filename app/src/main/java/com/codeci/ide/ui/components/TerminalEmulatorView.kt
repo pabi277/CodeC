@@ -44,7 +44,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -73,6 +72,7 @@ import com.codeci.ide.ui.terminal.SelectionAutoScroll
 import com.codeci.ide.ui.terminal.SelectionDrag
 import com.codeci.ide.ui.terminal.SelectionEnd
 import com.codeci.ide.ui.terminal.SelectionHandles
+import com.codeci.ide.ui.terminal.SelectionLook
 import com.codeci.ide.ui.terminal.SelectionModel
 import com.codeci.ide.ui.terminal.SelectionPoint
 import com.codeci.ide.ui.terminal.SelectionRange
@@ -310,11 +310,23 @@ fun TerminalEmulatorView(
 
     // ---- Phase 103.1: the selection and its two handles -------------------
     var selection by remember { mutableStateOf<TerminalSelection?>(null) }
-    var activeEnd by remember { mutableStateOf(SelectionEnd.CURSOR) }
-    var selecting by remember { mutableStateOf(false) }
-    /** The floating Copy / Select all / Paste toolbar, over the grid. */
-    var toolbar by remember { mutableStateOf(false) }
+    /**
+     * The bar's ONE rule: it is up whenever there is a selection and no finger
+     * is on the surface. There is no second flag to keep in sync (the old
+     * `toolbar`/`selecting`/`activeEnd` trio drifted out of sync and left a
+     * selection with no way to copy it). `pressActive` is the only exception,
+     * and only for the duration of a press: a bar under the finger would eat
+     * the very drag that extends the selection — and, worse, a press landing in
+     * a handle's 48 dp box used to suppress the NEXT long-press's bar too.
+     */
+    var pressActive by remember { mutableStateOf(false) }
     var flashAlpha by remember { mutableFloatStateOf(0f) }
+
+    // Phase 103.1 round 2 — the selection band, DERIVED from this theme's own
+    // foreground/background so it is legible on all four bundled themes (three
+    // of them stored an invisible dark band — see SelectionLook's table).
+    // Computed here, once per theme, not per row.
+    val selectionBand = SelectionLook.bandOver(theme.foregroundRgb, theme.backgroundRgb)
 
     // Reusable glyph batch buffer (Phase 19.2 round 3 run-batching).
     val glyphBatch = remember { StringBuilder(512) }
@@ -387,8 +399,6 @@ fun TerminalEmulatorView(
                 // Its text is gone (or was overwritten): drop it silently
                 // rather than leave a selection painting other people's cells.
                 selection = null
-                toolbar = false
-                selecting = false
             }
         }
     }
@@ -524,6 +534,7 @@ fun TerminalEmulatorView(
                             latest = { latestSnapshot },
                             subPxNow = { scrollSubPx },
                             selectionNow = { selection },
+                            onPressStart = { pressActive = true },
                             handleHit = { x, y ->
                                 hitHandle(
                                     selection = selection,
@@ -540,10 +551,8 @@ fun TerminalEmulatorView(
                                     y = y
                                 )
                             },
-                            onBeginHandleDrag = { end ->
-                                activeEnd = end
-                                selecting = true
-                                toolbar = false
+                            onBeginHandleDrag = { _ ->
+                                pressActive = true
                             },
                             onMoveHandle = { end, x, y ->
                                 val snap = latestSnapshot
@@ -558,12 +567,32 @@ fun TerminalEmulatorView(
                                     cols = cols,
                                     rows = rows,
                                     xScroll = scrollSubPx,
-                                    rowCap = topRow
+                                    rowCap = topRow,
+                                    minTop = -snap.scrollbackCount
                                 )
+                                // Two dead ends are verbs (round 2): dragging
+                                // past the oldest row selects everything, and
+                                // dragging past the newest line clears. Before
+                                // this the handle simply stopped following the
+                                // finger, which read as "selection is broken".
+                                when (drag) {
+                                    is SelectionDrag.SelectAll -> {
+                                        selection = SelectionModel.selectAll(snap)
+                                        return@detectTerminalGestures
+                                    }
+                                    is SelectionDrag.Clear -> {
+                                        selection = null
+                                        onSelectionChanged(null)
+                                        return@detectTerminalGestures
+                                    }
+                                    else -> Unit
+                                }
                                 val (move, scroll) = when (drag) {
                                     is SelectionDrag.Move -> drag.to to 0
                                     is SelectionDrag.AutoScroll -> null to 0
                                     is SelectionDrag.MoveAndScroll -> drag.to to drag.lines
+                                    is SelectionDrag.SelectAll -> null to 0
+                                    is SelectionDrag.Clear -> null to 0
                                 }
                                 if (move != null) {
                                     var sel = SelectionModel.drag(cur, end, move)
@@ -586,13 +615,12 @@ fun TerminalEmulatorView(
                                     return@detectTerminalGestures
                                 }
                                 if (selection != null) {
-                                    // A tap while a selection is up dismisses it
-                                    // (and the toolbar with it) — the same
-                                    // one-tap exit every native text surface has.
-                                    selection = null
-                                    toolbar = false
-                                    selecting = false
-                                    onSelectionChanged(null)
+                                    // Tapping to dismiss is only right when the
+                                    // bar is NOT up: with the bar on screen a
+                                    // tap used to throw the selection away and
+                                    // there was then no way to get it back —
+                                    // the owner's "it doesn't show again".
+                                    // With the bar up, a tap is inert; ✕ clears.
                                     return@detectTerminalGestures
                                 }
                                 val line = snap.lineAt(topRow + row)
@@ -614,9 +642,6 @@ fun TerminalEmulatorView(
                                 selection = TerminalSelection.word(
                                     absRow, start, end, line?.text.orEmpty()
                                 )
-                                activeEnd = SelectionEnd.CURSOR
-                                selecting = true
-                                toolbar = true
                                 // NO haptic here on purpose. The terminal
                                 // surface is one of the app's two animation-free
                                 // zones (Phase 36/48) and HapticWiringTest pins
@@ -667,7 +692,10 @@ fun TerminalEmulatorView(
                             // it already holds buffer-absolute rows, so the snap
                             // only changes what the canvas shows, never which
                             // cells are selected.
-                            onRest = { settleScroll() },
+                            onRest = {
+                                settleScroll()
+                                pressActive = false
+                            },
                             onFling = { velocity, aboutToScroll ->
                                 val snap = latestSnapshot
                                 if (snap.mouseMode and MouseModes.CAPTURE_MASK == 0) {
@@ -709,6 +737,7 @@ fun TerminalEmulatorView(
                             boldPaint = boldPaint,
                             cursorX = if (isCursorRow) snapshot.cursorX else -1,
                             selection = selection?.range,
+                            selectionBand = selectionBand,
                             extY = extY,
                             cols = cols,
                             theme = theme,
@@ -742,20 +771,40 @@ fun TerminalEmulatorView(
                             xScroll = scrollSubPx,
                             metrics = handleMetrics
                         )
-                        // Stem: a filled tab from the cell edge to the circle.
+                        // Round 2 (owner: "it is not looking good"): the old
+                        // handle was a ring floating clear of the text with a
+                        // tab the width of half a cell — it read as a stray
+                        // circle on the grid, not as "this end of the
+                        // selection". Now: a solid teardrop whose point sits
+                        // ON the selected cell's edge, so the shape visually
+                        // starts from the text it belongs to.
+                        val stemWidth = with(density) { 3.dp.toPx() }
+                        // The stem: cell edge → dot centre, in the band's own
+                        // colour so it belongs to the selection, not the chrome.
                         drawRect(
-                            color = theme.cursor,
-                            topLeft = Offset(h.tabX - h.tabW, minOf(h.tabY, h.circleY)),
-                            size = Size(h.tabW, kotlin.math.abs(h.circleY - h.tabY).coerceAtLeast(h.tabH))
+                            color = packedColor(selectionBand),
+                            topLeft = Offset(
+                                h.tabX - stemWidth,
+                                minOf(h.tabY, h.circleY)
+                            ),
+                            size = Size(
+                                stemWidth,
+                                kotlin.math.abs(h.circleY - h.tabY).coerceAtLeast(1f)
+                            )
                         )
-                        // The dot itself: hollow ring, so it never hides text
-                        // under it — Termux's handle, drawn with the terminal's
-                        // own cursor colour (Phase 40.5: existing roles only).
+                        // The dot: SOLID, in the cursor role (the terminal's
+                        // one "you can act here" colour), with a thin band-
+                        // coloured collar so it separates from both the text
+                        // and the grid on every theme.
+                        drawCircle(
+                            color = packedColor(selectionBand),
+                            radius = handleMetrics.radius + stemWidth,
+                            center = Offset(h.circleX, h.circleY)
+                        )
                         drawCircle(
                             color = theme.cursor,
                             radius = handleMetrics.radius,
-                            center = Offset(h.circleX, h.circleY),
-                            style = Stroke(width = with(density) { 2.dp.toPx() })
+                            center = Offset(h.circleX, h.circleY)
                         )
                     }
                 }
@@ -805,7 +854,13 @@ fun TerminalEmulatorView(
             // (Open URL, Copy all, Share, Reset) is the ⋮ overflow. Copy is
             // DISABLED when the selection yields no text — it never falls
             // back to the transcript.
-            if (toolbar && selection != null) {
+            // The bar is up whenever a selection exists and no finger is on
+            // the surface (see `pressActive`). It is anchored to the TOP of the
+            // grid and never follows the handles: a bar that moved under the
+            // finger would both hide the text being selected and sit where the
+            // drag is going.
+            val shownSelection = selection
+            if (shownSelection != null && !pressActive) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -820,22 +875,20 @@ fun TerminalEmulatorView(
                             if (text != null) onCopyText(text)
                             // Copy ends the interaction, like every native
                             // text surface: the selection clears, the grid
-                            // is clean, and the toolbar goes with it.
+                            // is clean, and the bar goes with it.
                             selection = null
-                            toolbar = false
-                            selecting = false
                             onSelectionChanged(null)
                         },
                         onSelectAll = {
                             selection = SelectionModel.selectAll(latestSnapshot)
-                            activeEnd = SelectionEnd.CURSOR
-                            selecting = true
                         },
                         onPaste = {
-                            toolbar = false
                             selection = null
-                            selecting = false
                             onPaste()
+                        },
+                        onDismiss = {
+                            selection = null
+                            onSelectionChanged(null)
                         },
                         more = { close ->
                             val selectedText = copySelectionText(snapshot, selection)
@@ -845,7 +898,6 @@ fun TerminalEmulatorView(
                                     text = { Text(stringResource(R.string.terminal_open_url)) },
                                     onClick = {
                                         close()
-                                        toolbar = false
                                         selection = null
                                         onUrlClick(selectedUrl)
                                     }
@@ -855,7 +907,6 @@ fun TerminalEmulatorView(
                                 text = { Text(stringResource(R.string.terminal_copy_all)) },
                                 onClick = {
                                     close()
-                                    toolbar = false
                                     selection = null
                                     onCopyText(snapshot.transcriptText())
                                 }
@@ -865,7 +916,6 @@ fun TerminalEmulatorView(
                                 onClick = {
                                     close()
                                     val text = selectedText ?: snapshot.transcriptText()
-                                    toolbar = false
                                     runCatching {
                                         val intent = Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
@@ -883,7 +933,6 @@ fun TerminalEmulatorView(
                                 text = { Text(stringResource(R.string.terminal_reset)) },
                                 onClick = {
                                     close()
-                                    toolbar = false
                                     selection = null
                                     onReset()
                                 }
@@ -900,7 +949,6 @@ fun TerminalEmulatorView(
                 if (keyView !== view) keyView = view
                 view.onInput = { text ->
                     if (text.isNotEmpty()) {
-                        selecting = false
                         selection = null
                         topRow = 0
                         onInput(text)
@@ -936,6 +984,8 @@ private fun SelectionToolbar(
     onCopy: () -> Unit,
     onSelectAll: () -> Unit,
     onPaste: () -> Unit,
+    /** ✕ — always available, so a selection can never trap the user. */
+    onDismiss: () -> Unit,
     more: @Composable ColumnScope.(close: () -> Unit) -> Unit
 ) {
     var moreOpen by remember { mutableStateOf(false) }
@@ -966,6 +1016,9 @@ private fun SelectionToolbar(
         TextButton(onClick = onPaste, colors = colors) {
             Text(stringResource(R.string.terminal_paste))
         }
+        TextButton(onClick = onDismiss, colors = colors) {
+            Text(stringResource(R.string.terminal_clear_selection))
+        }
         Box(modifier = Modifier.widthIn(min = 48.dp)) {
             TextButton(onClick = { moreOpen = true }, colors = colors) {
                 Text(stringResource(R.string.terminal_more))
@@ -989,6 +1042,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
     boldPaint: android.graphics.Paint,
     cursorX: Int,
     selection: SelectionRange?,
+    /** The selection band, already derived from the theme (SelectionLook). */
+    selectionBand: Int,
     extY: Int,
     cols: Int,
     theme: TerminalThemeColors,
@@ -1109,13 +1164,16 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLine(
         }
     }
     if (sel != null && extY in sel.start.row..sel.end.row) {
+        // Phase 103.1 round 2 — the band is DERIVED, not `theme.selection`:
+        // three of the four bundled themes store a dark translucent band that
+        // is invisible over their own background (SelectionLook's table).
         // Phase 103.1 — the band is computed from the ordered range
         // (SelectionRange is normalized at construction), so a drag through
         // itself and a right-to-left selection draw identically.
         val left = if (extY == sel.start.row) sel.start.col else 0
         val right = if (extY == sel.end.row) sel.end.col + 1 else cols
         drawRect(
-            color = theme.selection,
+            color = packedColor(selectionBand),
             topLeft = Offset(CellMetrics.columnX(left, cellW).toFloat(), CellMetrics.rowY(y, cellH).toFloat()),
             size = Size(((right - left).coerceAtLeast(0)) * cellW.toFloat(), cellH.toFloat())
         )
@@ -1327,17 +1385,24 @@ private suspend fun PointerInputScope.detectTerminalGestures(
     onTap: (Float, Float) -> Unit,
     onLongPress: (Float, Float) -> Unit,
     onScroll: (Float, Float, Float) -> Unit,
+    /** The press ended (every path shares this lift) — the bar may return. */
     onRest: () -> Unit,
+    /** A finger touched the surface: the bar hides so nothing blocks it. */
+    onPressStart: () -> Unit,
     onFling: (Float, Float) -> Unit
 ) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
-        var mode: Mode = Mode.UNDECIDED
+        onPressStart()
+        // NOT a handle grab yet. The handle's touch box is 48 dp, so a press
+        // that lands near a handle would otherwise be claimed as a drag before
+        // the long-press timer ever ran — and because a drag hides the toolbar,
+        // the symptom was the owner's: *"the copy/select-all bar shows once on
+        // the first long-press and never again"*. The hit is recorded and only
+        // ACTED ON when the finger moves; a long-press outranks it.
         val grabbed = handleHit(down.position.x, down.position.y)
-        if (grabbed != null) {
-            mode = Mode.HANDLE
-            onBeginHandleDrag(grabbed)
-        }
+        var mode: Mode = Mode.UNDECIDED
+        if (grabbed != null) mode = Mode.HANDLE_ARMED
         val downAt = down.uptimeMillis
         // Where the press landed. A long-press must ESTABLISH its word and stop
         // there: the first version fell into SELECTING and emitted a move on
@@ -1365,7 +1430,12 @@ private suspend fun PointerInputScope.detectTerminalGestures(
                     val rangePx = snap.scrollbackCount * cellH.toFloat()
                     if (rangePx > 0f) onFling(velocity, rangePx)
                 }
-                if (mode == Mode.UNDECIDED && !moved && !longPressed) {
+                // A press that never became anything else is a tap. That
+                // includes one that landed near a handle and stayed still: it
+                // is not a drag, so it must not silently swallow the tap.
+                if (!moved && !longPressed &&
+                    (mode == Mode.UNDECIDED || mode == Mode.HANDLE_ARMED)
+                ) {
                     onTap(down.position.x, down.position.y)
                 }
                 change.consume()
@@ -1397,6 +1467,16 @@ private suspend fun PointerInputScope.detectTerminalGestures(
                 Mode.SCROLL -> {
                     onScroll(-dy, change.position.x, change.position.y)
                 }
+                Mode.HANDLE_ARMED -> {
+                    // The finger moved after landing near a handle: NOW it is a
+                    // drag, and the handle is taken from that same cell.
+                    if (moved) {
+                        mode = Mode.HANDLE
+                        onBeginHandleDrag(grabbed ?: SelectionEnd.CURSOR)
+                        onMoveHandle(grabbed ?: SelectionEnd.CURSOR, change.position.x, change.position.y)
+                        change.consume()
+                    }
+                }
                 Mode.HANDLE -> {
                     // A grab inside the 48 dp touch box is not a drag: the
                     // handle must stay on its cell until the finger actually
@@ -1423,7 +1503,7 @@ private suspend fun PointerInputScope.detectTerminalGestures(
     }
 }
 
-private enum class Mode { UNDECIDED, SCROLL, SELECTING, HANDLE }
+private enum class Mode { UNDECIDED, SCROLL, SELECTING, HANDLE_ARMED, HANDLE }
 
 /** The platform's own slop, expressed once (Compose defaults to 8 px). */
 private const val TOUCH_SLOP_PX = 8f
