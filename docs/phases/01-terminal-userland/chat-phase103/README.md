@@ -2,7 +2,8 @@
 
 **Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22) — host harness 85/85 and
 **Build APK ✅ GREEN on `df3b285`** (run [`44999216380`](https://github.com/pabi277/CodeC/actions/runs/44999216380):
-host unit + screenshot tests, debug + release assembly, APK set check, lint). **The owner's
+host unit + screenshot tests, debug + release assembly, APK set check, lint) **and on the
+branch tip `96574a5`** (run [`45000896306`](https://github.com/pabi277/CodeC/actions/runs/45000896306)). **The owner's
 device round is still owed** (see `## Implementation` at the end). **Owner rows:** *"partial text copy not working"* and
 *"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
 Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
@@ -124,13 +125,18 @@ move the other one.
   both release assemblies, the APK-set check and `lintDebug` all pass.
 * **Not run, not claimed:** every device row in the exit condition.
 
-### The two CI rounds before the green one (both were real, both recorded)
+### The CI rounds before the green one (each recorded with its cause)
 
 1. **`44997918882` — `:app:compileDebugKotlin` FAILED, two errors**, both introduced by
    the rewrite and both invisible to the host harness because it cannot compile Compose:
    `ButtonDefaults` was imported **twice** (Kotlin reports it as an ambiguous name), and
    `hitHandle` referenced `rows`, which it never had as a parameter. Fixed in `d81a22e`.
-2. **`44998194404` — compile and unit tests passed, `:app:lintDebug` FAILED:** `NewApi`,
+2. **`45000665498` — an INFRASTRUCTURE failure, not a code failure.** The docs-only commit
+   `56810d1` failed during dependency resolution: Maven Central answered **HTTP 429 (Too
+   Many Requests)** for `org.robolectric:nativeruntime-dist-compat:1.0.18`. It was
+   re-triggered with an empty commit (`96574a5`) and went green. Recorded because a red
+   run's cause matters: this one says nothing about the phase.
+3. **`44998194404` — compile and unit tests passed, `:app:lintDebug` FAILED:** `NewApi`,
    `ValueAnimator.getDurationScale()` at `TerminalScreen.kt:487` is **API 33** and
    `minSdk` is 24. Replaced with `Settings.Global.ANIMATOR_DURATION_SCALE` — the platform
    switch the remove-animations accessibility setting zeroes on every version, and the
