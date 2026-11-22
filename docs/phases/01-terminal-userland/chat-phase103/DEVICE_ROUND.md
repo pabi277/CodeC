@@ -4,9 +4,10 @@
 > line. A screenshot on a ❌ is what makes the fix possible.
 
 **Build:** `CodeC-IDE-debug` (or `-release`) from **Build APK run
-[`45001976378`](https://github.com/pabi277/CodeC/actions/runs/45001976378)** — branch
-`arena/3f8a6afe-codec`, tip `e1e17f2`, ✅ green (compile, full host unit suite, debug +
-release assembly, lint).
+[`45010551830`](https://github.com/pabi277/CodeC/actions/runs/45010551830)** — branch
+`arena/3f8a6afe-codec`, tip `bf5afe7`, ✅ green (compile, full host unit suite, debug +
+release assembly, lint). This supersedes `45001976378`: it contains the round-2 fixes for
+your first report (the bar's one rule, the visible band, the attached handles).
 
 **Where to get it:** GitHub → **Actions** → that run → scroll to **Artifacts** →
 `CodeC-IDE-debug`. (The release artifact is signed only when the signing secrets exist on
