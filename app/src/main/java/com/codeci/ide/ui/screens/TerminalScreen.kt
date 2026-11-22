@@ -331,8 +331,13 @@ fun TerminalScreen(
                     )
                 }
                 IconButton(onClick = {
-                    val textToCopy = activeSelection ?: viewModel.transcriptText()
-                    copyText(context, textToCopy)
+                    // Phase 103.1 — the Copy button copies the SELECTION, or says
+                    // there is nothing to copy. The old `?: transcriptText()`
+                    // fallback is exactly the owner's *"partial text copy not
+                    // working"* → "it copied the whole terminal" symptom: with
+                    // no selection it silently dumped the entire transcript.
+                    // Copy-all still exists, named, in the ⊞ menu's overflow.
+                    copyText(context, activeSelection.orEmpty())
                 }) {
                     Icon(
                         Icons.Default.ContentCopy,
@@ -477,6 +482,10 @@ fun TerminalScreen(
             onMouseEvent = { viewModel.sendKey(it) },
             onReset = { viewModel.resetEmulator() },
             resizeKey = activeSessionId,
+            // Phase 103.2 — reduced motion: the fling becomes one jump.
+            animatorScale = remember {
+                runCatching { android.animation.ValueAnimator.getDurationScale() }.getOrDefault(1f)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)

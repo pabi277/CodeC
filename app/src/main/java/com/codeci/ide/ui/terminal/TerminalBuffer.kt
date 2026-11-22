@@ -99,7 +99,17 @@ data class TerminalLine(
      * mapping stays 1:1; the renderer draws the cluster instead of the bare
      * base character when present.
      */
-    val clusters: Map<Int, String>? = null
+    val clusters: Map<Int, String>? = null,
+    /**
+     * Phase 103.1: this row ended by **soft auto-wrap** — its last cell was
+     * filled and the next character continued the same logical line on the
+     * next row (the [Row.wrapped] flag the buffer has kept since Phase 19.1
+     * for reflow). Selection copy needs it: a soft-wrapped row joins the next
+     * one with no separator, so a long URL copied across three rows comes out
+     * as one unbroken string. Defaults false, so every existing construction
+     * of a row is unchanged and means "hard line".
+     */
+    val softWrapped: Boolean = false
 ) {
     /** True when [col] is the (invisible) right half of a wide glyph. */
     fun columnIsContinuation(col: Int): Boolean {
@@ -141,9 +151,36 @@ data class TerminalSnapshot(
     val title: String,
     val generation: Long,
     /** Phase 19.5: active mouse-reporting modes ([MouseModes] bits). */
-    val mouseMode: Int = 0
+    val mouseMode: Int = 0,
+    /**
+     * Phase 103.1 — how many rows the buffer has dropped from the FRONT of
+     * scrollback since it was created (its cap is 2 000 rows, so a busy
+     * session trims continuously). A selection holds buffer-absolute rows, so
+     * this counter is what lets the view (and the pure `TrimMath`) notice a
+     * trim and move the selection with its text instead of letting it paint
+     * over new rows. 0 means nothing has ever been trimmed.
+     */
+    val scrollbackGeneration: Long = 0L
 ) {
     val scrollbackCount: Int get() = scrollbackLines.size
+
+    /**
+     * Phase 103.1 — ONE row lookup for the whole app. A transcript row for an
+     * extended Y coordinate (0 = the first live row, negative = scrolled into
+     * history) without concatenating the two lists — the address every
+     * selection cell, handle and copy uses. Moved here from the Compose view
+     * so the selection model can depend on it without importing Android.
+     */
+    fun lineAt(extY: Int): TerminalLine? {
+        val idx = scrollbackCount + extY
+        if (idx < 0) return null
+        return if (idx < scrollbackLines.size) {
+            scrollbackLines[idx]
+        } else {
+            val live = idx - scrollbackLines.size
+            if (live in lines.indices) lines[live] else null
+        }
+    }
 
     /** Scrollback + live screen, readable (wide pairs joined, clusters kept). */
     fun transcriptText(): String = buildString {
@@ -353,7 +390,10 @@ class TerminalBuffer(
             val push = owed - drop
             for (i in 0 until push) {
                 scrollback.addLast(current[i])
-                while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
+                while (scrollback.size > scrollbackLimit) {
+                    scrollback.removeFirst()
+                    trims++
+                }
             }
             repeat(push) { current.removeAt(0) }
             cursorY -= push
@@ -695,9 +735,16 @@ class TerminalBuffer(
         screen[y].wrapped = false
     }
 
+    /** Phase 103.1: rows dropped from the front of scrollback, ever. */
+    private var trims: Long = 0L
+
+
     private fun pushScrollback(row: Row) {
         scrollback.addLast(row)
-        while (scrollback.size > scrollbackLimit) scrollback.removeFirst()
+        while (scrollback.size > scrollbackLimit) {
+            scrollback.removeFirst()
+            trims++
+        }
     }
 
     fun setScrollRegion(top: Int, bottom: Int) {
@@ -714,10 +761,10 @@ class TerminalBuffer(
     fun snapshot(): TerminalSnapshot {
         generation++
         val history = ArrayList<TerminalLine>(scrollback.size)
-        for (row in scrollback) history.add(rowToLine(row.cells))
+        for (row in scrollback) history.add(rowToLine(row))
         val lines = ArrayList<TerminalLine>(rows)
         for (y in 0 until rows) {
-            lines.add(rowToLine(screen[y].cells))
+            lines.add(rowToLine(screen[y]))
         }
         return TerminalSnapshot(
             cols = cols,
@@ -729,7 +776,8 @@ class TerminalBuffer(
             cursorVisible = cursorVisible,
             title = title,
             generation = generation,
-            mouseMode = mouseMode
+            mouseMode = mouseMode,
+            scrollbackGeneration = trims
         )
     }
 
@@ -770,7 +818,12 @@ class TerminalBuffer(
     }
 
     companion object {
-        fun rowToLine(row: Array<Cell>): TerminalLine {
+        /** A visible row as an immutable line, keeping its soft-wrap flag (Phase 103.1). */
+        fun rowToLine(row: Row): TerminalLine = rowToLine(row.cells, row.wrapped)
+
+        fun rowToLine(row: Array<Cell>): TerminalLine = rowToLine(row, softWrapped = false)
+
+        fun rowToLine(row: Array<Cell>, softWrapped: Boolean): TerminalLine {
             val text = StringBuilder(row.size)
             val runs = ArrayList<StyleRun>()
             var clusters: HashMap<Int, String>? = null
@@ -812,7 +865,7 @@ class TerminalBuffer(
                 }
             }
             runs.add(StyleRun(runStart, row.size, runFg, runBg, runFlags))
-            return TerminalLine(text.toString(), runs, clusters)
+            return TerminalLine(text.toString(), runs, clusters, softWrapped)
         }
     }
 }

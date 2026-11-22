@@ -1,6 +1,7 @@
 # CodeC Phase 103.2 — Scroll physics: rest position, fling, scrollbar
 
-> **Status:** 📋 PLANNED · **Cost:** `[client-only]` · **Effort:** S–M
+> **Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22) · **Cost:**
+> `[client-only]` · **Effort:** S–M
 > **Owner row (verbatim):** "after open the app first time then when i scroll up
 > then i saw empty space in the terminal"
 
@@ -62,3 +63,32 @@ match scrollback depth; a resting selection (103.1) does not drift.
 - **Scrollback-size setting** — the 2,000-line hard cap (`TerminalBuffer.kt:179`)
   becomes a setting in a later polish phase; this part only makes scrolling honest
   at whatever size the buffer is.
+
+## Implementation record (103.2)
+
+Built as `ui/terminal/TerminalScroll.kt` (pure) with the wiring in `TerminalEmulatorView.kt`.
+
+- **`rest()` discards the fraction and never changes the row.** A lift is
+  `Rest(topRow.coerceIn(minTop,0), row − topRow)`; because `ScrollMath` keeps
+  `|subRowPx| < cellH` by construction the second field is 0 for any legal state. The
+  earlier "round the remainder to the nearest row" model fabricated row changes out of a
+  sub-row offset and *doubled* every rest — that is the blank-band class of bug, not its
+  fix. The view has exactly **two** `rest(` call sites (finger lift, fling end), both of
+  which set `scrollSubPx = 0f` in the same breath, and a pin enforces both facts.
+- **The lift is unconditional on every path** — plain scroll and a selection drag alike —
+  which is what makes a resting terminal draw `translate(0f)` and no blank strip.
+- **Fling** is a list of frame deltas (`ScrollMotionPolicy.flingSteps`) applied through the
+  same `ScrollMath.step` a drag uses, at `FRAME_MS` on the frame pump, cancelled by the next
+  touch; velocity is capped (`MAX_VELOCITY`), the decay floor (`MIN_VELOCITY_PX_PER_MS`)
+  ends it, `MAX_FRAMES` bounds it, and `animatorScale <= 0` (reduced motion) turns it into a
+  single instant step. It always ends with the same `rest()` — no rail overshoot survives.
+- **Scrollbar** geometry is proportional (`MIN_THUMB_PX` 24 px floor, `MIN_FRACTION` 6 %),
+  0 = oldest and 1 = live; the thumb is drawn only `if (bar.hasTravel)` and fades
+  (`SCROLLBAR_LINGER_MS` 700 ms) keyed on the offset, so a resting terminal draws none.
+  Dragging it maps a track position to a row with `rowForThumb`.
+- **Defect the tests caught:** `-rows.roundToLong().toInt().coerceIn(-history, 0)` parses
+  as `-(…coerceIn…)`, so the positive count clamped to 0 and was then negated — every
+  track position mapped to live. Now `(-rows).coerceIn(-history, 0)`.
+
+Tests: `ScrollRestTest` 21 (rest invariants, decay/monotonicity/rails, reduced motion,
+thumb geometry, `rowForThumb`) + `ScrollMathTest` 6 untouched. Not run: Gradle, CI, device.

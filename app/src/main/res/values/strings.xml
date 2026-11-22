@@ -20,6 +20,13 @@
     <string name="terminal_copy">Copy</string>
     <string name="terminal_copied">Copied to clipboard</string>
     <string name="terminal_copy_empty">Nothing to copy</string>
+    <!-- Phase 103.1 — the floating selection toolbar. -->
+    <string name="terminal_select_all">Select all</string>
+    <string name="terminal_more">More</string>
+    <string name="terminal_open_url">Open URL</string>
+    <string name="terminal_copy_all">Copy all</string>
+    <string name="terminal_share">Share</string>
+    <string name="terminal_reset">Reset</string>
     <string name="terminal_restart">Restart shell</string>
     <string name="terminal_install_userland">Install userland</string>
     <!-- Phase 71.1 — ⬇ asks before it closes every session. -->
