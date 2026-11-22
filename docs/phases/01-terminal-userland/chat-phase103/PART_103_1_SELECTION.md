@@ -1,7 +1,7 @@
 # CodeC Phase 103.1 — Selection: handles, floating toolbar, joined copy
 
-> **Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22) · **Cost:**
-> `[client-only]` · **Effort:** M
+> **Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22), Build APK ✅ GREEN
+> on `df3b285` (run `44999216380`); device round owed · **Cost:** `[client-only]` · **Effort:** M
 > **Owner row (verbatim):** "partial text copy not working" → selection style pick:
 > "Termux-style — long-press → drag handles → floating Copy/Select-all toolbar"
 
@@ -119,5 +119,6 @@ path lost its transcript fallback.
   the view's four unused colour literals were deleted. Handles draw in `theme.cursor`.
 
 Tests: `SelectionModelTest` 31, `SelectionExtractTest` 11, `SelectionScrollWiringTest` 16 —
-host harness 85/85 (with `ScrollRestTest` 21 and `ScrollMathTest` 6). Not run: Gradle, CI,
-device.
+host harness 85/85 (with `ScrollRestTest` 21 and `ScrollMathTest` 6). CI (`Build APK`
+`44999216380` on `df3b285`) is green: compile, the full unit suite, debug + release
+assembly and lint. The device round is still owed.

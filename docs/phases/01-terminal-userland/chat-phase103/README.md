@@ -1,8 +1,9 @@
 # Phase 103 — Terminal selection + scroll rebuild
 
-**Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22) — host harness 85/85
-green; **CI and the owner's device round are both still owed** (see `## Implementation`
-at the end). **Owner rows:** *"partial text copy not working"* and
+**Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22) — host harness 85/85 and
+**Build APK ✅ GREEN on `df3b285`** (run [`44999216380`](https://github.com/pabi277/CodeC/actions/runs/44999216380):
+host unit + screenshot tests, debug + release assembly, APK set check, lint). **The owner's
+device round is still owed** (see `## Implementation` at the end). **Owner rows:** *"partial text copy not working"* and
 *"first open scroll up, empty space"* (device reports, this session) → *"yes"* to the
 Termux-parity program → first-quick-win pick: **selection + scroll**. Series roadmap:
 [`PHASE103_108_ROADMAP.md`](../../../roadmaps/PHASE103_108_ROADMAP.md); research:
@@ -58,9 +59,9 @@ gains its `## Implementation` record and the series moves to Phase 104.
 
 ## Implementation (2026-11-22, `arena/3f8a6afe-codec`, branch base `e06851a`)
 
-**State: implemented on the branch, host-verified, CI + device NOT yet run.** Nothing
-here is an acceptance claim: `Build APK` is the executor of record and every exit
-condition on the phone is the owner's to report.
+**State: implemented on the branch, host-verified and CI-green (`df3b285`); the device
+round is NOT run.** Nothing here is an acceptance claim: every exit condition on the phone
+is the owner's to report.
 
 ### What landed
 
@@ -118,8 +119,24 @@ move the other one.
   `TokenAdoptionTest` 6, `TouchTargetTest` 2 — **34 passed / 0 failed**, plus the host
   suites above for **119 green cases** in total. (`HapticWiringTest` is what rejected the
   long-press haptic below.)
-* **Not run, not claimed:** `assembleDebug`, `testDebugUnitTest`, `lintDebug`, and every
-  device row in the exit condition.
+* **CI (`Build APK`, run [`44999216380`](https://github.com/pabi277/CodeC/actions/runs/44999216380)
+  on `df3b285`): ✅ GREEN** — host unit + screenshot tests, `assembleDebug`,
+  both release assemblies, the APK-set check and `lintDebug` all pass.
+* **Not run, not claimed:** every device row in the exit condition.
+
+### The two CI rounds before the green one (both were real, both recorded)
+
+1. **`44997918882` — `:app:compileDebugKotlin` FAILED, two errors**, both introduced by
+   the rewrite and both invisible to the host harness because it cannot compile Compose:
+   `ButtonDefaults` was imported **twice** (Kotlin reports it as an ambiguous name), and
+   `hitHandle` referenced `rows`, which it never had as a parameter. Fixed in `d81a22e`.
+2. **`44998194404` — compile and unit tests passed, `:app:lintDebug` FAILED:** `NewApi`,
+   `ValueAnimator.getDurationScale()` at `TerminalScreen.kt:487` is **API 33** and
+   `minSdk` is 24. Replaced with `Settings.Global.ANIMATOR_DURATION_SCALE` — the platform
+   switch the remove-animations accessibility setting zeroes on every version, and the
+   exact value `MotionPolicy.inputFor` already reads, so the terminal's fling now degrades
+   on the same signal as the rest of the app. The wiring pin asserts both halves. Fixed in
+   `df3b285`.
 
 ### Open items for the device round
 

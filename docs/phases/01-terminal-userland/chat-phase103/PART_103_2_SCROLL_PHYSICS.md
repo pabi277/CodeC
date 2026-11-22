@@ -1,7 +1,7 @@
 # CodeC Phase 103.2 — Scroll physics: rest position, fling, scrollbar
 
-> **Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22) · **Cost:**
-> `[client-only]` · **Effort:** S–M
+> **Status:** 🚧 IMPLEMENTED on `arena/3f8a6afe-codec` (2026-11-22), Build APK ✅ GREEN
+> on `df3b285` (run `44999216380`); device round owed · **Cost:** `[client-only]` · **Effort:** S–M
 > **Owner row (verbatim):** "after open the app first time then when i scroll up
 > then i saw empty space in the terminal"
 
@@ -91,4 +91,14 @@ Built as `ui/terminal/TerminalScroll.kt` (pure) with the wiring in `TerminalEmul
   track position mapped to live. Now `(-rows).coerceIn(-history, 0)`.
 
 Tests: `ScrollRestTest` 21 (rest invariants, decay/monotonicity/rails, reduced motion,
-thumb geometry, `rowForThumb`) + `ScrollMathTest` 6 untouched. Not run: Gradle, CI, device.
+thumb geometry, `rowForThumb`) + `ScrollMathTest` 6 untouched. CI green (`44999216380` on
+`df3b285`).
+
+**One correction CI forced, worth keeping:** the reduced-motion signal was first read with
+`ValueAnimator.getDurationScale()`, which is **API 33** while `minSdk` is 24 — `lintDebug`
+rejected it (`NewApi`). The view is now handed
+`Settings.Global.ANIMATOR_DURATION_SCALE`, the platform switch the remove-animations
+accessibility setting zeroes on every version and the exact value `MotionPolicy.inputFor`
+already reads. So the terminal fling degrades on the **same** signal as the rest of the
+app's motion, and the wiring pin asserts both the presence of that read and the absence of
+the API-33 call.
