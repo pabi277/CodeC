@@ -186,6 +186,16 @@ class SelectionScrollWiringTest {
             "the platform animator scale must reach the view",
             screenCode.contains("animatorScale = remember {")
         )
+        // …and read the way minSdk 24 allows: `ValueAnimator.getDurationScale()`
+        // is API 33 and lint rejected it (NewApi), so the SETTING is the source.
+        assertTrue(
+            "the scale must come from ANIMATOR_DURATION_SCALE",
+            screenCode.contains("Settings.Global.ANIMATOR_DURATION_SCALE")
+        )
+        assertFalse(
+            "ValueAnimator.getDurationScale is API 33 — minSdk is 24",
+            SourceCode.of(screenCode).contains("ValueAnimator.getDurationScale(")
+        )
     }
 
     @Test

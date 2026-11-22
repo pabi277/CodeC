@@ -483,8 +483,20 @@ fun TerminalScreen(
             onReset = { viewModel.resetEmulator() },
             resizeKey = activeSessionId,
             // Phase 103.2 — reduced motion: the fling becomes one jump.
+            // Read the SETTING, not `ValueAnimator.getDurationScale()`: that
+            // call is API 33 (lint NewApi; minSdk is 24) and the platform's
+            // remove-animations switch zeroes this same value on every version.
+            // `MotionPolicy.inputFor` reads it the identical way, so the
+            // terminal's fling degrades on exactly the same signal the rest of
+            // the app's motion does.
             animatorScale = remember {
-                runCatching { android.animation.ValueAnimator.getDurationScale() }.getOrDefault(1f)
+                runCatching {
+                    android.provider.Settings.Global.getFloat(
+                        context.contentResolver,
+                        android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                        1f
+                    )
+                }.getOrDefault(1f)
             },
             modifier = Modifier
                 .fillMaxWidth()
