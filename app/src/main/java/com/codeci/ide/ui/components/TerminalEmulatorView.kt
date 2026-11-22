@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -532,6 +531,7 @@ fun TerminalEmulatorView(
                                     subRowPx = scrollSubPx,
                                     cellW = cellW,
                                     cellH = cellH,
+                                    rows = rows,
                                     radiusPx = handleRadiusPx,
                                     stemPx = handleStemPx,
                                     gapPx = handleGapPx,
@@ -1436,6 +1436,8 @@ private fun hitHandle(
     subRowPx: Float,
     cellW: Int,
     cellH: Int,
+    /** Visible rows: a handle whose cell is outside the viewport is not grabbable. */
+    rows: Int,
     radiusPx: Float,
     stemPx: Float,
     gapPx: Float,
